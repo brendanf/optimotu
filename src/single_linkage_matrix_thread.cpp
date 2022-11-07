@@ -32,6 +32,7 @@ struct MergeWorker
   }
 };
 
+//' @export
 // [[Rcpp::export]]
 Rcpp::IntegerMatrix single_linkage_matrix_thread(
     const std::string file,

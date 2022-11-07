@@ -31,3 +31,4 @@ Suggests:
 Config/testthat/edition: 3
 URL: https://github.com/brendanf/optimotu
 BugReports: https://github.com/brendanf/optimotu/issues
+RoxygenNote: 7.2.1

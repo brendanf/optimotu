@@ -652,6 +652,7 @@ struct cluster_pool {
    }
 };
 
+//' @export
 // [[Rcpp::export]]
 Rcpp::IntegerMatrix single_linkage_pool(
     const std::string file,
@@ -721,6 +722,7 @@ void process_mod(cluster_pool **pool, std::map<j_t, j_t> *fwd_map,
    }
 }
 
+//' @export
 // [[Rcpp::export]]
 Rcpp::List single_linkage_multi(
       const std::string file,

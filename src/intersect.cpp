@@ -22,16 +22,19 @@ int intersect_length_(It1 ci, It1 cend, It2 ki, It2 kend) {
    return l;
 }
 
+//' @export
 // [[Rcpp::export]]
 int intersect_length(const std::vector<int> &c, const std::vector<int> &k) {
   return intersect_length_(c.begin(), c.end(), k.begin(), k.end());
 }
 
+//' @export
 // [[Rcpp::export]]
 int intersect_length_string(const std::vector<std::string> &c, const std::vector<std::string> &k) {
    return intersect_length_(c.begin(), c.end(), k.begin(), k.end());
 }
 
+//' @export
 // [[Rcpp::export]]
 double inner_fmeasure(
       const std::vector<int> &cj,
@@ -88,6 +91,7 @@ struct FmeasureWorker : public RcppParallel::Worker
    }
 };
 
+//' @export
 // [[Rcpp::export]]
 Rcpp::NumericVector fmeasure(
       Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> k,
