@@ -1,0 +1,31 @@
+Package: optimotu
+Type: Package
+Title: Optimize OTU clustering thresholds
+Version: 0.1.0
+Author@R: 
+    person(given = "Brendan",
+           family = "Furneaux",
+           role = c("aut", "cre"),
+           email = "brendan.furneaux@gmail.com",
+           comment = c(ORCID = "0000-0003-3522-7363"))
+Description: OptimOTU calculates single-linkage clusters at multiple thresholds
+    given a distance matrix, which may be sparse, using a fast, multithreaded
+    C++ implementation. In particular, the memory requirements are small and
+    fixed, and it can accept the distance matrix from a file or text connection,
+    meaning that it can operate on very large matrices which do not fit in RAM.
+    Routines for quickly counting the measure of the intersection of sorted
+    sets, and for calculating the multiclass F-measure, are also included.
+License: MIT
+Imports:
+   Rcpp,
+   RcppParallel,
+   RcppThread
+LinkingTo:
+   Rcpp,
+   RcppParallel,
+   RcppThread
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
