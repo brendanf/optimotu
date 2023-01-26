@@ -763,6 +763,8 @@ Rcpp::List single_linkage_multi(
       }
       pool[pc] = new cluster_pool(m, fwd_map[pc].size());
    }
+   std::vector<j_t> whichsets;
+   whichsets.reserve(preclust.size());
    cluster *c, *c1, *c2, *c1p, *c2p;
    j_t j, j1, j2, j1p, j2p;
    d_t i;
@@ -787,9 +789,7 @@ Rcpp::List single_linkage_multi(
       Rcpp::Rcout << std::endl;
 #endif
 
-      std::vector<j_t> whichsets;
-      whichsets.reserve(std::max(precluster_key[seq1].size(),
-                                 precluster_key[seq2].size()));
+      whichsets.clear();
       std::set_intersection(
          precluster_key[seq1].begin(),
          precluster_key[seq1].end(),
