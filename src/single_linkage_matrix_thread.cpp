@@ -4,6 +4,7 @@
 #include <RcppThread.h>
 // [[Rcpp::depends(RcppParallel)]]
 #include <RcppParallel.h>
+#include "DistanceConverter.hpp"
 
 struct MergeWorker
 {
@@ -32,20 +33,17 @@ struct MergeWorker
   }
 };
 
-//' @export
-// [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_matrix_thread(
+
+Rcpp::IntegerMatrix single_linkage_matrix(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
-    const float dmin,
-    const float dmax,
-    const float dstep,
+    const DistanceConverter &dconv,
+    const int m,
     const int threads=1,
     const int minsplit=1
 ) {
   RcppThread::ThreadPool::globalInstance().setNumThreads(threads);
   const std::size_t n = seqnames.size();
-  const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
   // pointer to which cluster a sequence belongs to at each threshold
   Rcpp::IntegerMatrix output(m, n);
   RcppParallel::RMatrix<int> clust_array(output);
@@ -57,10 +55,10 @@ Rcpp::IntegerMatrix single_linkage_matrix_thread(
   }
   std::ifstream infile(file);
   std::size_t seq1, seq2;
-  float dist;
+  double dist;
   while(infile >> seq1 >> seq2 >> dist) {
     if (seq1 == seq2) continue;
-    i = std::max((int) ceilf((dist - dmin) / dstep), 0);
+    i = dconv.convert(dist);
     if (i >= m) continue;
     if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) continue;
     std::size_t imin = i, imax = m;
@@ -112,4 +110,34 @@ Rcpp::IntegerMatrix single_linkage_matrix_thread(
     }
   }
   return output;
+}
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix single_linkage_matrix_uniform(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const float dmin,
+      const float dmax,
+      const float dstep,
+      const int threads=1,
+      const int minsplit=1
+) {
+   const UniformDistanceConverter dconv(dmin, dstep);
+   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+   return single_linkage_matrix(file, seqnames, dconv, m, threads, minsplit);
+}
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix single_linkage_matrix_array(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const std::vector<double> &thresholds,
+      const int threads=1,
+      const int minsplit=1
+) {
+   const ArrayDistanceConverter dconv(thresholds);
+   const int m = thresholds.size();
+   return single_linkage_matrix(file, seqnames, dconv, m, threads, minsplit);
 }

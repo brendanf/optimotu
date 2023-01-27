@@ -6,15 +6,11 @@
 // [[Rcpp::depends(RcppThread)]]
 #include <RcppThread.h>
 #include "single_linkage_pool.hpp"
+#include "DistanceConverter.hpp"
 
 // #define SINGLE_LINK_FULL_DEBUG
 // #define SINGLE_LINK_DEBUG
 // #define SINGLE_LINK_TEST
-
-// type of "j", which is the index of a cluster
-typedef std::uint32_t j_t;
-// type of "d", which is the index corresponding to a distance
-typedef std::int32_t d_t;
 
 struct cluster {
    d_t min_d = NO_DIST;
@@ -650,60 +646,84 @@ struct cluster_pool {
    }
 };
 
+Rcpp::IntegerMatrix single_linkage_pool(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const DistanceConverter &dconv,
+      const d_t m
+) {
+   const j_t n = seqnames.size();
+   cluster *c, *c1p;
+   j_t j, j1p;
+   d_t i;
+
+   // keep track of which clusters are free
+   // clusters 0 to n-1 are always used (they are the tips)
+   // to start with n to 2n-2 are free.
+   cluster_pool pool(m, n);
+
+   std::ifstream infile(file);
+   j_t seq1, seq2;
+   double dist;
+   while(infile >> seq1 >> seq2 >> dist) {
+      if (seq1 == seq2) continue;
+#ifdef SINGLE_LINK_DEBUG
+      Rcpp::Rcout << "seq1: " << seq1 << ", seq2:" << seq2 << ", dist:" << dist << std::endl;
+#endif
+      i = dconv.convert(dist);
+      if (i >= m) continue;
+      pool.process(seq1, seq2, i);
+   }
+
+   Rcpp::IntegerMatrix out(m, n);
+   std::size_t k = 0;
+   for (std::uint32_t i = 0; i < n; i++) {
+      j = i;
+      c = pool.get_cluster(j);
+      j1p = c->parent;
+      c1p = pool.get_cluster(j1p);
+      std::uint32_t i2 = 0;
+      while (i2 < m) {
+         std::uint32_t max = pool.max_d(c);
+         if (m < max) max = m;
+         if (c->id == NO_CLUST) c->id = i;
+         while (i2 < max) {
+            out[k++] = c->id;
+            i2++;
+         }
+         if (i2 < m) pool.shift_to_parent(j, c, j1p, c1p);
+      }
+   }
+   return out;
+
+}
+
 //' @export
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_pool(
+Rcpp::IntegerMatrix single_linkage_pool_uniform(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const float dmin,
     const float dmax,
     const float dstep
 ) {
-  const j_t n = seqnames.size();
+  const UniformDistanceConverter dconv(dmin, dstep);
   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-  cluster *c, *c1, *c2, *c1p, *c2p;
-  j_t j, j1, j2, j1p, j2p;
-  d_t i;
-
-  // keep track of which clusters are free
-  // clusters 0 to n-1 are always used (they are the tips)
-  // to start with n to 2n-2 are free.
-  cluster_pool pool(m, n);
-
-  std::ifstream infile(file);
-  j_t seq1, seq2;
-  float dist;
-  while(infile >> seq1 >> seq2 >> dist) {
-    if (seq1 == seq2) continue;
-#ifdef SINGLE_LINK_DEBUG
-    Rcpp::Rcout << "seq1: " << seq1 << ", seq2:" << seq2 << ", dist:" << dist << std::endl;
-#endif
-    i = std::max((int) ceilf((dist - dmin) / dstep), 0);
-    if (i >= m) continue;
-    pool.process(seq1, seq2, i);
-  }
-
-  Rcpp::IntegerMatrix out(m, n);
-  std::size_t k = 0;
-  for (std::uint32_t i = 0; i < n; i++) {
-     j = i;
-     c = pool.get_cluster(j);
-     j1p = c->parent;
-     c1p = pool.get_cluster(j1p);
-     std::uint32_t i2 = 0;
-     while (i2 < m) {
-        std::uint32_t max = pool.max_d(c);
-        if (m < max) max = m;
-        if (c->id == NO_CLUST) c->id = i;
-        while (i2 < max) {
-           out[k++] = c->id;
-           i2++;
-        }
-        if (i2 < m) pool.shift_to_parent(j, c, j1p, c1p);
-     }
-  }
-  return out;
+  return single_linkage_pool(file, seqnames, dconv, m);
 }
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix single_linkage_pool_array(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const std::vector<double> &thresholds
+) {
+   const ArrayDistanceConverter dconv(thresholds);
+   const int m = thresholds.size();
+   return single_linkage_pool(file, seqnames, dconv, m);
+}
+
 
 void process(cluster_pool *pool, j_t seq1, j_t seq2, d_t i) {
    // RcppThread::Rcout << "dummy process; pool at " << pool << ", seq1=" <<

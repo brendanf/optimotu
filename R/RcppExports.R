@@ -22,13 +22,23 @@ fmeasure <- function(k, c, ncpu = 1L) {
 }
 
 #' @export
-single_linkage_matrix_thread <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, minsplit = 1L) {
-    .Call('_optimotu_single_linkage_matrix_thread', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, threads, minsplit)
+single_linkage_matrix_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, minsplit = 1L) {
+    .Call('_optimotu_single_linkage_matrix_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, threads, minsplit)
 }
 
 #' @export
-single_linkage_pool <- function(file, seqnames, dmin, dmax, dstep) {
-    .Call('_optimotu_single_linkage_pool', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep)
+single_linkage_matrix_array <- function(file, seqnames, thresholds, threads = 1L, minsplit = 1L) {
+    .Call('_optimotu_single_linkage_matrix_array', PACKAGE = 'optimotu', file, seqnames, thresholds, threads, minsplit)
+}
+
+#' @export
+single_linkage_pool_uniform <- function(file, seqnames, dmin, dmax, dstep) {
+    .Call('_optimotu_single_linkage_pool_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep)
+}
+
+#' @export
+single_linkage_pool_array <- function(file, seqnames, thresholds) {
+    .Call('_optimotu_single_linkage_pool_array', PACKAGE = 'optimotu', file, seqnames, thresholds)
 }
 
 #' @export
