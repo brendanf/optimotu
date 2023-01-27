@@ -490,9 +490,7 @@ struct cluster_pool {
             max_d2 = max_d(j2);
          }
       }
-      bool changed = false;
       while (c1 && c2 && c1 != c2) {
-         changed=true;
          /* we need to merge c1 and c2, and all their parents, starting at i and
           going up to m. */
 #ifdef SINGLE_LINK_DEBUG
@@ -765,8 +763,8 @@ Rcpp::List single_linkage_multi(
    }
    std::vector<j_t> whichsets;
    whichsets.reserve(preclust.size());
-   cluster *c, *c1, *c2, *c1p, *c2p;
-   j_t j, j1, j2, j1p, j2p;
+   cluster *c, *c1p;
+   j_t j, j1p;
    d_t i;
 
    std::ifstream infile(file);
