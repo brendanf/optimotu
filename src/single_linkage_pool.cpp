@@ -70,17 +70,17 @@ struct cluster_pool {
 #endif
    };
 
-   cluster* get_cluster(j_t j) {
+   cluster* get_cluster(j_t j) const {
       if (j == NO_CLUST) return nullptr;
       return my_pool + j;
    };
 
-   d_t max_d(j_t j) {
+   d_t max_d(j_t j) const {
       if (j == NO_CLUST) return NO_DIST;
       return my_pool[j].max_d(my_pool);
    };
 
-   d_t max_d(cluster * c) {
+   d_t max_d(cluster * c) const {
       if (c == nullptr) return NO_DIST;
       return c->max_d(my_pool);
    };
@@ -317,7 +317,7 @@ struct cluster_pool {
       return;
    }
 
-   void shift_to_parent(j_t &j, cluster *& c, j_t &jp, cluster *& cp) {
+   void shift_to_parent(j_t &j, cluster *& c, j_t &jp, cluster *& cp) const {
 #ifdef SINGLE_LINK_FULL_DEBUG
       Rcpp::Rcout << "-shifting from child " << j << " to parent " << jp <<
          " (clust array at " << my_pool << ")" << std::endl;
@@ -340,7 +340,7 @@ struct cluster_pool {
    }
 
 #ifdef SINGLE_LINK_TEST
-   void validate() {
+   void validate() const {
       bool err = false;
       j_t j, jp;
       cluster *c, *cp;
@@ -646,10 +646,202 @@ struct cluster_pool {
    }
 };
 
-Rcpp::IntegerMatrix single_linkage_pool(
+void cluster2matrix(cluster_pool &pool, Rcpp::IntegerMatrix &out) {
+   j_t j, j1p;
+   cluster *c, *c1p;
+   std::size_t k = 0;
+   std::size_t n = out.ncol();
+   std::size_t m = out.nrow();
+   for (std::uint32_t i = 0; i < n; i++) {
+      j = i;
+      c = pool.get_cluster(j);
+      j1p = c->parent;
+      c1p = pool.get_cluster(j1p);
+      j_t i2 = 0;
+      while (i2 < m) {
+         d_t max = pool.max_d(c);
+         if (m < max) max = m;
+         if (c->id == NO_CLUST) c->id = i;
+         while (i2 < max) {
+            out[k++] = c->id;
+            i2++;
+         }
+         if (i2 < m) pool.shift_to_parent(j, c, j1p, c1p);
+      }
+   }
+}
+
+int hclust_ordering(const cluster_pool &pool, j_t top, int start, Rcpp::IntegerVector &order) {
+   // Rcpp::Rcout << "ordering cluster " << top << " with start=" << start << std::endl;
+   int i = start;
+   j_t j = pool.get_cluster(top)->first_child;
+   if (j == NO_CLUST) {
+      // Rcpp::Rcout << i << ": " << top << std::endl;
+      order[i++] = top + 1;
+   } else {
+      do {
+         // Rcpp::Rcout << "getting cluster " << j << std::endl;
+         if (j < pool.n) {
+            // Rcpp::Rcout << i << ": " << j << std::endl;
+            order[i++] = j + 1;
+            // i++;
+            // Rcpp::Rcout << "i=" << i << std::endl;
+         } else {
+            i = hclust_ordering(pool, j, i, order);
+         }
+         j = pool.get_cluster(j)->next_sib;
+      } while (j != NO_CLUST);
+   }
+   return i;
+}
+
+Rcpp::List cluster2hclust(
+      const cluster_pool &pool,
+      const DistanceConverter &dconv,
+      const Rcpp::CharacterVector &seqnames
+) {
+   Rcpp::IntegerMatrix merge(pool.n - 1, 2);
+   Rcpp::NumericVector height(pool.n-1);
+   Rcpp::IntegerVector order(pool.n);
+
+   std::vector<bool> is_free;
+   is_free.reserve(2*pool.n);
+   // Rcpp::Rcout << "Initializing is_free" << std::endl;
+   for (int i = 0; i < 2*pool.n; i++) {
+      is_free.push_back(FALSE);
+   }
+   // Rcpp::Rcout << "Filling is_free" << std::endl;
+   if (pool.last_free >= pool.first_free) {
+      // Rcpp::Rcout << "last_free >= first_free" << std::endl;
+      for (int i = pool.first_free; i <= pool.last_free; i++) {
+         // Rcpp::Rcout << "free cluster " << i << " is " << pool.freeclusters[i] << std::endl;
+         is_free[pool.freeclusters[i]] = true;
+      }
+   } else {
+      // Rcpp::Rcout << "last_free < first_free" << std::endl;
+      for (int i = pool.first_free; i < pool.n; i++) {
+         // Rcpp::Rcout << "free cluster " << i << " is " << pool.freeclusters[i] << std::endl;
+         is_free[pool.freeclusters[i]] = true;
+      }
+      for (int i = 0; i <= pool.last_free; i++) {
+         // Rcpp::Rcout << "free cluster " << i << " is " << pool.freeclusters[i] << std::endl;
+         is_free[pool.freeclusters[i]] = true;
+      }
+   }
+   // Rcpp::Rcout << "finished filling is_free" << std::endl;
+   // Rcpp::Rcout << "making cluster/distance pairs" << std::endl;
+   // depths and indices of the valid clusters
+   std::vector<std::pair<d_t, j_t>> cluster_dj;
+   for (int i = pool.n; i < 2*pool.n; i++) {
+      if (is_free[i]) continue;
+      std::pair<d_t, j_t> dj = std::make_pair(pool.get_cluster(i)->min_d, i);
+      // Rcpp::Rcout << "adding cluster " << dj.second << " at depth " << dj.first << std::endl;
+      cluster_dj.push_back(dj);
+   }
+   // Rcpp::Rcout << "sorting cluster/distance pairs" << std::endl;
+   std::sort(cluster_dj.begin(), cluster_dj.end());
+   // Rcpp::Rcout << "finished sorting cluster/distance pairs" << std::endl;
+   size_t row = 0; // 1-indexed for R
+   auto merge1 = merge.begin(); // first column of merge
+   auto merge2 = merge1 + pool.n - 1; // second column of merge
+   auto h = height.begin();
+   std::map<int, int> row_key; // maps cluster number from pool to row number
+   std::vector<j_t> parentless; //keep track of clusters with no parent
+   for (auto cli : cluster_dj) {
+      // Rcpp::Rcout << "processing cluster " << cli.second << " at depth " << cli.first << std::endl;
+      cluster *c = pool.get_cluster(cli.second);
+      j_t child_j = c->first_child;
+      j_t next_j = pool.get_cluster(child_j)->next_sib;
+      j_t last_j = c->last_child;
+      int left = child_j;
+      bool first_pass = TRUE;
+      do {
+         if (left < pool.n && first_pass) {
+            // Rcpp::Rcout << "left child = " << -left << std::endl;
+            *merge1 = -left-1;
+         } else if (first_pass) {
+            // Rcpp::Rcout << "left child = " << row_key[child_j] << std::endl;
+            *merge1 = row_key[child_j];
+         } else {
+            // Rcpp::Rcout << "left child = " << row << std::endl;
+            *merge1 = row; //not incremented yet; this is the previous row
+         }
+         if (next_j < pool.n) {
+            // Rcpp::Rcout << "right child = " << -(int)next_j << std::endl;
+            *merge2 = -(int)next_j-1;
+         } else {
+            // Rcpp::Rcout << "right child = " << row_key[next_j] << std::endl;
+            *merge2 = row_key[next_j];
+         }
+         // Rcpp::Rcout << "height = " << dconv.inverse(c->min_d) << std::endl;
+         *h = dconv.inverse(c->min_d);
+         // go to the next row
+         merge2++;
+         merge1++;
+         h++;
+         row++;
+         first_pass = FALSE;
+         child_j = next_j;
+         next_j = pool.get_cluster(child_j)->next_sib;
+      } while (next_j != NO_CLUST);
+      if (c->parent == NO_CLUST) parentless.push_back(cli.second);
+      // Rcpp::Rcout << "finished processing cluster " << cli.second << " at row " << row << std::endl;
+
+      row_key[cli.second] = row;
+   }
+   // Rcpp::Rcout << "finished processing clusters" << std::endl;
+   // find parentless singletons
+   for (j_t i = 0; i < pool.n; i++) {
+      if (pool.get_cluster(i)->parent == NO_CLUST) {
+         parentless.push_back(i);
+      }
+   }
+   if (parentless.size() > 1) {
+      // Rcpp::Rcout << "adding dummy parent for parentless clusters" << std::endl;
+      int left;
+      if (parentless[0] < pool.n) {
+         left = -(int)parentless[0]-1;
+      } else {
+         left = row_key[parentless[0]];
+      }
+      for (int i = 1; i < parentless.size(); i++) {
+         int right;
+         if (parentless[i] < pool.n) {
+            right = -(int)parentless[i]-1;
+         } else {
+            right = row_key[parentless[i]];
+         }
+         // Rcpp::Rcout << "left child = " << left << std::endl;
+         *(merge1++) = left;
+         // Rcpp::Rcout << "right child = " << right << std::endl;
+         *(merge2++) = right;
+         *(h++) = 1;
+         row++;
+         left = row;
+      }
+      // Rcpp::Rcout << "finished adding parentless clusters" << std::endl;
+   }
+   j_t i = 0;
+   for (j_t j : parentless) {
+      // Rcpp::Rcout << "calculating ordering for parentless cluster " << j << std::endl;
+      i = hclust_ordering(pool, j, i, order);
+   }
+
+   Rcpp::List out;
+   out["merge"] = merge;
+   out["height"] = height;
+   out["order"] = order;
+   out["labels"] = seqnames;
+   out["method"] = "single";
+   out.attr("class") = "hclust";
+   return out;
+}
+
+Rcpp::RObject single_linkage_pool(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const DistanceConverter &dconv,
+      const std::string &output_type,
       const d_t m
 ) {
    const j_t n = seqnames.size();
@@ -675,53 +867,44 @@ Rcpp::IntegerMatrix single_linkage_pool(
       pool.process(seq1, seq2, i);
    }
 
-   Rcpp::IntegerMatrix out(m, n);
-   std::size_t k = 0;
-   for (std::uint32_t i = 0; i < n; i++) {
-      j = i;
-      c = pool.get_cluster(j);
-      j1p = c->parent;
-      c1p = pool.get_cluster(j1p);
-      std::uint32_t i2 = 0;
-      while (i2 < m) {
-         std::uint32_t max = pool.max_d(c);
-         if (m < max) max = m;
-         if (c->id == NO_CLUST) c->id = i;
-         while (i2 < max) {
-            out[k++] = c->id;
-            i2++;
-         }
-         if (i2 < m) pool.shift_to_parent(j, c, j1p, c1p);
-      }
+   if (output_type == "matrix") {
+      Rcpp::IntegerMatrix out(m, n);
+      cluster2matrix(pool, out);
+      return out;
+   } else if (output_type == "hclust") {
+      Rcpp::List out = cluster2hclust(pool, dconv, seqnames);
+      return out;
+   } else {
+      Rcpp::stop("'output_type' must be 'matrix' or 'hclust'");
    }
-   return out;
-
 }
 
 //' @export
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_pool_uniform(
+Rcpp::RObject single_linkage_pool_uniform(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const float dmin,
     const float dmax,
-    const float dstep
+    const float dstep,
+    const std::string output_type
 ) {
   const UniformDistanceConverter dconv(dmin, dstep);
   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-  return single_linkage_pool(file, seqnames, dconv, m);
+  return single_linkage_pool(file, seqnames, dconv, output_type, m);
 }
 
 //' @export
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_pool_array(
+Rcpp::RObject single_linkage_pool_array(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
-      const std::vector<double> &thresholds
+      const std::vector<double> &thresholds,
+      const std::string output_type
 ) {
    const ArrayDistanceConverter dconv(thresholds);
    const int m = thresholds.size();
-   return single_linkage_pool(file, seqnames, dconv, m);
+   return single_linkage_pool(file, seqnames, dconv, output_type, m);
 }
 
 
@@ -740,20 +923,17 @@ void process_mod(cluster_pool **pool, std::map<j_t, j_t> *fwd_map,
    }
 }
 
-//' @export
-// [[Rcpp::export]]
 Rcpp::List single_linkage_multi(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
-      const float dmin,
-      const float dmax,
-      const float dstep,
+      const DistanceConverter &dconv,
+      const std::string &output_type,
+      const int m,
       const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
       const size_t threads=1
 ) {
    RcppThread::ThreadPool::globalInstance().setNumThreads(threads);
    const j_t n = seqnames.size();
-   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
    std::vector<j_t> *precluster_key = new std::vector<j_t>[n];
    // map from universal index to index in the precluster
    std::map<j_t, j_t> *fwd_map = new std::map<j_t, j_t>[preclust.size()];
@@ -789,14 +969,14 @@ Rcpp::List single_linkage_multi(
 
    std::ifstream infile(file);
    j_t seq1, seq2;
-   float dist;
+   double dist;
    bool did_parallel = false;
    while(infile >> seq1 >> seq2 >> dist) {
       if (seq1 == seq2) continue;
 #ifdef SINGLE_LINK_DEBUG
       Rcpp::Rcout << "seq1: " << seq1 << ", seq2:" << seq2 << ", dist:" << dist << std::endl;
 #endif
-      i = std::max((int) ceilf((dist - dmin) / dstep), 0);
+      i = dconv.convert(dist);
       if (i >= m) continue;
 #ifdef SINGLE_LINK_DEBUG
       Rcpp::Rcout << "seq " << seq1 << " present in preclusters:";
@@ -873,30 +1053,7 @@ Rcpp::List single_linkage_multi(
    Rcpp::List out(preclust.size());
    for(j_t pc = 0; pc < preclust.size(); pc++) {
       size_t pc_len = fwd_map[pc].size();
-      Rcpp::IntegerMatrix outm(m, pc_len);
 
-      std::size_t k = 0;
-      for (j_t i = 0; i < pc_len; i++) {
-         j = i;
-         c = pool[pc]->get_cluster(j);
-         j1p = c->parent;
-         c1p = pool[pc]->get_cluster(j1p);
-         j_t i2 = 0;
-         while (i2 < m) {
-            d_t max = pool[pc]->max_d(c);
-            if (m < max) max = m;
-            if (c->id == NO_CLUST) c->id = i;
-            while (i2 < max) {
-               outm[k++] = c->id;
-               i2++;
-            }
-            if (i2 < m) pool[pc]->shift_to_parent(j, c, j1p, c1p);
-         }
-      }
-#ifdef SINGLE_LINK_DEBUG
-      Rcpp::Rcout << " freeing pool " << pc << " at " << pool[pc] << std::endl;
-#endif
-      delete pool[pc];
 #ifdef SINGLE_LINK_DEBUG
       Rcpp::Rcout << " creating character names vector of size " << pc_len << std::endl;
 #endif
@@ -908,12 +1065,25 @@ Rcpp::List single_linkage_multi(
 #ifdef SINGLE_LINK_FULL_DEBUG
          Rcpp::Rcout << " assigning seqname " << p.first <<
             " (" << seqnames[p.first] <<
-            ") to column name " << p.second << std::endl;
+               ") to column name " << p.second << std::endl;
 #endif
          cn[p.second] = seqnames[p.first];
       }
-      Rcpp::colnames(outm) = cn;
-      out[pc] = outm;
+
+      if (output_type == "matrix") {
+         Rcpp::IntegerMatrix outm(m, pc_len);
+         cluster2matrix(*(pool[pc]), outm);
+         Rcpp::colnames(outm) = cn;
+         out[pc] = outm;
+      } else if (output_type == "hclust") {
+         out[pc] = cluster2hclust(*pool[pc], dconv, cn);
+      } else {
+         Rcpp::stop("'output_type' must be 'matrix' or 'hclust'");
+      }
+#ifdef SINGLE_LINK_DEBUG
+      Rcpp::Rcout << " freeing pool " << pc << " at " << pool[pc] << std::endl;
+#endif
+      delete pool[pc];
    }
 #ifdef SINGLE_LINK_DEBUG
    Rcpp::Rcout << " freeing pools..." << std::endl;
@@ -928,4 +1098,36 @@ Rcpp::List single_linkage_multi(
 #endif
    delete[] fwd_map;
    return out;
+}
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::List single_linkage_multi_uniform(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const std::string &output_type,
+      const double dmin,
+      const double dmax,
+      const double dstep,
+      const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
+      const size_t threads=1
+) {
+   const UniformDistanceConverter dconv(dmin, dstep);
+   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+   return single_linkage_multi(file, seqnames, dconv, output_type, m, preclust, threads);
+}
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::List single_linkage_multi_array(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const std::string &output_type,
+      const std::vector<double> thresholds,
+      const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
+      const size_t threads=1
+) {
+   const ArrayDistanceConverter dconv(thresholds);
+   const int m = thresholds.size();
+   return single_linkage_multi(file, seqnames, dconv, output_type, m, preclust, threads);
 }

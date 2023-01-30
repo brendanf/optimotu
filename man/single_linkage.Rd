@@ -8,7 +8,9 @@ single_linkage(
   file,
   seqnames,
   method = c("tree", "matrix"),
+  output_type = c("matrix", "hclust"),
   thresholds = NULL,
+  which = NULL,
   dmin = NULL,
   dmax = NULL,
   dstep = NULL,
@@ -17,7 +19,64 @@ single_linkage(
 )
 }
 \arguments{
-\item{minsplit}{}
+\item{file}{(`character` filename) The name of the file (or, e.g., a named
+pipe) from which to read the sparse distance matrix. The matrix should be
+a whitespace delimited text file, with three values per line: seq1 seq2 dist,
+where seq1 and seq2 are numeric indices of the sequences to be clustered,
+starting with 0, and dist is the distance, typically a read number between 0
+and 1 (but the algorithm works for any non-negative distance.)}
+
+\item{seqnames}{(`character` vector) Names of the sequences, used for
+labeling the columns of the output matrix. Typically, in order to generate
+the sparse distance matrix with integer indices, an alternate version of the
+input file is written, where the sequence names are replaced with integers.
+These are the "real" names.}
+
+\item{method}{(`character`) The algorithm to use; one of "tree" or "matrix".
+The "tree" algorithm is faster in at least some large cases, but tends to be
+slower in smaller cases, and cannot take advantage of parallel computation
+unless multiple overlapping subsets are specified in `which`. The two
+algorithms give identical results.}
+
+\item{output_type}{(`character`) Which type of output to give; one of
+"matrix" or "hclust". "matrix" returns an integer matrix giving clustering
+results, where the element in row `i` and column `j` give the 0-based index
+of the first member of the cluster to which sequence `j` belongs when
+clustered at the `i`th clustering threshold. "hclust" returns an object as
+returned by `stats::hclust()`, which requires less memory, especially for
+large problems, but is only supported for method "tree". If "which" is given,
+then either output_type returns a list whose elements are of the chosen type.}
+
+\item{thresholds}{(sorted `numeric` vector) An explicit list of clustering
+thresholds to try.  These do not need to be evenly spaced but must be
+strictly increasing.}
+
+\item{which}{(`list` of `character` vectors) Instead of performing clustering
+on all input sequences, perform independent clustering on subsets of the
+sequences defined by the elements of `which`. Subsets do not need to be
+disjoint (and indeed, if they are it is probably faster to calculate the
+distance matrices separately.) Currently `which` is only implemented for the
+"tree" algorithm.}
+
+\item{dmin}{(`numeric` scalar) The minimum distance threshold for clustering;
+should not be given if explicit `thresholds` are specified.}
+
+\item{dmax}{(`numeric` scalar) The maximum distance threshold for clustering;
+should not be given if explicit `thresholds` are specified.}
+
+\item{dstep}{(`numeric` scalar) The spacing between subsequent distance
+thresholds for clustering; should not be given if explicit `thresholds` are
+specified.}
+
+\item{threads}{(`integer` scalar) Maximum number of parallel threads.}
+
+\item{minsplit}{(`integer` scalar) Controls the granularity of parallel
+processing in the "matrix" algorithm.}
+}
+\value{
+An [`integer matrix`][methods::StructureClasses] if
+`output_type=="matrix"`, an [`hclust`][stats::hclust] object if
+`output_type == "hclust"`, or a list of one of these when `which` is a list.
 }
 \description{
 Title
