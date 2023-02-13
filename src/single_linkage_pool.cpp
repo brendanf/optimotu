@@ -907,6 +907,20 @@ Rcpp::RObject single_linkage_pool_array(
    return single_linkage_pool(file, seqnames, dconv, output_type, m);
 }
 
+//' @export
+// [[Rcpp::export]]
+Rcpp::RObject single_linkage_pool_cached(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const std::vector<double> &thresholds,
+      const double precision,
+      const std::string output_type
+) {
+   const CachedDistanceConverter dconv(thresholds, precision);
+   const int m = thresholds.size();
+   return single_linkage_pool(file, seqnames, dconv, output_type, m);
+}
+
 
 void process(cluster_pool *pool, j_t seq1, j_t seq2, d_t i) {
    // RcppThread::Rcout << "dummy process; pool at " << pool << ", seq1=" <<
@@ -1128,6 +1142,22 @@ Rcpp::List single_linkage_multi_array(
       const size_t threads=1
 ) {
    const ArrayDistanceConverter dconv(thresholds);
+   const int m = thresholds.size();
+   return single_linkage_multi(file, seqnames, dconv, output_type, m, preclust, threads);
+}
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::List single_linkage_multi_cached(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const std::string &output_type,
+      const std::vector<double> thresholds,
+      const double precision,
+      const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
+      const size_t threads=1
+) {
+   const CachedDistanceConverter dconv(thresholds, precision);
    const int m = thresholds.size();
    return single_linkage_multi(file, seqnames, dconv, output_type, m, preclust, threads);
 }

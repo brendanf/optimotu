@@ -13,6 +13,7 @@ public:
 
 class UniformDistanceConverter : public DistanceConverter
 {
+protected:
    const double dmin, dstep;
 public:
    d_t convert(double dist) const override;
@@ -22,12 +23,22 @@ public:
 
 class ArrayDistanceConverter : public DistanceConverter
 {
+protected:
    const std::vector<double> thresholds;
    const double max_threshold;
 public:
    d_t convert(double dist) const override;
    double inverse(d_t d) const override;
    ArrayDistanceConverter(std::vector<double> thresholds);
+};
+
+class CachedDistanceConverter : public ArrayDistanceConverter
+{
+   const double precision;
+   const std::vector<d_t> cache;
+public:
+   d_t convert(double dist) const override;
+   CachedDistanceConverter(std::vector<double> thresholds, double precision);
 };
 
 #endif

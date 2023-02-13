@@ -93,6 +93,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// single_linkage_matrix_cached
+Rcpp::IntegerMatrix single_linkage_matrix_cached(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds, const double precision, const int threads, const int minsplit);
+RcppExport SEXP _optimotu_single_linkage_matrix_cached(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP threadsSEXP, SEXP minsplitSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
+    Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
+    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< const int >::type minsplit(minsplitSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_matrix_cached(file, seqnames, thresholds, precision, threads, minsplit));
+    return rcpp_result_gen;
+END_RCPP
+}
 // single_linkage_pool_uniform
 Rcpp::RObject single_linkage_pool_uniform(const std::string file, const Rcpp::CharacterVector& seqnames, const float dmin, const float dmax, const float dstep, const std::string output_type);
 RcppExport SEXP _optimotu_single_linkage_pool_uniform(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP output_typeSEXP) {
@@ -120,6 +136,21 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
     Rcpp::traits::input_parameter< const std::string >::type output_type(output_typeSEXP);
     rcpp_result_gen = Rcpp::wrap(single_linkage_pool_array(file, seqnames, thresholds, output_type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// single_linkage_pool_cached
+Rcpp::RObject single_linkage_pool_cached(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds, const double precision, const std::string output_type);
+RcppExport SEXP _optimotu_single_linkage_pool_cached(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP output_typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
+    Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type output_type(output_typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_pool_cached(file, seqnames, thresholds, precision, output_type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -157,6 +188,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// single_linkage_multi_cached
+Rcpp::List single_linkage_multi_cached(const std::string file, const Rcpp::CharacterVector& seqnames, const std::string& output_type, const std::vector<double> thresholds, const double precision, const Rcpp::ListOf<Rcpp::CharacterVector>& preclust, const size_t threads);
+RcppExport SEXP _optimotu_single_linkage_multi_cached(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP output_typeSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP preclustSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type output_type(output_typeSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double> >::type thresholds(thresholdsSEXP);
+    Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::ListOf<Rcpp::CharacterVector>& >::type preclust(preclustSEXP);
+    Rcpp::traits::input_parameter< const size_t >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_multi_cached(file, seqnames, output_type, thresholds, precision, preclust, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
@@ -165,10 +213,13 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_fmeasure", (DL_FUNC) &_optimotu_fmeasure, 3},
     {"_optimotu_single_linkage_matrix_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix_uniform, 7},
     {"_optimotu_single_linkage_matrix_array", (DL_FUNC) &_optimotu_single_linkage_matrix_array, 5},
+    {"_optimotu_single_linkage_matrix_cached", (DL_FUNC) &_optimotu_single_linkage_matrix_cached, 6},
     {"_optimotu_single_linkage_pool_uniform", (DL_FUNC) &_optimotu_single_linkage_pool_uniform, 6},
     {"_optimotu_single_linkage_pool_array", (DL_FUNC) &_optimotu_single_linkage_pool_array, 4},
+    {"_optimotu_single_linkage_pool_cached", (DL_FUNC) &_optimotu_single_linkage_pool_cached, 5},
     {"_optimotu_single_linkage_multi_uniform", (DL_FUNC) &_optimotu_single_linkage_multi_uniform, 8},
     {"_optimotu_single_linkage_multi_array", (DL_FUNC) &_optimotu_single_linkage_multi_array, 6},
+    {"_optimotu_single_linkage_multi_cached", (DL_FUNC) &_optimotu_single_linkage_multi_cached, 7},
     {NULL, NULL, 0}
 };
 

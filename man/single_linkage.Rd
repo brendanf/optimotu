@@ -10,6 +10,7 @@ single_linkage(
   method = c("tree", "matrix"),
   output_type = c("matrix", "hclust"),
   thresholds = NULL,
+  precision = NULL,
   which = NULL,
   dmin = NULL,
   dmax = NULL,
@@ -50,6 +51,12 @@ then either output_type returns a list whose elements are of the chosen type.}
 \item{thresholds}{(sorted `numeric` vector) An explicit list of clustering
 thresholds to try.  These do not need to be evenly spaced but must be
 strictly increasing.}
+
+\item{precision}{(\code{numeric} scalar) The precision of the distances in the
+distance matrix; providing this may give a slight speedup when explicit
+\code{thresholds} are provided. If the actual precision of numbers in the distance
+matrix is smaller than this value, then distances will be rounded to this
+precision without warning.}
 
 \item{which}{(`list` of `character` vectors) Instead of performing clustering
 on all input sequences, perform independent clustering on subsets of the

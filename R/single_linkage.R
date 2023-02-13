@@ -60,6 +60,16 @@ verify_thresholds <- function(thresholds) {
    invisible(TRUE)
 }
 
+verify_precision <- function(precision) {
+   checkmate::assert_number(
+      precision,
+      na.ok = FALSE,
+      null.ok = TRUE,
+      finite = TRUE,
+      lower = .Machine$double.xmin
+   )
+}
+
 verify_method_output_type <- function(
    method = c("tree", "matrix"),
    output_type = c("matrix", "hclust")
@@ -101,6 +111,11 @@ verify_method_output_type <- function(
 #' @param thresholds (sorted `numeric` vector) An explicit list of clustering
 #' thresholds to try.  These do not need to be evenly spaced but must be
 #' strictly increasing.
+#' @param precision (`numeric` scalar) The precision of the distances in the
+#' distance matrix; providing this may give a slight speedup when explicit
+#' `thresholds` are provided. If the actual precision of numbers in the distance
+#' matrix is smaller than this value, then distances will be rounded to this
+#' precision without warning.
 #' @param which (`list` of `character` vectors) Instead of performing clustering
 #' on all input sequences, perform independent clustering on subsets of the
 #' sequences defined by the elements of `which`. Subsets do not need to be
@@ -130,6 +145,7 @@ single_linkage = function(
    method = c("tree", "matrix"),
    output_type = c("matrix", "hclust"),
    thresholds = NULL,
+   precision = NULL,
    which = NULL,
    dmin = NULL,
    dmax = NULL,
@@ -141,6 +157,9 @@ single_linkage = function(
    output_type = match.arg(output_type)
    verify_method_output_type()
    if (is.null(thresholds)) {
+      if (!is.null(precision)) {
+         warning("'precision' has no effect when 'thresholds' is not given. Ignoring.\n")
+      }
       verify_threshold_steps(dmin, dmax, dstep)
       if (!is.null(which) && !isTRUE(which)) {
          verify_which(which, method, seqnames)
@@ -156,15 +175,28 @@ single_linkage = function(
       stop("If 'thresholds' is given, 'dmin', 'dmax', and 'dstep' must not be.")
    } else {
       verify_thresholds(thresholds)
+      verify_precision(precision)
       if (!is.null(which) && !isTRUE(which)) {
          verify_which(which, method, seqnames)
-         single_linkage_multi_array(file, seqnames, thresholds, which, threads)
+         if (is.null(precision)) {
+            single_linkage_multi_array(file, seqnames, thresholds, which, threads)
+         } else {
+            single_linkage_multi_cached(file, seqnames, thresholds, precision, which, threads)
+         }
       } else {
-         switch(
-            method,
-            tree = single_linkage_pool_array(file, seqnames, thresholds, output_type),
-            matrix = single_linkage_matrix_array(file, seqnames, thresholds, threads, minsplit)
-         )
+         if (is.null(precision)) {
+            switch(
+               method,
+               tree = single_linkage_pool_array(file, seqnames, thresholds, output_type),
+               matrix = single_linkage_matrix_array(file, seqnames, thresholds, threads, minsplit)
+            )
+         } else {
+            switch(
+               method,
+               tree = single_linkage_pool_cached(file, seqnames, thresholds, precision, output_type),
+               matrix = single_linkage_matrix_cached(file, seqnames, thresholds, precision, threads, minsplit)
+            )
+         }
       }
    }
 }
@@ -202,6 +234,7 @@ usearch_single_linkage <- function(
    output_type = c("matrix", "hclust"),
    thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
    thresholds = NULL,
+   precision = if (is.null(thresholds)) NULL else 0.001,
    thresh_names = names(thresholds),
    which = TRUE,
    ncpu = local_cpus(),
@@ -216,6 +249,7 @@ usearch_single_linkage.character <- function(
    output_type = c("matrix", "hclust"),
    thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
    thresholds = NULL,
+   precision = NULL,
    thresh_names = names(thresholds),
    which = TRUE,
    ncpu = local_cpus(),
@@ -255,6 +289,7 @@ usearch_single_linkage.character <- function(
          thresh_min = thresh_min,
          thresh_step = thresh_step,
          thresholds = thresholds,
+         precision = precision,
          thresh_names = thresh_names,
          which = which,
          ncpu = ncpu,
@@ -277,6 +312,7 @@ usearch_singlelink.DNAStringSet <- function(
    output_type = c("matrix", "hclust"),
    thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
    thresholds = NULL,
+   precision = NULL,
    thresh_names = names(thresholds),
    which = TRUE,
    ncpu = local_cpus(),
@@ -313,6 +349,7 @@ usearch_singlelink.DNAStringSet <- function(
       thresh_min = thresh_min,
       thresh_step = thresh_step,
       thresholds = thresholds,
+      precision = precision,
       thresh_names = thresh_names,
       which = which,
       ncpu = ncpu,
@@ -335,6 +372,7 @@ do_usearch_singlelink <- function(
 
    if (is.list(thresholds)) {
       verify_thresholds(thresholds)
+      verify_precision(precision)
       nthresh <- length(thresholds)
    } else {
       verify_threshold_steps(thresh_min, thresh_max, thresh_step)

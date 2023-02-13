@@ -13,6 +13,7 @@ usearch_single_linkage(
   thresh_min = NULL,
   thresh_step = NULL,
   thresholds = NULL,
+  precision = if (is.null(thresholds)) NULL else 0.001,
   thresh_names = names(thresholds),
   which = TRUE,
   ncpu = local_cpus(),

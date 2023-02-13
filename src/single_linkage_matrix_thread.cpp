@@ -141,3 +141,18 @@ Rcpp::IntegerMatrix single_linkage_matrix_array(
    const int m = thresholds.size();
    return single_linkage_matrix(file, seqnames, dconv, m, threads, minsplit);
 }
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix single_linkage_matrix_cached(
+      const std::string file,
+      const Rcpp::CharacterVector &seqnames,
+      const std::vector<double> &thresholds,
+      const double precision,
+      const int threads=1,
+      const int minsplit=1
+) {
+   const CachedDistanceConverter dconv(thresholds, precision);
+   const int m = thresholds.size();
+   return single_linkage_matrix(file, seqnames, dconv, m, threads, minsplit);
+}

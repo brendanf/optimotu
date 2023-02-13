@@ -32,6 +32,11 @@ single_linkage_matrix_array <- function(file, seqnames, thresholds, threads = 1L
 }
 
 #' @export
+single_linkage_matrix_cached <- function(file, seqnames, thresholds, precision, threads = 1L, minsplit = 1L) {
+    .Call('_optimotu_single_linkage_matrix_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, threads, minsplit)
+}
+
+#' @export
 single_linkage_pool_uniform <- function(file, seqnames, dmin, dmax, dstep, output_type) {
     .Call('_optimotu_single_linkage_pool_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, output_type)
 }
@@ -42,6 +47,11 @@ single_linkage_pool_array <- function(file, seqnames, thresholds, output_type) {
 }
 
 #' @export
+single_linkage_pool_cached <- function(file, seqnames, thresholds, precision, output_type) {
+    .Call('_optimotu_single_linkage_pool_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, output_type)
+}
+
+#' @export
 single_linkage_multi_uniform <- function(file, seqnames, output_type, dmin, dmax, dstep, preclust, threads = 1L) {
     .Call('_optimotu_single_linkage_multi_uniform', PACKAGE = 'optimotu', file, seqnames, output_type, dmin, dmax, dstep, preclust, threads)
 }
@@ -49,5 +59,10 @@ single_linkage_multi_uniform <- function(file, seqnames, output_type, dmin, dmax
 #' @export
 single_linkage_multi_array <- function(file, seqnames, output_type, thresholds, preclust, threads = 1L) {
     .Call('_optimotu_single_linkage_multi_array', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, preclust, threads)
+}
+
+#' @export
+single_linkage_multi_cached <- function(file, seqnames, output_type, thresholds, precision, preclust, threads = 1L) {
+    .Call('_optimotu_single_linkage_multi_cached', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, precision, preclust, threads)
 }
 
