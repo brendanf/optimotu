@@ -243,8 +243,9 @@ single_linkage = function(
 #' or higher) should be installed separately; it is available with a free
 #' license for most users at [https://www.drive5.com/usearch/].
 #'
-#' @param seq (`character` vector, filename, or [DNAStringSet][Biostrings::DNAStringSet()])
-#' sequences to cluster
+#' @param seq (`character` vector, filename,
+#' [DNAStringSet][Biostrings::DNAStringSet()], or `data.frame` with columns
+#' "seq_id" (`character`) and "seq" (`character`)) sequences to cluster
 #' @param seq_id (`character` vector) names for the sequences.  If they are
 #' already named, this will replace the names.  Has no effect if `seq` is a
 #' filename.
@@ -280,6 +281,33 @@ usearch_single_linkage <- function(
    ncpu = local_cpus(),
    usearch = Sys.which("usearch")) {
    UseMethod("usearch_single_linkage", seq)
+}
+
+
+usearch_single_linkage.data.frame <- function(
+   seq,
+   seq_id = seq$seq_id,
+   method = c("tree", "matrix"),
+   output_type = c("matrix", "hclust"),
+   thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
+   thresholds = NULL,
+   precision = NULL,
+   thresh_names = names(thresholds),
+   which = TRUE,
+   ncpu = local_cpus(),
+   usearch = Sys.which("usearch")
+) {
+   mycall <- match.call()
+   mycall[[1]] <- usearch_singlelink.DNAStringSet
+   if (missing(seq_id)) {
+      newseq_id <- quote(seq$seq_id)
+      newseq_id[[2]] <- mycall$seq
+      mycall$seq_id <- newseq_id
+   }
+   newseq <- quote(Biostrings::DNAStringSet(seq$seq))
+   newseq[[2]][[2]] <- mycall$seq
+   mycall$seq <- newseq
+   eval(mycall, envir = parent.frame())
 }
 
 usearch_single_linkage.character <- function(

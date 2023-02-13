@@ -22,8 +22,9 @@ usearch_single_linkage(
 )
 }
 \arguments{
-\item{seq}{(\code{character} vector, filename, or \link[Biostrings:XStringSet-class]{DNAStringSet})
-sequences to cluster}
+\item{seq}{(\code{character} vector, filename,
+\link[Biostrings:XStringSet-class]{DNAStringSet}, or \code{data.frame} with columns
+"seq_id" (\code{character}) and "seq" (\code{character})) sequences to cluster}
 
 \item{seq_id}{(\code{character} vector) names for the sequences.  If they are
 already named, this will replace the names.  Has no effect if \code{seq} is a
@@ -57,8 +58,8 @@ distance matrix and clustering}
 \code{integer} matrix giving clustering results
 }
 \description{
-This function uses a named unix pipe to direct the output of
-\code{usearch -calc_distmx} to \code{\link[=single_linkage]{single_linkage()}}. USEARCH (version 8.0 or higher)
-should be installed separately; it is available with a free license for most
-users at \link{https://www.drive5.com/usearch/}.
+This function uses a unix pipe to direct the output of the
+USEARCH "\code{calc_distmx}" command  to \code{\link[=single_linkage]{single_linkage()}}. USEARCH (version 8.0
+or higher) should be installed separately; it is available with a free
+license for most users at \link{https://www.drive5.com/usearch/}.
 }
