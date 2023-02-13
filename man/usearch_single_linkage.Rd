@@ -23,7 +23,7 @@ usearch_single_linkage(
 }
 \arguments{
 \item{seq}{(\code{character} vector, filename,
-\link[Biostrings:XStringSet-class]{DNAStringSet}, or \code{data.frame} with columns
+\link[Biostrings:DNAStringSet]{DNAStringSet}, or \code{data.frame} with columns
 "seq_id" (\code{character}) and "seq" (\code{character})) sequences to cluster}
 
 \item{seq_id}{(\code{character} vector) names for the sequences.  If they are

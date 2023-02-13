@@ -283,7 +283,8 @@ usearch_single_linkage <- function(
    UseMethod("usearch_single_linkage", seq)
 }
 
-
+#' @method usearch_single_linkage data.frame
+#' @export
 usearch_single_linkage.data.frame <- function(
    seq,
    seq_id = seq$seq_id,
@@ -310,6 +311,7 @@ usearch_single_linkage.data.frame <- function(
    eval(mycall, envir = parent.frame())
 }
 
+#' @export
 usearch_single_linkage.character <- function(
    seq,
    seq_id = names(seq),
@@ -373,7 +375,8 @@ usearch_single_linkage.character <- function(
    }
 }
 
-usearch_singlelink.DNAStringSet <- function(
+#' @export
+usearch_single_linkage.DNAStringSet <- function(
    seq,
    seq_id = names(seq),
    method = c("tree", "matrix"),
