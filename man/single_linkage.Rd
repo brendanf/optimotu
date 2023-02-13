@@ -2,53 +2,65 @@
 % Please edit documentation in R/single_linkage.R
 \name{single_linkage}
 \alias{single_linkage}
-\title{Title}
+\title{Single linkage clustering at multiple thresholds from a sparse distance
+matrix}
 \usage{
 single_linkage(
-  file,
-  seqnames,
+  distmx,
+  names,
   method = c("tree", "matrix"),
   output_type = c("matrix", "hclust"),
+  thresh_min = NULL,
+  thresh_max = NULL,
+  thresh_step = NULL,
   thresholds = NULL,
   precision = NULL,
   which = NULL,
-  dmin = NULL,
-  dmax = NULL,
-  dstep = NULL,
   threads = 1L,
   minsplit = 1L
 )
 }
 \arguments{
-\item{file}{(`character` filename) The name of the file (or, e.g., a named
+\item{distmx}{(\code{character} filename) The name of the file (or, e.g., a named
 pipe) from which to read the sparse distance matrix. The matrix should be
-a whitespace delimited text file, with three values per line: seq1 seq2 dist,
-where seq1 and seq2 are numeric indices of the sequences to be clustered,
-starting with 0, and dist is the distance, typically a read number between 0
+a white-space delimited text file, with three values per line: id1 id2 dist,
+where id1 and id2 are integer indices of the objects to be clustered,
+starting with 0, and dist is the distance, typically a real number between 0
 and 1 (but the algorithm works for any non-negative distance.)}
 
-\item{seqnames}{(`character` vector) Names of the sequences, used for
+\item{names}{(\code{character} vector) Names of the sequences, used for
 labeling the columns of the output matrix. Typically, in order to generate
 the sparse distance matrix with integer indices, an alternate version of the
-input file is written, where the sequence names are replaced with integers.
-These are the "real" names.}
+input may be used, where the "real" names are replaced with integers. These
+are the "real" names.}
 
-\item{method}{(`character`) The algorithm to use; one of "tree" or "matrix".
+\item{method}{(\code{character}) The algorithm to use; one of "tree" or "matrix".
 The "tree" algorithm is faster in at least some large cases, but tends to be
 slower in smaller cases, and cannot take advantage of parallel computation
-unless multiple overlapping subsets are specified in `which`. The two
+unless multiple overlapping subsets are specified in \code{which}. The two
 algorithms give identical results.}
 
-\item{output_type}{(`character`) Which type of output to give; one of
-"matrix" or "hclust". "matrix" returns an integer matrix giving clustering
-results, where the element in row `i` and column `j` give the 0-based index
-of the first member of the cluster to which sequence `j` belongs when
-clustered at the `i`th clustering threshold. "hclust" returns an object as
-returned by `stats::hclust()`, which requires less memory, especially for
-large problems, but is only supported for method "tree". If "which" is given,
-then either output_type returns a list whose elements are of the chosen type.}
+\item{output_type}{(\code{character}) Which type of output to give; one of
+\code{"matrix"} or \code{"hclust"}. \code{"matrix"} returns an integer matrix giving
+clustering results, where the element in row \code{i} and column \code{j} gives the
+0-based index of the first member of the cluster to which sequence \code{j}
+belongs when clustered at the \code{i}th clustering threshold. \code{"hclust"} returns
+an object as returned by \code{\link[stats:hclust]{stats::hclust()}}, which requires less memory,
+especially for large problems, but is only supported for method \code{"tree"}. If
+\code{which} is given, then either \code{output_type} returns a list whose elements are
+of the chosen type.}
 
-\item{thresholds}{(sorted `numeric` vector) An explicit list of clustering
+\item{thresh_min}{(\code{numeric} scalar) The minimum distance threshold for
+clustering; should not be given if explicit \code{thresholds} are specified.}
+
+\item{thresh_max}{(\code{numeric} scalar) The maximum distance threshold for
+clustering; should not be given if explicit \code{thresholds} are specified.}
+
+\item{thresh_step}{(\code{numeric} scalar) The spacing between subsequent distance
+thresholds for clustering; should not be given if explicit \code{thresholds} are
+specified.}
+
+\item{thresholds}{(sorted \code{numeric} vector) An explicit list of clustering
 thresholds to try.  These do not need to be evenly spaced but must be
 strictly increasing.}
 
@@ -58,33 +70,31 @@ distance matrix; providing this may give a slight speedup when explicit
 matrix is smaller than this value, then distances will be rounded to this
 precision without warning.}
 
-\item{which}{(`list` of `character` vectors) Instead of performing clustering
+\item{which}{(\code{list} of \code{character} vectors) Instead of performing clustering
 on all input sequences, perform independent clustering on subsets of the
-sequences defined by the elements of `which`. Subsets do not need to be
+sequences defined by the elements of \code{which}. Subsets do not need to be
 disjoint (and indeed, if they are it is probably faster to calculate the
-distance matrices separately.) Currently `which` is only implemented for the
-"tree" algorithm.}
+distance matrices separately.) Currently \code{which} is only implemented for the
+\code{"tree"} algorithm.}
 
-\item{dmin}{(`numeric` scalar) The minimum distance threshold for clustering;
-should not be given if explicit `thresholds` are specified.}
+\item{threads}{(\code{integer} scalar) Maximum number of parallel threads.}
 
-\item{dmax}{(`numeric` scalar) The maximum distance threshold for clustering;
-should not be given if explicit `thresholds` are specified.}
-
-\item{dstep}{(`numeric` scalar) The spacing between subsequent distance
-thresholds for clustering; should not be given if explicit `thresholds` are
-specified.}
-
-\item{threads}{(`integer` scalar) Maximum number of parallel threads.}
-
-\item{minsplit}{(`integer` scalar) Controls the granularity of parallel
+\item{minsplit}{(\code{integer} scalar) Controls the granularity of parallel
 processing in the "matrix" algorithm.}
 }
 \value{
-An [`integer matrix`][methods::StructureClasses] if
-`output_type=="matrix"`, an [`hclust`][stats::hclust] object if
-`output_type == "hclust"`, or a list of one of these when `which` is a list.
+An \code{\link[methods:StructureClasses]{integer matrix}} if
+\code{output_type=="matrix"}, an \code{\link[stats:hclust]{hclust}} object if
+\code{output_type=="hclust"}, or a list of one of these when \code{which} is a list.
 }
 \description{
-Title
+This function is designed to reduce CPU and memory requirements
+of clustering by doing multiple clustering "jobs" concurrently from the same
+sparse distance matrix, which is read once and never kept in memory.  This is
+especially useful when the algorithm generating the distance matrix can also
+operate in a streaming fashion, so that distance matrices which are too large
+to fit in memory, or even to disk, can still be utilized. The motivating
+application is clustering biological sequences, but the implementation is
+totally agnostic about the nature of the entities it is clustering; it only
+needs distances.
 }

@@ -8,5 +8,5 @@
 Optimize OTU clustering thresholds
 }
 \author{
-Brendan Furneaux <brendan.furneaux@gmail.com>
+Brendan Furneaux \href{mailto:brendan.furneaux@gmail.com}{brendan.furneaux@gmail.com}
 }

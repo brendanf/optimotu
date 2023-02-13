@@ -2,7 +2,8 @@
 % Please edit documentation in R/single_linkage.R
 \name{usearch_single_linkage}
 \alias{usearch_single_linkage}
-\title{Do single-linkage clustering at a series of increasing similarity thresholds.}
+\title{Do single-linkage clustering at a series of increasing similarity thresholds
+using USEARCH to calculate sequence similarities.}
 \usage{
 usearch_single_linkage(
   seq,
@@ -21,40 +22,43 @@ usearch_single_linkage(
 )
 }
 \arguments{
-\item{seq}{(`character` vector, filename, or `Biostrings::DNAStringSet`)
+\item{seq}{(\code{character} vector, filename, or \link[Biostrings:XStringSet-class]{DNAStringSet})
 sequences to cluster}
 
-\item{seq_id}{(`character` vector) names for the sequences.  If they are
-already named, this will replace the names.  Has no effect if `seq` is a
+\item{seq_id}{(\code{character} vector) names for the sequences.  If they are
+already named, this will replace the names.  Has no effect if \code{seq} is a
 filename.}
 
-\item{thresh_max}{(`numeric`) maximum sequence dissimilarity threshold for
+\item{thresh_max}{(\code{numeric}) maximum sequence dissimilarity threshold for
 clustering. Number between 0 and 1.}
 
-\item{thresh_min}{(`numeric`) minimum sequence dissimilarity threshold for
+\item{thresh_min}{(\code{numeric}) minimum sequence dissimilarity threshold for
 clustering. Number between 0 and 1.}
 
-\item{thresh_step}{(`numeric`) difference between successive percentage similarity thresholds for
+\item{thresh_step}{(\code{numeric}) difference between successive percentage similarity thresholds for
 clustering. Number <= thresh_max - thresh_min.}
 
-\item{which}{(`logical`, `character` or `integer` vector, or a list of these)
-subset(s) of `seq` to operate on.  If `seq` is a filename, then the distance
+\item{which}{(\code{logical}, \code{character} or \code{integer} vector, or a list of these)
+subset(s) of \code{seq} to operate on.  If \code{seq} is a filename, then the distance
 matrix for the full file will be calculated, but only the selected sequences
 will be clustered.  Otherwise, distances will only be calculated for
 sequences occurring in the subset(s)}
 
-\item{ncpu}{(`integer` scalar) number of threads to use for calculating the
+\item{ncpu}{(\code{integer} scalar) number of threads to use for calculating the
 distance matrix and clustering}
 
-\item{usearch}{(`character` scalar) path to usearch executable}
+\item{usearch}{(\code{character} scalar) path to usearch executable}
 
-\item{thresh_name}{(`character` vector) names for the thresholds.}
+\item{thresh_name}{(\code{character} vector) names for the thresholds.}
 
 \item{...}{}
 }
 \value{
-`integer` matrix giving clustering results
+\code{integer} matrix giving clustering results
 }
 \description{
-Do single-linkage clustering at a series of increasing similarity thresholds.
+This function uses a named unix pipe to direct the output of
+\code{usearch -calc_distmx} to \code{\link[=single_linkage]{single_linkage()}}. USEARCH (version 8.0 or higher)
+should be installed separately; it is available with a free license for most
+users at \link{https://www.drive5.com/usearch/}.
 }
