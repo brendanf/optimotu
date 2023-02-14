@@ -441,13 +441,13 @@ do_usearch_singlelink <- function(
    usearch = Sys.which("usearch")
 ) {
 
-   if (is.list(thresholds)) {
+   if (is.null(thresholds)) {
+      verify_threshold_steps(thresh_min, thresh_max, thresh_step)
+      nthresh <- length(seq(thresh_min, thresh_max, thresh_step))
+   } else {
       verify_thresholds(thresholds)
       verify_precision(precision)
       nthresh <- length(thresholds)
-   } else {
-      verify_threshold_steps(thresh_min, thresh_max, thresh_step)
-      nthresh <- length(seq(thresh_min, thresh_max, thresh_step))
    }
    if (is.list(which)) {
       verify_which(which, seq_id)
