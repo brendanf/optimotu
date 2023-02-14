@@ -1,4 +1,4 @@
-verify_which <- function(which, seqnames) {
+verify_which <- function(which, method, seqnames) {
    checkmate::assert_list(
       which,
       types = "character",
@@ -264,7 +264,6 @@ single_linkage = function(
 #' @param ncpu (`integer` scalar) number of threads to use for calculating the
 #' distance matrix and clustering
 #' @param usearch (`character` scalar) path to usearch executable
-#' @param ...
 #'
 #' @return `integer` matrix giving clustering results
 #' @export
@@ -435,6 +434,7 @@ do_usearch_singlelink <- function(
    output_type,
    thresh_max, thresh_min, thresh_step,
    thresholds,
+   precision,
    thresh_names,
    which,
    ncpu,
@@ -488,26 +488,28 @@ do_usearch_singlelink <- function(
    )
    if (is.list(which)) {
       out <- single_linkage(
-         file = fifoname,
+         distmx = fifoname,
          seq_id,
          thresh_min = thresh_min,
          thresh_max = thresh_max,
          thresh_step = thresh_step,
          thresholds = thresholds,
+         precision = precision,
          method = method,
          output_type = output_type,
-         preclust = which,
+         which = which,
          threads = ncpu
       )
       out <- lapply(out, `rownames<-`, thresh_names)
    } else {
       out <- single_linkage(
-         file = fifoname,
+         distmx = fifoname,
          seq_id,
          thresh_min = thresh_min,
          thresh_max = thresh_max,
          thresh_step = thresh_step,
          thresholds = thresholds,
+         precision = precision,
          method = method,
          output_type = output_type,
          threads = ncpu

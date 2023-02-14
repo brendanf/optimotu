@@ -51,8 +51,6 @@ distance matrix and clustering}
 \item{usearch}{(\code{character} scalar) path to usearch executable}
 
 \item{thresh_name}{(\code{character} vector) names for the thresholds.}
-
-\item{...}{}
 }
 \value{
 \code{integer} matrix giving clustering results
