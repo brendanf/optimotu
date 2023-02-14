@@ -1,3 +1,7 @@
+# optimotu 0.2.4
+
+* bug fix
+
 # optimotu 0.2.3
 
 * Bug fix
