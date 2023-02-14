@@ -299,7 +299,7 @@ usearch_single_linkage.data.frame <- function(
    usearch = Sys.which("usearch")
 ) {
    mycall <- match.call()
-   mycall[[1]] <- usearch_singlelink.DNAStringSet
+   mycall[[1]] <- usearch_single_linkage.DNAStringSet
    if (missing(seq_id)) {
       newseq_id <- quote(seq$seq_id)
       newseq_id[[2]] <- mycall$seq
@@ -367,7 +367,7 @@ usearch_single_linkage.character <- function(
       )
    } else {
       mycall <- match.call()
-      mycall[[1]] <- usearch_singlelink.DNAStringSet
+      mycall[[1]] <- usearch_single_linkage.DNAStringSet
       newseq <- quote(Biostrings::DNAStringSet(seq))
       newseq[[2]] <- mycall$seq
       mycall$seq <- newseq
