@@ -272,7 +272,7 @@ usearch_single_linkage <- function(
    precision = if (is.null(thresholds)) NULL else 0.001,
    thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = local_cpus(),
+   ncpu = NULL,
    usearch = Sys.which("usearch")) {
    UseMethod("usearch_single_linkage", seq)
 }
@@ -289,7 +289,7 @@ usearch_single_linkage.data.frame <- function(
    precision = NULL,
    thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = local_cpus(),
+   ncpu = NULL,
    usearch = Sys.which("usearch")
 ) {
    mycall <- match.call()
@@ -316,7 +316,7 @@ usearch_single_linkage.character <- function(
    precision = NULL,
    thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = local_cpus(),
+   ncpu = NULL,
    usearch = Sys.which("usearch")
 ) {
    method = match.arg(method)
@@ -382,7 +382,7 @@ usearch_single_linkage.DNAStringSet <- function(
    precision = NULL,
    thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = local_cpus(),
+   ncpu = NULL,
    usearch = Sys.which("usearch")
 ) {
    method = match.arg(method)
@@ -469,21 +469,21 @@ do_usearch_singlelink <- function(
    fifoname <- tempfile("fifo")
    stopifnot(system2("mkfifo", fifoname) == 0)
    on.exit(unlink(fifoname), TRUE)
-   f <- fifo(fifoname)
-   system2(
-      usearch,
-      c(
-         "-calc_distmx", seq_file, # input file
-         "-tabbedout", fifoname, # output fifo
-         "-maxdist", thresh_max, # similarity threshold
-         "-termdist", min(1, 1.5*thresh_max), # threshold for udist
-         "-lopen", "1", # gap opening
-         "-lext", "1", # gap extend
-         # "-pattern", "111010010111", # pattern gives better result than kmers maybe?
-         "-threads", ncpu
-      ),
-      wait = FALSE
+   args <- c(
+      "-calc_distmx", seq_file, # input file
+      "-tabbedout", fifoname, # output fifo
+      "-maxdist", thresh_max, # similarity threshold
+      "-termdist", min(1, 1.5*thresh_max), # threshold for udist
+      "-lopen", "1", # gap opening
+      "-lext", "1" # gap extend
    )
+   if (!is.null(ncpu)) {
+      checkmate::assert_count(ncpu, positive = TRUE)
+      args <- c(args, "-threads", ncpu)
+   } else {
+      ncpu <- 1L
+   }
+   system2(usearch, args, wait = FALSE)
    if (is.list(which)) {
       out <- single_linkage(
          distmx = fifoname,

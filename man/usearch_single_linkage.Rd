@@ -17,7 +17,7 @@ usearch_single_linkage(
   precision = if (is.null(thresholds)) NULL else 0.001,
   thresh_names = names(thresholds),
   which = TRUE,
-  ncpu = local_cpus(),
+  ncpu = NULL,
   usearch = Sys.which("usearch")
 )
 }
