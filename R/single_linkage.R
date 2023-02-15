@@ -346,7 +346,7 @@ usearch_single_linkage.character <- function(
       } else {
          tf <- seq
       }
-      do_usearch_single_linkage(
+      do_usearch_singlelink(
          seq_file = tf,
          seq_id = names(index),
          method = method,
