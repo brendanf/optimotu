@@ -443,10 +443,12 @@ do_usearch_singlelink <- function(
    if (is.null(thresholds)) {
       verify_threshold_steps(thresh_min, thresh_max, thresh_step)
       nthresh <- length(seq(thresh_min, thresh_max, thresh_step))
+      usearch_thresh_max <- thresh_max
    } else {
       verify_thresholds(thresholds)
       verify_precision(precision)
       nthresh <- length(thresholds)
+      usearch_thresh_max <- max(thresholds)
    }
    if (is.list(which)) {
       verify_which(which, seq_id)
@@ -472,8 +474,8 @@ do_usearch_singlelink <- function(
    args <- c(
       "-calc_distmx", seq_file, # input file
       "-tabbedout", fifoname, # output fifo
-      "-maxdist", thresh_max, # similarity threshold
-      "-termdist", min(1, 1.5*thresh_max), # threshold for udist
+      "-maxdist", usearch_thresh_max, # similarity threshold
+      "-termdist", min(1, 2*usearch_thresh_max), # threshold for udist
       "-lopen", "1", # gap opening
       "-lext", "1" # gap extend
    )
