@@ -70,12 +70,7 @@ verify_precision <- function(precision) {
    )
 }
 
-verify_method_output_type <- function(
-   method = c("tree", "matrix"),
-   output_type = c("matrix", "hclust")
-) {
-   method = match.arg(method)
-   output_type = match.arg(output_type)
+verify_method_output_type <- function(method, output_type) {
    if (output_type == "hclust" && method == "matrix") {
       stop("output_type 'hclust' is not available for method 'matrix'.")
    }
@@ -167,7 +162,7 @@ single_linkage = function(
 ) {
    method = match.arg(method)
    output_type = match.arg(output_type)
-   verify_method_output_type()
+   verify_method_output_type(method, output_type)
    if (is.null(thresholds)) {
       if (!is.null(precision)) {
          warning("'precision' has no effect when 'thresholds' is not given. Ignoring.\n")
@@ -324,7 +319,9 @@ usearch_single_linkage.character <- function(
    ncpu = local_cpus(),
    usearch = Sys.which("usearch")
 ) {
-   verify_method_output_type()
+   method = match.arg(method)
+   output_type = match.arg(output_type)
+   verify_method_output_type(method, output_type)
    if (length(seq) == 1 && file.exists(seq)) {
       index <- Biostrings::fasta.seqlengths(seq)
       if (!missing(seq_id))
@@ -388,7 +385,9 @@ usearch_single_linkage.DNAStringSet <- function(
    ncpu = local_cpus(),
    usearch = Sys.which("usearch")
 ) {
-   verify_method_output_type()
+   method = match.arg(method)
+   output_type = match.arg(output_type)
+   verify_method_output_type(method, output_type)
    # rename the sequences if necessary
    if (!isTRUE(all.equal(names(seq), seq_id))) names(seq) <- seq_id
    if (is.list(which)) {
@@ -467,7 +466,6 @@ do_usearch_singlelink <- function(
    if (is.list(which) && !is.character(which[[1]])) {
       which <- lapply(which, `[`, x = seq_id)
    }
-   method <- match.arg(method)
    fifoname <- tempfile("fifo")
    stopifnot(system2("mkfifo", fifoname) == 0)
    on.exit(unlink(fifoname), TRUE)
