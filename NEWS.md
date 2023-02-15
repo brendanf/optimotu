@@ -1,3 +1,8 @@
+# optimotu 0.2.5
+
+* More bug fixes
+* `usearch_single_linkage()` now checks for the presence of `usearch`.
+
 # optimotu 0.2.4
 
 * bug fix
