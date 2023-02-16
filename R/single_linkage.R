@@ -54,10 +54,39 @@ verify_thresholds <- function(thresholds) {
    if (any(thresholds < 0)) {
       stop("'thresholds' may not contain negative values.")
    }
-   if (any(utils::head(thresholds, -1) >= utils::tail(thresholds, -1))) {
-      stop("'thresholds' must be strictly increasing.")
+   if (any(utils::head(thresholds, -1) > utils::tail(thresholds, -1))) {
+      stop("'thresholds' must be non-decreasing.")
    }
    invisible(TRUE)
+}
+
+deduplicate_thresholds <- function(thresholds) {
+   out <- list()
+   if (all(utils::head(thresholds, -1) < utils::tail(thresholds, -1))) {
+      out$thresholds <- thresholds
+      out$threshold_order <- seq_along(thresholds)
+   } else {
+      d <- duplicated(thresholds)
+      out$thresholds <- thresholds[!d]
+      out$threshold_order <- match(thresholds, thresholds[!d])
+   }
+   out
+}
+
+reduplicate_thresholds <- function(out, dedup) {
+   UseMethod("reduplicate_thresholds", out)
+}
+
+reduplicate_thresholds.matrix <- function(out, dedup) {
+   if (isTRUE(all.equal(dedup$threshold_order, seq_len(nrow(out))))) {
+      out
+   } else {
+      out[dedup$threshold_order,]
+   }
+}
+
+reduplicate_thresholds.hclust <- function(out, dedup) {
+   out
 }
 
 verify_precision <- function(precision) {
@@ -115,14 +144,6 @@ verify_method_output_type <- function(method, output_type) {
 #' especially for large problems, but is only supported for method `"tree"`. If
 #' `which` is given, then either `output_type` returns a list whose elements are
 #' of the chosen type.
-#' @param thresholds (sorted `numeric` vector) An explicit list of clustering
-#' thresholds to try.  These do not need to be evenly spaced but must be
-#' strictly increasing.
-#' @param precision (`numeric` scalar) The precision of the distances in the
-#' distance matrix; providing this may give a slight speedup when explicit
-#' `thresholds` are provided. If the actual precision of numbers in the distance
-#' matrix is smaller than this value, then distances will be rounded to this
-#' precision without warning.
 #' @param thresh_min (`numeric` scalar) The minimum distance threshold for
 #' clustering; should not be given if explicit `thresholds` are specified.
 #' @param thresh_max (`numeric` scalar) The maximum distance threshold for
@@ -130,6 +151,14 @@ verify_method_output_type <- function(method, output_type) {
 #' @param thresh_step (`numeric` scalar) The spacing between subsequent distance
 #' thresholds for clustering; should not be given if explicit `thresholds` are
 #' specified.
+#' @param thresholds (sorted `numeric` vector) An explicit list of clustering
+#' thresholds to try.  These do not need to be evenly spaced but must be
+#' non-decreasing.
+#' @param precision (`numeric` scalar) The precision of the distances in the
+#' distance matrix; providing this may give a slight speedup when explicit
+#' `thresholds` are provided. If the actual precision of numbers in the distance
+#' matrix is smaller than this value, then distances will be rounded to this
+#' precision without warning.
 #' @param which (`list` of `character` vectors) Instead of performing clustering
 #' on all input sequences, perform independent clustering on subsets of the
 #' sequences defined by the elements of `which`. Subsets do not need to be
@@ -144,8 +173,6 @@ verify_method_output_type <- function(method, output_type) {
 #' `output_type=="matrix"`, an [`hclust`][stats::hclust] object if
 #' `output_type=="hclust"`, or a list of one of these when `which` is a list.
 #' @export
-#'
-#' @examples
 single_linkage = function(
    distmx,
    names,
@@ -205,28 +232,30 @@ single_linkage = function(
    } else {
       verify_thresholds(thresholds)
       verify_precision(precision)
-      if (!is.null(which) && !isTRUE(which)) {
+      dedup <- deduplicate_thresholds(thresholds)
+      out <- if (!is.null(which) && !isTRUE(which)) {
          verify_which(which, method, seqnames)
          if (is.null(precision)) {
-            single_linkage_multi_array(distmx, names, thresholds, which, threads)
+            single_linkage_multi_array(distmx, names, dedup$thresholds, which, threads)
          } else {
-            single_linkage_multi_cached(distmx, names, thresholds, precision, which, threads)
+            single_linkage_multi_cached(distmx, names, dedup$thresholds, precision, which, threads)
          }
       } else {
          if (is.null(precision)) {
             switch(
                method,
-               tree = single_linkage_pool_array(distmx, names, thresholds, output_type),
-               matrix = single_linkage_matrix_array(distmx, names, thresholds, threads, minsplit)
+               tree = single_linkage_pool_array(distmx, names, dedup$thresholds, output_type),
+               matrix = single_linkage_matrix_array(distmx, names, dedup$thresholds, threads, minsplit)
             )
          } else {
             switch(
                method,
-               tree = single_linkage_pool_cached(distmx, names, thresholds, precision, output_type),
-               matrix = single_linkage_matrix_cached(distmx, names, thresholds, precision, threads, minsplit)
+               tree = single_linkage_pool_cached(distmx, names, dedup$thresholds, precision, output_type),
+               matrix = single_linkage_matrix_cached(distmx, names, dedup$thresholds, precision, threads, minsplit)
             )
          }
       }
+      reduplicate_thresholds(out, dedup)
    }
 }
 
@@ -244,13 +273,35 @@ single_linkage = function(
 #' @param seq_id (`character` vector) names for the sequences.  If they are
 #' already named, this will replace the names.  Has no effect if `seq` is a
 #' filename.
+#' @param method (`character`) The algorithm to use; one of "tree" or "matrix".
+#' The "tree" algorithm is faster in at least some large cases, but tends to be
+#' slower in smaller cases, and cannot take advantage of parallel computation
+#' unless multiple overlapping subsets are specified in `which`. The two
+#' algorithms give identical results.
+#' @param output_type (`character`) Which type of output to give; one of
+#' `"matrix"` or `"hclust"`. `"matrix"` returns an integer matrix giving
+#' clustering results, where the element in row `i` and column `j` gives the
+#' 0-based index of the first member of the cluster to which sequence `j`
+#' belongs when clustered at the `i`th clustering threshold. `"hclust"` returns
+#' an object as returned by [stats::hclust()], which requires less memory,
+#' especially for large problems, but is only supported for method `"tree"`. If
+#' `which` is given, then either `output_type` returns a list whose elements are
+#' of the chosen type.
 #' @param thresh_min (`numeric`) minimum sequence dissimilarity threshold for
 #' clustering. Number between 0 and 1.
 #' @param thresh_max (`numeric`) maximum sequence dissimilarity threshold for
 #' clustering. Number between 0 and 1.
-#' @param thresh_step (`numeric`) difference between successive percentage similarity thresholds for
-#' clustering. Number <= thresh_max - thresh_min.
-#' @param thresh_name (`character` vector) names for the thresholds.
+#' @param thresh_step (`numeric`) difference between successive percentage
+#' similarity thresholds for clustering. Number <= thresh_max - thresh_min.
+#' @param thresholds (sorted `numeric` vector) An explicit list of clustering
+#' thresholds to try.  These do not need to be evenly spaced but must be
+#' non-decreasing.
+#' @param precision (`numeric` scalar) The precision of the distances in the
+#' distance matrix; providing this may give a slight speedup when explicit
+#' `thresholds` are provided. If the actual precision of numbers in the distance
+#' matrix is smaller than this value, then distances will be rounded to this
+#' precision without warning.
+#' @param thresh_names (`character` vector) names for the thresholds.
 #' @param which (`logical`, `character` or `integer` vector, or a list of these)
 #' subset(s) of `seq` to operate on.  If `seq` is a filename, then the distance
 #' matrix for the full file will be calculated, but only the selected sequences
@@ -260,14 +311,17 @@ single_linkage = function(
 #' distance matrix and clustering
 #' @param usearch (`character` scalar) path to usearch executable
 #'
-#' @return `integer` matrix giving clustering results
+#' @return An [`integer matrix`][methods::StructureClasses] if
+#' `output_type=="matrix"`, an [`hclust`][stats::hclust] object if
+#' `output_type=="hclust"`, or a list of one of these when `which` is a list.
+#'
 #' @export
 usearch_single_linkage <- function(
    seq,
    seq_id = names(seq),
    method = c("tree", "matrix"),
    output_type = c("matrix", "hclust"),
-   thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
+   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
    thresholds = NULL,
    precision = if (is.null(thresholds)) NULL else 0.001,
    thresh_names = names(thresholds),
@@ -284,7 +338,7 @@ usearch_single_linkage.data.frame <- function(
    seq_id = seq$seq_id,
    method = c("tree", "matrix"),
    output_type = c("matrix", "hclust"),
-   thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
+   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
    thresholds = NULL,
    precision = NULL,
    thresh_names = names(thresholds),
@@ -311,7 +365,7 @@ usearch_single_linkage.character <- function(
    seq_id = names(seq),
    method = c("tree", "matrix"),
    output_type = c("matrix", "hclust"),
-   thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
+   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
    thresholds = NULL,
    precision = NULL,
    thresh_names = names(thresholds),
@@ -351,8 +405,8 @@ usearch_single_linkage.character <- function(
          seq_id = names(index),
          method = method,
          output_type = output_type,
-         thresh_max = thresh_max,
          thresh_min = thresh_min,
+         thresh_max = thresh_max,
          thresh_step = thresh_step,
          thresholds = thresholds,
          precision = precision,
@@ -377,7 +431,7 @@ usearch_single_linkage.DNAStringSet <- function(
    seq_id = names(seq),
    method = c("tree", "matrix"),
    output_type = c("matrix", "hclust"),
-   thresh_max = NULL, thresh_min = NULL, thresh_step = NULL,
+   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
    thresholds = NULL,
    precision = NULL,
    thresh_names = names(thresholds),
@@ -414,8 +468,8 @@ usearch_single_linkage.DNAStringSet <- function(
       seq_id = names(seq),
       method = method,
       output_type = output_type,
-      thresh_max = thresh_max,
       thresh_min = thresh_min,
+      thresh_max = thresh_max,
       thresh_step = thresh_step,
       thresholds = thresholds,
       precision = precision,
@@ -431,7 +485,7 @@ do_usearch_singlelink <- function(
    seq_id,
    method,
    output_type,
-   thresh_max, thresh_min, thresh_step,
+   thresh_min, thresh_max, thresh_step,
    thresholds,
    precision,
    thresh_names,

@@ -62,7 +62,7 @@ specified.}
 
 \item{thresholds}{(sorted \code{numeric} vector) An explicit list of clustering
 thresholds to try.  These do not need to be evenly spaced but must be
-strictly increasing.}
+non-decreasing.}
 
 \item{precision}{(\code{numeric} scalar) The precision of the distances in the
 distance matrix; providing this may give a slight speedup when explicit

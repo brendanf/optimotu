@@ -10,8 +10,8 @@ usearch_single_linkage(
   seq_id = names(seq),
   method = c("tree", "matrix"),
   output_type = c("matrix", "hclust"),
-  thresh_max = NULL,
   thresh_min = NULL,
+  thresh_max = NULL,
   thresh_step = NULL,
   thresholds = NULL,
   precision = if (is.null(thresholds)) NULL else 0.001,
@@ -30,14 +30,42 @@ usearch_single_linkage(
 already named, this will replace the names.  Has no effect if \code{seq} is a
 filename.}
 
-\item{thresh_max}{(\code{numeric}) maximum sequence dissimilarity threshold for
-clustering. Number between 0 and 1.}
+\item{method}{(\code{character}) The algorithm to use; one of "tree" or "matrix".
+The "tree" algorithm is faster in at least some large cases, but tends to be
+slower in smaller cases, and cannot take advantage of parallel computation
+unless multiple overlapping subsets are specified in \code{which}. The two
+algorithms give identical results.}
+
+\item{output_type}{(\code{character}) Which type of output to give; one of
+\code{"matrix"} or \code{"hclust"}. \code{"matrix"} returns an integer matrix giving
+clustering results, where the element in row \code{i} and column \code{j} gives the
+0-based index of the first member of the cluster to which sequence \code{j}
+belongs when clustered at the \code{i}th clustering threshold. \code{"hclust"} returns
+an object as returned by \code{\link[stats:hclust]{stats::hclust()}}, which requires less memory,
+especially for large problems, but is only supported for method \code{"tree"}. If
+\code{which} is given, then either \code{output_type} returns a list whose elements are
+of the chosen type.}
 
 \item{thresh_min}{(\code{numeric}) minimum sequence dissimilarity threshold for
 clustering. Number between 0 and 1.}
 
-\item{thresh_step}{(\code{numeric}) difference between successive percentage similarity thresholds for
-clustering. Number <= thresh_max - thresh_min.}
+\item{thresh_max}{(\code{numeric}) maximum sequence dissimilarity threshold for
+clustering. Number between 0 and 1.}
+
+\item{thresh_step}{(\code{numeric}) difference between successive percentage
+similarity thresholds for clustering. Number <= thresh_max - thresh_min.}
+
+\item{thresholds}{(sorted \code{numeric} vector) An explicit list of clustering
+thresholds to try.  These do not need to be evenly spaced but must be
+non-decreasing.}
+
+\item{precision}{(\code{numeric} scalar) The precision of the distances in the
+distance matrix; providing this may give a slight speedup when explicit
+\code{thresholds} are provided. If the actual precision of numbers in the distance
+matrix is smaller than this value, then distances will be rounded to this
+precision without warning.}
+
+\item{thresh_names}{(\code{character} vector) names for the thresholds.}
 
 \item{which}{(\code{logical}, \code{character} or \code{integer} vector, or a list of these)
 subset(s) of \code{seq} to operate on.  If \code{seq} is a filename, then the distance
@@ -49,11 +77,11 @@ sequences occurring in the subset(s)}
 distance matrix and clustering}
 
 \item{usearch}{(\code{character} scalar) path to usearch executable}
-
-\item{thresh_name}{(\code{character} vector) names for the thresholds.}
 }
 \value{
-\code{integer} matrix giving clustering results
+An \code{\link[methods:StructureClasses]{integer matrix}} if
+\code{output_type=="matrix"}, an \code{\link[stats:hclust]{hclust}} object if
+\code{output_type=="hclust"}, or a list of one of these when \code{which} is a list.
 }
 \description{
 This function uses a unix pipe to direct the output of the
