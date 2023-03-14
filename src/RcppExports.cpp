@@ -49,15 +49,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx
-Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold, uint8_t threads);
-RcppExport SEXP _optimotu_distmx(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP threadsSEXP) {
+Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold, uint8_t threads, bool heuristic);
+RcppExport SEXP _optimotu_distmx(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP threadsSEXP, SEXP heuristicSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<std::string> >::type seq(seqSEXP);
     Rcpp::traits::input_parameter< double >::type dist_threshold(dist_thresholdSEXP);
     Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(distmx(seq, dist_threshold, threads));
+    Rcpp::traits::input_parameter< bool >::type heuristic(heuristicSEXP);
+    rcpp_result_gen = Rcpp::wrap(distmx(seq, dist_threshold, threads, heuristic));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -299,7 +300,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
     {"_optimotu_align", (DL_FUNC) &_optimotu_align, 2},
     {"_optimotu_align2", (DL_FUNC) &_optimotu_align2, 2},
-    {"_optimotu_distmx", (DL_FUNC) &_optimotu_distmx, 3},
+    {"_optimotu_distmx", (DL_FUNC) &_optimotu_distmx, 4},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},
     {"_optimotu_inner_fmeasure", (DL_FUNC) &_optimotu_inner_fmeasure, 3},

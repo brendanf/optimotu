@@ -17,8 +17,8 @@ align2 <- function(a, b) {
 }
 
 #' @export
-distmx <- function(seq, dist_threshold, threads = 1L) {
-    .Call('_optimotu_distmx', PACKAGE = 'optimotu', seq, dist_threshold, threads)
+distmx <- function(seq, dist_threshold, threads = 1L, heuristic = TRUE) {
+    .Call('_optimotu_distmx', PACKAGE = 'optimotu', seq, dist_threshold, threads, heuristic)
 }
 
 #' @export
