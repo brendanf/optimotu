@@ -1,4 +1,13 @@
+# optimotu (development version)
+
+* New functions to calculate additional clustering quality metrics:
+  `mutual_information()`, `adjusted_mutual_information()`, `confusion_matrix()`.
+* `fmeasure2()` is a much faster version of `fmeasure()`.
+
 # optimotu 0.3.0
+
+* `single_linkage()` and `usearch_single_linkage()` now allow explicit threshold
+  specifications which are non-decreasing, instead of strictly increasing.
 
 # optimotu 0.2.5
 

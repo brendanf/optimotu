@@ -11,6 +11,31 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// confusion_matrix
+Rcpp::DataFrame confusion_matrix(const Rcpp::IntegerMatrix& cluster_matrix, const std::vector<int>& known_clusters);
+RcppExport SEXP _optimotu_confusion_matrix(SEXP cluster_matrixSEXP, SEXP known_clustersSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix& >::type cluster_matrix(cluster_matrixSEXP);
+    Rcpp::traits::input_parameter< const std::vector<int>& >::type known_clusters(known_clustersSEXP);
+    rcpp_result_gen = Rcpp::wrap(confusion_matrix(cluster_matrix, known_clusters));
+    return rcpp_result_gen;
+END_RCPP
+}
+// confusion_matrix2
+Rcpp::DataFrame confusion_matrix2(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, const int ncpu);
+RcppExport SEXP _optimotu_confusion_matrix2(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
+    Rcpp::traits::input_parameter< const int >::type ncpu(ncpuSEXP);
+    rcpp_result_gen = Rcpp::wrap(confusion_matrix2(k, c, ncpu));
+    return rcpp_result_gen;
+END_RCPP
+}
 // intersect_length
 int intersect_length(const std::vector<int>& c, const std::vector<int>& k);
 RcppExport SEXP _optimotu_intersect_length(SEXP cSEXP, SEXP kSEXP) {
@@ -58,6 +83,69 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::ListOf<Rcpp::IntegerVector> >::type c(cSEXP);
     Rcpp::traits::input_parameter< size_t >::type ncpu(ncpuSEXP);
     rcpp_result_gen = Rcpp::wrap(fmeasure(k, c, ncpu));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fmeasure2
+Rcpp::NumericVector fmeasure2(Rcpp::IntegerMatrix k, Rcpp::IntegerVector c, size_t ncpu);
+RcppExport SEXP _optimotu_fmeasure2(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerMatrix >::type k(kSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type c(cSEXP);
+    Rcpp::traits::input_parameter< size_t >::type ncpu(ncpuSEXP);
+    rcpp_result_gen = Rcpp::wrap(fmeasure2(k, c, ncpu));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mutual_information
+Rcpp::NumericVector mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c);
+RcppExport SEXP _optimotu_mutual_information(SEXP kSEXP, SEXP cSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
+    rcpp_result_gen = Rcpp::wrap(mutual_information(k, c));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mutual_information_parallel
+Rcpp::NumericVector mutual_information_parallel(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads);
+RcppExport SEXP _optimotu_mutual_information_parallel(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
+    Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(mutual_information_parallel(k, c, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// adjusted_mutual_information
+Rcpp::DataFrame adjusted_mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c);
+RcppExport SEXP _optimotu_adjusted_mutual_information(SEXP kSEXP, SEXP cSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
+    rcpp_result_gen = Rcpp::wrap(adjusted_mutual_information(k, c));
+    return rcpp_result_gen;
+END_RCPP
+}
+// adjusted_mutual_information_parallel
+Rcpp::DataFrame adjusted_mutual_information_parallel(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads);
+RcppExport SEXP _optimotu_adjusted_mutual_information_parallel(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
+    Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(adjusted_mutual_information_parallel(k, c, threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -207,10 +295,17 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 2},
+    {"_optimotu_confusion_matrix2", (DL_FUNC) &_optimotu_confusion_matrix2, 3},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},
     {"_optimotu_inner_fmeasure", (DL_FUNC) &_optimotu_inner_fmeasure, 3},
     {"_optimotu_fmeasure", (DL_FUNC) &_optimotu_fmeasure, 3},
+    {"_optimotu_fmeasure2", (DL_FUNC) &_optimotu_fmeasure2, 3},
+    {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 2},
+    {"_optimotu_mutual_information_parallel", (DL_FUNC) &_optimotu_mutual_information_parallel, 3},
+    {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 2},
+    {"_optimotu_adjusted_mutual_information_parallel", (DL_FUNC) &_optimotu_adjusted_mutual_information_parallel, 3},
     {"_optimotu_single_linkage_matrix_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix_uniform, 7},
     {"_optimotu_single_linkage_matrix_array", (DL_FUNC) &_optimotu_single_linkage_matrix_array, 5},
     {"_optimotu_single_linkage_matrix_cached", (DL_FUNC) &_optimotu_single_linkage_matrix_cached, 6},

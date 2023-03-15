@@ -2,6 +2,16 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @export
+confusion_matrix <- function(cluster_matrix, known_clusters) {
+    .Call('_optimotu_confusion_matrix', PACKAGE = 'optimotu', cluster_matrix, known_clusters)
+}
+
+#' @export
+confusion_matrix2 <- function(k, c, ncpu = 1L) {
+    .Call('_optimotu_confusion_matrix2', PACKAGE = 'optimotu', k, c, ncpu)
+}
+
+#' @export
 intersect_length <- function(c, k) {
     .Call('_optimotu_intersect_length', PACKAGE = 'optimotu', c, k)
 }
@@ -19,6 +29,31 @@ inner_fmeasure <- function(cj, kpartition, nk) {
 #' @export
 fmeasure <- function(k, c, ncpu = 1L) {
     .Call('_optimotu_fmeasure', PACKAGE = 'optimotu', k, c, ncpu)
+}
+
+#' @export
+fmeasure2 <- function(k, c, ncpu = 1L) {
+    .Call('_optimotu_fmeasure2', PACKAGE = 'optimotu', k, c, ncpu)
+}
+
+#' @export
+mutual_information <- function(k, c) {
+    .Call('_optimotu_mutual_information', PACKAGE = 'optimotu', k, c)
+}
+
+#' @export
+mutual_information_parallel <- function(k, c, threads) {
+    .Call('_optimotu_mutual_information_parallel', PACKAGE = 'optimotu', k, c, threads)
+}
+
+#' @export
+adjusted_mutual_information <- function(k, c) {
+    .Call('_optimotu_adjusted_mutual_information', PACKAGE = 'optimotu', k, c)
+}
+
+#' @export
+adjusted_mutual_information_parallel <- function(k, c, threads) {
+    .Call('_optimotu_adjusted_mutual_information_parallel', PACKAGE = 'optimotu', k, c, threads)
 }
 
 #' @export
