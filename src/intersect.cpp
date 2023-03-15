@@ -109,3 +109,100 @@ Rcpp::NumericVector fmeasure(
    }
    return result;
 }
+
+inline void initialize_counts(
+    const Rcpp::IntegerVector c,
+    std::vector<std::pair<int, size_t>> &c_sort,
+    std::unordered_map<int, size_t> &c_count,
+    size_t N
+) {
+  double Ninv = 1.0/N;
+  c_sort.reserve(N);
+  for (size_t i = 0; i < N; ++i) {
+    c_sort.emplace_back(c[i], i);
+    auto counti = c_count.find(c[i]);
+    if (counti == c_count.end()) {
+      c_count.emplace(c[i], 1);
+    } else {
+      ++counti->second;
+    }
+  }
+  std::sort(c_sort.begin(), c_sort.end());
+}
+
+struct FMeasureWorker2 : public RcppParallel::Worker
+{
+  const RcppParallel::RMatrix<int> k;
+  const std::vector<std::pair<int, size_t>> &c_sort;
+  const std::unordered_map<int, size_t> &c_count;
+  const double N;
+  RcppParallel::RVector<double> result;
+
+  FMeasureWorker2(
+    Rcpp::IntegerMatrix k,
+    std::vector<std::pair<int, size_t>> &c_sort,
+    std::unordered_map<int, size_t> &c_count,
+    Rcpp::NumericVector result
+  )
+    : k(k), c_sort(c_sort), c_count(c_count), result(result), N(k.ncol()) {};
+
+  void operator()(std::size_t begin, std::size_t end) {
+    int c_clust, k_clust;
+    std::unordered_map<int, size_t> k_count;
+    std::unordered_map<int, size_t> intersects;
+    for (std::size_t j = begin; j < end; ++j) {
+      auto kj = k.row(j);
+      k_count.clear();
+      for (size_t i = 0; i < N; ++i) {
+        auto counti = k_count.find(kj[i]);
+        if (counti == k_count.end()) {
+          k_count.emplace(kj[i], 1);
+        } else {
+          ++counti->second;
+        }
+      }
+      auto ci = c_sort.begin();
+      auto c_end = c_sort.end();
+      while(ci < c_end) {
+        c_clust = ci->first;
+        intersects.clear();
+        while(ci->first == c_clust) {
+          k_clust = kj[ci->second];
+          auto counti = intersects.find(k_clust);
+          if (counti == intersects.end()) {
+            intersects.emplace(k_clust, 1);
+          } else {
+            ++(counti->second);
+          }
+          ++ci;
+        }
+        double m = 0;
+        for (const auto counti : intersects) {
+          double mm = counti.second /
+            (double)(c_count.at(c_clust) + k_count.at(counti.first));
+          if (mm > m) m = mm;
+        }
+        result[j] += c_count.at(c_clust) * m;
+      }
+      result[j] *= 2.0 / N;
+    }
+  }
+};
+
+
+//' @export
+// [[Rcpp::export]]
+Rcpp::NumericVector fmeasure2(
+  Rcpp::IntegerMatrix k,
+  Rcpp::IntegerVector c,
+  size_t ncpu = 1
+) {
+  size_t n = c.size(), m = k.nrow();
+  Rcpp::NumericVector fm(m, 0.0);
+  std::vector<std::pair<int, size_t>> c_sort;
+  std::unordered_map<int, size_t> c_count;
+  initialize_counts(c, c_sort, c_count, n);
+  FMeasureWorker2 worker(k, c_sort, c_count, fm);
+  RcppParallel::parallelFor(0, k.nrow(), worker, 1, ncpu);
+  return fm;
+}
