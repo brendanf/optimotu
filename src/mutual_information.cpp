@@ -41,7 +41,7 @@ struct MutualInformationWorker : public RcppParallel::Worker
     std::unordered_map<int, SizeAndEntropy> &c_count,
     Rcpp::NumericVector result
   )
-    : k(k), c_sort(c_sort), c_count(c_count), result(result), N(k.ncol()) {};
+    : k(k), c_sort(c_sort), c_count(c_count), N(k.ncol()), result(result) {};
 
   void operator()(std::size_t begin, std::size_t end) {
     int c_clust, k_clust;

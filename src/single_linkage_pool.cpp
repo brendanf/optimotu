@@ -496,7 +496,7 @@ struct cluster_pool {
          Rcpp::Rcout << "max_d1:" << max_d(c1) << ", max_d2:" << max_d(c2) << std::endl;
 #endif
          cluster *cnew;
-         std::uint32_t jnew;
+         j_t jnew;
 #ifdef SINGLE_LINK_DEBUG
          Rcpp::Rcout << "j1p:" << j1p << ", j2p:" << j2p << std::endl;
 #endif
@@ -543,6 +543,7 @@ struct cluster_pool {
             // the only children of that parent.
             // thus we can move the minimum distance of the parent rather than
             // creating a new cluster.
+            jnew = j1p;
             cnew = c1p;
             cnew->min_d = i;
             shift_to_parent(j1, c1, j1p, c1p);
@@ -660,9 +661,9 @@ void cluster2matrix(cluster_pool &pool, Rcpp::IntegerMatrix &out) {
       j_t i2 = 0;
       while (i2 < m) {
          d_t max = pool.max_d(c);
-         if (m < max) max = m;
+         if (m < (size_t)max) max = m;
          if (c->id == NO_CLUST) c->id = i;
-         while (i2 < max) {
+         while (i2 < (size_t)max) {
             out[k++] = c->id;
             i2++;
          }
@@ -707,23 +708,23 @@ Rcpp::List cluster2hclust(
    std::vector<bool> is_free;
    is_free.reserve(2*pool.n);
    // Rcpp::Rcout << "Initializing is_free" << std::endl;
-   for (int i = 0; i < 2*pool.n; i++) {
+   for (int i = 0; i < (int)(2*pool.n); i++) {
       is_free.push_back(FALSE);
    }
    // Rcpp::Rcout << "Filling is_free" << std::endl;
    if (pool.last_free >= pool.first_free) {
       // Rcpp::Rcout << "last_free >= first_free" << std::endl;
-      for (int i = pool.first_free; i <= pool.last_free; i++) {
+      for (j_t i = pool.first_free; i <= pool.last_free; i++) {
          // Rcpp::Rcout << "free cluster " << i << " is " << pool.freeclusters[i] << std::endl;
          is_free[pool.freeclusters[i]] = true;
       }
    } else {
       // Rcpp::Rcout << "last_free < first_free" << std::endl;
-      for (int i = pool.first_free; i < pool.n; i++) {
+      for (j_t i = pool.first_free; i < pool.n; i++) {
          // Rcpp::Rcout << "free cluster " << i << " is " << pool.freeclusters[i] << std::endl;
          is_free[pool.freeclusters[i]] = true;
       }
-      for (int i = 0; i <= pool.last_free; i++) {
+      for (j_t i = 0; i <= pool.last_free; i++) {
          // Rcpp::Rcout << "free cluster " << i << " is " << pool.freeclusters[i] << std::endl;
          is_free[pool.freeclusters[i]] = true;
       }
@@ -732,7 +733,7 @@ Rcpp::List cluster2hclust(
    // Rcpp::Rcout << "making cluster/distance pairs" << std::endl;
    // depths and indices of the valid clusters
    std::vector<std::pair<d_t, j_t>> cluster_dj;
-   for (int i = pool.n; i < 2*pool.n; i++) {
+   for (j_t i = pool.n; i < 2*pool.n; i++) {
       if (is_free[i]) continue;
       std::pair<d_t, j_t> dj = std::make_pair(pool.get_cluster(i)->min_d, i);
       // Rcpp::Rcout << "adding cluster " << dj.second << " at depth " << dj.first << std::endl;
@@ -752,8 +753,7 @@ Rcpp::List cluster2hclust(
       cluster *c = pool.get_cluster(cli.second);
       j_t child_j = c->first_child;
       j_t next_j = pool.get_cluster(child_j)->next_sib;
-      j_t last_j = c->last_child;
-      int left = child_j;
+      j_t left = child_j;
       bool first_pass = TRUE;
       do {
          if (left < pool.n && first_pass) {
@@ -804,7 +804,7 @@ Rcpp::List cluster2hclust(
       } else {
          left = row_key[parentless[0]];
       }
-      for (int i = 1; i < parentless.size(); i++) {
+      for (size_t i = 1; i < parentless.size(); i++) {
          int right;
          if (parentless[i] < pool.n) {
             right = -(int)parentless[i]-1;
@@ -845,8 +845,6 @@ Rcpp::RObject single_linkage_pool(
       const d_t m
 ) {
    const j_t n = seqnames.size();
-   cluster *c, *c1p;
-   j_t j, j1p;
    d_t i;
 
    // keep track of which clusters are free
@@ -977,8 +975,6 @@ Rcpp::List single_linkage_multi(
    }
    std::vector<j_t> whichsets;
    whichsets.reserve(preclust.size());
-   cluster *c, *c1p;
-   j_t j, j1p;
    d_t i;
 
    std::ifstream infile(file);

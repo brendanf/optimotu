@@ -48,7 +48,7 @@ Rcpp::IntegerMatrix single_linkage_matrix(
   Rcpp::IntegerMatrix output(m, n);
   RcppParallel::RMatrix<int> clust_array(output);
   std::size_t i, j, j1m, j2m;
-  for (i = 0; i < m; i++) {
+  for (i = 0; i < (size_t)m; i++) {
     for (j = 0; j < n; j++) {
       clust_array[i + j*m] = j;
     }
@@ -59,7 +59,7 @@ Rcpp::IntegerMatrix single_linkage_matrix(
   while(infile >> seq1 >> seq2 >> dist) {
     if (seq1 == seq2) continue;
     i = dconv.convert(dist);
-    if (i >= m) continue;
+    if (i >= (size_t)m) continue;
     if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) continue;
     std::size_t imin = i, imax = m;
     // shortcut for case when the clusters are not yet joined at any level

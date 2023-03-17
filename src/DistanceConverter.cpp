@@ -24,7 +24,7 @@ d_t ArrayDistanceConverter::convert(double dist) const {
 }
 
 double ArrayDistanceConverter::inverse(d_t d) const {
-   if (d >= thresholds.size()) return max_threshold;
+   if (d >= (d_t)thresholds.size()) return max_threshold;
    if (d < 0) return thresholds[0];
    return thresholds[d];
 }
