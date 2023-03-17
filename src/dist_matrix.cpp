@@ -150,6 +150,64 @@ struct KmerHit{
   }
 };
 
+static const uint32_t debrujin32 = 0x077CB531;
+static constexpr const uint8_t index32[] = {
+  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+  31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
+};
+
+// ok, maybe this was too much optimization...
+struct KmerBitField {
+private :
+  std::array<uint64_t, 1024> bits{0};
+  std::array<uint32_t, 32> dirty{0};
+  size_t n = 0;
+public :
+  void clear() {
+    uint16_t bitsi = 0;
+    for (uint8_t i = 0; i < 32; ++i) {
+      uint32_t &j = dirty[i];
+      while (j) {
+        uint32_t l = (j & -j);
+        // Rcpp::Rcout << "clearing field "
+        //             << std::setfill('0') << std::setw(4) << bitsi + index32[((l * debrujin32) >> 27)]
+        //             << " (j=" << std::hex << std::setw(8) << j
+        //             << ", l=" << std::setw(8) << l << ")" << std::dec << std::endl;
+        bits[bitsi + index32[((l * debrujin32) >> 27)]] = 0;
+        j -= l;
+      }
+      dirty[i] = 0;
+      bitsi+=32;
+    }
+    n = 0;
+  };
+
+  void insert(uint16_t k) {
+    // Rcpp::Rcout << "setting " << std::hex << std::setw(4) << std::setfill('0') << k;
+    uint16_t i = k >> 6;
+    uint64_t j = (uint64_t)1 << (k & 0x3F);
+    // Rcpp::Rcout << " as bit " << std::dec << (k & 0x3F) << " of field " << i;
+    if ((bits[i] & j) == 0)  {
+      // Rcpp::Rcout << " (not previously set)" << std::endl;
+      ++n;
+    }// else {
+      // Rcpp::Rcout << " (already set)" << std::endl;
+    // }
+    bits[i] |= j;
+    uint32_t l = (uint32_t)1 << (i & 0x1F);
+    dirty[i >> 5] |= l;
+  };
+
+  bool check(uint16_t k) {
+    // Rcpp::Rcout << "checking " << std::hex << std::setw(4) << k << " : " << ((bits[k >> 6] & ((uint64_t)1 << (k & 0x3F))) > 0) << std::dec << std::endl;
+    return (bits[k >> 6] & ((uint64_t)1 << (k & 0x3F))) > 0;
+  };
+
+  size_t size() {
+    return n;
+  }
+};
+
 bool comp_by_kmer(const KmerHit &a, const KmerHit &b) {
   return a.kmer < b.kmer;
 }
@@ -160,12 +218,12 @@ bool comp_by_kmer(const KmerHit &a, const KmerHit &b) {
 // (i.e., 2 different 8-mers, or a run of 9 consecutive 8mers)
 bool find_anchors(const std::vector<KmerHit> &seq_kmer_index1, const std::vector<KmerHit> &seq_kmer_index2,
                   const std::vector<KmerHit> &seq_x_index1, const std::vector<KmerHit> &seq_x_index2,
-                  std::vector<Anchor> &anchors) {
+                  std::vector<Anchor> &anchors, KmerBitField &match_kmers) {
   auto i1 = seq_kmer_index1.begin();
   auto i2 = seq_kmer_index2.begin();
   auto end1 = seq_kmer_index1.end();
   auto end2 = seq_kmer_index2.end();
-  std::unordered_set<uint16_t> match_kmers;
+  match_kmers.clear();
   while (true) {
     if (i1->kmer < i2->kmer) {
       if (++i1 == end1) break;
@@ -187,8 +245,8 @@ bool find_anchors(const std::vector<KmerHit> &seq_kmer_index1, const std::vector
   uint16_t l = 0, a_ext, b_ext, n = 0;
   anchors.clear();
   while(n < match_kmers.size() && i1 < end1 && i2 < end2) {
-    while(i1 < end1 && match_kmers.count(i1->kmer) == 0) i1++;
-    while(i2 < end2 && match_kmers.count(i2->kmer) == 0) i2++;
+    while(i1 < end1 && match_kmers.check(i1->kmer) == false) i1++;
+    while(i2 < end2 && match_kmers.check(i2->kmer) == false) i2++;
     if (i1->kmer == i2->kmer) {
       n++;
       if (anchors.size() == 0) {
@@ -205,8 +263,8 @@ bool find_anchors(const std::vector<KmerHit> &seq_kmer_index1, const std::vector
         b_ext = i2->x + 8 - anchors.back().end2;
         // this happens with variable length repeats
         if (a_ext == b_ext) {
-        anchors.back() += a_ext;
-        l += a_ext;
+          anchors.back() += a_ext;
+          l += a_ext;
         }
       } else {
         // Rcpp::Rcout << "ext anchor: start1=" << anchors.back().start1
@@ -349,7 +407,7 @@ struct BigAlignWorker : public RcppParallel::Worker {
     size_t &anchored
   ) : seq(seq), kmer_seq_index(kmer_seq_index), seq_kmer_index(seq_kmer_index),
   seq_x_index(seq_x_index),
-  dist_threshold(dist_threshold), threads(threads), heuristic(heuristic),
+  dist_threshold(dist_threshold), heuristic(heuristic), threads(threads),
   seq1(seq1), seq2(seq2), dist1(dist1), dist2(dist2),
   mutex(mutex), aligned(aligned), anchored(anchored) {};
 
@@ -367,6 +425,7 @@ struct BigAlignWorker : public RcppParallel::Worker {
     my_dist1.reserve(100);
     std::vector<double> my_dist2;
     my_dist2.reserve(100);
+    KmerBitField match_hits;
 
     if (begin == 0) {
       begin_i = 1;
@@ -419,7 +478,8 @@ struct BigAlignWorker : public RcppParallel::Worker {
           if (
               heuristic
               && find_anchors(seq_kmer_index[i], seq_kmer_index[match.first],
-                           seq_x_index[i], seq_x_index[match.first], anchors)
+                           seq_x_index[i], seq_x_index[match.first], anchors,
+                           match_hits)
           ) {
             d2 = anchor_align(seq[i], seq[match.first], anchors);
             anchors.clear();
@@ -427,6 +487,7 @@ struct BigAlignWorker : public RcppParallel::Worker {
             ++my_anchored;
           } else {
             // Rcpp::Rcout << "profile aligning full length sequences" << std::endl;
+            d2 = d1;
             d2 = profile_align(profile, seq[match.first]);
             ++my_aligned;
           }
