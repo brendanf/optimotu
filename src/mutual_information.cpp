@@ -94,6 +94,9 @@ Rcpp::NumericVector mutual_information(
     int threads = 1L
 ) {
   size_t N = c.size(), m = k.nrow();
+  if (N != k.ncol())
+    Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
+                 " the same number of objects.", k.ncol(), N);
   Rcpp::NumericVector mi(m, 0.0);
   std::vector<std::pair<int, size_t>> c_sort;
   std::unordered_map<int, SizeAndEntropy> c_count;
@@ -199,6 +202,9 @@ Rcpp::DataFrame adjusted_mutual_information(
     int threads = 1L
 ) {
   size_t N = c.size(), m = k.nrow();
+  if (N != k.ncol())
+    Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
+                 " the same number of objects.", k.ncol(), N);
   Rcpp::NumericVector mi(m, 0.0), ami(m, 0.0);
   std::vector<std::pair<int, size_t>> c_sort;
   std::unordered_map<int, SizeAndEntropy> c_count;
