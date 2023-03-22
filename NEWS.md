@@ -1,4 +1,4 @@
-# optimotu (development version)
+# optimotu 0.4.0
 
 * New functions to calculate additional clustering quality metrics:
   `mutual_information()`, `adjusted_mutual_information()`, `confusion_matrix()`,
