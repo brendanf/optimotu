@@ -5,7 +5,7 @@ rand_index <- function(x, ...) {
 
 #' @export
 rand_index.matrix <- function(x, y, ncpu = 1, ...) {
-  cm <- confusion_matrix2(x, y, ncpu)
+  cm <- confusion_matrix(x, y, ncpu)
   rand_index.data.frame(cm)
 }
 
@@ -22,7 +22,7 @@ adjusted_rand_index <- function(x, ...) {
 
 #' @export
 adjusted_rand_index.matrix <- function(x, y, ncpu = 1, ...) {
-  cm <- confusion_matrix2(x, y, ncpu)
+  cm <- confusion_matrix(x, y, ncpu)
   adjusted_rand_index.data.frame(cm)
 }
 
@@ -39,7 +39,7 @@ matthews_correlation_coefficient <- function(x, ...) {
 
 #' @export
 matthews_correlation_coefficient.matrix <- function(x, y, ncpu = 1, ...) {
-  cm <- confusion_matrix2(x, y, ncpu)
+  cm <- confusion_matrix(x, y, ncpu)
   matthews_correlation_coefficient.data.frame(cm)
 }
 
@@ -56,7 +56,7 @@ fowlkes_mallow_index <- function(x, ...) {
 
 #' @export
 fowlkes_mallow_index.matrix <- function(x, y, ncpu = 1, ...) {
-  cm <- confusion_matrix2(x, y, ncpu)
+  cm <- confusion_matrix(x, y, ncpu)
   fowlkes_mallow_index.data.frame(cm)
 }
 
