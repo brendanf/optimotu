@@ -1,3 +1,7 @@
+# optimotu 0.4.1
+
+* Fix typo in new `fmeasure()` implementation.
+
 # optimotu 0.4.0
 
 * New functions to calculate additional clustering quality metrics:

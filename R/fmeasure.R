@@ -38,8 +38,8 @@
 #' @export
 fmeasure <- function(k, c, ncpu) {
   if (is.integer(k) && is.matrix(k) && is.integer(c)) {
-    fmeasure_matrix(k, c, cpu)
+    fmeasure_matrix(k, c, ncpu)
   } else {
-    fmeasure_list(k, c, cpu)
+    fmeasure_list(k, c, ncpu)
   }
 }
