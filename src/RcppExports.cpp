@@ -12,27 +12,15 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // confusion_matrix
-Rcpp::DataFrame confusion_matrix(const Rcpp::IntegerMatrix& cluster_matrix, const std::vector<int>& known_clusters);
-RcppExport SEXP _optimotu_confusion_matrix(SEXP cluster_matrixSEXP, SEXP known_clustersSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix& >::type cluster_matrix(cluster_matrixSEXP);
-    Rcpp::traits::input_parameter< const std::vector<int>& >::type known_clusters(known_clustersSEXP);
-    rcpp_result_gen = Rcpp::wrap(confusion_matrix(cluster_matrix, known_clusters));
-    return rcpp_result_gen;
-END_RCPP
-}
-// confusion_matrix2
-Rcpp::DataFrame confusion_matrix2(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, const int ncpu);
-RcppExport SEXP _optimotu_confusion_matrix2(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
+Rcpp::DataFrame confusion_matrix(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, const int ncpu);
+RcppExport SEXP _optimotu_confusion_matrix(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
     Rcpp::traits::input_parameter< const int >::type ncpu(ncpuSEXP);
-    rcpp_result_gen = Rcpp::wrap(confusion_matrix2(k, c, ncpu));
+    rcpp_result_gen = Rcpp::wrap(confusion_matrix(k, c, ncpu));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -271,8 +259,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 2},
-    {"_optimotu_confusion_matrix2", (DL_FUNC) &_optimotu_confusion_matrix2, 3},
+    {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},
     {"_optimotu_inner_fmeasure", (DL_FUNC) &_optimotu_inner_fmeasure, 3},

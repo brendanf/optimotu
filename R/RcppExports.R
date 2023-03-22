@@ -2,13 +2,8 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @export
-confusion_matrix <- function(cluster_matrix, known_clusters) {
-    .Call('_optimotu_confusion_matrix', PACKAGE = 'optimotu', cluster_matrix, known_clusters)
-}
-
-#' @export
-confusion_matrix2 <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_confusion_matrix2', PACKAGE = 'optimotu', k, c, ncpu)
+confusion_matrix <- function(k, c, ncpu = 1L) {
+    .Call('_optimotu_confusion_matrix', PACKAGE = 'optimotu', k, c, ncpu)
 }
 
 #' @export
