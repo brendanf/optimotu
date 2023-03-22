@@ -206,7 +206,11 @@ Rcpp::DataFrame confusion_matrix2(
   ConfusionMatrixWorker worker(k, c_sort, c_count,
                                true_positive, false_positive,
                                false_negative, true_negative);
-  RcppParallel::parallelFor(0, m, worker, 1, ncpu);
+  if (ncpu == 1) {
+    worker(0, m);
+  } else {
+    RcppParallel::parallelFor(0, m, worker, 1, ncpu);
+  }
 
   auto out = Rcpp::DataFrame::create(
     Rcpp::Named("TP") = true_positive,

@@ -100,52 +100,28 @@ BEGIN_RCPP
 END_RCPP
 }
 // mutual_information
-Rcpp::NumericVector mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c);
-RcppExport SEXP _optimotu_mutual_information(SEXP kSEXP, SEXP cSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
-    rcpp_result_gen = Rcpp::wrap(mutual_information(k, c));
-    return rcpp_result_gen;
-END_RCPP
-}
-// mutual_information_parallel
-Rcpp::NumericVector mutual_information_parallel(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads);
-RcppExport SEXP _optimotu_mutual_information_parallel(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
+Rcpp::NumericVector mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads);
+RcppExport SEXP _optimotu_mutual_information(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
     Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(mutual_information_parallel(k, c, threads));
+    rcpp_result_gen = Rcpp::wrap(mutual_information(k, c, threads));
     return rcpp_result_gen;
 END_RCPP
 }
 // adjusted_mutual_information
-Rcpp::DataFrame adjusted_mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c);
-RcppExport SEXP _optimotu_adjusted_mutual_information(SEXP kSEXP, SEXP cSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
-    rcpp_result_gen = Rcpp::wrap(adjusted_mutual_information(k, c));
-    return rcpp_result_gen;
-END_RCPP
-}
-// adjusted_mutual_information_parallel
-Rcpp::DataFrame adjusted_mutual_information_parallel(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads);
-RcppExport SEXP _optimotu_adjusted_mutual_information_parallel(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
+Rcpp::DataFrame adjusted_mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads);
+RcppExport SEXP _optimotu_adjusted_mutual_information(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
     Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(adjusted_mutual_information_parallel(k, c, threads));
+    rcpp_result_gen = Rcpp::wrap(adjusted_mutual_information(k, c, threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -302,10 +278,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_inner_fmeasure", (DL_FUNC) &_optimotu_inner_fmeasure, 3},
     {"_optimotu_fmeasure", (DL_FUNC) &_optimotu_fmeasure, 3},
     {"_optimotu_fmeasure2", (DL_FUNC) &_optimotu_fmeasure2, 3},
-    {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 2},
-    {"_optimotu_mutual_information_parallel", (DL_FUNC) &_optimotu_mutual_information_parallel, 3},
-    {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 2},
-    {"_optimotu_adjusted_mutual_information_parallel", (DL_FUNC) &_optimotu_adjusted_mutual_information_parallel, 3},
+    {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 3},
+    {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 3},
     {"_optimotu_single_linkage_matrix_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix_uniform, 7},
     {"_optimotu_single_linkage_matrix_array", (DL_FUNC) &_optimotu_single_linkage_matrix_array, 5},
     {"_optimotu_single_linkage_matrix_cached", (DL_FUNC) &_optimotu_single_linkage_matrix_cached, 6},

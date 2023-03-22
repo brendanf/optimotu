@@ -37,23 +37,13 @@ fmeasure2 <- function(k, c, ncpu = 1L) {
 }
 
 #' @export
-mutual_information <- function(k, c) {
-    .Call('_optimotu_mutual_information', PACKAGE = 'optimotu', k, c)
+mutual_information <- function(k, c, threads = 1L) {
+    .Call('_optimotu_mutual_information', PACKAGE = 'optimotu', k, c, threads)
 }
 
 #' @export
-mutual_information_parallel <- function(k, c, threads) {
-    .Call('_optimotu_mutual_information_parallel', PACKAGE = 'optimotu', k, c, threads)
-}
-
-#' @export
-adjusted_mutual_information <- function(k, c) {
-    .Call('_optimotu_adjusted_mutual_information', PACKAGE = 'optimotu', k, c)
-}
-
-#' @export
-adjusted_mutual_information_parallel <- function(k, c, threads) {
-    .Call('_optimotu_adjusted_mutual_information_parallel', PACKAGE = 'optimotu', k, c, threads)
+adjusted_mutual_information <- function(k, c, threads = 1L) {
+    .Call('_optimotu_adjusted_mutual_information', PACKAGE = 'optimotu', k, c, threads)
 }
 
 #' @export

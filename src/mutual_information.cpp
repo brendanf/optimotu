@@ -87,40 +87,26 @@ struct MutualInformationWorker : public RcppParallel::Worker
 };
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::NumericVector mutual_information(
-     const Rcpp::IntegerMatrix k,
-     const Rcpp::IntegerVector c
- ) {
-   size_t N = c.size(), m = k.nrow();
-   Rcpp::NumericVector mi(m, 0.0);
+// [[Rcpp::export]]
+Rcpp::NumericVector mutual_information(
+    const Rcpp::IntegerMatrix k,
+    const Rcpp::IntegerVector c,
+    int threads = 1L
+) {
+  size_t N = c.size(), m = k.nrow();
+  Rcpp::NumericVector mi(m, 0.0);
+  std::vector<std::pair<int, size_t>> c_sort;
+  std::unordered_map<int, SizeAndEntropy> c_count;
+  initialize_c_counts(c, c_sort, c_count, N);
 
-   std::vector<std::pair<int, size_t>> c_sort;
-   std::unordered_map<int, SizeAndEntropy> c_count, k_count;
-   initialize_c_counts(c, c_sort, c_count, N);
-   MutualInformationWorker worker(k, c_sort, c_count, mi);
-   worker(0, m);
-   return mi;
- }
-
-//' @export
- // [[Rcpp::export]]
- Rcpp::NumericVector mutual_information_parallel(
-     const Rcpp::IntegerMatrix k,
-     const Rcpp::IntegerVector c,
-     int threads
- ) {
-   size_t N = c.size(), m = k.nrow();
-   Rcpp::NumericVector mi(m, 0.0);
-   std::vector<std::pair<int, size_t>> c_sort;
-   std::unordered_map<int, SizeAndEntropy> c_count;
-   initialize_c_counts(c, c_sort, c_count, N);
-
-   MutualInformationWorker worker(k, c_sort, c_count, mi);
-   RcppParallel::parallelFor(0, m, worker, 1, threads);
-   return mi;
- }
-
+  MutualInformationWorker worker(k, c_sort, c_count, mi);
+  if (threads == 1L) {
+    worker(0, m);
+  } else {
+    RcppParallel::parallelFor(0, m, worker, 1, threads);
+  }
+  return mi;
+}
 
 struct AdjustedMutualInformationWorker : public RcppParallel::Worker
 {
@@ -205,47 +191,28 @@ struct AdjustedMutualInformationWorker : public RcppParallel::Worker
   }
 };
 
-
-
 //' @export
- // [[Rcpp::export]]
- Rcpp::DataFrame adjusted_mutual_information(
-     const Rcpp::IntegerMatrix k,
-     const Rcpp::IntegerVector c
- ) {
-   size_t N = c.size(), m = k.nrow();
-   Rcpp::NumericVector mi(m, 0.0), ami(m, 0.0);
+// [[Rcpp::export]]
+Rcpp::DataFrame adjusted_mutual_information(
+    const Rcpp::IntegerMatrix k,
+    const Rcpp::IntegerVector c,
+    int threads = 1L
+) {
+  size_t N = c.size(), m = k.nrow();
+  Rcpp::NumericVector mi(m, 0.0), ami(m, 0.0);
+  std::vector<std::pair<int, size_t>> c_sort;
+  std::unordered_map<int, SizeAndEntropy> c_count;
+  initialize_c_counts(c, c_sort, c_count, N);
 
-   std::vector<std::pair<int, size_t>> c_sort;
-   std::unordered_map<int, SizeAndEntropy> c_count, k_count;
-   initialize_c_counts(c, c_sort, c_count, N);
-   AdjustedMutualInformationWorker worker(k, c_sort, c_count, mi, ami);
-   worker(0, m);
-   auto out = Rcpp::DataFrame::create(
-     Rcpp::Named("MI") = mi,
-     Rcpp::Named("AMI") = ami
-   );
-   return out;
- }
-
-//' @export
- // [[Rcpp::export]]
- Rcpp::DataFrame adjusted_mutual_information_parallel(
-     const Rcpp::IntegerMatrix k,
-     const Rcpp::IntegerVector c,
-     int threads
- ) {
-   size_t N = c.size(), m = k.nrow();
-   Rcpp::NumericVector mi(m, 0.0), ami(m, 0.0);
-   std::vector<std::pair<int, size_t>> c_sort;
-   std::unordered_map<int, SizeAndEntropy> c_count;
-   initialize_c_counts(c, c_sort, c_count, N);
-
-   AdjustedMutualInformationWorker worker(k, c_sort, c_count, mi, ami);
-   RcppParallel::parallelFor(0, m, worker, 1, threads);
-   auto out = Rcpp::DataFrame::create(
-     Rcpp::Named("MI") = mi,
-     Rcpp::Named("AMI") = ami
-   );
-   return out;
- }
+  AdjustedMutualInformationWorker worker(k, c_sort, c_count, mi, ami);
+  if (threads == 1) {
+    worker(0, m);
+  } else {
+    RcppParallel::parallelFor(0, m, worker, 1, threads);
+  }
+  auto out = Rcpp::DataFrame::create(
+    Rcpp::Named("MI") = mi,
+    Rcpp::Named("AMI") = ami
+  );
+  return out;
+}

@@ -203,6 +203,10 @@ Rcpp::NumericVector fmeasure2(
   std::unordered_map<int, size_t> c_count;
   initialize_counts(c, c_sort, c_count, n);
   FMeasureWorker2 worker(k, c_sort, c_count, fm);
-  RcppParallel::parallelFor(0, k.nrow(), worker, 1, ncpu);
+  if (ncpu == 1) {
+    worker(0, m);
+  } else {
+    RcppParallel::parallelFor(0, k.nrow(), worker, 1, ncpu);
+  }
   return fm;
 }
