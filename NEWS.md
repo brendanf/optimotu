@@ -1,7 +1,9 @@
 # optimotu (development version)
 
 * New functions to calculate additional clustering quality metrics:
-  `mutual_information()`, `adjusted_mutual_information()`, `confusion_matrix()`.
+  `mutual_information()`, `adjusted_mutual_information()`, `confusion_matrix()`,
+  `rand_index()`, `adjusted_rand_index`, `matthews_correlation_coefficient()`,
+  `fowlkes_mallow_index()`.
 * `fmeasure2()` is a much faster version of `fmeasure()`.
 
 # optimotu 0.3.0
