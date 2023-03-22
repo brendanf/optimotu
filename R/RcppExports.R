@@ -7,6 +7,21 @@ confusion_matrix <- function(k, c, ncpu = 1L) {
 }
 
 #' @export
+align <- function(a, b) {
+    .Call('_optimotu_align', PACKAGE = 'optimotu', a, b)
+}
+
+#' @export
+align2 <- function(a, b) {
+    .Call('_optimotu_align2', PACKAGE = 'optimotu', a, b)
+}
+
+#' @export
+distmx <- function(seq, dist_threshold, threads = 1L) {
+    .Call('_optimotu_distmx', PACKAGE = 'optimotu', seq, dist_threshold, threads)
+}
+
+#' @export
 intersect_length <- function(c, k) {
     .Call('_optimotu_intersect_length', PACKAGE = 'optimotu', c, k)
 }
