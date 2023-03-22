@@ -91,9 +91,8 @@ struct FmeasureWorker : public RcppParallel::Worker
    }
 };
 
-//' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector fmeasure(
+Rcpp::NumericVector fmeasure_list(
       Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> k,
       Rcpp::ListOf<Rcpp::IntegerVector> c,
       size_t ncpu = 1
@@ -189,9 +188,8 @@ struct FMeasureWorker2 : public RcppParallel::Worker
 };
 
 
-//' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector fmeasure2(
+Rcpp::NumericVector fmeasure_matrix(
   Rcpp::IntegerMatrix k,
   Rcpp::IntegerVector c,
   size_t ncpu = 1

@@ -21,14 +21,12 @@ inner_fmeasure <- function(cj, kpartition, nk) {
     .Call('_optimotu_inner_fmeasure', PACKAGE = 'optimotu', cj, kpartition, nk)
 }
 
-#' @export
-fmeasure <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_fmeasure', PACKAGE = 'optimotu', k, c, ncpu)
+fmeasure_list <- function(k, c, ncpu = 1L) {
+    .Call('_optimotu_fmeasure_list', PACKAGE = 'optimotu', k, c, ncpu)
 }
 
-#' @export
-fmeasure2 <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_fmeasure2', PACKAGE = 'optimotu', k, c, ncpu)
+fmeasure_matrix <- function(k, c, ncpu = 1L) {
+    .Call('_optimotu_fmeasure_matrix', PACKAGE = 'optimotu', k, c, ncpu)
 }
 
 #' @export

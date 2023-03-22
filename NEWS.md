@@ -4,7 +4,10 @@
   `mutual_information()`, `adjusted_mutual_information()`, `confusion_matrix()`,
   `rand_index()`, `adjusted_rand_index`, `matthews_correlation_coefficient()`,
   `fowlkes_mallow_index()`.
-* `fmeasure2()` is a much faster version of `fmeasure()`.
+* `fmeasure()` now accepts the same matrix representation of clusters as the
+  other clustering algorithms (and which is the output of `single_linkage()`).
+  This representation leads to much faster computation, but the old
+  representation is also still supported.
 
 # optimotu 0.3.0
 

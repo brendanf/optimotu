@@ -61,29 +61,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// fmeasure
-Rcpp::NumericVector fmeasure(Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> k, Rcpp::ListOf<Rcpp::IntegerVector> c, size_t ncpu);
-RcppExport SEXP _optimotu_fmeasure(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
+// fmeasure_list
+Rcpp::NumericVector fmeasure_list(Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> k, Rcpp::ListOf<Rcpp::IntegerVector> c, size_t ncpu);
+RcppExport SEXP _optimotu_fmeasure_list(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::ListOf<Rcpp::ListOf<Rcpp::IntegerVector>> >::type k(kSEXP);
     Rcpp::traits::input_parameter< Rcpp::ListOf<Rcpp::IntegerVector> >::type c(cSEXP);
     Rcpp::traits::input_parameter< size_t >::type ncpu(ncpuSEXP);
-    rcpp_result_gen = Rcpp::wrap(fmeasure(k, c, ncpu));
+    rcpp_result_gen = Rcpp::wrap(fmeasure_list(k, c, ncpu));
     return rcpp_result_gen;
 END_RCPP
 }
-// fmeasure2
-Rcpp::NumericVector fmeasure2(Rcpp::IntegerMatrix k, Rcpp::IntegerVector c, size_t ncpu);
-RcppExport SEXP _optimotu_fmeasure2(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
+// fmeasure_matrix
+Rcpp::NumericVector fmeasure_matrix(Rcpp::IntegerMatrix k, Rcpp::IntegerVector c, size_t ncpu);
+RcppExport SEXP _optimotu_fmeasure_matrix(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::IntegerMatrix >::type k(kSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type c(cSEXP);
     Rcpp::traits::input_parameter< size_t >::type ncpu(ncpuSEXP);
-    rcpp_result_gen = Rcpp::wrap(fmeasure2(k, c, ncpu));
+    rcpp_result_gen = Rcpp::wrap(fmeasure_matrix(k, c, ncpu));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -263,8 +263,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},
     {"_optimotu_inner_fmeasure", (DL_FUNC) &_optimotu_inner_fmeasure, 3},
-    {"_optimotu_fmeasure", (DL_FUNC) &_optimotu_fmeasure, 3},
-    {"_optimotu_fmeasure2", (DL_FUNC) &_optimotu_fmeasure2, 3},
+    {"_optimotu_fmeasure_list", (DL_FUNC) &_optimotu_fmeasure_list, 3},
+    {"_optimotu_fmeasure_matrix", (DL_FUNC) &_optimotu_fmeasure_matrix, 3},
     {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 3},
     {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 3},
     {"_optimotu_single_linkage_matrix_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix_uniform, 7},
