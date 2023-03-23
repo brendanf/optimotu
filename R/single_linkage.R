@@ -106,6 +106,10 @@ verify_method_output_type <- function(method, output_type) {
    invisible(TRUE)
 }
 
+is_list_of_character <- function(x) {
+  all(vapply(x, is.character, TRUE))
+}
+
 #' Single linkage clustering at multiple thresholds from a sparse distance
 #' matrix
 #'
@@ -202,6 +206,7 @@ single_linkage = function(
             names,
             thresh_min,
             thresh_max,
+            thresh_step,
             which,
             threads
          )
@@ -234,7 +239,7 @@ single_linkage = function(
       verify_precision(precision)
       dedup <- deduplicate_thresholds(thresholds)
       out <- if (!is.null(which) && !isTRUE(which)) {
-         verify_which(which, method, seqnames)
+         verify_which(which, method, names)
          if (is.null(precision)) {
             single_linkage_multi_array(distmx, names, dedup$thresholds, which, threads)
          } else {
