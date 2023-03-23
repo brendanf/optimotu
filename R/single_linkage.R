@@ -505,7 +505,7 @@ do_usearch_singlelink <- function(
       usearch_thresh_max <- max(thresholds)
    }
    if (is.list(which)) {
-      verify_which(which, seq_id)
+      verify_which(which, method, seq_id)
    }
    checkmate::assert(
       checkmate::check_null(thresh_names),

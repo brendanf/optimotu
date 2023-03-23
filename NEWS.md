@@ -1,3 +1,12 @@
+# optimotu 0.4.2
+
+* Fix a bug which caused `usearch_single_linkage()` to fail when argument
+ 'which' was a list.
+* Fix a bug in `rand_index()`, `adjusted_rand_index()`,
+  `matthews_correlation_coefficient()`, `fowlkes_mallow_index()` which caused
+  them to fail when called directly on a cluster matrix instead of on the
+  output of `confusion_matrix()`.
+
 # optimotu 0.4.1
 
 * Fix typo in new `fmeasure()` implementation.
