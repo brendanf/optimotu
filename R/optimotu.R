@@ -4,7 +4,8 @@
 #'
 #' @docType package
 #' @author Brendan Furneaux <brendan.furneaux@gmail.com>
-#' @import Rcpp
-#' @useDynLib optimotu
+#' @importFrom Rcpp evalCpp
+#' @importFrom RcppParallel RcppParallelLibs
+#' @useDynLib optimotu, .registration=TRUE
 #' @name optimotu
 NULL

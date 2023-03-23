@@ -3,84 +3,84 @@
 
 #' @export
 confusion_matrix <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_confusion_matrix', PACKAGE = 'optimotu', k, c, ncpu)
+    .Call(`_optimotu_confusion_matrix`, k, c, ncpu)
 }
 
 #' @export
 intersect_length <- function(c, k) {
-    .Call('_optimotu_intersect_length', PACKAGE = 'optimotu', c, k)
+    .Call(`_optimotu_intersect_length`, c, k)
 }
 
 #' @export
 intersect_length_string <- function(c, k) {
-    .Call('_optimotu_intersect_length_string', PACKAGE = 'optimotu', c, k)
+    .Call(`_optimotu_intersect_length_string`, c, k)
 }
 
 #' @export
 inner_fmeasure <- function(cj, kpartition, nk) {
-    .Call('_optimotu_inner_fmeasure', PACKAGE = 'optimotu', cj, kpartition, nk)
+    .Call(`_optimotu_inner_fmeasure`, cj, kpartition, nk)
 }
 
 fmeasure_list <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_fmeasure_list', PACKAGE = 'optimotu', k, c, ncpu)
+    .Call(`_optimotu_fmeasure_list`, k, c, ncpu)
 }
 
 fmeasure_matrix <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_fmeasure_matrix', PACKAGE = 'optimotu', k, c, ncpu)
+    .Call(`_optimotu_fmeasure_matrix`, k, c, ncpu)
 }
 
 #' @export
 mutual_information <- function(k, c, threads = 1L) {
-    .Call('_optimotu_mutual_information', PACKAGE = 'optimotu', k, c, threads)
+    .Call(`_optimotu_mutual_information`, k, c, threads)
 }
 
 #' @export
 adjusted_mutual_information <- function(k, c, threads = 1L) {
-    .Call('_optimotu_adjusted_mutual_information', PACKAGE = 'optimotu', k, c, threads)
+    .Call(`_optimotu_adjusted_mutual_information`, k, c, threads)
 }
 
 #' @export
 single_linkage_matrix_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, minsplit = 1L) {
-    .Call('_optimotu_single_linkage_matrix_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, threads, minsplit)
+    .Call(`_optimotu_single_linkage_matrix_uniform`, file, seqnames, dmin, dmax, dstep, threads, minsplit)
 }
 
 #' @export
 single_linkage_matrix_array <- function(file, seqnames, thresholds, threads = 1L, minsplit = 1L) {
-    .Call('_optimotu_single_linkage_matrix_array', PACKAGE = 'optimotu', file, seqnames, thresholds, threads, minsplit)
+    .Call(`_optimotu_single_linkage_matrix_array`, file, seqnames, thresholds, threads, minsplit)
 }
 
 #' @export
 single_linkage_matrix_cached <- function(file, seqnames, thresholds, precision, threads = 1L, minsplit = 1L) {
-    .Call('_optimotu_single_linkage_matrix_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, threads, minsplit)
+    .Call(`_optimotu_single_linkage_matrix_cached`, file, seqnames, thresholds, precision, threads, minsplit)
 }
 
 #' @export
 single_linkage_pool_uniform <- function(file, seqnames, dmin, dmax, dstep, output_type) {
-    .Call('_optimotu_single_linkage_pool_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, output_type)
+    .Call(`_optimotu_single_linkage_pool_uniform`, file, seqnames, dmin, dmax, dstep, output_type)
 }
 
 #' @export
 single_linkage_pool_array <- function(file, seqnames, thresholds, output_type) {
-    .Call('_optimotu_single_linkage_pool_array', PACKAGE = 'optimotu', file, seqnames, thresholds, output_type)
+    .Call(`_optimotu_single_linkage_pool_array`, file, seqnames, thresholds, output_type)
 }
 
 #' @export
 single_linkage_pool_cached <- function(file, seqnames, thresholds, precision, output_type) {
-    .Call('_optimotu_single_linkage_pool_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, output_type)
+    .Call(`_optimotu_single_linkage_pool_cached`, file, seqnames, thresholds, precision, output_type)
 }
 
 #' @export
 single_linkage_multi_uniform <- function(file, seqnames, output_type, dmin, dmax, dstep, preclust, threads = 1L) {
-    .Call('_optimotu_single_linkage_multi_uniform', PACKAGE = 'optimotu', file, seqnames, output_type, dmin, dmax, dstep, preclust, threads)
+    .Call(`_optimotu_single_linkage_multi_uniform`, file, seqnames, output_type, dmin, dmax, dstep, preclust, threads)
 }
 
 #' @export
 single_linkage_multi_array <- function(file, seqnames, output_type, thresholds, preclust, threads = 1L) {
-    .Call('_optimotu_single_linkage_multi_array', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, preclust, threads)
+    .Call(`_optimotu_single_linkage_multi_array`, file, seqnames, output_type, thresholds, preclust, threads)
 }
 
 #' @export
 single_linkage_multi_cached <- function(file, seqnames, output_type, thresholds, precision, preclust, threads = 1L) {
-    .Call('_optimotu_single_linkage_multi_cached', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, precision, preclust, threads)
+    .Call(`_optimotu_single_linkage_multi_cached`, file, seqnames, output_type, thresholds, precision, preclust, threads)
 }
 

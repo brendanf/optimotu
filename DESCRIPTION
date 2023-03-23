@@ -2,7 +2,7 @@ Package: optimotu
 Type: Package
 Title: Optimize OTU clustering thresholds
 Version: 0.4.2
-Author@R: 
+Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
            role = c("aut", "cre"),
@@ -18,11 +18,11 @@ Description: OptimOTU calculates single-linkage clusters at multiple thresholds
 License: MIT
 Imports:
    checkmate,
-   cpp11
+   Biostrings,
+   magrittr
 Depends:
    Rcpp,
-   RcppParallel,
-   RcppThread
+   RcppParallel
 LinkingTo:
    Rcpp,
    RcppParallel,

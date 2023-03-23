@@ -1,4 +1,4 @@
-#include "DistanceConverter.hpp"
+#include "DistanceConverter.h"
 #include <cmath>
 
 d_t UniformDistanceConverter::convert(double dist) const {

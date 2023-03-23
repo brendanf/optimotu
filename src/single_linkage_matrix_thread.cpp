@@ -4,7 +4,7 @@
 #include <RcppThread.h>
 // [[Rcpp::depends(RcppParallel)]]
 #include <RcppParallel.h>
-#include "DistanceConverter.hpp"
+#include "DistanceConverter.h"
 
 struct MergeWorker
 {
