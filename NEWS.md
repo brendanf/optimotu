@@ -1,3 +1,8 @@
+# optimotu 0.4.4
+
+* Fix even more bugs which caused `usearch_single_linkage()` to fail when argument
+ 'which' was a list.
+
 # optimotu 0.4.3
 
 * Fix additional bugs which caused `usearch_single_linkage()` to fail when argument

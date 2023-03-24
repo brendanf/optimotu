@@ -204,6 +204,7 @@ single_linkage = function(
          single_linkage_multi_uniform(
             distmx,
             names,
+            output_type,
             thresh_min,
             thresh_max,
             thresh_step,
@@ -241,9 +242,9 @@ single_linkage = function(
       out <- if (!is.null(which) && !isTRUE(which)) {
          verify_which(which, method, names)
          if (is.null(precision)) {
-            single_linkage_multi_array(distmx, names, dedup$thresholds, which, threads)
+            single_linkage_multi_array(distmx, names, output_type, dedup$thresholds, which, threads)
          } else {
-            single_linkage_multi_cached(distmx, names, dedup$thresholds, precision, which, threads)
+            single_linkage_multi_cached(distmx, names, output_type, dedup$thresholds, precision, which, threads)
          }
       } else {
          if (is.null(precision)) {
