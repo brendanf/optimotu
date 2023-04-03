@@ -63,8 +63,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx2
-Rcpp::DataFrame distmx2(std::vector<std::string> seq, double dist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, uint8_t threads);
-RcppExport SEXP _optimotu_distmx2(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP threadsSEXP) {
+Rcpp::DataFrame distmx2(std::vector<std::string> seq, double dist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, bool prealign, uint8_t threads);
+RcppExport SEXP _optimotu_distmx2(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP prealignSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -76,8 +76,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
     Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
     Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    Rcpp::traits::input_parameter< bool >::type prealign(prealignSEXP);
     Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(distmx2(seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads));
+    rcpp_result_gen = Rcpp::wrap(distmx2(seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -208,7 +209,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
     {"_optimotu_align", (DL_FUNC) &_optimotu_align, 8},
     {"_optimotu_distmx", (DL_FUNC) &_optimotu_distmx, 10},
-    {"_optimotu_distmx2", (DL_FUNC) &_optimotu_distmx2, 9},
+    {"_optimotu_distmx2", (DL_FUNC) &_optimotu_distmx2, 10},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 6},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 7},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
