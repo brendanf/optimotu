@@ -17,6 +17,20 @@ double distance(const std::string &a, const std::string &b, wfa::WFAligner &alig
   return 1.0 - double(match) / double(length);
 }
 
+std::pair<int, double> score_and_distance(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
+  auto status = aligner.alignEnd2End(a, b);
+  if (status != wfa::WFAligner::StatusSuccessful) return {std::max(a.size(), b.size()), 1.0};
+  auto cigar = aligner.getAlignmentCigar();
+  uint16_t match = 0, length = 0, edit = 0;
+  for (char c : cigar) {
+    if (c == 'M') {
+      match++;
+    }
+    length++;
+  }
+  return {length - match, 1.0 - double(match) / double(length)};
+}
+
 //' @export
 // [[Rcpp::export]]
 double align(const std::string a, const std::string b,
@@ -147,19 +161,27 @@ bool comp_by_kmer(const KmerHit &a, const KmerHit &b) {
 
 struct SparseDistanceMatrix {
   std::vector<size_t> &seq1, &seq2;
+  std::vector<int> &score1, &score2;
   std::vector<double> &dist1, &dist2;
   tthread::mutex mutex;
 
   SparseDistanceMatrix(
     std::vector<size_t> &seq1,
     std::vector<size_t> &seq2,
+    std::vector<int> &score1,
+    std::vector<int> &score2,
     std::vector<double> &dist1,
     std::vector<double> &dist2
-  ) : seq1(seq1), seq2(seq2), dist1(dist1), dist2(dist2), mutex() {};
+  ) : seq1(seq1), seq2(seq2),
+  score1(score1), score2(score2),
+  dist1(dist1), dist2(dist2),
+  mutex() {};
 
-  void push_back(size_t s1, size_t s2, double d1, double d2) {
+  void push_back(size_t s1, size_t s2, int sc1, int sc2, double d1, double d2) {
     seq1.push_back(s1);
     seq2.push_back(s2);
+    score1.push_back(sc1);
+    score2.push_back(sc2);
     dist1.push_back(d1);
     dist2.push_back(d2);
   }
@@ -167,6 +189,8 @@ struct SparseDistanceMatrix {
   void append(
       std::vector<size_t> &seq1new,
       std::vector<size_t> &seq2new,
+      std::vector<int> &score1new,
+      std::vector<int> &score2new,
       std::vector<double> &dist1new,
       std::vector<double> &dist2new
   ) {
@@ -175,6 +199,10 @@ struct SparseDistanceMatrix {
     seq1new.clear();
     std::copy(seq2new.begin(), seq2new.end(), std::back_inserter(seq2));
     seq2new.clear();
+    std::copy(score1new.begin(), score1new.end(), std::back_inserter(score1));
+    score1new.clear();
+    std::copy(score2new.begin(), score2new.end(), std::back_inserter(score2));
+    score2new.clear();
     std::copy(dist1new.begin(), dist1new.end(), std::back_inserter(dist1));
     dist1new.clear();
     std::copy(dist2new.begin(), dist2new.end(), std::back_inserter(dist2));
@@ -229,6 +257,10 @@ struct KmerAlignWorker : public RcppParallel::Worker {
     my_seq1.reserve(1000);
     std::vector<size_t> my_seq2;
     my_seq2.reserve(1000);
+    std::vector<int> my_score1;
+    my_score1.reserve(1000);
+    std::vector<int> my_score2;
+    my_score2.reserve(1000);
     std::vector<double> my_dist1;
     my_dist1.reserve(1000);
     std::vector<double> my_dist2;
@@ -279,15 +311,17 @@ struct KmerAlignWorker : public RcppParallel::Worker {
         }
         if (d1 <= udist_threshold) {
           ++my_aligned;
-          double d2 = distance(seq[match.first], seq[i], aligner);
-          if (d2 <= dist_threshold) {
+          auto d2 = score_and_distance(seq[match.first], seq[i], aligner);
+          if (d2.second <= dist_threshold) {
             my_seq1.push_back(match.first);
             my_seq2.push_back(i);
+            my_score1.push_back(seq[match.first].size() - 7.0);
+            my_score2.push_back(d2.first);
             my_dist1.push_back(d1);
-            my_dist2.push_back(d2);
+            my_dist2.push_back(d2.second);
 
             if (my_seq1.size() == 1000) {
-              sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+              sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
             }
           }
           RcppThread::checkUserInterrupt();
@@ -299,7 +333,7 @@ struct KmerAlignWorker : public RcppParallel::Worker {
       }
     }
     if (my_seq1.size() > 0) {
-      sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+      sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
     }
     sdm.mutex.lock();
     aligned += my_aligned;
@@ -393,9 +427,10 @@ Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold,
   // faster to fill with push_back and are more thread-safe
   std::vector<size_t> seq1, seq2;
   std::vector<double> dist1, dist2;
+  std::vector<int> score1, score2;
   size_t aligned = 0, considered = 0;
 
-  SparseDistanceMatrix sdm {seq1, seq2, dist1, dist2};
+  SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
   KmerAlignWorker worker(seq, kmer_seq_index, seq_kmer_index, seq_x_index,
                         match, mismatch, gap_open, gap_extend, gap_open2,
                         gap_extend2,
@@ -497,7 +532,9 @@ Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold,
   Rcpp::DataFrame out = Rcpp::DataFrame::create(
     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
     Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+    Rcpp::Named("score1") = Rcpp::wrap(score1),
     Rcpp::Named("dist1") = Rcpp::wrap(dist1),
+    Rcpp::Named("score2") = Rcpp::wrap(score2),
     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
   );
   return out;
@@ -554,6 +591,10 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
     my_seq1.reserve(1000);
     std::vector<size_t> my_seq2;
     my_seq2.reserve(1000);
+    std::vector<int> my_score1;
+    my_score1.reserve(1000);
+    std::vector<int> my_score2;
+    my_score2.reserve(1000);
     std::vector<double> my_dist1;
     my_dist1.reserve(1000);
     std::vector<double> my_dist2;
@@ -575,7 +616,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
     sdm.mutex.unlock();
     for (size_t i = begin_i; i < end_i; i++) {
       for (size_t j = 0; j < i; j++) {
-        double l1 = seq[i].size(), l2 = seq[j].size(), maxd1, maxs1;
+        double l1 = seq[i].size(), l2 = seq[j].size();
         // // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
         // //             << j << " (l2=" << l2 <<")####" << std::endl;
 
@@ -584,6 +625,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
         int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
         int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
 
+        std::pair<int, double> d1 = {0, 0};
         if (do_prealign) {
           prealigner.setMaxAlignmentScore((int) maxd1 + 1);
           // // std::cout << "(skipping) Setting band heuristics to " << min_k << ", " << max_k << std::endl;
@@ -594,9 +636,9 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
           ++my_prealigned;
           if (status != wfa::WFAligner::AlignmentStatus::StatusSuccessful) continue;
           // std::cout << "Prealignment successful." << std::endl;
-          double d1 = prealigner.getAlignmentScore();
-          if (d1 > maxd1) continue;
-          d1 /= (l1 + l2)/sim_threshold_plus_1;
+          int sc1 = prealigner.getAlignmentScore();
+          if (sc1 > maxd1) continue;
+          d1 = {sc1, (double)sc1*sim_threshold_plus_1 / (l1 + l2)};
         }
         if (is_constrained) {
           aligner.setHeuristicBandedStatic(min_k, max_k);
@@ -604,23 +646,25 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
             aligner.setMaxAlignmentScore((int)maxd1 + 1);
           }
         }
-        double d2 = distance(seq[j], seq[i], aligner);
+        auto d2 = score_and_distance(seq[j], seq[i], aligner);
         my_aligned++;
-        if (d2 <= dist_threshold) {
+        if (d2.second <= dist_threshold) {
           my_seq1.push_back(j);
           my_seq2.push_back(i);
-          my_dist1.push_back(d1);
-          my_dist2.push_back(d2);
+          my_score1.push_back(d1.first);
+          my_score2.push_back(d2.first);
+          my_dist1.push_back(d1.second);
+          my_dist2.push_back(d2.second);
 
           if (my_seq1.size() == 1000) {
-            sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+            sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
           }
         }
         RcppThread::checkUserInterrupt();
       }
     }
     if (my_seq1.size() > 0) {
-      sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+      sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
     }
     sdm.mutex.lock();
     aligned += my_aligned;
@@ -639,9 +683,10 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
    size_t prealigned = 0, aligned = 0;
 
    std::vector<size_t> seq1, seq2;
+   std::vector<int> score1, score2;
    std::vector<double> dist1, dist2;
 
-   SparseDistanceMatrix sdm {seq1, seq2, dist1, dist2};
+   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
    PrealignAlignWorker worker(seq,
                          match, mismatch, gap_open, gap_extend, gap_open2,
                          gap_extend2,
@@ -661,6 +706,8 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
    Rcpp::DataFrame out = Rcpp::DataFrame::create(
      Rcpp::Named("seq1") = Rcpp::wrap(seq1),
      Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+     Rcpp::Named("score1") = Rcpp::wrap(score1),
+     Rcpp::Named("score2") = Rcpp::wrap(score2),
      Rcpp::Named("dist1") = Rcpp::wrap(dist1),
      Rcpp::Named("dist2") = Rcpp::wrap(dist2)
    );
