@@ -11,3 +11,6 @@ renv.lock
 renv
 sample.profile*
 *.profile
+autom4te.cache
+config.log
+config.status
