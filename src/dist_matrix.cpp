@@ -507,7 +507,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
   const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
-  const bool do_prealign;
+  const bool do_prealign, is_constrained, is_score_constrained;
   const uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
@@ -522,6 +522,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
     const int extend2,
     const double dist_threshold,
     const bool do_prealign,
+    const bool constrain,
     const uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
@@ -529,7 +530,18 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   ) : seq(seq),
   match(match), mismatch(mismatch), gap(gap), extend(extend), gap2(gap2), extend2(extend2),
   dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
-  sim_threshold_plus_1(1.0 + sim_threshold), do_prealign(do_prealign), threads(threads),
+  sim_threshold_plus_1(1.0 + sim_threshold), do_prealign(do_prealign),
+  is_constrained(constrain),
+  is_score_constrained(
+    constrain &&
+      match == 0 &&
+      mismatch == 1 &&
+      gap == 0 &&
+      extend == 1 &&
+      gap2 == 0 &&
+      (extend2 == 0 || extend2 == 1)
+  ),
+  threads(threads),
   sdm(sdm), prealigned(prealigned), aligned(aligned) {};
 
   void operator()(std::size_t begin, std::size_t end) {
@@ -566,14 +578,14 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
         double l1 = seq[i].size(), l2 = seq[j].size(), maxd1, maxs1;
         // // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
         // //             << j << " (l2=" << l2 <<")####" << std::endl;
+
         if (l1 / l2 < sim_threshold || l2/l1 < sim_threshold) continue;
-        //
-        maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
-        double d1 = 0;
+        double maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
+        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+        int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
+
         if (do_prealign) {
-          prealigner.setMaxAlignmentScore((int) maxd1);
-          int min_k = -(int)round((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-          int max_k = (int)round((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
+          prealigner.setMaxAlignmentScore((int) maxd1 + 1);
           // // std::cout << "(skipping) Setting band heuristics to " << min_k << ", " << max_k << std::endl;
           prealigner.setHeuristicBandedStatic(min_k, max_k);
           // std::cout << "Prealigning..." << std::endl;
@@ -585,6 +597,12 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
           double d1 = prealigner.getAlignmentScore();
           if (d1 > maxd1) continue;
           d1 /= (l1 + l2)/sim_threshold_plus_1;
+        }
+        if (is_constrained) {
+          aligner.setHeuristicBandedStatic(min_k, max_k);
+          if (is_score_constrained) {
+            aligner.setMaxAlignmentScore((int)maxd1 + 1);
+          }
         }
         double d2 = distance(seq[j], seq[i], aligner);
         my_aligned++;
@@ -616,7 +634,8 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
  Rcpp::DataFrame distmx2(std::vector<std::string> seq, double dist_threshold,
                         int match = 1, int mismatch = 2, int gap_open = 10,
                         int gap_extend = 1, int gap_open2 = 0, int gap_extend2 = 0,
-                        bool prealign = true, uint8_t threads = 1) {
+                        bool prealign = true, bool constrain = true,
+                        uint8_t threads = 1) {
    size_t prealigned = 0, aligned = 0;
 
    std::vector<size_t> seq1, seq2;
@@ -626,7 +645,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
    PrealignAlignWorker worker(seq,
                          match, mismatch, gap_open, gap_extend, gap_open2,
                          gap_extend2,
-                         dist_threshold, prealign, threads,
+                         dist_threshold, prealign, constrain, threads,
                          sdm, prealigned, aligned);
    if (threads > 1) {
      RcppParallel::parallelFor(0, threads, worker, 1, threads);
