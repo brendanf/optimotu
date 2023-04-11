@@ -4,3 +4,6 @@
 [submodule "src/SneakySnake"]
 	path = src/SneakySnake
 	url = git@github.com:CMU-SAFARI/SneakySnake.git
+[submodule "src/edlib"]
+	path = src/edlib
+	url = git@github.com:Martinsos/edlib.git
