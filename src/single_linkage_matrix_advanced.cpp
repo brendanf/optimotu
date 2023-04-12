@@ -3,6 +3,7 @@
 // [[Rcpp::depends(RcppParallel)]]
 #include <RcppParallel.h>
 #include "ClusterMatrix.h"
+#include "ClusterIndexedMatrix.h"
 
 Rcpp::IntegerMatrix single_linkage_matrix2(
     const std::string file,
@@ -63,3 +64,59 @@ Rcpp::IntegerMatrix single_linkage_matrix2_cached(
    const int m = thresholds.size();
    return single_linkage_matrix2(file, seqnames, dconv, m, do_binary_search);
 }
+
+Rcpp::IntegerMatrix single_linkage_imatrix(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const DistanceConverter &dconv,
+    const int m
+) {
+  Rcpp::IntegerMatrix im(m, seqnames.size());
+  ClusterIndexedMatrix<RcppParallel::RMatrix<int>, Rcpp::IntegerMatrix> cm(dconv, im);
+  std::ifstream infile(file);
+  std::size_t seq1, seq2;
+  double dist;
+  while(infile >> seq1 >> seq2 >> dist) {
+    cm(seq1, seq2, dist);
+  }
+  return im;
+}
+
+//' @export
+ // [[Rcpp::export]]
+ Rcpp::IntegerMatrix single_linkage_imatrix_uniform(
+     const std::string file,
+     const Rcpp::CharacterVector &seqnames,
+     const float dmin,
+     const float dmax,
+     const float dstep
+ ) {
+   const UniformDistanceConverter dconv(dmin, dstep);
+   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+   return single_linkage_imatrix(file, seqnames, dconv, m);
+ }
+
+//' @export
+ // [[Rcpp::export]]
+ Rcpp::IntegerMatrix single_linkage_imatrix_array(
+     const std::string file,
+     const Rcpp::CharacterVector &seqnames,
+     const std::vector<double> &thresholds
+ ) {
+   const ArrayDistanceConverter dconv(thresholds);
+   const int m = thresholds.size();
+   return single_linkage_imatrix(file, seqnames, dconv, m);
+ }
+
+//' @export
+ // [[Rcpp::export]]
+ Rcpp::IntegerMatrix single_linkage_imatrix_cached(
+     const std::string file,
+     const Rcpp::CharacterVector &seqnames,
+     const std::vector<double> &thresholds,
+     const double precision
+ ) {
+   const CachedDistanceConverter dconv(thresholds, precision);
+   const int m = thresholds.size();
+   return single_linkage_imatrix(file, seqnames, dconv, m);
+ }

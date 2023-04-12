@@ -158,6 +158,48 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// single_linkage_imatrix_uniform
+Rcpp::IntegerMatrix single_linkage_imatrix_uniform(const std::string file, const Rcpp::CharacterVector& seqnames, const float dmin, const float dmax, const float dstep);
+RcppExport SEXP _optimotu_single_linkage_imatrix_uniform(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const float >::type dmin(dminSEXP);
+    Rcpp::traits::input_parameter< const float >::type dmax(dmaxSEXP);
+    Rcpp::traits::input_parameter< const float >::type dstep(dstepSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_imatrix_uniform(file, seqnames, dmin, dmax, dstep));
+    return rcpp_result_gen;
+END_RCPP
+}
+// single_linkage_imatrix_array
+Rcpp::IntegerMatrix single_linkage_imatrix_array(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds);
+RcppExport SEXP _optimotu_single_linkage_imatrix_array(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_imatrix_array(file, seqnames, thresholds));
+    return rcpp_result_gen;
+END_RCPP
+}
+// single_linkage_imatrix_cached
+Rcpp::IntegerMatrix single_linkage_imatrix_cached(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds, const double precision);
+RcppExport SEXP _optimotu_single_linkage_imatrix_cached(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
+    Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_imatrix_cached(file, seqnames, thresholds, precision));
+    return rcpp_result_gen;
+END_RCPP
+}
 // single_linkage_matrix_uniform
 Rcpp::IntegerMatrix single_linkage_matrix_uniform(const std::string file, const Rcpp::CharacterVector& seqnames, const float dmin, const float dmax, const float dstep, const int threads, const int minsplit);
 RcppExport SEXP _optimotu_single_linkage_matrix_uniform(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP threadsSEXP, SEXP minsplitSEXP) {
@@ -315,6 +357,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_single_linkage_matrix2_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix2_uniform, 6},
     {"_optimotu_single_linkage_matrix2_array", (DL_FUNC) &_optimotu_single_linkage_matrix2_array, 4},
     {"_optimotu_single_linkage_matrix2_cached", (DL_FUNC) &_optimotu_single_linkage_matrix2_cached, 5},
+    {"_optimotu_single_linkage_imatrix_uniform", (DL_FUNC) &_optimotu_single_linkage_imatrix_uniform, 5},
+    {"_optimotu_single_linkage_imatrix_array", (DL_FUNC) &_optimotu_single_linkage_imatrix_array, 3},
+    {"_optimotu_single_linkage_imatrix_cached", (DL_FUNC) &_optimotu_single_linkage_imatrix_cached, 4},
     {"_optimotu_single_linkage_matrix_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix_uniform, 7},
     {"_optimotu_single_linkage_matrix_array", (DL_FUNC) &_optimotu_single_linkage_matrix_array, 5},
     {"_optimotu_single_linkage_matrix_cached", (DL_FUNC) &_optimotu_single_linkage_matrix_cached, 6},

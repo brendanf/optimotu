@@ -99,6 +99,21 @@ single_linkage_matrix2_cached <- function(file, seqnames, thresholds, precision,
 }
 
 #' @export
+single_linkage_imatrix_uniform <- function(file, seqnames, dmin, dmax, dstep) {
+    .Call(`_optimotu_single_linkage_imatrix_uniform`, file, seqnames, dmin, dmax, dstep)
+}
+
+#' @export
+single_linkage_imatrix_array <- function(file, seqnames, thresholds) {
+    .Call(`_optimotu_single_linkage_imatrix_array`, file, seqnames, thresholds)
+}
+
+#' @export
+single_linkage_imatrix_cached <- function(file, seqnames, thresholds, precision) {
+    .Call(`_optimotu_single_linkage_imatrix_cached`, file, seqnames, thresholds, precision)
+}
+
+#' @export
 single_linkage_matrix_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, minsplit = 1L) {
     .Call(`_optimotu_single_linkage_matrix_uniform`, file, seqnames, dmin, dmax, dstep, threads, minsplit)
 }
