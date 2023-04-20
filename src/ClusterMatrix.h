@@ -44,9 +44,9 @@ public:
 
   void operator()(j_t seq1, j_t seq2, d_t i) override;
 
-  void merge_into(DistanceConsumer &consumer) const override final;
+  void merge_into(DistanceConsumer &consumer) override final;
 
-  void merge_into(ClusterAlgorithm &consumer) const override final;
+  void merge_into(ClusterAlgorithm &consumer) override final;
 
   ClusterAlgorithm * make_child() override;
 

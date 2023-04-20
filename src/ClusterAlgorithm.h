@@ -65,11 +65,11 @@ public:
 
   // send consumer() pairwise distances to ensure it is up-to-date with this
   // clustering
-  virtual void merge_into(DistanceConsumer &consumer) const=0;
+  virtual void merge_into(DistanceConsumer &consumer)=0;
 
   // send consumer() pairwise distances to ensure it is up-to-date with this
   // clustering
-  virtual void merge_into(ClusterAlgorithm &consumer) const=0;
+  virtual void merge_into(ClusterAlgorithm &consumer)=0;
 
   // send parent pairwise distances to ensure it is up-to-date
   virtual void merge_into_parent() {

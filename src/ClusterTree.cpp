@@ -50,7 +50,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i) {
 #ifdef SINGLE_LINK_DEBUG
          Rcpp::Rcout << "j1p:" << clust(c1p)
                      << ", j2p:" << clust(c2p)
-                << std::endl;
+                     << std::endl;
 #endif
     if (i == c1->min_d) {
       // we don't need to create a new cluster for c1, we can just modify this
@@ -468,7 +468,19 @@ int ClusterTree::hclust_ordering(cluster * top, int start, Rcpp::IntegerVector &
 }
 #endif
 
-void ClusterTree::merge_into(DistanceConsumer &consumer) const {
+void ClusterTree::assign_ids() {
+  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
+  for (j_t i = 0; i < n; ++i) {
+    cluster * c = my_pool + i;
+    while(c->parent && c->parent->id > i) {
+      c->parent->id = i;
+      c = c->parent;
+    }
+  }
+}
+
+void ClusterTree::merge_into(DistanceConsumer &consumer) {
+  this->assign_ids();
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (auto c = this->my_pool + this->n; c < this->my_pool + 2*this->n; ++c) {
@@ -484,14 +496,28 @@ void ClusterTree::merge_into(DistanceConsumer &consumer) const {
   }
 }
 
-void ClusterTree::merge_into(ClusterAlgorithm &consumer) const {
+void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
+  this->assign_ids();
   // std::lock_guard<std::mutex> lock{this->mutex};
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (auto c = this->my_pool + this->n; c < this->my_pool + 2*this->n; ++c) {
+    // std::cout << "merging cluster " << c - my_pool
+    //           << " (" << c
+    //           << ") with ID " << c->id
+    //           << std::endl;
     if (c->allocated) {
+      // std::cout << " - cluster is allocated" << std::endl;
       if (c->first_child) {
+        // std::cout << " - first child is cluster " << c->first_child - my_pool
+        //           << " (" << c->first_child
+        //           << ") with ID " << c->first_child->id
+        //           << std::endl;
         cluster * next = c->first_child->next_sib;
         while (next) {
+          // std::cout << " - next child is cluster " << next - my_pool
+          //           << " (" << next
+          //           << ") with ID " << next->id
+          //           << std::endl;
           consumer(c->first_child->id, next->id, c->min_d);
           next = next->next_sib;
         }

@@ -413,7 +413,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i) {
 }
 
 template <class A>
-void ClusterIndexedMatrix<A>::merge_into(DistanceConsumer &consumer) const {
+void ClusterIndexedMatrix<A>::merge_into(DistanceConsumer &consumer) {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   tip * t = index;
   while (t->next != nullptr) {
@@ -423,7 +423,7 @@ void ClusterIndexedMatrix<A>::merge_into(DistanceConsumer &consumer) const {
 }
 
 template <class A>
-void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) const {
+void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   // TODO check that the distance converters are really compatible
   tip * t = index;

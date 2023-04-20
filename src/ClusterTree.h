@@ -63,6 +63,11 @@ protected:
      if (c) return std::to_string(c - my_pool);
      return "none";
    };
+
+   std::string clust_id(const cluster * c) const {
+     if (c) return std::to_string(c->id);
+     return "none";
+   };
 #endif
 
 #ifdef OPTIMOTU_R
@@ -84,6 +89,8 @@ protected:
       freeclusters.push_back(c);
     }
   };
+
+  void assign_ids();
 
   ClusterTree(ClusterAlgorithm * parent) :
     ClusterAlgorithm(parent) {
@@ -122,11 +129,11 @@ public:
 
    // send consumer() pairwise distances to ensure it is up-to-date with this
    // clustering
-   virtual void merge_into(DistanceConsumer &consumer) const override;
+   virtual void merge_into(DistanceConsumer &consumer) override;
 
    // send consumer() pairwise distances to ensure it is up-to-date with this
    // clustering
-   virtual void merge_into(ClusterAlgorithm &consumer) const override;
+   virtual void merge_into(ClusterAlgorithm &consumer) override;
 
    // calculate the maximum distance between seq1 and seq2 which would actually
    // cause an update
