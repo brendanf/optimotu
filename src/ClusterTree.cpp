@@ -538,6 +538,7 @@ double ClusterTree::max_relevant(j_t seq1, j_t seq2) const {
   // correct height.
   d_t max_d1 = c1->max_d();
   d_t max_d2 = c2->max_d();
+  if (c1p == c2p && max_d1 == 0) return -1.0;
   while (c1 != c2) {
     RcppThread::checkUserInterrupt();
     // shift to the parent of whichever cluster has the nearer parent

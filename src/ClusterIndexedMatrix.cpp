@@ -455,6 +455,7 @@ double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2) const {
   if (clust_array[j1 + m - 1] != clust_array[j2 + m - 1]) {
     return dconv.inverse(m-1);
   }
+  if (*c1 == *c2) return -1.0;
   // linear search version
   while (c1 < c1max && *c1 != *c2) {
     ++c1;
