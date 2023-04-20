@@ -214,13 +214,29 @@ double ClusterMatrix<A, BM, F>::max_relevant(j_t seq1, j_t seq2) const {
   if (clust_array[j1 + m - 1] != clust_array[j2 + m - 1]) {
     return dconv.inverse(m-1);
   }
-  // linear search version
-  while (c1 < c1max && *c1 == *c2) {
-    ++c1;
-    ++c2;
+  if (*c1 == *c2) return -1;
+  if (BM) {
+    // binary search to find imax and imin
+    while (c1max - c1 > 1) {
+      int diff = (c1max-c1) / 2;
+      auto c1mean = c1 + diff;
+      auto c2mean = c2 + diff;
+      if (*c1mean == *c2mean) {
+        c1max=c1mean;
+      } else {
+        c1=c1mean;
+        c2=c2mean;
+      }
+    }
+    return dconv.inverse(c1 - ca - j1);
+  } else {
+    // linear search version
+    while (c1 < c1max && *c1 != *c2) {
+      ++c1;
+      ++c2;
+    }
+    return dconv.inverse(c1 - ca - j1 - 1);
   }
-  // maybe try binary search?
-  return dconv.inverse(c1 - ca - j1 - 1);
 };
 
 #ifdef OPTIMOTU_R
