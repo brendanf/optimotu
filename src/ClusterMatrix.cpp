@@ -209,9 +209,9 @@ double ClusterMatrix<A, BM, F>::max_relevant(j_t seq1, j_t seq2) const {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   if (seq1 == seq2) return 0.0;
   j_t j1 = seq1*m, j2 = seq2*m;
-  auto c1 = clust_array.begin() + j1, c2 = clust_array.begin() + j2,
+  auto c1 = ca + j1, c2 = ca + j2,
     c1max = c1+m;
-  if (clust_array[j1 + m - 1] == clust_array[j2 + m - 1]) {
+  if (clust_array[j1 + m - 1] != clust_array[j2 + m - 1]) {
     return dconv.inverse(m-1);
   }
   // linear search version
@@ -220,7 +220,7 @@ double ClusterMatrix<A, BM, F>::max_relevant(j_t seq1, j_t seq2) const {
     ++c2;
   }
   // maybe try binary search?
-  return dconv.inverse(c1 - clust_array.begin() - j1 - 1);
+  return dconv.inverse(c1 - ca - j1 - 1);
 };
 
 #ifdef OPTIMOTU_R
