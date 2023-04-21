@@ -121,6 +121,19 @@ struct MutualInformationWorker : public RcppParallel::Worker
   }
 };
 
+//' Calculate similarity for a set of alternate "test" partitions vs. a "true" partition
+//'
+//' @param k (`m` x `n` `integer` matrix) `m` alternative "test" partitions; each
+//' row gives the cluster assignment for the `n` objects. Objects with the same
+//' cluster ID are clustered together. Cluster IDs do not need to be
+//' consecutive, and they do not need to correspond between different
+//' partitions.
+//' @param c (`integer` vector of length `n`) "True" partition of the `n`
+//' objects.
+//' @param threads (`integer` count) number of parallel threads to use.
+//'
+//' @return (`numeric` vector of length `m`) The similarity measure between each
+//' of the alternative partitions and the "true" partition.
 //' @export
 // [[Rcpp::export]]
 Rcpp::NumericVector mutual_information(
@@ -529,6 +542,7 @@ public:
 
 };
 
+//' @rdname mutual_information
 //' @export
  // [[Rcpp::export]]
  Rcpp::DataFrame adjusted_mutual_information(
