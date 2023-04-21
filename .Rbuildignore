@@ -10,3 +10,7 @@
 ^benchmark$
 ^configure$
 ^configure.ac$
+^\.git$
+^.*/\.git$
+^.*/\.github$
+^.*/\.travis.yml$
