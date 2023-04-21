@@ -6,6 +6,8 @@ extern "C" {
 #include <SneakySnake.h>
 }
 
+
+
 #include "pairwise_alignment.h"
 #include "pad_strings.h"
 #include "SparseDistanceMatrix.h"
@@ -81,42 +83,56 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
     }
     size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
     sdm.mutex.lock();
-    std::cout << "Thread " << begin << " entered; sequences [" <<
+    std::cout << "SneakySnakeAlignWorker thread " << begin << " entered; sequences [" <<
       begin_i << ", "<< end_i << ")" << std::endl;
     sdm.mutex.unlock();
     for (size_t i = begin_i; i < end_i; i++) {
       for (size_t j = 0; j < i; j++) {
-        double l1 = seq[i].size(), l2 = seq[j].size(), maxd1;
-        int big_l = std::max(l1, l2), small_l = std::min(l1, l2);
+        bool is_seqj_longer = seq[j].size() > seq[i].size();
+        size_t s1 = is_seqj_longer ? i : j;
+        size_t s2 = is_seqj_longer ? j : i;
+        double l1 = seq[s1].size(), l2 = seq[s2].size();
+
+        // sdm.mutex.lock();
         // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
         //             << j << " (l2=" << l2 <<")####" << std::endl;
-        if (l1 / l2 < sim_threshold || l2/l1 < sim_threshold) continue;
-        maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
+        // sdm.mutex.unlock();
 
-        int kmer_width = (int)round(2*(big_l - small_l * sim_threshold) / sim_threshold_plus_1);
+        if (l1/l2 < sim_threshold) continue;
+        double maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
+
+        int kmer_width = (int)ceil(2*(l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+
+        // sdm.mutex.lock();
         // Rcpp::Rcout << "maxd1=" << maxd1 << " kmer_width=" << kmer_width << std::endl;
+        // sdm.mutex.unlock();
+
         int d1 = SneakySnake(
-          big_l,
-          pseq.first + i*pseq.second,
-          pseq.first + j*pseq.second,
-          maxd1,
+          l2,
+          pseq.first + s2*pseq.second,
+          pseq.first + s1*pseq.second,
+          ceil(maxd1),
           kmer_width,
           0,
-          big_l
+          l2
         );
+
+        // sdm.mutex.lock();
         // Rcpp::Rcout << "SneakySnake: " << d1 << std::endl;
+        // sdm.mutex.unlock();
+
         ++my_prealigned;
         if (d1 == 0) continue;
         // double d1 = 0;
         if (is_constrained) {
-          int max_k = (int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-          int min_k = -(int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+          int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+          int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
           aligner.setHeuristicBandedStatic(min_k, max_k);
           if (is_score_constrained) {
             aligner.setMaxAlignmentScore((int) maxd1 + 1);
           }
         }
-        auto d2 = score_and_distance_wfa2(seq[j], seq[i], aligner);
+        auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);
         my_aligned++;
         if (d2.second <= dist_threshold) {
           my_seq1.push_back(j);

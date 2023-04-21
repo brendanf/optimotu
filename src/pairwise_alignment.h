@@ -32,6 +32,12 @@ std::pair<int, double> score_and_distance_wfa2(
     wfa::WFAligner &aligner
 );
 
+std::pair<int, double> score_and_distance_wfa2(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAlignerEdit &aligner
+);
+
 //' @export
 //'
 // [[Rcpp::export]]

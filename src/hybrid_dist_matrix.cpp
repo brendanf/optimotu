@@ -63,7 +63,7 @@ struct HybridAlignWorker : public RcppParallel::Worker {
     }
     size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
     sdm.mutex.lock();
-    std::cout << "Thread " << begin << " entered; sequences [" <<
+    std::cout << "HybridAlignWorker thread " << begin << " entered; sequences [" <<
       begin_i << ", "<< end_i << ")" << std::endl;
     sdm.mutex.unlock();
     for (size_t i = begin_i; i < end_i; i++) {

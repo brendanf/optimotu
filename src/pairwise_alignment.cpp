@@ -112,7 +112,20 @@ std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::
     }
     length++;
   }
-  return {length - match, 1.0 - double(match) / double(length)};
+  return {length - match, double(length - match) / double(length)};
+}
+
+std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::string &b, wfa::WFAlignerEdit &aligner) {
+  wfa::WFAligner::AlignmentStatus status;
+  // if (a.size() >= b.size()) {
+  status = aligner.alignEnd2End(a, b);
+  // } else {
+  //   status = aligner.alignEnd2End(b, a);
+  // }
+  if (status != wfa::WFAligner::StatusSuccessful) return {std::max(a.size(), b.size()), 1.0};
+  auto cigar = aligner.getAlignmentCigar();
+  return {aligner.getAlignmentScore(),
+          double(aligner.getAlignmentScore()) / double(cigar.size())};
 }
 
 double align(const std::string a, const std::string b,
