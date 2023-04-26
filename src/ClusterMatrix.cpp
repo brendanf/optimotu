@@ -9,7 +9,7 @@ void ClusterMatrix<A, BM, F>::initialize() {
       ++ca;
     }
   }
-};
+}
 
 template<typename A, bool BM, int F>
 void ClusterMatrix<A, BM, F>::operator()(j_t seq1, j_t seq2, d_t i) {
@@ -162,7 +162,7 @@ void ClusterMatrix<A, BM, F>::operator()(j_t seq1, j_t seq2, d_t i) {
     &*toclust.begin() + i,
     (imax - i) * sizeof(int)
   );
-};
+}
 
 template<typename A, bool BM, int F>
 void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) {
@@ -175,7 +175,7 @@ void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) {
     }
     consumer(j, clust_array[i], dconv.inverse(i - j*m));
   }
-};
+}
 
 template<typename A, bool BM, int F>
 void ClusterMatrix<A, BM, F>::merge_into(ClusterAlgorithm &consumer) {
@@ -189,7 +189,7 @@ void ClusterMatrix<A, BM, F>::merge_into(ClusterAlgorithm &consumer) {
     }
     consumer(j, clust_array[i], (d_t)(i - j*m));
   }
-};
+}
 
 template<typename A, bool BM, int F>
 ClusterAlgorithm * ClusterMatrix<A, BM, F>::make_child() {
@@ -237,7 +237,7 @@ double ClusterMatrix<A, BM, F>::max_relevant(j_t seq1, j_t seq2) const {
     }
     return dconv.inverse(c1 - ca - j1 - 1);
   }
-};
+}
 
 #ifdef OPTIMOTU_R
 template<>
@@ -247,7 +247,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
-};
+}
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
@@ -256,7 +256,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
-};
+}
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
@@ -265,7 +265,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
-};
+}
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
@@ -274,7 +274,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
-};
+}
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
@@ -283,7 +283,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
-};
+}
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
@@ -292,5 +292,5 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
-};
+}
 #endif

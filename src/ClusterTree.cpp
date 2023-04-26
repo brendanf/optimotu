@@ -188,7 +188,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i) {
 #ifdef SINGLE_LINK_TEST
   validate();
 #endif
-};
+}
 
 void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
 #ifdef SINGLE_LINK_DEBUG
@@ -288,7 +288,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
 #endif
   }
   return;
-};
+}
 
 void ClusterTree::remove_child(cluster *parent, cluster *child) {
 #ifdef SINGLE_LINK_FULL_DEBUG
@@ -351,7 +351,7 @@ void ClusterTree::remove_child(cluster *parent, cluster *child) {
                   << std::endl;
 #endif
   return;
-};
+}
 
 void ClusterTree::add_child(cluster * parent, cluster * child) {
 #ifdef SINGLE_LINK_FULL_DEBUG
@@ -709,7 +709,7 @@ ClusterTree * ClusterTree::make_child() {
   }
   this->own_child = true;
   return this;
-};
+}
 
 #ifdef SINGLE_LINK_TEST
 void ClusterTree::validate() const {
