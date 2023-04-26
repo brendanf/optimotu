@@ -6,15 +6,14 @@ extern "C" {
 #include <SneakySnake.h>
 }
 
-
-
 #include "pairwise_alignment.h"
 #include "pad_strings.h"
 #include "SparseDistanceMatrix.h"
 
 struct SneakySnakeAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
-  const std::pair<char*, size_t> pseq;
+  const std::shared_ptr<char[]> pseq;
+  std::size_t seq_width = 0;
   const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
   const bool is_constrained, is_score_constrained;
@@ -36,8 +35,10 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
     size_t &aligned
-  ) : seq(seq), pseq(pad_strings(seq)),
-  match(match), mismatch(mismatch), gap(gap), extend(extend), gap2(gap2), extend2(extend2), dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
+  ) : seq(seq), pseq(pad_strings(seq, seq_width)),
+  match(match), mismatch(mismatch), gap(gap), extend(extend),
+  gap2(gap2), extend2(extend2), dist_threshold(dist_threshold),
+  sim_threshold(1.0 - dist_threshold),
   sim_threshold_plus_1(1.0 + sim_threshold), is_constrained(constrain),
   is_score_constrained(
     constrain &&
@@ -50,10 +51,6 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
   ),
   threads(threads),
   sdm(sdm), prealigned(prealigned), aligned(aligned) {};
-
-  ~SneakySnakeAlignWorker() {
-    delete[] pseq.first;
-  };
 
   void operator()(std::size_t begin, std::size_t end) {
     double n = seq.size();
@@ -109,8 +106,8 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
 
         int d1 = SneakySnake(
           l2,
-          pseq.first + s2*pseq.second,
-          pseq.first + s1*pseq.second,
+          pseq.get() + s2*seq_width,
+          pseq.get() + s1*seq_width,
           ceil(maxd1),
           kmer_width,
           0,

@@ -1,11 +1,13 @@
 #ifndef OPTIMOTU_PADSTRINGS_H_INCLUDED
 #define OPTIMOTU_PADSTRINGS_H_INCLUDED
 
-#include <utility>
 #include <vector>
 #include <string>
-#include <cstring>
+#include <memory>
 
-std::pair<char*, size_t> pad_strings(const std::vector<std::string> &seq);
+std::shared_ptr<char[]> pad_strings(
+    const std::vector<std::string> &seq,
+    std::size_t & seq_width
+);
 
 #endif //OPTIMOTU_PADSTRINGS_H_INCLUDED

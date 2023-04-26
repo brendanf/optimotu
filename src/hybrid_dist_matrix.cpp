@@ -12,12 +12,13 @@ extern "C" {
 
 struct HybridAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
-  const std::pair<char*, size_t> pseq;
+  const std::shared_ptr<char[]> pseq;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
   const double breakpoint;
   const uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
+  size_t seq_width = 0;
 
   HybridAlignWorker(
     const std::vector<std::string> &seq,
@@ -27,7 +28,7 @@ struct HybridAlignWorker : public RcppParallel::Worker {
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
     size_t &aligned
-  ) : seq(seq), pseq(pad_strings(seq)),
+  ) : seq(seq), pseq(pad_strings(seq, seq_width)),
   dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
   sim_threshold_plus_1(1.0 + sim_threshold),
   breakpoint(breakpoint),
@@ -84,8 +85,8 @@ struct HybridAlignWorker : public RcppParallel::Worker {
           // edit distance, not pairwise dissimilarity
           is_close = SneakySnake(
             l2,
-            pseq.first + s2*pseq.second,
-            pseq.first + s1*pseq.second,
+            pseq.get() + s2*seq_width,
+            pseq.get() + s1*seq_width,
             (int) breakpoint,
             (int) breakpoint * 2 + 1,
             0,
@@ -98,8 +99,8 @@ struct HybridAlignWorker : public RcppParallel::Worker {
                             (2-breakpoint));
           is_close = SneakySnake(
             l2,
-            pseq.first + s2*pseq.second,
-            pseq.first + s1*pseq.second,
+            pseq.get() + s2*seq_width,
+            pseq.get() + s1*seq_width,
             (int) (breakpoint * (l1 + l2) / (2 - breakpoint)),
             kmer_width,
             0,
@@ -159,6 +160,11 @@ struct HybridAlignWorker : public RcppParallel::Worker {
   }
 };
 
+//' @param breakpoint (`numeric` scalar) threshold for deciding whetehr to use
+//' WFA2 or edlib for edit-distance alignment.  This parameter is interpreted as
+//' an edit distance if greater than or equal to `1`, or as a pairwise
+//' dissimilarity if less than 1. In either case, WFA2 is used below the
+//' breakpoint, and edlib is used above it.
 //' @export
 //' @rdname seq_distmx
 // [[Rcpp::export]]
