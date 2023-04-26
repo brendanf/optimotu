@@ -49,11 +49,11 @@ std::vector<d_t> init_cache(
 ) {
    size_t cache_size = (size_t)ceil((max_threshold - thresholds[0]) / precision);
    std::vector<d_t> cache;
-   // cache.reserve(cache_size);
+   cache.reserve(cache_size);
    d_t i = 0;
    for (size_t j = 0; j <= cache_size; j++) {
       double t = thresholds[0] + precision * j;
-      while(thresholds[i] < t) i++;
+      while(t - thresholds[i] > sqrt(std::numeric_limits<double>::epsilon())) i++;
       cache.push_back(i);
    }
    return cache;
