@@ -22,7 +22,7 @@ public:
       const int max_ed,
       const int min_k,
       const int max_k
-  ) const override;
+  ) override;
   std::unique_ptr<PrealignFilter> copy() const override;
 };
 

@@ -3,7 +3,7 @@
 
 #include "PairGenerator.h"
 
-// Generates all pairs {i, j} where begin <= i < j and + <= j < i
+// Generates all pairs {i, j} where begin <= i < end and 0 <= j < i
 class AllPairGenerator : public PairGenerator {
 private:
   std::size_t i, j = 0;

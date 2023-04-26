@@ -12,7 +12,7 @@ bool SneakySnakeFilter::operator()(
     const int max_ed,
     const int min_k,
     const int max_k
-) const {
+) {
   return (bool) SneakySnake(
     seq[j].size(),
     pseq.get() + j*seq_width,

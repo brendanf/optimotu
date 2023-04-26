@@ -76,6 +76,11 @@ seq_distmx_edlib <- function(seq, dist_threshold, constrain = TRUE, threads = 1L
     .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, constrain, threads)
 }
 
+#' @param breakpoint (`numeric` scalar) threshold for deciding whether to use
+#' WFA2 or edlib for edit-distance alignment.  This parameter is interpreted as
+#' an edit distance if greater than or equal to `1`, or as a pairwise
+#' dissimilarity if less than 1. In either case, WFA2 is used below the
+#' breakpoint, and edlib is used above it.
 #' @export
 #' @rdname seq_distmx
 seq_distmx_hybrid <- function(seq, dist_threshold, breakpoint = 0.1, threads = 1L) {

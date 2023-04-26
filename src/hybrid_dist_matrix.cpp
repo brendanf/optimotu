@@ -160,7 +160,7 @@ struct HybridAlignWorker : public RcppParallel::Worker {
   }
 };
 
-//' @param breakpoint (`numeric` scalar) threshold for deciding whetehr to use
+//' @param breakpoint (`numeric` scalar) threshold for deciding whether to use
 //' WFA2 or edlib for edit-distance alignment.  This parameter is interpreted as
 //' an edit distance if greater than or equal to `1`, or as a pairwise
 //' dissimilarity if less than 1. In either case, WFA2 is used below the

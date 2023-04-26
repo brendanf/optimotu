@@ -16,7 +16,7 @@ public:
       const int max_ed,
       const int min_k,
       const int max_k
-  ) const = 0;
+  ) = 0;
   virtual std::unique_ptr<PrealignFilter> copy() const = 0;
 };
 

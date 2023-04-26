@@ -68,6 +68,12 @@ that the results do not change.}
 \item{threads}{(\code{integer} count) number of parallel threads to use for
 computation.}
 
+\item{breakpoint}{(\code{numeric} scalar) threshold for deciding whether to use
+WFA2 or edlib for edit-distance alignment.  This parameter is interpreted as
+an edit distance if greater than or equal to \code{1}, or as a pairwise
+dissimilarity if less than 1. In either case, WFA2 is used below the
+breakpoint, and edlib is used above it.}
+
 \item{udist_threshold}{(\code{numeric} scalar between 0 and 1) maximum udist
 (number of shared kmers / number of kmers in the shorter sequence) for full
 alignment.}
