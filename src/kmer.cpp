@@ -1,8 +1,11 @@
 #include <Rcpp.h>
 #include <RcppParallel.h>
 #include <RcppThread.h>
+
 #include "pairwise_alignment.h"
 #include "SparseDistanceMatrix.h"
+
+#include "kmer.h"
 
 // for a given kmer (implicit),
 // what sequence was it found in (i),
