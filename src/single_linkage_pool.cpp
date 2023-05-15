@@ -929,8 +929,10 @@ void process(cluster_pool *pool, j_t seq1, j_t seq2, d_t i) {
 void process_mod(cluster_pool **pool, std::map<j_t, j_t> *fwd_map,
                  j_t seq1, j_t seq2, d_t i, std::vector<j_t> &whichsets,
                  std::uint8_t shard, std::uint8_t base) {
-   for (j_t pc : whichsets) {
-      if (pc % base != shard) continue;
+  size_t kmax = whichsets.size();
+   for (size_t k = 0; k < kmax; k++) {
+     j_t pc = whichsets[k];
+      if (k % base != shard) continue;
       pool[pc]->process(fwd_map[pc][seq1], fwd_map[pc][seq2], i);
    }
 }
@@ -1022,7 +1024,8 @@ Rcpp::List single_linkage_multi(
          //    pool[pc]->process(fwd_map[pc][seq1], fwd_map[pc][seq2], i);
          // });
          did_parallel = true;
-         for (std::uint8_t k = 0; k < threads; k++) {
+         size_t kmax = threads > whichsets.size() ? whichsets.size() : threads;
+         for (std::uint8_t k = 0; k < kmax; k++) {
             RcppThread::ThreadPool::globalInstance().push(
                   process_mod,
                pool, fwd_map, seq1, seq2, i, whichsets, k, threads
