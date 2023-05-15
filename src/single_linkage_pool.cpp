@@ -5,7 +5,7 @@
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
 #include <RcppThread.h>
-#include "single_linkage_pool.h"
+#include "single_linkage.h"
 #include "DistanceConverter.h"
 
 // #define SINGLE_LINK_FULL_DEBUG

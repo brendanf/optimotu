@@ -1,5 +1,5 @@
-#ifndef _SINGLE_LINKAGE_POOL_
-#define _SINGLE_LINKAGE_POOL_
+#ifndef _SINGLE_LINKAGE_
+#define _SINGLE_LINKAGE_
 #include <cstdint>
 #include <limits>
 // type of "j", which is the index of a cluster

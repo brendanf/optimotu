@@ -2,7 +2,7 @@
 #define _DISTANCE_CONVERTER_
 
 #include <vector>
-#include "single_linkage_pool.h"
+#include "single_linkage.h"
 
 class DistanceConverter
 {
