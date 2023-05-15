@@ -116,8 +116,21 @@ struct AdjustedMutualInformationWorker : public RcppParallel::Worker
   const RcppParallel::RMatrix<int> k;
   const std::vector<std::pair<int, size_t>> &c_sort;
   const std::unordered_map<int, SizeAndEntropy> &c_count;
-  const double N;
+  const size_t N;
   RcppParallel::RVector<double> mi, ami;
+  const std::vector<double> lfact;
+
+  std::vector<double> init_lfact() {
+    std::vector<double> v;
+    v.reserve(N + 1);
+    double s = 0.0;
+    v.push_back(s);
+    for (size_t i = 1; i <= N; ++i) {
+      s += log(i);
+      v.push_back(s);
+    }
+    return v;
+  }
 
   AdjustedMutualInformationWorker(
     Rcpp::IntegerMatrix k,
@@ -126,7 +139,8 @@ struct AdjustedMutualInformationWorker : public RcppParallel::Worker
     Rcpp::NumericVector mi,
     Rcpp::NumericVector ami
   )
-    : k(k), c_sort(c_sort), c_count(c_count), N(k.ncol()), mi(mi), ami(ami) {};
+    : k(k), c_sort(c_sort), c_count(c_count), N(k.ncol()), lfact(init_lfact()),
+      mi(mi), ami(ami) {};
 
   void operator()(std::size_t begin, std::size_t end) {
     int c_clust, k_clust;
