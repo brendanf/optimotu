@@ -1,3 +1,9 @@
+# optimotu 0.5.0
+
+* Dramatically improve speed of `adjusted_mutual_information()`, while also
+ avoiding numerical underflows.
+* Add documentation of clustering quality metrics.
+
 # optimotu 0.4.4
 
 * Fix even more bugs which caused `usearch_single_linkage()` to fail when argument
