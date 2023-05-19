@@ -3,18 +3,20 @@
 
 #include<mutex>
 
+#define NEGINF (-std::numeric_limits<double>::infinity())
+
 double log_plus(double x, double y) {
-  if (x == -std::numeric_limits<double>::infinity()) return y;
-  if (y == -std::numeric_limits<double>::infinity()) return x;
+  if (x == NEGINF) return y;
+  if (y == NEGINF) return x;
   if (x == y) return x + std::log(2);
   if (x > y) return x + std::log1p(std::exp(y - x));
   return y + std::log1p(std::exp(x - y));
 }
 
 void log_add_to(double &x, double y) {
-  if (x == -std::numeric_limits<double>::infinity()) {
+  if (x == NEGINF) {
     x = y;
-  } else if (y == -std::numeric_limits<double>::infinity()) {
+  } else if (y == NEGINF) {
     return;
   } else if (x == y) {
     x += std::log(2);
@@ -26,8 +28,8 @@ void log_add_to(double &x, double y) {
 }
 
 double log_minus(double x, double y) {
-  if (x == -std::numeric_limits<double>::infinity()) return y;
-  if (y == -std::numeric_limits<double>::infinity()) return x;
+  if (x == NEGINF) return y;
+  if (y == NEGINF) return x;
   if (x == y) return x + std::log(2);
   if (x > y) return x + std::log1p(-std::exp(y - x));
   return y + std::log1p(-std::exp(x - y));
@@ -392,7 +394,7 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
   double emi_term(size_t ai, size_t bi, double precalc) {
     size_t nijmin = 1;
     if (ai + bi > N) nijmin = ai + bi - N;
-    double E = -std::numeric_limits<double>::infinity();
+    double E = NEGINF;
     precalc += lfact[bi] + lfact[N - bi];
     double logN = log(N);
     double logab = log(ai) + log(bi);
@@ -439,7 +441,7 @@ public:
     //             << " to " << max_calc
     //             << " of " << n_calc
     //             << std::endl;
-    std::vector<double> log_emi(emi.size(), -std::numeric_limits<double>::infinity());
+    std::vector<double> log_emi(emi.size(), NEGINF);
 
     auto calc_i = cum_calc.rbegin();
     auto calc_end = cum_calc.rend();
