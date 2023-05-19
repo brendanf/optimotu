@@ -1,3 +1,7 @@
+# optimotu 0.5.1
+
+* Fix bug which prevented installation on systems without gproftools installed.
+
 # optimotu 0.5.0
 
 * Dramatically improve speed of `adjusted_mutual_information()`, while also

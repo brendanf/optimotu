@@ -1,7 +1,7 @@
 Package: optimotu
 Type: Package
 Title: Optimize OTU clustering thresholds
-Version: 0.5.0
+Version: 0.5.1
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
