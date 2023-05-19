@@ -59,32 +59,6 @@ inline void initialize_c_counts(
   std::sort(c_sort.begin(), c_sort.end());
 }
 
-inline void initialize_c_counts2(
-    const Rcpp::IntegerVector c,
-    std::vector<std::pair<int, size_t>> &c_sort,
-    std::vector<SizeAndEntropy> &c_count,
-    size_t N
-) {
-  double Ninv = 1.0/N;
-  c_sort.reserve(N);
-  for (size_t i = 0; i < N; ++i) {
-    c_sort.emplace_back(c[i], i);
-  }
-  std::sort(c_sort.begin(), c_sort.end());
-  int last = -1;
-  for (auto ci : c_sort) {
-    if (ci.first > last) {
-      c_count.push_back({Ninv, 1});
-      last = ci.first;
-    } else {
-      ++(c_count.end()->n);
-    }
-  }
-  for (auto ci_count : c_count) {
-    ci_count.H = ci_count.n*Ninv;
-  }
-}
-
 struct MutualInformationWorker : public RcppParallel::Worker
 {
   const RcppParallel::RMatrix<int> k;
@@ -171,149 +145,6 @@ Rcpp::NumericVector mutual_information(
   }
   return mi;
 }
-
-class AdjustedMutualInformationWorker : public RcppParallel::Worker {
-
-struct CountAndLogFact {
-  double log_part;
-  size_t clust_size, n_clust;
-
-  CountAndLogFact(size_t clust_size, size_t n_clust, size_t N) :
-    log_part(lgamma(clust_size + 1.0) + lgamma(N - clust_size + 1.0)),
-    clust_size(clust_size), n_clust(n_clust) {};
-};
-
-  const RcppParallel::RMatrix<int> k;
-  const std::vector<std::pair<int, size_t>> &c_sort;
-  const std::unordered_map<int, SizeAndEntropy> &c_count;
-  const std::vector<CountAndLogFact> c_count_table;
-  const size_t N;
-  RcppParallel::RVector<double> mi, ami;
-  const std::vector<double> lfact;
-  const bool lookup_factorial;
-
-  std::vector<double> init_lfact() {
-    std::vector<double> v;
-    v.reserve(N + 1);
-    double s = 0.0;
-    v.push_back(s);
-    for (size_t i = 1; i <= N; ++i) {
-      s += log(i);
-      v.push_back(s);
-    }
-    return v;
-  };
-
-  void build_count_table(
-      std::vector<CountAndLogFact> &table,
-      const std::unordered_map<int, SizeAndEntropy> &count,
-      std::vector<size_t> *scratch = NULL
-  ) {
-    bool scratch_owned = false;
-    if (scratch == NULL) {
-      scratch_owned = true;
-      scratch = new std::vector<size_t>;
-    }
-    scratch->clear();
-    scratch->reserve(count.size());
-    for (const auto &c : count) {
-      scratch->push_back(c.second.n);
-    }
-    std::sort(scratch->begin(), scratch->end());
-    auto s_i = scratch->begin();
-    auto s_end = scratch->end();
-    while (s_i < s_end) {
-      auto start = s_i;
-      while (s_i < s_end && *s_i == *start) ++s_i;
-      table.emplace_back(*start, s_i - start, N);
-    }
-
-    if (scratch_owned) delete scratch;
-  };
-
-public:
-
-  AdjustedMutualInformationWorker(
-    const Rcpp::IntegerMatrix k,
-    const std::vector<std::pair<int, size_t>> &c_sort,
-    const std::unordered_map<int, SizeAndEntropy> &c_count,
-    Rcpp::NumericVector mi,
-    Rcpp::NumericVector ami,
-    bool lookup_factorial = TRUE
-  )
-    : k(k), c_sort(c_sort), c_count(c_count), N(k.ncol()),
-      mi(mi), ami(ami), lfact(init_lfact()),
-      lookup_factorial(lookup_factorial) {};
-
-  inline double log_factorial(size_t x) {
-    return lookup_factorial ? lfact[x] : lgamma(x + 1.0);
-  }
-
-  void operator()(std::size_t begin, std::size_t end) {
-    int c_clust, k_clust;
-    double Hij, Hc = 0.0, Hk, Ej, maxH;
-    std::unordered_map<int, SizeAndEntropy> k_count;
-    std::unordered_map<int, size_t> intersects;
-    for (auto ci : c_count) {
-      Hc -= ci.second.H * log(ci.second.H);
-    }
-    for (std::size_t j = begin; j < end; j++) {
-      auto kj = k.row(j);
-      k_count.clear();
-      Hk = 0.0;
-      for (size_t i = 0; i < N; ++i) {
-        auto counti = k_count.find(kj[i]);
-        if (counti == k_count.end()) {
-          k_count.emplace(kj[i], SizeAndEntropy{1.0/N, 1});
-        } else {
-          ++counti->second.n;
-        }
-      }
-      for (auto &ki : k_count) {
-        if (ki.second.n > 1) ki.second.H = ki.second.n/N;
-        Hk -= ki.second.H * log(ki.second.H);
-      }
-      maxH = Hk > Hc ? Hk : Hc;
-      auto ci = c_sort.begin();
-      auto c_end = c_sort.end();
-      Ej = 0;
-      while(ci < c_end) {
-        c_clust = ci->first;
-        intersects.clear();
-        while(ci < c_end && ci->first == c_clust) {
-          k_clust = kj[ci->second];
-          auto counti = intersects.find(k_clust);
-          if (counti == intersects.end()) {
-            intersects.emplace(k_clust, 1);
-          } else {
-            ++counti->second;
-          }
-          ++ci;
-        }
-        for (const auto &counti : intersects) {
-          Hij = (double)counti.second / N;
-          mi[j] += Hij * log(Hij / c_count.at(c_clust).H / k_count[kj[counti.first]].H);
-        }
-        size_t ai = c_count.at(c_clust).n;
-        double apart = log_factorial(ai) + log_factorial(N - ai) - log_factorial(N);
-        for (const auto &ki : k_count) {
-          size_t bj = ki.second.n;
-          size_t nijmin = 1;
-          if (ai + bj > N) nijmin = ai + bj - N;
-          size_t nijmax = ai > bj ? bj : ai;
-          double bpart = apart + log_factorial(bj) + log_factorial(N - bj);
-          for (size_t nij = nijmin; nij <= nijmax; nij++) {
-            Ej += nij/N * log(N * nij / ai / bj) * exp(
-              bpart - log_factorial(nij) - log_factorial(ai - nij)
-            - log_factorial(bj - nij) - log_factorial(N - ai - bj + nij)
-            );
-          }
-        }
-      }
-      ami[j] = (mi[j] - Ej) / (maxH - Ej);
-    }
-  }
-};
 
 struct ClusterCount {
   size_t size, // size of each cluster
@@ -445,20 +276,17 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
   const std::vector<size_t> cum_calc;
   const size_t N;
   const size_t n_shard;
-  const bool lookup_factorial;
   const std::vector<double> lfact;
   std::mutex mutex;
 
   std::vector<double> init_lfact() {
     std::vector<double> v;
-    if (lookup_factorial) {
-      v.reserve(N + 1);
-      double s = 0.0;
+    v.reserve(N + 1);
+    double s = 0.0;
+    v.push_back(s);
+    for (size_t i = 1; i <= N; ++i) {
+      s += log(i);
       v.push_back(s);
-      for (size_t i = 1; i <= N; ++i) {
-        s += log(i);
-        v.push_back(s);
-      }
     }
     return v;
   };
@@ -548,23 +376,19 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
     return cum;
   }
 
-  inline double log_factorial(const size_t x) {
-    return lookup_factorial ? lfact[x] : lgamma(x + 1.0);
-  }
-
   double emi_term(size_t ai, size_t bi, double precalc) {
     size_t nijmin = 1;
     if (ai + bi > N) nijmin = ai + bi - N;
     double E = -std::numeric_limits<double>::infinity();
-    precalc += log_factorial(bi) + log_factorial(N - bi);
+    precalc += lfact[bi] + lfact[N - bi];
     double logN = log(N);
     double logab = log(ai) + log(bi);
     for (size_t nij = bi + 1; nij-- > nijmin;) {
       double lognij = log(nij);
       double det = logN - logab - lognij;
       double all_but_log = lognij - logN + precalc
-        - log_factorial(nij) - log_factorial(ai - nij)
-        - log_factorial(bi - nij) - log_factorial(N - ai - bi + nij);
+        - lfact[nij] - lfact[ai - nij]
+        - lfact[bi - nij] - lfact[N - ai - bi + nij];
       if (det > 0) {
         E = log_plus(E, all_but_log + log(det));
       } else if (det < 0) {
@@ -582,8 +406,7 @@ public:
     const std::vector<ClusterCount> &k_counts,
     const std::unordered_map<int, SizeAndEntropy> &c_clust,
     const size_t N,
-    const size_t n_shard,
-    const bool lookup_factorial
+    const size_t n_shard
   ) :
     emi(emi),
     k_counts(k_counts),
@@ -591,7 +414,6 @@ public:
     cum_calc(cum2(c_counts, k_counts)),
     N(N),
     n_shard(n_shard),
-    lookup_factorial(lookup_factorial),
     lfact(init_lfact()) {};
 
   void operator()(size_t begin, size_t end) {
@@ -626,7 +448,7 @@ public:
         //                << " (calculations up to " << *calc_i
         //                << ")" << std::endl;
                     // << std::flush;
-        double a_part = log_factorial(asize) + log_factorial(N - asize) - log_factorial(N);
+        double a_part = lfact[asize] + lfact[N - asize] - lfact[N];
         if (cc_i->size == kc_i->size) {
           // Rcpp::Rcerr << " (case 1: both)" << std::endl;
           auto cc_j = cc_i;
@@ -708,42 +530,11 @@ public:
 };
 
 //' @export
-// [[Rcpp::export]]
-Rcpp::DataFrame adjusted_mutual_information(
-    const Rcpp::IntegerMatrix k,
-    const Rcpp::IntegerVector c,
-    int threads = 1L,
-    bool lookup_factorial = TRUE
-) {
-  size_t N = c.size(), m = k.nrow();
-  if (N != (size_t)k.ncol())
-    Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
-                 " the same number of objects.", k.ncol(), N);
-  Rcpp::NumericVector mi(m, 0.0), ami(m, 0.0);
-  std::vector<std::pair<int, size_t>> c_sort;
-  std::unordered_map<int, SizeAndEntropy> c_count;
-  initialize_c_counts(c, c_sort, c_count, N);
-
-  AdjustedMutualInformationWorker worker(k, c_sort, c_count, mi, ami, lookup_factorial);
-  if (threads == 1) {
-    worker(0, m);
-  } else {
-    RcppParallel::parallelFor(0, m, worker, 1, threads);
-  }
-  auto out = Rcpp::DataFrame::create(
-    Rcpp::Named("MI") = mi,
-    Rcpp::Named("AMI") = ami
-  );
-  return out;
-}
-
-//' @export
  // [[Rcpp::export]]
- Rcpp::DataFrame adjusted_mutual_information2(
+ Rcpp::DataFrame adjusted_mutual_information(
      const Rcpp::IntegerMatrix k,
      const Rcpp::IntegerVector c,
-     int threads = 1L,
-     bool lookup_factorial = TRUE
+     int threads = 1L
  ) {
    size_t N = c.size(), m = k.nrow();
    if (N != (size_t)k.ncol())
@@ -755,32 +546,29 @@ Rcpp::DataFrame adjusted_mutual_information(
    initialize_c_counts(c, c_sort, c_count, N);
 
    std::vector<ClusterCount> k_counts;
-   Rcpp::Rcerr << "constructing AdjustedMutualInformationWorker1" << std::endl;
-   AdjustedMutualInformationWorker1 worker(k, c_sort, c_count, mi, Hmax, k_counts);
-   Rcpp::Rcerr << "running AdjustedMutualInformationWorker1()" << std::endl;
+   // Rcpp::Rcerr << "constructing AdjustedMutualInformationWorker1" << std::endl;
+   AdjustedMutualInformationWorker1 worker1(k, c_sort, c_count, mi, Hmax, k_counts);
+   // Rcpp::Rcerr << "running AdjustedMutualInformationWorker1()" << std::endl;
    if (threads == 1) {
-     worker(0, m);
+     worker1(0, m);
    } else {
-     RcppParallel::parallelFor(0, m, worker, 1, threads);
+     RcppParallel::parallelFor(0, m, worker1, 1, threads);
    }
-   Rcpp::Rcerr << "finished AdjustedMutualInformationWorker1()" << std::endl;
+   // Rcpp::Rcerr << "finished AdjustedMutualInformationWorker1()" << std::endl;
 
-   Rcpp::Rcerr << "sorting k_counts" << std::endl;
+   // Rcpp::Rcerr << "sorting k_counts" << std::endl;
    std::sort(k_counts.begin(), k_counts.end());
-   Rcpp::Rcerr << "finished sorting k_counts" << std::endl;
+   // Rcpp::Rcerr << "finished sorting k_counts" << std::endl;
 
-   Rcpp::Rcerr << "constructing AdjustedMutualInformationWorker2" << std::endl;
-   AdjustedMutualInformationWorker2 worker2(emi, k_counts, c_count, N, threads, lookup_factorial);
-   Rcpp::Rcerr << "running AdjustedMutualInformationWorker2()" << std::endl;
+   // Rcpp::Rcerr << "constructing AdjustedMutualInformationWorker2" << std::endl;
+   AdjustedMutualInformationWorker2 worker2(emi, k_counts, c_count, N, threads);
+   // Rcpp::Rcerr << "running AdjustedMutualInformationWorker2()" << std::endl;
    if (threads == 1) {
      worker2(0, 1);
    } else {
      RcppParallel::parallelFor(0, threads, worker2, 1, threads);
-     // for (size_t i = 0; i < threads; ++i) {
-     //   worker2(i, i+1);
-     // }
    }
-   Rcpp::Rcerr << "finished AdjustedMutualInformationWorker2()" << std::endl;
+   // Rcpp::Rcerr << "finished AdjustedMutualInformationWorker2()" << std::endl;
    emi = exp(emi);
    Rcpp::NumericVector ami = (mi - emi) / (Hmax - emi);
    auto out = Rcpp::DataFrame::create(

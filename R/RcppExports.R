@@ -35,13 +35,8 @@ mutual_information <- function(k, c, threads = 1L) {
 }
 
 #' @export
-adjusted_mutual_information <- function(k, c, threads = 1L, lookup_factorial) {
-    .Call(`_optimotu_adjusted_mutual_information`, k, c, threads, lookup_factorial)
-}
-
-#' @export
-adjusted_mutual_information2 <- function(k, c, threads = 1L, lookup_factorial) {
-    .Call(`_optimotu_adjusted_mutual_information2`, k, c, threads, lookup_factorial)
+adjusted_mutual_information <- function(k, c, threads = 1L) {
+    .Call(`_optimotu_adjusted_mutual_information`, k, c, threads)
 }
 
 start_profiler <- function(str) {
