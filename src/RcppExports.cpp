@@ -12,15 +12,15 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // confusion_matrix
-Rcpp::DataFrame confusion_matrix(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, const int ncpu);
-RcppExport SEXP _optimotu_confusion_matrix(SEXP kSEXP, SEXP cSEXP, SEXP ncpuSEXP) {
+Rcpp::DataFrame confusion_matrix(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, const int threads);
+RcppExport SEXP _optimotu_confusion_matrix(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
-    Rcpp::traits::input_parameter< const int >::type ncpu(ncpuSEXP);
-    rcpp_result_gen = Rcpp::wrap(confusion_matrix(k, c, ncpu));
+    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(confusion_matrix(k, c, threads));
     return rcpp_result_gen;
 END_RCPP
 }

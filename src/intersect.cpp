@@ -21,7 +21,15 @@ int intersect_length_(It1 ci, It1 cend, It2 ki, It2 kend) {
    }
    return l;
 }
-
+//' Size of the intersection between two sorted sets
+//'
+//' This implementation is much faster that `length(intersect(c, k))`. However
+//' it assumes (without checking!) that the sets are sorted.
+//'
+//' @param c (sorted `integer` or ` character` vector) the first set to compare
+//' @param k (sorted `integer` or ` character` vector) the second set to compare
+//'
+//' @return (`integer` count) the number of elements which occur in both sets
 //' @export
 // [[Rcpp::export]]
 int intersect_length(const std::vector<int> &c, const std::vector<int> &k) {
@@ -29,12 +37,13 @@ int intersect_length(const std::vector<int> &c, const std::vector<int> &k) {
 }
 
 //' @export
+//' @rdname intersect_length
 // [[Rcpp::export]]
 int intersect_length_string(const std::vector<std::string> &c, const std::vector<std::string> &k) {
    return intersect_length_(c.begin(), c.end(), k.begin(), k.end());
 }
 
-//' @export
+
 // [[Rcpp::export]]
 double inner_fmeasure(
       const std::vector<int> &cj,

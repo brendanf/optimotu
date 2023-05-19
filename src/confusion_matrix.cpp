@@ -87,12 +87,33 @@ struct ConfusionMatrixWorker : RcppParallel::Worker {
   }
 };
 
+//' Confusion matrix for a set of "test" partitions vs. a "true" partition
+//'
+//' One way to analyze the comparison of two different partitions of the same
+//' data is to treat it as a binary classification problem operating on pairs
+//' of objects, where pairs should be classified as belonging to the same
+//' cluster or not.  Then a "true positive" is a pair which belong to the same
+//' cluster in both the "test" partition and the "true" partition; a "false
+//' positive" is a pair which belongs to the same cluster in the "test"
+//' partition but not the "true" partition; a "false negative" is a pair which
+//' belongs to the same cluster in the "true" partition but not in the "test"
+//' partition; and a "true" negative is a pair which does not belong to the same
+//' cluster in either the "test" partition or the "true" partition.
+//'
+//' This formulation allows various measures of binary classification
+//' performance to be applied to the case of clustering.
+//'
+//' @return (`data.frame` with `m` rows) for each "test" partition, the number
+//' of true positives ("`TP`"), false positives ("`FP`"), false negatives
+//' ("`FN`"), and true negatives ("`TN`") relative to the "true" partition.
+//'
 //' @export
+//' @inheritParams mutual_information
 // [[Rcpp::export]]
 Rcpp::DataFrame confusion_matrix(
     const Rcpp::IntegerMatrix k,
     const Rcpp::IntegerVector c,
-    const int ncpu = 1
+    const int threads = 1
 ) {
   size_t N = c.size(), m = k.nrow();
   if (N != k.ncol())
@@ -110,10 +131,10 @@ Rcpp::DataFrame confusion_matrix(
   ConfusionMatrixWorker worker(k, c_sort, c_count,
                                true_positive, false_positive,
                                false_negative, true_negative);
-  if (ncpu == 1) {
+  if (threads == 1) {
     worker(0, m);
   } else {
-    RcppParallel::parallelFor(0, m, worker, 1, ncpu);
+    RcppParallel::parallelFor(0, m, worker, 1, threads);
   }
 
   auto out = Rcpp::DataFrame::create(
