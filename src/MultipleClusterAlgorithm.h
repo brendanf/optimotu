@@ -3,12 +3,20 @@
 #include "single_linkage.h"
 #include "DistanceConverter.h"
 #include "ClusterAlgorithm.h"
+#include <cassert>
+#include <algorithm>
+#ifdef OPTIMOTU_R
+#include <Rcpp.h>
+#include "ClusterTree.h"
+#endif
 
 template <class CLUST_T>
-class MultipleClusterAlgorithm : DistanceConsumer {
-private:
+class MultipleClusterAlgorithm : public DistanceConsumer {
+protected:
   const DistanceConverter &dconv;
   const d_t m;
+  const std::vector<std::string> &names;
+  const std::vector<std::vector<std::string>> &subset_names;
   std::vector<CLUST_T> subsets;
   // for each element, which subsets does it belong to? sorted
   std::vector<std::vector<j_t>> subset_key;
@@ -22,19 +30,20 @@ public:
     const std::vector<std::string> &names,
     const std::vector<std::vector<std::string>> &subset_names,
     const d_t m
-  ) : dconv(dconv), m(m), subsets(), subset_key(names.size()), fwd_map(subset_names.size()) {
+  ) : dconv(dconv), m(m), names(names), subset_names(subset_names), subsets(),
+  subset_key(names.size()), fwd_map(subset_names.size()) {
     subsets.reserve(subset_names.size());
     whichsets.reserve(subset_names.size());
     std::unordered_map<std::string, j_t> namekey;
     for (j_t i = 0; i < names.size(); i++) {
       namekey.emplace(names[i], i);
     }
-    for (int i = 0; i < subset_names.size(); ++i) {
+    for (j_t i = 0; i < subset_names.size(); ++i) {
       subsets.emplace_back(dconv, subset_names[i].size(), m);
       fwd_map[i].reserve(subset_names[i].size());
-      for (int j = 0; j < subset_names[i].size(); ++j) {
+      for (j_t j = 0; j < subset_names[i].size(); ++j) {
         auto f = namekey.find(subset_names[i][j]);
-        if (f == namekey.end()) Rcpp::stop("mismatched name");
+        assert(f != namekey.end());
         subset_key[f->second].push_back(i);
         fwd_map[i].emplace(f->second, j);
       }
@@ -77,5 +86,34 @@ public:
     return min;
   };
 
+  // send consumer() pairwise distances to ensure it is up-to-date with this
+  // clustering
+  template<class CLUST_U>
+  void merge_into(MultipleClusterAlgorithm<CLUST_U> &consumer) {
+    for (size_t i = 0; i < this->subsets.size(); i++) {
+      this->subsets[i].merge_into(consumer.subsets[i]);
+    }
+  };
+
+#ifdef OPTIMOTU_R
+  void write_to_matrix(std::vector<RcppParallel::RMatrix<int>> &matrix_list) {
+    for (size_t i = 0; i < this->subsets.size(); i++) {
+      this->subsets[i].template write_to_matrix(matrix_list[i]);
+    }
+  }
+  Rcpp::List as_hclust() = delete;
+#endif
 };
+
+#ifdef OPTIMOTU_R
+template<>
+Rcpp::List MultipleClusterAlgorithm<ClusterTree>::as_hclust() {
+  std::vector<Rcpp::List> out;
+  for (size_t i = 0; i < this->subsets.size(); i++) {
+    out.push_back(this->subsets[i].as_hclust(Rcpp::wrap(this->subset_names[i])));
+  }
+  return Rcpp::wrap(out);
+}
+#endif
+
 #endif

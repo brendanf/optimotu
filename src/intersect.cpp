@@ -204,7 +204,7 @@ Rcpp::NumericVector fmeasure_matrix(
   size_t ncpu = 1
 ) {
   size_t n = c.size(), m = k.nrow();
-  if (n != k.ncol())
+  if (n != (size_t)k.ncol())
     Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                  " the same number of objects.", k.ncol(), n);
   Rcpp::NumericVector fm(m, 0.0);

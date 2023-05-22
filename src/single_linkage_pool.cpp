@@ -24,6 +24,13 @@ struct cluster {
    };
 };
 
+#ifdef SINGLE_LINK_TEST
+std::string clust(j_t j) {
+  if (j == NO_CLUST) return "none";
+  return std::to_string(j);
+}
+#endif
+
 // tracks which clusters from the pool are currently used.
 // note that it never actually interacts with the clusters.
 struct cluster_pool {
@@ -34,8 +41,8 @@ struct cluster_pool {
    cluster_pool(int m, j_t n): m(m), n(n), n_free(n) {
       my_pool = new cluster[2*n];
 #ifdef SINGLE_LINK_DEBUG
-      Rcpp::Rcout << "initializing first " << n << " of " << (2*n) <<
-         " clusters" << std::endl;
+      Rcpp::Rcout << "initializing first " << n << " of " << (2*n)
+          << " clusters" << std::endl;
 #endif
       j_t j;
       cluster *c;
@@ -87,15 +94,15 @@ struct cluster_pool {
 
    void delete_cluster(j_t j) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << "-deallocating cluster " << j << "..." << std::endl;
+      Rcpp::Rcout << "-deallocating cluster " << clust(j) << "..." << std::endl;
 #endif
       last_free++;
       if (last_free >= n) last_free = 0;
       freeclusters[last_free] = j;
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << " -last free cluster is " <<
-         freeclusters[last_free] << " at position " <<
-         last_free << "\n - " << n_free << " free clusters remain" << std::endl;
+      Rcpp::Rcout << " -last free cluster is "
+          << freeclusters[last_free] << " at position "
+          << last_free << "\n - " << n_free << " free clusters remain" << std::endl;
 #endif
    };
 
@@ -107,10 +114,10 @@ struct cluster_pool {
       first_free++;
       if (first_free >= n) first_free = 0;
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << " -allocated new cluster " << j <<
-         "\n -first free cluster is " << freeclusters[first_free] <<
-         " at position " << first_free << "\n - " << n_free <<
-         " free clusters remain" << std::endl;
+      Rcpp::Rcout << " -allocated new cluster " << j
+          << "\n -first free cluster is " << freeclusters[first_free]
+          << " at position " << first_free << "\n - " << n_free
+          << " free clusters remain" << std::endl;
 #endif
       return j;
    };
@@ -118,37 +125,40 @@ struct cluster_pool {
    // this DOES reassign the parent of all the children.
    void merge_children(j_t dest, j_t src) {
 #ifdef SINGLE_LINK_DEBUG
-      Rcpp::Rcout << "-merging children of cluster " << src <<
-         " into cluster " << dest <<
-            " (clust array at " << my_pool << ")" << std::endl;
+      Rcpp::Rcout << "-merging children of cluster " << clust(src)
+                  << " into cluster " << clust(dest)
+                  << std::endl;
 #endif
       cluster *csrc, *cdest, *c1, *c2;
       // CASE 1: the source is null
       // nothing to do
       if (src == NO_CLUST) {
 #ifdef SINGLE_LINK_DEBUG
-         Rcpp::Rcout << " -finished merging children of cluster " << src <<
-            " into cluster " << dest << " (no-op)" << std::endl;
+         Rcpp::Rcout << " -finished merging children of cluster " << clust(src)
+                     << " into cluster " << clust(dest) << " (no-op)" << std::endl;
 #endif
          return;
       }
       csrc = my_pool + src;
 #ifdef SINGLE_LINK_DEBUG
-      Rcpp::Rcout << " - source cluster " << src << ": n_child=" << csrc->n_child <<
-         ", first_child=" << csrc->first_child << ", last_child=" <<
-            csrc->last_child << std::endl;
+      Rcpp::Rcout << " - source cluster " << clust(src)
+                  << ": n_child=" << csrc->n_child
+                  << ", first_child=" << clust(csrc->first_child)
+                  << ", last_child=" << clust(csrc->last_child)
+                  << std::endl;
 #endif
       // Reassign the parents
       // this is the slow part O(n)
       auto src_child = csrc->first_child;
       if (dest == NO_CLUST) {
 #ifdef SINGLE_LINK_DEBUG
-         Rcpp::Rcout << " - destination cluster " << dest <<
-            " is null\n - removing children from source cluster..." << std::endl;
+         Rcpp::Rcout << " - destination cluster " << clust(dest)
+                     << " is null" << std::endl
+                     << " - removing children from source cluster..." << std::endl;
 #endif
          while (src_child != NO_CLUST) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-            Rcpp::Rcout << "  - removing child " << src_child << std::endl;
+            Rcpp::Rcout << "  - removing child " << clust(src_child) << std::endl;
 #endif
             c1 = my_pool + src_child;
             c1->parent = NO_CLUST;
@@ -160,18 +170,22 @@ struct cluster_pool {
          csrc->first_child = NO_CLUST;
          csrc->last_child = NO_CLUST;
 #ifdef SINGLE_LINK_DEBUG
-         Rcpp::Rcout <<
-            "  -finished removing children.\n  - source cluster " << src <<
-               ": n_child=" << csrc->n_child <<
-                  ", first_child=" << csrc->first_child << ", last_child=" <<
-                     csrc->last_child << std::endl;
+         Rcpp::Rcout << "  -finished removing children."
+                     << std::endl
+                     << "  - source cluster " << clust(src)
+                     << ": n_child=" << csrc->n_child
+                     << ", first_child=" << clust(csrc->first_child)
+                     << ", last_child=" << clust(csrc->last_child)
+                     << std::endl;
 #endif
       } else {
          cdest = my_pool + dest;
 #ifdef SINGLE_LINK_DEBUG
-         Rcpp::Rcout << "  - destination cluster " << dest << ": n_child=" << cdest->n_child <<
-            ", first_child=" << cdest->first_child << ", last_child=" <<
-               cdest->last_child << "\n - merging..." << std::endl;
+         Rcpp::Rcout << "  - destination cluster " << clust(dest)
+                     << ": n_child=" << cdest->n_child
+                     << ", first_child=" << clust(cdest->first_child)
+                     << ", last_child=" << clust(cdest->last_child)
+                     << std::endl << " - merging..." << std::endl;
 #endif
          // both clusters exist, so do the splice
          auto dest_child = cdest->last_child;
@@ -189,7 +203,7 @@ struct cluster_pool {
          // reassign parents
          while (src_child != NO_CLUST) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-            Rcpp::Rcout << "  - transferring child " << src_child << std::endl;
+            Rcpp::Rcout << "  - transferring child " << clust(src_child) << std::endl;
 #endif
             c1 = my_pool + src_child;
             c1->parent = dest;
@@ -200,14 +214,17 @@ struct cluster_pool {
          csrc->first_child = NO_CLUST;
          csrc->last_child = NO_CLUST;
 #ifdef SINGLE_LINK_DEBUG
-         Rcpp::Rcout <<
-            "  -finished transferring children.\n  - source cluster " << src <<
-               ": n_child=" << csrc->n_child <<
-                  ", first_child=" << csrc->first_child << ", last_child=" <<
-                     csrc->last_child << "\n  - destination cluster " << dest <<
-                        ": n_child=" << cdest->n_child <<
-                           ", first_child=" << cdest->first_child << ", last_child=" <<
-                              cdest->last_child <<std::endl;
+         Rcpp::Rcout << "  -finished transferring children."
+                     << "  - source cluster " << clust(src)
+                     << ": n_child=" << csrc->n_child
+                     << ", first_child=" << clust(csrc->first_child)
+                     << ", last_child=" << clust(csrc->last_child)
+                     << std::endl
+                     << "  - destination cluster " << clust(dest)
+                     << ": n_child=" << cdest->n_child
+                     << ", first_child=" << clust(cdest->first_child)
+                     << ", last_child=" << clust(cdest->last_child)
+                     << std::endl;
 #endif
       }
       return;
@@ -217,21 +234,28 @@ struct cluster_pool {
    // this DOES NOT reassign `c[child].parent`.
    void remove_child(j_t parent, j_t child) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << "-removing child " << child << " from cluster " << parent <<
-         " (clust array at " << my_pool << ")" << std::endl;
+      Rcpp::Rcout << "-removing child " << clust(child)
+                  << " from cluster " << clust(parent)
+                  << std::endl;
 #endif
       if (parent == NO_CLUST) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-         Rcpp::Rcout << " -finished removing child " << child << " from cluster " <<
-            parent << " (no-op)" << std::endl;
+         Rcpp::Rcout << " -finished removing child " << clust(child)
+                     << " from cluster " << clust(parent)
+                     << " (no-op)" << std::endl;
 #endif
          return;
       }
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << "  -parent " << parent << ": n_child=" << my_pool[parent].n_child <<
-         ", first_child=" << my_pool[parent].first_child << ", last_child=" << my_pool[parent].last_child <<
-            "\n  -child " << child << ": prev_sib=" << my_pool[child].prev_sib <<
-               ", next_sib=" << my_pool[child].next_sib << std::endl;
+      Rcpp::Rcout << "  -parent " << clust(parent)
+                  << ": n_child=" << my_pool[parent].n_child
+                  << ", first_child=" << clust(my_pool[parent].first_child)
+                  << ", last_child=" << clust(my_pool[parent].last_child)
+                  << std::endl
+                  << "  -child " << clust(child)
+                  << ": prev_sib=" << clust(my_pool[child].prev_sib)
+                  << ", next_sib=" << clust(my_pool[child].next_sib)
+                  << std::endl;
 #endif
 
       auto prev = my_pool[child].prev_sib;
@@ -258,11 +282,16 @@ struct cluster_pool {
       my_pool[parent].n_child--;
 
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << "  -finished removing child\n  -parent " << parent <<
-         ": n_child=" << my_pool[parent].n_child <<
-            ", first_child=" << my_pool[parent].first_child << ", last_child=" << my_pool[parent].last_child <<
-               "\n  -child " << child << ": prev_sib=" << my_pool[child].prev_sib <<
-                  ", next_sib=" << my_pool[child].next_sib << std::endl;
+      Rcpp::Rcout << "  -finished removing child" << std::endl
+                  << "  -parent " << clust(parent)
+                  << ": n_child=" << my_pool[parent].n_child
+                  << ", first_child=" << clust(my_pool[parent].first_child)
+                  << ", last_child=" << clust(my_pool[parent].last_child)
+                  << std::endl
+                  << "  -child " << clust(child)
+                  << ": prev_sib=" << clust(my_pool[child].prev_sib)
+                  << ", next_sib=" << clust(my_pool[child].next_sib)
+                  << std::endl;
 #endif
       return;
    };
@@ -271,33 +300,47 @@ struct cluster_pool {
    // does NOT assign `c[child].parent`
    void add_child(j_t parent, j_t child) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << "-adding child " << child << " to cluster " << parent <<
-         " (clust array at " << my_pool << ")" << std::endl;
+      Rcpp::Rcout << "-adding child " << clust(child)
+                  << " to cluster " << clust(parent)
+                  << std::endl;
 #endif
       if (parent == NO_CLUST) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-         Rcpp::Rcout << " -finished adding child " << child << " to cluster " <<
-            parent << " (no-op)" << std::endl;
+         Rcpp::Rcout << " -finished adding child " << clust(child)
+                     << " to cluster " << clust(parent)
+                     << " (no-op)" << std::endl;
 #endif
          return;
       }
       cluster *c_parent = my_pool + parent;
       cluster *c_child = my_pool + child;
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << "  -parent " << parent << ": n_child=" << c_parent->n_child <<
-         ", first_child=" << c_parent->first_child << ", last_child=" << c_parent->last_child <<
-            "\n  -child " << child << ": prev_sib=" << c_child->prev_sib <<
-               ", next_sib=" << c_child->next_sib << std::endl;
+      Rcpp::Rcout << "  -parent " << clust(parent)
+                  << ": n_child=" << c_parent->n_child
+                  << ", first_child=" << clust(c_parent->first_child)
+                  << ", last_child=" << clust(c_parent->last_child)
+                  << std::endl
+                  << "  -child " << clust(child)
+                  << ": prev_sib=" << clust(c_child->prev_sib)
+                  << ", next_sib=" << clust(c_child->next_sib)
+                  << std::endl;
 #endif
       if (c_parent->last_child == NO_CLUST) {
          c_parent->first_child = c_parent->last_child = child;
          c_parent->n_child++;
 #ifdef SINGLE_LINK_FULL_DEBUG
-         Rcpp::Rcout << " -finished adding only child " << child << " to cluster " <<
-            parent << "\n  -parent " << parent << ": n_child=" << c_parent->n_child <<
-               ", first_child=" << c_parent->first_child << ", last_child=" << c_parent->last_child <<
-                  "\n  -child " << child << ": prev_sib=" << my_pool[child].prev_sib <<
-                     ", next_sib=" << c_child->next_sib << std::endl;
+         Rcpp::Rcout << " -finished adding only child " << clust(child)
+                     << " to cluster " << clust(parent)
+                     << std::endl
+                     << "  -parent " << clust(parent)
+                     << ": n_child=" << c_parent->n_child
+                     << ", first_child=" << clust(c_parent->first_child)
+                     << ", last_child=" << clust(c_parent->last_child)
+                     << std::endl
+                     << "  -child " << clust(child)
+                     << ": prev_sib=" << clust(my_pool[child].prev_sib)
+                     << ", next_sib=" << clust(c_child->next_sib)
+                     << std::endl;
 #endif
          return;
       }
@@ -308,33 +351,42 @@ struct cluster_pool {
       c_parent->last_child = child;
       c_parent->n_child++;
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << " -finished adding child " << child << " to cluster " <<
-         parent << "\n  -parent " << parent << ": n_child=" << c_parent->n_child <<
-            ", first_child=" << c_parent->first_child << ", last_child=" << c_parent->last_child <<
-               "\n  -child " << child << ": prev_sib=" << c_child->prev_sib <<
-                  ", next_sib=" << c_child->next_sib << std::endl;
+      Rcpp::Rcout << " -finished adding child " << clust(child)
+                  << " to cluster " << clust(parent)
+                  << std::endl
+                  << "  -parent " << clust(parent)
+                  << ": n_child=" << c_parent->n_child
+                  << ", first_child=" << clust(c_parent->first_child)
+                  << ", last_child=" << clust(c_parent->last_child)
+                  << std::endl
+                  << "  -child " << clust(child)
+                  << ": prev_sib=" << clust(c_child->prev_sib)
+                  << ", next_sib=" << clust(c_child->next_sib)
+                  << std::endl;
 #endif
       return;
    }
 
    void shift_to_parent(j_t &j, cluster *& c, j_t &jp, cluster *& cp) const {
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << "-shifting from child " << j << " to parent " << jp <<
-         " (clust array at " << my_pool << ")" << std::endl;
+      Rcpp::Rcout << "-shifting from child " << clust(j)
+                  << " to parent " << clust(jp)
+                  << std::endl;
 #endif
       j = jp;
       c = cp;
       if (jp == NO_CLUST) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-         Rcpp::Rcout << " -finished shifting to parent " << j << " (NO_CLUST)" <<
-            std::endl;
+         Rcpp::Rcout << " -finished shifting to parent " << clust(j)
+                     << " (NO_CLUST)"
+                     << std::endl;
 #endif
          return;
       }
       jp = cp->parent;
       if (jp != NO_CLUST) cp = my_pool + jp; else cp = nullptr;
 #ifdef SINGLE_LINK_FULL_DEBUG
-      Rcpp::Rcout << " -finished shifting to parent " << j << std::endl;
+      Rcpp::Rcout << " -finished shifting to parent " << clust(j) << std::endl;
 #endif
       return;
    }
@@ -357,49 +409,50 @@ struct cluster_pool {
             cp = nullptr;
          }
          while (true) {
-            // Rcpp::Rcout << "cluster " << j <<
-            //    "\n id: " << c->id <<
-            //    "\n min_d: " << c->min_d <<
-            //    "\n max_d: " << c->max_d(clust) <<
-            //    "\n parent: " << c->parent <<
-            //    "\n first_child: " << c->first_child <<
-            //    "\n next_sib: " << c->next_sib <<
-            //    "\n n_child: " << c->n_child << std::endl;
+            // Rcpp::Rcout << "cluster " << j
+            //     << "\n id: " << c->id
+            //     << "\n min_d: " << c->min_d
+            //     << "\n max_d: " << c->max_d(clust)
+            //     << "\n parent: " << c->parent
+            //     << "\n first_child: " << c->first_child
+            //     << "\n next_sib: " << c->next_sib
+            //     << "\n n_child: " << c->n_child << std::endl;
             if (c->min_d < -1 || (c->min_d >= m && c->min_d != NO_DIST)) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has invalid min_d: " << c->min_d << std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                   << " has invalid min_d: " << c->min_d << std::endl;
                err = true;
             }
             std::int32_t max = c->max_d(my_pool);
             if (max < 0 || (max >= m && max != NO_DIST)) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has invalid max_d: " << max << std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                   << " has invalid max_d: " << max << std::endl;
                err = true;
             }
             if (max < c->min_d) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has invalid max_d: " << max <<
-                     " which is less than its min_d: " << c->min_d << std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                   << " has invalid max_d: " << max
+                      << " which is less than its min_d: " << c->min_d << std::endl;
                err = true;
             }
             if (c->parent < n || (c->parent >= 2*n + 1 && c->parent != NO_CLUST)) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has invalid parent: " << c->parent << std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                           << " has invalid parent: " << clust(c->parent)
+                           << std::endl;
                err = true;
             } else if (c->parent != NO_CLUST && !my_pool[c->parent].allocated) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  "'s parent " << c->parent << " is not allocated " <<
-                     std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                           << "'s parent " << clust(c->parent) << " is not allocated "
+                           << std::endl;
                err = true;
             }
             if (c->n_child == 1) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has exactly one child." << std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                           << " has exactly one child." << std::endl;
                err = true;
             }
             if (c->first_child < 0 || (c->first_child >= 2*n + 1 && c->first_child != NO_CLUST)) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has invalid first_child: " << c->first_child << std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                           << " has invalid first_child: " << clust(c->first_child) << std::endl;
                err = true;
             }
             auto next = c->first_child;
@@ -408,50 +461,59 @@ struct cluster_pool {
                auto cnext = my_pool + next;
                kids++;
                if (cnext->parent != j) {
-                  Rcpp::Rcerr << "validation error: cluster " << j << "'s child " <<
-                     next << " instead has parent " << cnext->parent << std::endl;
+                 Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                             << "'s child " << clust(next)
+                             << " instead has parent " << clust(cnext->parent)
+                             << std::endl;
                   err = true;
                }
                if (!cnext->allocated) {
-                  Rcpp::Rcerr << "validation error: cluster " << j << "'s child " <<
-                     next << " is not allocated " << std::endl;
+                 Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                             << "'s child " << clust(next)
+                             << " is not allocated " << std::endl;
                   err = true;
                }
                next = cnext->next_sib;
             }
             if (kids != c->n_child) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has " << kids << " children but n_child=" << c->n_child << std::endl;
+              Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                          << " has " << kids
+                          << " children but n_child=" << c->n_child
+                          << std::endl;
                err = true;
             }
             if (c->next_sib < 0 || (c->next_sib >= 2*n + 1 && c->next_sib != NO_CLUST)) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " has invalid next_sib: " << c->next_sib << std::endl;
+              Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                          << " has invalid next_sib: " << clust(c->next_sib)
+                          << std::endl;
                err = true;
             }
             if (c->next_sib != NO_CLUST && my_pool[c->next_sib].parent != c->parent) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " with parent " << c->parent << " has sibling " <<
-                     c->next_sib << " which instead has parent " <<
-                        my_pool[c->next_sib].parent << std::endl;
+              Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                          << " with parent " << c->parent
+                          << " has sibling " << c->next_sib
+                          << " which instead has parent " << my_pool[c->next_sib].parent
+                          << std::endl;
                err = true;
             }
             if (c->next_sib != NO_CLUST && !my_pool[c->next_sib].allocated) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " with parent " << c->parent << " has sibling " <<
-                     c->next_sib << " which is not allocated " << std::endl;
+              Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                          << " with parent " << clust(c->parent)
+                          << " has sibling " << clust(c->next_sib)
+                          << " which is not allocated " << std::endl;
                err = true;
             }
             if (c->next_sib != NO_CLUST && my_pool[c->next_sib].prev_sib != j) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " with parent " << c->parent << " has sibling " <<
-                     c->next_sib << " whose previous sibling is " <<
-                        my_pool[c->next_sib].prev_sib << std::endl;
+              Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                          << " with parent " << clust(c->parent)
+                          << " has sibling " << clust(c->next_sib)
+                          << " whose previous sibling is " << clust(my_pool[c->next_sib].prev_sib)
+                          << std::endl;
                err = true;
             }
             if (c->next_sib == j ) {
-               Rcpp::Rcerr << "validation error: cluster " << j <<
-                  " is its own next sibling" << std::endl;
+               Rcpp::Rcerr << "validation error: cluster " << clust(j)
+                   << " is its own next sibling" << std::endl;
                err = true;
             }
             if (err) Rcpp::stop("found validation errors");
@@ -490,20 +552,28 @@ struct cluster_pool {
          /* we need to merge c1 and c2, and all their parents, starting at i and
           going up to m. */
 #ifdef SINGLE_LINK_DEBUG
-         Rcpp::Rcout << "clust: " << my_pool << "\n";
-         Rcpp::Rcout << "j1:" << j1 << ", j2:" << j2 << ", i:" << i << "\n";
-         Rcpp::Rcout << "min_d1:" << c1->min_d << ", min_d2:" << c2->min_d << "\n";
-         Rcpp::Rcout << "max_d1:" << max_d(c1) << ", max_d2:" << max_d(c2) << std::endl;
+         Rcpp::Rcout << "j1:" << clust(j1)
+                     << ", j2:" << clust(j2)
+                     << ", i:" << i
+                     << std::endl;
+         Rcpp::Rcout << "min_d1:" << c1->min_d
+                     << ", min_d2:" << c2->min_d
+                     << std::endl;
+         Rcpp::Rcout << "max_d1:" << max_d(c1)
+                     << ", max_d2:" << max_d(c2)
+                     << std::endl;
 #endif
          cluster *cnew;
          j_t jnew;
 #ifdef SINGLE_LINK_DEBUG
-         Rcpp::Rcout << "j1p:" << j1p << ", j2p:" << j2p << std::endl;
+         Rcpp::Rcout << "j1p:" << clust(j1p)
+                     << ", j2p:" << clust(j2p)
+                     << std::endl;
 #endif
          if (i == c1->min_d) {
             // we don't need to create a new cluster for c1, we can just modify this
 #ifdef SINGLE_LINK_DEBUG
-            Rcpp::Rcout << "modifying first cluster: " << j1 << std::endl;
+            Rcpp::Rcout << "modifying first cluster: " << clust(j1) << std::endl;
 #endif
             jnew = j1;
             cnew = c1;
@@ -528,7 +598,7 @@ struct cluster_pool {
          } else if (i == c2->min_d) {
             // we don't need to define a new cluster, we can re-use c2
 #ifdef SINGLE_LINK_DEBUG
-            Rcpp::Rcout << "modifying second cluster: " << j2 << std::endl;
+            Rcpp::Rcout << "modifying second cluster: " << clust(j2) << std::endl;
 #endif
             jnew = j2;
             cnew = c2;
@@ -537,7 +607,7 @@ struct cluster_pool {
             c1->parent = jnew;
          } else if (c1p && c1p == c2p && c1p->n_child == 2) {
 #ifdef SINGLE_LINK_DEBUG
-            Rcpp::Rcout << "modifying common parent cluster: " << j1p << std::endl;
+            Rcpp::Rcout << "modifying common parent cluster: " << clust(j1p) << std::endl;
 #endif
             // the two clusters to be merged have the same parent, and they are
             // the only children of that parent.
@@ -565,13 +635,14 @@ struct cluster_pool {
             add_child(jnew, j2); //sets cnew->n_child
             c2->parent = jnew;
 #ifdef SINGLE_LINK_DEBUG
-            Rcpp::Rcout << "finished initializing cluster " << jnew << std::endl;
+            Rcpp::Rcout << "finished initializing cluster " << clust(jnew) << std::endl;
 #endif
          }
          if (c1p && (c2p == nullptr || c2p->min_d >= c1p->min_d)) {
 #ifdef SINGLE_LINK_DEBUG
-            Rcpp::Rcout << "parent of new/modified cluster " << jnew <<
-               " should be " << j1p << std::endl;
+            Rcpp::Rcout << "parent of new/modified cluster " << clust(jnew)
+                        << " should be " << clust(j1p)
+                        << std::endl;
 #endif
             if (cnew->parent != j1p) {
                remove_child(cnew->parent, jnew);
@@ -584,8 +655,9 @@ struct cluster_pool {
             // b) only c2p is non-null
             // c) both are non-null but c1p > c2p
 #ifdef SINGLE_LINK_DEBUG
-            Rcpp::Rcout << "parent of new/modified cluster " << jnew <<
-               " should be " << j2p << std::endl;
+            Rcpp::Rcout << "parent of new/modified cluster " << clust(jnew)
+                        << " should be " << clust(j2p)
+                        << std::endl;
 #endif
             if (cnew->parent != j2p) {
                remove_child(cnew->parent, jnew);
@@ -613,9 +685,9 @@ struct cluster_pool {
          while (j1 != j2 && (c1p || c2p) && (max_d1 <= min_d2 || max_d2 <= min_d1)) {
             RcppThread::checkUserInterrupt();
 #ifdef SINGLE_LINK_DEBUG
-            // Rcpp::Rcout << "climbing tree: min_d1=" << min_d1 <<
-            //    ", max_d1=" << max_d1 << ", min_d2=" << min_d2 <<
-            //       ", max_d2=" << max_d2 << std::endl;
+            // Rcpp::Rcout << "climbing tree: min_d1=" << min_d1
+            //     << ", max_d1=" << max_d1 << ", min_d2=" << min_d2
+            //        << ", max_d2=" << max_d2 << std::endl;
 #endif
             // shift to the parent of whichever cluster has the nearer parent
             if (c1p && max_d1 <= max_d2) {
@@ -921,8 +993,8 @@ Rcpp::RObject single_linkage_pool_cached(
 
 
 void process(cluster_pool *pool, j_t seq1, j_t seq2, d_t i) {
-   // RcppThread::Rcout << "dummy process; pool at " << pool << ", seq1=" <<
-   //    seq1 << ", seq2=" << seq2 << ", i=" << i << std::endl;
+   // RcppThread::Rcout << "dummy process; pool at " << pool << ", seq1="
+   //     << seq1 << ", seq2=" << seq2 << ", i=" << i << std::endl;
    pool->process(seq1, seq2, i);
 }
 
@@ -960,17 +1032,17 @@ Rcpp::List single_linkage_multi(
       which = Rcpp::sort_unique(which) - 1;
       for(int j : which) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-         Rcpp::Rcout << "adding seq " << j << " (" << seqnames[j] <<
-            ") to precluster " << pc <<
-            " at position " << fwd_map[pc].size() << std::endl;
+         Rcpp::Rcout << "adding seq " << j << " (" << seqnames[j]
+             << ") to precluster " << pc
+             << " at position " << fwd_map[pc].size() << std::endl;
 #endif
          precluster_key[j].push_back(pc);
          fwd_map[pc].insert({j, fwd_map[pc].size()});
 
 #ifdef SINGLE_LINK_FULL_DEBUG
-         Rcpp::Rcout << "seq " << j << " now found in " <<
-            precluster_key[j].size() << " preclusters \n precluster " << pc <<
-               " now has " << fwd_map[pc].size() << "sequences" << std::endl;
+         Rcpp::Rcout << "seq " << j << " now found in "
+             << precluster_key[j].size() << " preclusters \n precluster " << pc
+                << " now has " << fwd_map[pc].size() << "sequences" << std::endl;
 #endif
       }
       pool[pc] = new cluster_pool(m, fwd_map[pc].size());
@@ -1038,8 +1110,8 @@ Rcpp::List single_linkage_multi(
 //             if (pc_pool->n >= 1000) {
 //                did_parallel = true;
 // #ifdef SINGLE_LINK_DEBUG
-//                Rcpp::Rcout << "pushing thread to process seqs " << pc_seq1 << " and " <<
-//                   pc_seq2 << " at threshold " << i << " for pool " << pc << std::endl;
+//                Rcpp::Rcout << "pushing thread to process seqs " << pc_seq1 << " and "
+//                    << pc_seq2 << " at threshold " << i << " for pool " << pc << std::endl;
 // #endif
 //                RcppThread::ThreadPool::globalInstance().push(
 //                      process,
@@ -1076,9 +1148,9 @@ Rcpp::List single_linkage_multi(
 #endif
       for (auto p : fwd_map[pc]) {
 #ifdef SINGLE_LINK_FULL_DEBUG
-         Rcpp::Rcout << " assigning seqname " << p.first <<
-            " (" << seqnames[p.first] <<
-               ") to column name " << p.second << std::endl;
+         Rcpp::Rcout << " assigning seqname " << p.first
+             << " (" << seqnames[p.first]
+                << ") to column name " << p.second << std::endl;
 #endif
          cn[p.second] = seqnames[p.first];
       }

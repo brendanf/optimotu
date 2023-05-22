@@ -116,7 +116,7 @@ Rcpp::DataFrame confusion_matrix(
     const int threads = 1
 ) {
   size_t N = c.size(), m = k.nrow();
-  if (N != k.ncol())
+  if (N != (size_t)k.ncol())
     Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                  " the same number of objects.", k.ncol(), N);
   Rcpp::NumericVector true_positive(m);
