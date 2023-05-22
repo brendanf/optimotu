@@ -27,6 +27,21 @@ confusion_matrix <- function(k, c, threads = 1L) {
     .Call(`_optimotu_confusion_matrix`, k, c, threads)
 }
 
+#' @export
+align <- function(a, b) {
+    .Call(`_optimotu_align`, a, b)
+}
+
+#' @export
+align2 <- function(a, b) {
+    .Call(`_optimotu_align2`, a, b)
+}
+
+#' @export
+distmx <- function(seq, dist_threshold, threads = 1L) {
+    .Call(`_optimotu_distmx`, seq, dist_threshold, threads)
+}
+
 distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {
     .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, method_config, parallel_config, output_type)
 }

@@ -24,6 +24,43 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// align
+double align(std::string a, std::string b);
+RcppExport SEXP _optimotu_align(SEXP aSEXP, SEXP bSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type a(aSEXP);
+    Rcpp::traits::input_parameter< std::string >::type b(bSEXP);
+    rcpp_result_gen = Rcpp::wrap(align(a, b));
+    return rcpp_result_gen;
+END_RCPP
+}
+// align2
+double align2(const std::string& a, const std::string& b);
+RcppExport SEXP _optimotu_align2(SEXP aSEXP, SEXP bSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type b(bSEXP);
+    rcpp_result_gen = Rcpp::wrap(align2(a, b));
+    return rcpp_result_gen;
+END_RCPP
+}
+// distmx
+Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold, uint8_t threads);
+RcppExport SEXP _optimotu_distmx(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< double >::type dist_threshold(dist_thresholdSEXP);
+    Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(distmx(seq, dist_threshold, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // distmx_cluster_single
 Rcpp::RObject distmx_cluster_single(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type);
 RcppExport SEXP _optimotu_distmx_cluster_single(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP) {
@@ -149,6 +186,9 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
+    {"_optimotu_align", (DL_FUNC) &_optimotu_align, 2},
+    {"_optimotu_align2", (DL_FUNC) &_optimotu_align2, 2},
+    {"_optimotu_distmx", (DL_FUNC) &_optimotu_distmx, 3},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 6},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 7},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
