@@ -1,4 +1,0 @@
-CXX_STD = CXX14
-PKG_CPPFLAGS = -DOPTIMOTU_R
-PKG_CFLAGS = -I. -DGMP -DSKIP_MAIN
-PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") -lparasail

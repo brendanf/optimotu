@@ -1,121 +1,54 @@
 #include <Rcpp.h>
-#include <parasail.h>
-#include <parasail/matrices/dnafull.h>
 #include <RcppParallel.h>
 #include <RcppThread.h>
+#include <bindings/cpp/WFAligner.hpp>
 
-//' @export
-// [[Rcpp::export]]
-double align(std::string a, std::string b) {
-  parasail_result * r = parasail_nw_banded(
-    a.c_str(), a.size(),
-    b.c_str(), b.size(),
-    2, 1, 64,
-    &parasail_dnafull);
-  // int match = parasail_result_get_matches(r);
-  // int length = parasail_result_get_length(r);
-  // parasail_traceback_generic(
-  //   a.c_str(), a.size(),
-  //   b.c_str(), b.size(),
-  //   "A:", "B:", &parasail_nuc44, r, '|', '*', '*', 60, 7, 1);
-  parasail_result_free(r);
-  return 1.0;// - double(match) / double(length);
-}
-
-
-//' @export
- // [[Rcpp::export]]
- double align2(const std::string &a, const std::string &b) {
-   // const parasail_pfunction_info_t *info = parasail_lookup_pfunction_info("sg_striped_16");
-   Rcpp::Rcout << "creating profile...";
-   parasail_profile_t *profile = parasail_profile_create_stats_avx_256_16(
-     a.c_str(), a.size(),
-     &parasail_dnafull
-   );
-   Rcpp::Rcout << "done." << std::endl;
-
-   Rcpp::Rcout << "aligning...";
-   parasail_result *r = parasail_sg_stats_scan_profile_avx2_256_16(
-     profile,
-     b.c_str(), b.size(),
-     2, 1);
-   Rcpp::Rcout << "done." << std::endl;
-   double match = parasail_result_get_matches(r);
-   double length = parasail_result_get_length(r);
-   // parasail_traceback_generic(
-   //   a.c_str(), a.size(),
-   //   b.c_str(), b.size(),
-   //   "A:", "B:", &parasail_nuc44, r, '|', '*', '*', 60, 7, 1);
-   parasail_result_free(r);
-   parasail_profile_free(profile);
-   return 1.0 - match / length;
- }
-
-double profile_align(const parasail_profile_t *a, const std::string b) {
-  parasail_result * r = parasail_sg_stats_scan_profile_avx2_256_16(
-    a,
-    b.c_str(), b.size(),
-    2, 1
-  );
-  int match = parasail_result_get_matches(r);
-  int length = parasail_result_get_length(r);
-  // parasail_traceback_generic(
-  //   a.c_str(), a.size(),
-  //   b.c_str(), b.size(),
-  //   "A:", "B:", &parasail_nuc44, r, '|', '*', '*', 60, 7, 1);
-  parasail_result_free(r);
+double distance(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
+  auto status = aligner.alignEnd2End(a, b);
+  if (status != wfa::WFAligner::StatusSuccessful) return 1.0;
+  auto cigar = aligner.getAlignmentCigar();
+  uint16_t match = 0, length = 0;
+  for (char c : cigar) {
+    if (c == 'M') {
+      match++;
+    }
+    length++;
+  }
   return 1.0 - double(match) / double(length);
 }
 
-struct Anchor {
-  uint16_t start1;
-  uint16_t start2;
-  uint16_t end1;
-  uint16_t end2;
-  uint16_t length;
-  Anchor(uint16_t start1, uint16_t start2, uint16_t length):
-    start1(start1), start2(start2), end1(start1 + length), end2(start2 + length), length(length) {};
-  Anchor& operator++() {
-    ++(this->end1);
-    ++(this->end2);
-    ++(this->length);
-    return *this;
-  };
-  Anchor& operator+=(int i) {
-    this->end1 += i;
-    this->end2 += i;
-    this->length += i;
-    return *this;
+//' @export
+// [[Rcpp::export]]
+double align(const std::string a, const std::string b,
+             int match = 0, int mismatch = 1,
+             int gap = 1, int extend = 0,
+             int gap2 = 0, int extend2 = 0) {
+  if (gap2 != 0 || extend2 != 0) {
+    wfa::WFAlignerGapAffine2Pieces aligner(
+        match, mismatch,
+        gap, extend,
+        gap2, extend2,
+        wfa::WFAligner::Alignment);
+    return distance(a, b, aligner);
+  } else if (extend != 0) {
+    wfa::WFAlignerGapAffine aligner(
+        match, mismatch,
+        gap, extend,
+        wfa::WFAligner::Alignment);
+    return distance(a, b, aligner);
+  } else if (match == 0 && gap == mismatch) {
+    wfa::WFAlignerEdit aligner(wfa::WFAligner::Alignment);
+    return distance(a, b, aligner);
+  } else if (mismatch == 0 && match == 0) {
+    wfa::WFAlignerIndel aligner(wfa::WFAligner::Alignment);
+    return distance(a, b, aligner);
+  } else {
+    wfa::WFAlignerGapLinear aligner(
+        match, mismatch, gap,
+        wfa::WFAligner::Alignment);
+    return distance(a, b, aligner);
   }
-};
-
-// struct AlignWorker : public RcppParallel::Worker {
-//   const std::vector<std::string> &seq;
-//   const std::vector<size_t> &matches;
-//   std::vector<double> &dist;
-//   const parasail_profile_t * profile;
-//
-//   template <class InputIt>
-//   AlignWorker(
-//     const std::vector<std::string> &seq,
-//     const InputIt begin, const InputIt end,
-//     std::vector<double> &dist,
-//     const parasail_profile_t * profile
-//   ): seq(seq), matches(begin, end), dist(dist), profile(profile) {};
-//
-//   AlignWorker(
-//     const std::vector<std::string> &seq,
-//     const std::vector<size_t> &matches,
-//     std::vector<double> &dist,
-//     const parasail_profile_t * profile
-//   ): seq(seq), matches(matches), dist(dist), profile(profile) {};
-//
-//   void operator()(std::size_t begin, std::size_t end) {
-//     for (size_t i = begin; i < end; i++) {
-//       dist[i] = profile_align(profile, seq[i]);
-//     }
-//   };
-// };
+}
 
 // for a given kmer (implicit),
 // what sequence was it found in (i),
@@ -212,232 +145,107 @@ bool comp_by_kmer(const KmerHit &a, const KmerHit &b) {
   return a.kmer < b.kmer;
 }
 
-// check whether we can do an anchored alignment
-// we will allow it if all shared kmer hits occur in the same order in each
-// sequence, and if the total length of the anchor regions is 16
-// (i.e., 2 different 8-mers, or a run of 9 consecutive 8mers)
-bool find_anchors(const std::vector<KmerHit> &seq_kmer_index1, const std::vector<KmerHit> &seq_kmer_index2,
-                  const std::vector<KmerHit> &seq_x_index1, const std::vector<KmerHit> &seq_x_index2,
-                  std::vector<Anchor> &anchors, KmerBitField &match_kmers) {
-  auto i1 = seq_kmer_index1.begin();
-  auto i2 = seq_kmer_index2.begin();
-  auto end1 = seq_kmer_index1.end();
-  auto end2 = seq_kmer_index2.end();
-  match_kmers.clear();
-  while (true) {
-    if (i1->kmer < i2->kmer) {
-      if (++i1 == end1) break;
-    } else if (i1->kmer > i2->kmer) {
-      if (++i2 == end2) break;
-    } else {
-      if (i1->n == 1 && i2->n == 1) {
-        match_kmers.insert(i1->kmer);
-      }
-      if (++i1 == end1) break;
-      if (++i2 == end2) break;
-    }
-  }
-  i1 = seq_x_index1.begin();
-  i2 = seq_x_index2.begin();
-  end1 = seq_x_index1.end();
-  end2 = seq_x_index2.end();
-  // total anchor length
-  uint16_t l = 0, a_ext, b_ext, n = 0;
-  anchors.clear();
-  while(n < match_kmers.size() && i1 < end1 && i2 < end2) {
-    while(i1 < end1 && match_kmers.check(i1->kmer) == false) i1++;
-    while(i2 < end2 && match_kmers.check(i2->kmer) == false) i2++;
-    if (i1->kmer == i2->kmer) {
-      n++;
-      if (anchors.size() == 0) {
-        anchors.emplace_back(i1->x, i2->x, 8);
-        // Rcpp::Rcout << "new anchor: start1=" << anchors.back().start1
-        //             << " end1=" << anchors.back().end1
-        //             << " start2=" << anchors.back().start2
-        //             << " end2=" << anchors.back().end2
-        //             << " length=" << anchors.back().length;
-        l += 8;
-        // Rcpp::Rcout << " total length: " << l << std::endl;
-      } else if (anchors.back().end1 >= i1->x && anchors.back().end2 >= i2->x){
-        a_ext = i1->x + 8 - anchors.back().end1;
-        b_ext = i2->x + 8 - anchors.back().end2;
-        // this happens with variable length repeats
-        if (a_ext == b_ext) {
-          anchors.back() += a_ext;
-          l += a_ext;
-        }
-      } else {
-        // Rcpp::Rcout << "ext anchor: start1=" << anchors.back().start1
-        //             << " end1=" << anchors.back().end1
-        //             << " start2=" << anchors.back().start2
-        //             << " end2=" << anchors.back().end2
-        //             << " length=" << anchors.back().length
-        //             << " total length: " << l << std::endl;
-        // anchors.emplace_back(i1->x, i2->x, 8);
-        // Rcpp::Rcout << "new anchor: start1=" << anchors.back().start1
-        //             << " end1=" << anchors.back().end1
-        //             << " start2=" << anchors.back().start2
-        //             << " end2=" << anchors.back().end2
-        //             << " length=" << anchors.back().length;
-        // l += 8;
-        // Rcpp::Rcout << " total length: " << l << std::endl;
-      }
-    } else {
-      // Rcpp::Rcout << "giving up on anchors because of ordering mismatch"
-      //             << std::endl;
-      return false;
-    }
-    ++i1;
-    ++i2;
-  }
-  if (anchors.back().length > 8) {
-    // Rcpp::Rcout << "ext anchor: start1=" << anchors.back().start1
-    //             << " end1=" << anchors.back().end1
-    //             << " start2=" << anchors.back().start2
-    //             << " end2=" << anchors.back().end2
-    //             << " length=" << anchors.back().length
-    //             << " total length: " << l << std::endl;
-  }
-  if (l >= 16) return true;
-  // Rcpp::Rcout << "giving up on anchors because total match is too short"
-  //             << std::endl;
-  return false;
-}
+struct SparseDistanceMatrix {
+  std::vector<size_t> &seq1, &seq2;
+  std::vector<double> &dist1, &dist2;
+  tthread::mutex mutex;
 
-double anchor_align(const std::string &seq1, const std::string &seq2,
-                   const std::vector<Anchor> &anchors) {
-  const char* s1 = seq1.c_str();
-  const char* s2 = seq2.c_str();
-  uint16_t x1 = 0, x2 = 0;
-  double matches = 0.0, length = 0.0;
-  auto a_i = anchors.begin();
-  auto a_end = anchors.end();
-  if (a_i->start1 == 0 || a_i->start2 == 0) {
-    matches += a_i->length;
-    length += a_i->length;
-  } else {
-    // Rcpp::Rcout << "aligning seq 1:[0," << a_i->start1 << ") with seq 2:[0," <<
-    //   a_i->start2 << ")" << std::endl;
-    parasail_result_t *r = parasail_sg_qb_db_stats_scan_avx2_256_16(
-      s1, a_i->start1,
-      s2, a_i->start2,
-      2, 1,
-      &parasail_dnafull
-    );
-    matches += parasail_result_get_matches(r) + a_i->length;
-    length += parasail_result_get_length(r) + a_i->length;
-    parasail_result_free(r);
-  }
-  x1 = a_i->end1;
-  x2 = a_i->end2;
-  ++a_i;
-  for (;a_i != a_end; ++a_i) {
-    uint32_t l1 = a_i->start1 - x1;
-    uint32_t l2 = a_i->start2 - x2;
-    if (l1 == 0) {
-      length += l2;
-      x1 = a_i->end1;
-      x2 = a_i->end2;
-      continue;
-    }
-    if (l2 == 0) {
-      length += l1;
-      x1 = a_i->end1;
-      x2 = a_i->end2;
-      continue;
-    }
+  SparseDistanceMatrix(
+    std::vector<size_t> &seq1,
+    std::vector<size_t> &seq2,
+    std::vector<double> &dist1,
+    std::vector<double> &dist2
+  ) : seq1(seq1), seq2(seq2), dist1(dist1), dist2(dist2), mutex() {};
 
-    // Rcpp::Rcout << "aligning seq 1:[" << x1 << "," << a_i->start1 <<
-    //   ") with seq 2:[" << x2 << "," << a_i->start2 << ")" << std::endl;
-    parasail_result *r = parasail_sw_stats_scan_avx2_256_16(
-      s1 + x1, l1,
-      s2 + x2, l2,
-      2, 1,
-      &parasail_dnafull
-    );
-    x1 = a_i->end1;
-    x2 = a_i->end2;
-    matches += parasail_result_get_matches(r) + a_i->length;
-    length += parasail_result_get_length(r) + a_i->length;
-    parasail_result_free(r);
+  void push_back(size_t s1, size_t s2, double d1, double d2) {
+    seq1.push_back(s1);
+    seq2.push_back(s2);
+    dist1.push_back(d1);
+    dist2.push_back(d2);
   }
-  --a_i;
-  if (a_i->end1 < seq1.size() && a_i->end2 < seq2.size()) {
-    parasail_result *r = parasail_sg_qe_de_stats_scan_avx2_256_16(
-      s1 + x1, seq1.size() - x1,
-      s2 + x2, seq2.size() - x2,
-      2, 1,
-      &parasail_dnafull
-    );
-    matches += parasail_result_get_matches(r) + a_i->length;
-    length += parasail_result_get_length(r) + a_i->length;
-    parasail_result_free(r);
-  }
-  return 1.0 - (matches/length);
-}
 
-struct BigAlignWorker : public RcppParallel::Worker {
+  void append(
+      std::vector<size_t> &seq1new,
+      std::vector<size_t> &seq2new,
+      std::vector<double> &dist1new,
+      std::vector<double> &dist2new
+  ) {
+    mutex.lock();
+    std::copy(seq1new.begin(), seq1new.end(), std::back_inserter(seq1));
+    seq1new.clear();
+    std::copy(seq2new.begin(), seq2new.end(), std::back_inserter(seq2));
+    seq2new.clear();
+    std::copy(dist1new.begin(), dist1new.end(), std::back_inserter(dist1));
+    dist1new.clear();
+    std::copy(dist2new.begin(), dist2new.end(), std::back_inserter(dist2));
+    dist2new.clear();
+    mutex.unlock();
+  }
+};
+
+struct KmerAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
   const std::vector<std::vector<KmerCount>> &kmer_seq_index;
   const std::vector<std::vector<KmerHit>> &seq_kmer_index;
   const std::vector<std::vector<KmerHit>> &seq_x_index;
+  const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold;
-  const bool heuristic;
+  const double udist_threshold;
   const uint8_t threads;
-  std::vector<size_t> &seq1, &seq2;
-  std::vector<double> &dist1, &dist2;
-  tthread::mutex &mutex;
+  SparseDistanceMatrix &sdm;
   size_t &aligned;
-  size_t &anchored;
+  size_t &considered;
 
-  BigAlignWorker(
+  KmerAlignWorker(
     const std::vector<std::string> &seq,
     const std::vector<std::vector<KmerCount>> &kmer_seq_index,
     const std::vector<std::vector<KmerHit>> &seq_kmer_index,
     const std::vector<std::vector<KmerHit>> &seq_x_index,
+    const int match,
+    const int mismatch,
+    const int gap,
+    const int extend,
+    const int gap2,
+    const int extend2,
     const double dist_threshold,
+    const double udist_threshold,
     const uint8_t threads,
-    const bool heuristic,
-    std::vector<size_t> &seq1,
-    std::vector<size_t> &seq2,
-    std::vector<double> &dist1,
-    std::vector<double> &dist2,
-    tthread::mutex &mutex,
+    SparseDistanceMatrix &sdm,
     size_t &aligned,
-    size_t &anchored
+    size_t &considered
   ) : seq(seq), kmer_seq_index(kmer_seq_index), seq_kmer_index(seq_kmer_index),
   seq_x_index(seq_x_index),
-  dist_threshold(dist_threshold), heuristic(heuristic), threads(threads),
-  seq1(seq1), seq2(seq2), dist1(dist1), dist2(dist2),
-  mutex(mutex), aligned(aligned), anchored(anchored) {};
+  match(match), mismatch(mismatch), gap(gap), extend(extend), gap2(gap2), extend2(extend2),
+  dist_threshold(dist_threshold), udist_threshold(udist_threshold), threads(threads),
+  sdm(sdm), aligned(aligned), considered(considered) {};
 
   void operator()(std::size_t begin, std::size_t end) {
     double n = seq.size();
     double m = (n*n - 3.0*n + 2.0)/2.0;
-    size_t my_anchored = 0;
+    size_t my_considered = 0;
     size_t my_aligned = 0;
     size_t begin_i;
     std::vector<size_t> my_seq1;
-    my_seq1.reserve(100);
+    my_seq1.reserve(1000);
     std::vector<size_t> my_seq2;
-    my_seq2.reserve(100);
+    my_seq2.reserve(1000);
     std::vector<double> my_dist1;
-    my_dist1.reserve(100);
+    my_dist1.reserve(1000);
     std::vector<double> my_dist2;
-    my_dist2.reserve(100);
+    my_dist2.reserve(1000);
     KmerBitField match_hits;
-
+    wfa::WFAlignerChoose aligner{match, mismatch, gap, extend, gap2, extend2,
+                                 wfa::WFAligner::Alignment};
     if (begin == 0) {
       begin_i = 1;
     } else {
       begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
     }
     size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
-    mutex.lock();
+    sdm.mutex.lock();
     std::cout << "Thread " << begin << " entered; sequences [" <<
       begin_i << ", "<< end_i << ")" << std::endl;
-    mutex.unlock();
-    std::vector<Anchor> anchors;
+    sdm.mutex.unlock();
     for (size_t i = begin_i; i < end_i; i++) {
       const std::vector<KmerHit> &index = seq_kmer_index[i];
       if (index.size() == 0) continue;
@@ -460,12 +268,8 @@ struct BigAlignWorker : public RcppParallel::Worker {
         }
       }
       if (match_index.size() == 0) continue;
-      parasail_profile_t * profile = parasail_profile_create_stats_avx_256_16(
-        // Rcpp::as<std::string>(seq[i]).c_str(), seq[i].size(),
-        seq[i].c_str(), seq[i].size(),
-        &parasail_dnafull
-      );
       for (auto const & match : match_index) {
+        ++my_considered;
         // Rcpp::Rcout << "#### seq " << i << " and " << match.first << " ####" << std::endl;
         double d1;
         if (seq[i].size() >= seq[match.first].size()) {
@@ -473,41 +277,18 @@ struct BigAlignWorker : public RcppParallel::Worker {
         } else {
           d1 = 1.0 - match.second/(seq[i].size() - 7.0);
         }
-        if (d1 <= dist_threshold) {
-          double d2;
-          if (
-              heuristic
-              && find_anchors(seq_kmer_index[i], seq_kmer_index[match.first],
-                           seq_x_index[i], seq_x_index[match.first], anchors,
-                           match_hits)
-          ) {
-            d2 = anchor_align(seq[i], seq[match.first], anchors);
-            anchors.clear();
-            ++my_aligned;
-            ++my_anchored;
-          } else {
-            // Rcpp::Rcout << "profile aligning full length sequences" << std::endl;
-            d2 = d1;
-            d2 = profile_align(profile, seq[match.first]);
-            ++my_aligned;
-          }
-          // double d2 = align(seq[i], seq[match.first]);
+        if (d1 <= udist_threshold) {
+          ++my_aligned;
+          double d2 = distance(seq[match.first], seq[i], aligner);
+          if (d2 <= dist_threshold) {
+            my_seq1.push_back(match.first);
+            my_seq2.push_back(i);
+            my_dist1.push_back(d1);
+            my_dist2.push_back(d2);
 
-          my_seq1.push_back(match.first);
-          my_seq2.push_back(i);
-          my_dist1.push_back(d1);
-          my_dist2.push_back(d2);
-          if (my_seq1.size() == 100) {
-            mutex.lock();
-            std::copy(my_seq1.begin(), my_seq1.end(), std::back_inserter(seq1));
-            my_seq1.clear();
-            std::copy(my_seq2.begin(), my_seq2.end(), std::back_inserter(seq2));
-            my_seq2.clear();
-            std::copy(my_dist1.begin(), my_dist1.end(), std::back_inserter(dist1));
-            my_dist1.clear();
-            std::copy(my_dist2.begin(), my_dist2.end(), std::back_inserter(dist2));
-            my_dist2.clear();
-            mutex.unlock();
+            if (my_seq1.size() == 1000) {
+              sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+            }
           }
           RcppThread::checkUserInterrupt();
         } else {
@@ -516,12 +297,14 @@ struct BigAlignWorker : public RcppParallel::Worker {
           //             << std::endl;
         }
       }
-      parasail_profile_free(profile);
     }
-    mutex.lock();
+    if (my_seq1.size() > 0) {
+      sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+    }
+    sdm.mutex.lock();
     aligned += my_aligned;
-    anchored += my_anchored;
-    mutex.unlock();
+    considered += my_considered;
+    sdm.mutex.unlock();
   }
 };
 
@@ -542,7 +325,10 @@ uint8_t lookup(char c) {
 //' @export
 // [[Rcpp::export]]
 Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold,
-                       uint8_t threads = 1, bool heuristic = true) {
+                       double udist_threshold,
+                       int match = 1, int mismatch = 2, int gap_open = 10,
+                       int gap_extend = 1, int gap_open2 = 0, int gap_extend2 = 0,
+                       uint8_t threads = 1) {
 
   Rcpp::Rcout << "Indexing k-mers...";
   // index: for each kmer, which sequences is it found in, and how many times?
@@ -607,15 +393,23 @@ Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold,
   // faster to fill with push_back and are more thread-safe
   std::vector<size_t> seq1, seq2;
   std::vector<double> dist1, dist2;
-  size_t aligned = 0, anchored = 0;
+  size_t aligned = 0, considered = 0;
 
-  tthread::mutex mutex;
-  BigAlignWorker worker(seq, kmer_seq_index, seq_kmer_index, seq_x_index,
-                        dist_threshold, threads, heuristic,
-                        seq1, seq2, dist1, dist2, mutex, aligned, anchored);
-  RcppParallel::parallelFor(0, threads, worker, 1, threads);
+  SparseDistanceMatrix sdm {seq1, seq2, dist1, dist2};
+  KmerAlignWorker worker(seq, kmer_seq_index, seq_kmer_index, seq_x_index,
+                        match, mismatch, gap_open, gap_extend, gap_open2,
+                        gap_extend2,
+                        dist_threshold, udist_threshold, threads,
+                        sdm, aligned, considered);
+  if (threads > 1) {
+    RcppParallel::parallelFor(0, threads, worker, 1, threads);
+  } else {
+    worker(0, 1);
+  }
 
-  Rcpp::Rcout << anchored << "/" << aligned << " used anchored alignment." << std::endl;
+  Rcpp::Rcout  << seq1.size() << " included / "
+               << aligned << " aligned / "
+               << considered << " considered." << std::endl;
   //   for (auto kmer : seq_index) {
   //     // Rcpp::Rcout << "looking for matches to " << std::hex << kmer.first << std::endl;
   //     auto & index = kmer_index[kmer.first];
@@ -707,4 +501,145 @@ Rcpp::DataFrame distmx(std::vector<std::string> seq, double dist_threshold,
     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
   );
   return out;
+}
+
+struct PrealignAlignWorker : public RcppParallel::Worker {
+  const std::vector<std::string> &seq;
+  const int match, mismatch, gap, extend, gap2, extend2;
+  const double dist_threshold, sim_threshold, sim_threshold_plus_1;
+  const uint8_t threads;
+  SparseDistanceMatrix &sdm;
+  size_t &prealigned, &aligned;
+
+  PrealignAlignWorker(
+    const std::vector<std::string> &seq,
+    const int match,
+    const int mismatch,
+    const int gap,
+    const int extend,
+    const int gap2,
+    const int extend2,
+    const double dist_threshold,
+    const uint8_t threads,
+    SparseDistanceMatrix &sdm,
+    size_t &prealigned,
+    size_t &aligned
+  ) : seq(seq),
+  match(match), mismatch(mismatch), gap(gap), extend(extend), gap2(gap2), extend2(extend2),
+  dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
+  sim_threshold_plus_1(1.0 + sim_threshold), threads(threads),
+  sdm(sdm), prealigned(prealigned), aligned(aligned) {};
+
+  void operator()(std::size_t begin, std::size_t end) {
+    double n = seq.size();
+    double m = (n*n - 3.0*n + 2.0)/2.0;
+    size_t my_prealigned = 0;
+    size_t my_aligned = 0;
+    size_t begin_i;
+    std::vector<size_t> my_seq1;
+    my_seq1.reserve(1000);
+    std::vector<size_t> my_seq2;
+    my_seq2.reserve(1000);
+    std::vector<double> my_dist1;
+    my_dist1.reserve(1000);
+    std::vector<double> my_dist2;
+    my_dist2.reserve(1000);
+    KmerBitField match_hits;
+    wfa::WFAlignerEdit prealigner{wfa::WFAligner::Score};
+
+    wfa::WFAlignerChoose aligner{match, mismatch, gap, extend, gap2, extend2,
+                                 wfa::WFAligner::Alignment};
+    if (begin == 0) {
+      begin_i = 1;
+    } else {
+      begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
+    }
+    size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
+    sdm.mutex.lock();
+    std::cout << "Thread " << begin << " entered; sequences [" <<
+      begin_i << ", "<< end_i << ")" << std::endl;
+    sdm.mutex.unlock();
+    for (size_t i = begin_i; i < end_i; i++) {
+      for (size_t j = 0; j < i; j++) {
+        double l1 = seq[i].size(), l2 = seq[j].size(), maxd1, maxs1;
+        // // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
+        // //             << j << " (l2=" << l2 <<")####" << std::endl;
+        if (l1 / l2 < sim_threshold || l2/l1 < sim_threshold) continue;
+        //
+        maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
+        prealigner.setMaxAlignmentScore((int) maxd1);
+        int min_k = -(int)round((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+        int max_k = (int)round((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
+        // // std::cout << "(skipping) Setting band heuristics to " << min_k << ", " << max_k << std::endl;
+        prealigner.setHeuristicBandedStatic(min_k, max_k);
+        // std::cout << "Prealigning..." << std::endl;
+        auto status = prealigner.alignEnd2End(seq[i], seq[j]);
+        // std::cout << "Prealignment finished." << std::endl;
+        ++my_prealigned;
+        if (status != wfa::WFAligner::AlignmentStatus::StatusSuccessful) continue;
+        // std::cout << "Prealignment successful." << std::endl;
+        double d1 = prealigner.getAlignmentScore();
+        if (d1 > maxd1) continue;
+        d1 /= (l1 + l2)/sim_threshold_plus_1;
+        // double d1 = 0;
+        double d2 = distance(seq[j], seq[i], aligner);
+        my_aligned++;
+        if (d2 <= dist_threshold) {
+          my_seq1.push_back(j);
+          my_seq2.push_back(i);
+          my_dist1.push_back(d1);
+          my_dist2.push_back(d2);
+
+          if (my_seq1.size() == 1000) {
+            sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+          }
+        }
+        RcppThread::checkUserInterrupt();
+      }
+    }
+    if (my_seq1.size() > 0) {
+      sdm.append(my_seq1, my_seq2, my_dist1, my_dist2);
+    }
+    sdm.mutex.lock();
+    aligned += my_aligned;
+    prealigned += my_prealigned;
+    sdm.mutex.unlock();
+  }
+};
+
+//' @export
+// [[Rcpp::export]]
+ Rcpp::DataFrame distmx2(std::vector<std::string> seq, double dist_threshold,
+                        int match = 1, int mismatch = 2, int gap_open = 10,
+                        int gap_extend = 1, int gap_open2 = 0, int gap_extend2 = 0,
+                        uint8_t threads = 1) {
+   size_t prealigned = 0, aligned = 0;
+
+   std::vector<size_t> seq1, seq2;
+   std::vector<double> dist1, dist2;
+
+   SparseDistanceMatrix sdm {seq1, seq2, dist1, dist2};
+   PrealignAlignWorker worker(seq,
+                         match, mismatch, gap_open, gap_extend, gap_open2,
+                         gap_extend2,
+                         dist_threshold, threads,
+                         sdm, prealigned, aligned);
+   if (threads > 1) {
+     RcppParallel::parallelFor(0, threads, worker, 1, threads);
+   } else {
+     worker(0, 1);
+   }
+
+   Rcpp::Rcout << seq1.size() << " included / "
+               << aligned << " aligned / "
+               << prealigned << " prealigned"
+               << std::endl;
+
+   Rcpp::DataFrame out = Rcpp::DataFrame::create(
+     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
+     Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+     Rcpp::Named("dist1") = Rcpp::wrap(dist1),
+     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
+   );
+   return out;
 }

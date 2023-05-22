@@ -28,18 +28,18 @@ confusion_matrix <- function(k, c, threads = 1L) {
 }
 
 #' @export
-align <- function(a, b) {
-    .Call(`_optimotu_align`, a, b)
+align <- function(a, b, match = 0L, mismatch = 1L, gap = 1L, extend = 0L, gap2 = 0L, extend2 = 0L) {
+    .Call(`_optimotu_align`, a, b, match, mismatch, gap, extend, gap2, extend2)
 }
 
 #' @export
-align2 <- function(a, b) {
-    .Call(`_optimotu_align2`, a, b)
+distmx <- function(seq, dist_threshold, udist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
+    .Call(`_optimotu_distmx`, seq, dist_threshold, udist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads)
 }
 
 #' @export
-distmx <- function(seq, dist_threshold, threads = 1L, heuristic = TRUE) {
-    .Call(`_optimotu_distmx`, seq, dist_threshold, threads, heuristic)
+distmx2 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
+    .Call(`_optimotu_distmx2`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads)
 }
 
 distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {

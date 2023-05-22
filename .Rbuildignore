@@ -8,3 +8,5 @@
 ^codecov\.yml$
 ^.*\.profile.*$
 ^benchmark$
+^configure$
+^configure.ac$
