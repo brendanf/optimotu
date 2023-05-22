@@ -173,11 +173,11 @@ is_list_of_character <- function(x) {
 #' @param minsplit (`integer` scalar) Controls the granularity of parallel
 #' processing in the "matrix" algorithm.
 #'
-#' @return An [`integer matrix`][methods::StructureClasses] if
+#' @return An [`integer matrix`][methods::structure-class] if
 #' `output_type=="matrix"`, an [`hclust`][stats::hclust] object if
 #' `output_type=="hclust"`, or a list of one of these when `which` is a list.
 #' @export
-single_linkage = function(
+distmx_cluster = function(
    distmx,
    names,
    method = c("tree", "matrix"),
@@ -201,7 +201,7 @@ single_linkage = function(
       verify_threshold_steps(thresh_min, thresh_max, thresh_step)
       if (!is.null(which) && !isTRUE(which)) {
          verify_which(which, method, names)
-         single_linkage_multi_uniform(
+         distmx_cluster_multi_uniform(
             distmx,
             names,
             output_type,
@@ -214,7 +214,7 @@ single_linkage = function(
       } else {
          switch(
             method,
-            tree = single_linkage_pool_uniform(
+            tree = distmx_cluster_pool_uniform(
                distmx,
                names,
                thresh_min,
@@ -222,7 +222,7 @@ single_linkage = function(
                thresh_step,
                output_type
             ),
-            matrix = single_linkage_matrix_uniform(
+            matrix = distmx_cluster_matrix_uniform(
                distmx,
                names,
                thresh_min,
@@ -242,22 +242,22 @@ single_linkage = function(
       out <- if (!is.null(which) && !isTRUE(which)) {
          verify_which(which, method, names)
          if (is.null(precision)) {
-            single_linkage_multi_array(distmx, names, output_type, dedup$thresholds, which, threads)
+            distmx_cluster_multi_array(distmx, names, output_type, dedup$thresholds, which, threads)
          } else {
-            single_linkage_multi_cached(distmx, names, output_type, dedup$thresholds, precision, which, threads)
+            distmx_cluster_multi_cached(distmx, names, output_type, dedup$thresholds, precision, which, threads)
          }
       } else {
          if (is.null(precision)) {
             switch(
                method,
-               tree = single_linkage_pool_array(distmx, names, dedup$thresholds, output_type),
-               matrix = single_linkage_matrix_array(distmx, names, dedup$thresholds, threads, minsplit)
+               tree = distmx_cluster_pool_array(distmx, names, dedup$thresholds, output_type),
+               matrix = distmx_cluster_matrix_array(distmx, names, dedup$thresholds, threads, minsplit)
             )
          } else {
             switch(
                method,
-               tree = single_linkage_pool_cached(distmx, names, dedup$thresholds, precision, output_type),
-               matrix = single_linkage_matrix_cached(distmx, names, dedup$thresholds, precision, threads, minsplit)
+               tree = distmx_cluster_pool_cached(distmx, names, dedup$thresholds, precision, output_type),
+               matrix = distmx_cluster_matrix_cached(distmx, names, dedup$thresholds, precision, threads, minsplit)
             )
          }
       }
@@ -269,9 +269,9 @@ single_linkage = function(
 #' using USEARCH to calculate sequence similarities.
 #'
 #' @description This function uses a unix pipe to direct the output of the
-#' USEARCH "`calc_distmx`" command  to [single_linkage()]. USEARCH (version 8.0
+#' USEARCH "`calc_distmx`" command  to [distmx_cluster()]. USEARCH (version 8.0
 #' or higher) should be installed separately; it is available with a free
-#' license for most users at [https://www.drive5.com/usearch/].
+#' license for most users at https://www.drive5.com/usearch/.
 #'
 #' @param seq (`character` vector, filename,
 #' [DNAStringSet][Biostrings::DNAStringSet()], or `data.frame` with columns
@@ -317,12 +317,12 @@ single_linkage = function(
 #' distance matrix and clustering
 #' @param usearch (`character` scalar) path to usearch executable
 #'
-#' @return An [`integer matrix`][methods::StructureClasses] if
+#' @return An [`integer matrix`][methods::structure-class] if
 #' `output_type=="matrix"`, an [`hclust`][stats::hclust] object if
 #' `output_type=="hclust"`, or a list of one of these when `which` is a list.
 #'
 #' @export
-usearch_single_linkage <- function(
+seq_cluster_usearch <- function(
    seq,
    seq_id = names(seq),
    method = c("tree", "matrix"),
@@ -334,12 +334,12 @@ usearch_single_linkage <- function(
    which = TRUE,
    ncpu = NULL,
    usearch = Sys.which("usearch")) {
-   UseMethod("usearch_single_linkage", seq)
+   UseMethod("seq_cluster_usearch", seq)
 }
 
-#' @method usearch_single_linkage data.frame
+#' @method seq_cluster_usearch data.frame
 #' @export
-usearch_single_linkage.data.frame <- function(
+seq_cluster_usearch.data.frame <- function(
    seq,
    seq_id = seq$seq_id,
    method = c("tree", "matrix"),
@@ -353,7 +353,7 @@ usearch_single_linkage.data.frame <- function(
    usearch = Sys.which("usearch")
 ) {
    mycall <- match.call()
-   mycall[[1]] <- usearch_single_linkage.DNAStringSet
+   mycall[[1]] <- seq_cluster_usearch.DNAStringSet
    if (missing(seq_id)) {
       newseq_id <- quote(seq$seq_id)
       newseq_id[[2]] <- mycall$seq
@@ -366,7 +366,7 @@ usearch_single_linkage.data.frame <- function(
 }
 
 #' @export
-usearch_single_linkage.character <- function(
+seq_cluster_usearch.character <- function(
    seq,
    seq_id = names(seq),
    method = c("tree", "matrix"),
@@ -423,7 +423,7 @@ usearch_single_linkage.character <- function(
       )
    } else {
       mycall <- match.call()
-      mycall[[1]] <- usearch_single_linkage.DNAStringSet
+      mycall[[1]] <- seq_cluster_usearch.DNAStringSet
       newseq <- quote(Biostrings::DNAStringSet(seq))
       newseq[[2]] <- mycall$seq
       mycall$seq <- newseq
@@ -432,7 +432,7 @@ usearch_single_linkage.character <- function(
 }
 
 #' @export
-usearch_single_linkage.DNAStringSet <- function(
+seq_cluster_usearch.DNAStringSet <- function(
    seq,
    seq_id = names(seq),
    method = c("tree", "matrix"),
@@ -550,7 +550,7 @@ do_usearch_singlelink <- function(
    }
    system2(usearch, args, wait = FALSE)
    if (is.list(which)) {
-      out <- single_linkage(
+      out <- distmx_cluster(
          distmx = fifoname,
          seq_id,
          thresh_min = thresh_min,
@@ -565,7 +565,7 @@ do_usearch_singlelink <- function(
       )
       out <- lapply(out, `rownames<-`, thresh_names)
    } else {
-      out <- single_linkage(
+      out <- distmx_cluster(
          distmx = fifoname,
          seq_id,
          thresh_min = thresh_min,

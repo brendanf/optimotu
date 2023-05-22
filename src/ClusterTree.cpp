@@ -825,7 +825,7 @@ void ClusterTree::validate() const {
 
 #ifdef OPTIMOTU_R
 
-Rcpp::RObject single_linkage_tree(
+Rcpp::RObject distmx_cluster_tree(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const DistanceConverter &dconv,
@@ -867,48 +867,51 @@ Rcpp::RObject single_linkage_tree(
 }
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::RObject single_linkage_tree_uniform(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const float dmin,
-     const float dmax,
-     const float dstep,
-     const std::string output_type
- ) {
-   const UniformDistanceConverter dconv(dmin, dstep);
-   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_tree(file, seqnames, dconv, output_type, m);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::RObject distmx_cluster_tree_uniform(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const float dmin,
+    const float dmax,
+    const float dstep,
+    const std::string output_type
+) {
+  const UniformDistanceConverter dconv(dmin, dstep);
+  const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+  return distmx_cluster_tree(file, seqnames, dconv, output_type, m);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::RObject single_linkage_tree_array(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const std::vector<double> &thresholds,
-     const std::string output_type
- ) {
-   const ArrayDistanceConverter dconv(thresholds);
-   const int m = thresholds.size();
-   return single_linkage_tree(file, seqnames, dconv, output_type, m);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::RObject distmx_cluster_tree_array(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const std::vector<double> &thresholds,
+    const std::string output_type
+) {
+  const ArrayDistanceConverter dconv(thresholds);
+  const int m = thresholds.size();
+  return distmx_cluster_tree(file, seqnames, dconv, output_type, m);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::RObject single_linkage_tree_cached(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const std::vector<double> &thresholds,
-     const double precision,
-     const std::string output_type
- ) {
-   const CachedDistanceConverter dconv(thresholds, precision);
-   const int m = thresholds.size();
-   return single_linkage_tree(file, seqnames, dconv, output_type, m);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::RObject distmx_cluster_tree_cached(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const std::vector<double> &thresholds,
+    const double precision,
+    const std::string output_type
+) {
+  const CachedDistanceConverter dconv(thresholds, precision);
+  const int m = thresholds.size();
+  return distmx_cluster_tree(file, seqnames, dconv, output_type, m);
+}
 
-Rcpp::List single_linkage_mtree(
+Rcpp::List distmx_cluster_mtree(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const DistanceConverter &dconv,
@@ -950,51 +953,54 @@ Rcpp::List single_linkage_mtree(
 }
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::List single_linkage_mtree_uniform(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const std::string &output_type,
-     const double dmin,
-     const double dmax,
-     const double dstep,
-     const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
-     const size_t threads=1
- ) {
-   const UniformDistanceConverter dconv(dmin, dstep);
-   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_mtree(file, seqnames, dconv, output_type, m, preclust, threads);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::List distmx_cluster_mtree_uniform(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const std::string &output_type,
+    const double dmin,
+    const double dmax,
+    const double dstep,
+    const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
+    const size_t threads=1
+) {
+  const UniformDistanceConverter dconv(dmin, dstep);
+  const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+  return distmx_cluster_mtree(file, seqnames, dconv, output_type, m, preclust, threads);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::List single_linkage_mtree_array(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const std::string &output_type,
-     const std::vector<double> thresholds,
-     const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
-     const size_t threads=1
- ) {
-   const ArrayDistanceConverter dconv(thresholds);
-   const int m = thresholds.size();
-   return single_linkage_mtree(file, seqnames, dconv, output_type, m, preclust, threads);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::List distmx_cluster_mtree_array(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const std::string &output_type,
+    const std::vector<double> thresholds,
+    const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
+    const size_t threads=1
+) {
+  const ArrayDistanceConverter dconv(thresholds);
+  const int m = thresholds.size();
+  return distmx_cluster_mtree(file, seqnames, dconv, output_type, m, preclust, threads);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::List single_linkage_mtree_cached(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const std::string &output_type,
-     const std::vector<double> thresholds,
-     const double precision,
-     const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
-     const size_t threads=1
- ) {
-   const CachedDistanceConverter dconv(thresholds, precision);
-   const int m = thresholds.size();
-   return single_linkage_mtree(file, seqnames, dconv, output_type, m, preclust, threads);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::List distmx_cluster_mtree_cached(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const std::string &output_type,
+    const std::vector<double> thresholds,
+    const double precision,
+    const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
+    const size_t threads=1
+) {
+  const CachedDistanceConverter dconv(thresholds, precision);
+  const int m = thresholds.size();
+  return distmx_cluster_mtree(file, seqnames, dconv, output_type, m, preclust, threads);
+}
 
 #endif

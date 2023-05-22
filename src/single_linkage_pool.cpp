@@ -909,7 +909,7 @@ Rcpp::List cluster2hclust(
    return out;
 }
 
-Rcpp::RObject single_linkage_pool(
+Rcpp::RObject distmx_cluster_pool(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const DistanceConverter &dconv,
@@ -950,8 +950,9 @@ Rcpp::RObject single_linkage_pool(
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::RObject single_linkage_pool_uniform(
+Rcpp::RObject distmx_cluster_pool_uniform(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const float dmin,
@@ -961,12 +962,13 @@ Rcpp::RObject single_linkage_pool_uniform(
 ) {
   const UniformDistanceConverter dconv(dmin, dstep);
   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-  return single_linkage_pool(file, seqnames, dconv, output_type, m);
+  return distmx_cluster_pool(file, seqnames, dconv, output_type, m);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::RObject single_linkage_pool_array(
+Rcpp::RObject distmx_cluster_pool_array(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::vector<double> &thresholds,
@@ -974,12 +976,13 @@ Rcpp::RObject single_linkage_pool_array(
 ) {
    const ArrayDistanceConverter dconv(thresholds);
    const int m = thresholds.size();
-   return single_linkage_pool(file, seqnames, dconv, output_type, m);
+   return distmx_cluster_pool(file, seqnames, dconv, output_type, m);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::RObject single_linkage_pool_cached(
+Rcpp::RObject distmx_cluster_pool_cached(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::vector<double> &thresholds,
@@ -988,7 +991,7 @@ Rcpp::RObject single_linkage_pool_cached(
 ) {
    const CachedDistanceConverter dconv(thresholds, precision);
    const int m = thresholds.size();
-   return single_linkage_pool(file, seqnames, dconv, output_type, m);
+   return distmx_cluster_pool(file, seqnames, dconv, output_type, m);
 }
 
 
@@ -1009,7 +1012,7 @@ void process_mod(cluster_pool **pool, std::map<j_t, j_t> *fwd_map,
    }
 }
 
-Rcpp::List single_linkage_multi(
+Rcpp::List distmx_cluster_multi(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const DistanceConverter &dconv,
@@ -1186,8 +1189,9 @@ Rcpp::List single_linkage_multi(
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::List single_linkage_multi_uniform(
+Rcpp::List distmx_cluster_multi_uniform(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::string &output_type,
@@ -1199,12 +1203,13 @@ Rcpp::List single_linkage_multi_uniform(
 ) {
    const UniformDistanceConverter dconv(dmin, dstep);
    const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_multi(file, seqnames, dconv, output_type, m, preclust, threads);
+   return distmx_cluster_multi(file, seqnames, dconv, output_type, m, preclust, threads);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::List single_linkage_multi_array(
+Rcpp::List distmx_cluster_multi_array(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::string &output_type,
@@ -1214,12 +1219,13 @@ Rcpp::List single_linkage_multi_array(
 ) {
    const ArrayDistanceConverter dconv(thresholds);
    const int m = thresholds.size();
-   return single_linkage_multi(file, seqnames, dconv, output_type, m, preclust, threads);
+   return distmx_cluster_multi(file, seqnames, dconv, output_type, m, preclust, threads);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::List single_linkage_multi_cached(
+Rcpp::List distmx_cluster_multi_cached(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::string &output_type,
@@ -1230,5 +1236,5 @@ Rcpp::List single_linkage_multi_cached(
 ) {
    const CachedDistanceConverter dconv(thresholds, precision);
    const int m = thresholds.size();
-   return single_linkage_multi(file, seqnames, dconv, output_type, m, preclust, threads);
+   return distmx_cluster_multi(file, seqnames, dconv, output_type, m, preclust, threads);
 }

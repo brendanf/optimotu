@@ -84,7 +84,7 @@ public:
   }
 };
 
-Rcpp::IntegerMatrix single_linkage_matrix2(
+Rcpp::IntegerMatrix distmx_cluster_matrix2(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const DistanceConverter &dconv,
@@ -113,8 +113,9 @@ Rcpp::IntegerMatrix single_linkage_matrix2(
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_matrix2_uniform(
+Rcpp::IntegerMatrix distmx_cluster_matrix2_uniform(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const float dmin,
@@ -126,13 +127,14 @@ Rcpp::IntegerMatrix single_linkage_matrix2_uniform(
 ) {
    const UniformDistanceConverter dconv(dmin, dstep);
    const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_matrix2(file, seqnames, dconv, m, threads,
+   return distmx_cluster_matrix2(file, seqnames, dconv, m, threads,
                                  do_binary_search, fill_method);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_matrix2_array(
+Rcpp::IntegerMatrix distmx_cluster_matrix2_array(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::vector<double> &thresholds,
@@ -142,13 +144,14 @@ Rcpp::IntegerMatrix single_linkage_matrix2_array(
 ) {
    const ArrayDistanceConverter dconv(thresholds);
    const int m = thresholds.size();
-   return single_linkage_matrix2(file, seqnames, dconv, m, threads,
+   return distmx_cluster_matrix2(file, seqnames, dconv, m, threads,
                                  do_binary_search, fill_method);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_matrix2_cached(
+Rcpp::IntegerMatrix distmx_cluster_matrix2_cached(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::vector<double> &thresholds,
@@ -159,11 +162,11 @@ Rcpp::IntegerMatrix single_linkage_matrix2_cached(
 ) {
    const CachedDistanceConverter dconv(thresholds, precision);
    const int m = thresholds.size();
-   return single_linkage_matrix2(file, seqnames, dconv, m, threads,
+   return distmx_cluster_matrix2(file, seqnames, dconv, m, threads,
                                  do_binary_search, fill_method);
 }
 
-Rcpp::IntegerMatrix single_linkage_imatrix(
+Rcpp::IntegerMatrix distmx_cluster_imatrix(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const DistanceConverter &dconv,
@@ -181,41 +184,43 @@ Rcpp::IntegerMatrix single_linkage_imatrix(
 }
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_imatrix_uniform(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const float dmin,
-     const float dmax,
-     const float dstep
- ) {
-   const UniformDistanceConverter dconv(dmin, dstep);
-   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_imatrix(file, seqnames, dconv, m);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix distmx_cluster_imatrix_uniform(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const float dmin,
+    const float dmax,
+    const float dstep
+) {
+  const UniformDistanceConverter dconv(dmin, dstep);
+  const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+  return distmx_cluster_imatrix(file, seqnames, dconv, m);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_imatrix_array(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const std::vector<double> &thresholds
- ) {
-   const ArrayDistanceConverter dconv(thresholds);
-   const int m = thresholds.size();
-   return single_linkage_imatrix(file, seqnames, dconv, m);
- }
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix distmx_cluster_imatrix_array(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const std::vector<double> &thresholds
+) {
+  const ArrayDistanceConverter dconv(thresholds);
+  const int m = thresholds.size();
+  return distmx_cluster_imatrix(file, seqnames, dconv, m);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_imatrix_cached(
-     const std::string file,
-     const Rcpp::CharacterVector &seqnames,
-     const std::vector<double> &thresholds,
-     const double precision
- ) {
-   const CachedDistanceConverter dconv(thresholds, precision);
-   const int m = thresholds.size();
-   return single_linkage_matrix2(file, seqnames, dconv, m);
- }
+//' @rdname distmx_cluster
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix distmx_cluster_imatrix_cached(
+    const std::string file,
+    const Rcpp::CharacterVector &seqnames,
+    const std::vector<double> &thresholds,
+    const double precision
+) {
+  const CachedDistanceConverter dconv(thresholds, precision);
+  const int m = thresholds.size();
+  return distmx_cluster_matrix2(file, seqnames, dconv, m);
+}
 #endif

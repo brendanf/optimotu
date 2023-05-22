@@ -34,7 +34,7 @@ struct MergeWorker
 };
 
 
-Rcpp::IntegerMatrix single_linkage_matrix(
+Rcpp::IntegerMatrix distmx_cluster_matrix(
     const std::string file,
     const Rcpp::CharacterVector &seqnames,
     const DistanceConverter &dconv,
@@ -113,8 +113,9 @@ Rcpp::IntegerMatrix single_linkage_matrix(
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_matrix_uniform(
+Rcpp::IntegerMatrix distmx_cluster_matrix_uniform(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const float dmin,
@@ -125,12 +126,13 @@ Rcpp::IntegerMatrix single_linkage_matrix_uniform(
 ) {
    const UniformDistanceConverter dconv(dmin, dstep);
    const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_matrix(file, seqnames, dconv, m, threads, minsplit);
+   return distmx_cluster_matrix(file, seqnames, dconv, m, threads, minsplit);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_matrix_array(
+Rcpp::IntegerMatrix distmx_cluster_matrix_array(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::vector<double> &thresholds,
@@ -139,12 +141,13 @@ Rcpp::IntegerMatrix single_linkage_matrix_array(
 ) {
    const ArrayDistanceConverter dconv(thresholds);
    const int m = thresholds.size();
-   return single_linkage_matrix(file, seqnames, dconv, m, threads, minsplit);
+   return distmx_cluster_matrix(file, seqnames, dconv, m, threads, minsplit);
 }
 
 //' @export
+//' @rdname distmx_cluster
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix single_linkage_matrix_cached(
+Rcpp::IntegerMatrix distmx_cluster_matrix_cached(
       const std::string file,
       const Rcpp::CharacterVector &seqnames,
       const std::vector<double> &thresholds,
@@ -154,5 +157,5 @@ Rcpp::IntegerMatrix single_linkage_matrix_cached(
 ) {
    const CachedDistanceConverter dconv(thresholds, precision);
    const int m = thresholds.size();
-   return single_linkage_matrix(file, seqnames, dconv, m, threads, minsplit);
+   return distmx_cluster_matrix(file, seqnames, dconv, m, threads, minsplit);
 }

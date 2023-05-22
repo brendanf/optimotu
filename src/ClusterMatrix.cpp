@@ -165,7 +165,7 @@ void ClusterMatrix<A, BM, F>::operator()(j_t seq1, j_t seq2, d_t i) {
 };
 
 template<typename A, bool BM, int F>
-void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) const {
+void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (size_t j = 1; j < n; ++j) {
     j_t i = j*m;
@@ -178,7 +178,7 @@ void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) const {
 };
 
 template<typename A, bool BM, int F>
-void ClusterMatrix<A, BM, F>::merge_into(ClusterAlgorithm &consumer) const {
+void ClusterMatrix<A, BM, F>::merge_into(ClusterAlgorithm &consumer) {
   // TODO check that the distance converters are really compatible
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (j_t j = 1; j < n; ++j) {
