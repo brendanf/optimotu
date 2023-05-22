@@ -42,6 +42,11 @@ distmx2 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 1
     .Call(`_optimotu_distmx2`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
 }
 
+#' @export
+distmx3 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, ss_iterations = 100L, threads = 1L) {
+    .Call(`_optimotu_distmx3`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, ss_iterations, threads)
+}
+
 distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {
     .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, method_config, parallel_config, output_type)
 }

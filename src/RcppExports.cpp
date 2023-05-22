@@ -83,6 +83,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// distmx3
+Rcpp::DataFrame distmx3(const std::vector<std::string>& seq, const double dist_threshold, const int match, const int mismatch, const int gap_open, const int gap_extend, const int gap_open2, const int gap_extend2, int ss_iterations, uint8_t threads);
+RcppExport SEXP _optimotu_distmx3(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP ss_iterationsSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< const double >::type dist_threshold(dist_thresholdSEXP);
+    Rcpp::traits::input_parameter< const int >::type match(matchSEXP);
+    Rcpp::traits::input_parameter< const int >::type mismatch(mismatchSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< const int >::type gap_extend2(gap_extend2SEXP);
+    Rcpp::traits::input_parameter< int >::type ss_iterations(ss_iterationsSEXP);
+    Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(distmx3(seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, ss_iterations, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // distmx_cluster_single
 Rcpp::RObject distmx_cluster_single(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type);
 RcppExport SEXP _optimotu_distmx_cluster_single(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP) {
@@ -211,6 +231,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_align", (DL_FUNC) &_optimotu_align, 8},
     {"_optimotu_distmx", (DL_FUNC) &_optimotu_distmx, 10},
     {"_optimotu_distmx2", (DL_FUNC) &_optimotu_distmx2, 11},
+    {"_optimotu_distmx3", (DL_FUNC) &_optimotu_distmx3, 10},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 6},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 7},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},

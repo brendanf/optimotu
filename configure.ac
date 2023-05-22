@@ -33,7 +33,7 @@ AC_CONFIG_SRCDIR([src])
 
 # Dynamically generate list of sources from subdirectories via shell
 CXXSOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
-CSOURCES="$(cd src/ && ls WFA2-lib/**/*.c | tr '\n' ' ')"
+CSOURCES="$(cd src/ && ls WFA2-lib/**/*.c SneakySnake/*.c | tr '\n' ' ')"
 
 # Supply it as a variable
 AC_SUBST(CXXSOURCES)

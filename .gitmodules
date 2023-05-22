@@ -1,3 +1,6 @@
 [submodule "src/WFA2-lib"]
 	path = src/WFA2-lib
 	url = git@github.com:smarco/WFA2-lib.git
+[submodule "src/SneakySnake"]
+	path = src/SneakySnake
+	url = git@github.com:CMU-SAFARI/SneakySnake.git
