@@ -3,6 +3,8 @@
 
 #include "ClusterAlgorithm.h"
 #ifdef OPTIMOTU_R
+#include <Rcpp.h>
+// [[Rcpp::depends(RcppParallel)]]
 #include <RcppParallel.h>
 #endif
 

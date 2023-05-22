@@ -6,28 +6,35 @@
 #include "ClusterMatrix.h"
 #include "ClusterIndexedMatrix.h"
 
+typedef RcppParallel::RMatrix<int> matrix_t;
+
 std::unique_ptr<ClusterAlgorithm> create_clustermatrix(
     const DistanceConverter &dconv,
     Rcpp::IntegerMatrix im,
     const bool do_binary_search = true,
-    const bool do_binary_fill = true,
-    const bool do_topdown_fill = false
+    const int fill_type = LINEAR_FILL
 ) {
   if (do_binary_search) {
-    if (do_binary_fill) {
-      return std::make_unique<ClusterMatrix<RcppParallel::RMatrix<int>, true, true, false>>(dconv, im);
-    } else if (do_topdown_fill) {
-      return std::make_unique<ClusterMatrix<RcppParallel::RMatrix<int>, true, false, true>>(dconv, im);
-    } else {
-      return std::make_unique<ClusterMatrix<RcppParallel::RMatrix<int>, true, false, false>>(dconv, im);
+    switch (fill_type) {
+    case LINEAR_FILL:
+      return std::make_unique<ClusterMatrix<matrix_t, true, LINEAR_FILL>>(dconv, im);
+    case BINARY_FILL:
+      return std::make_unique<ClusterMatrix<matrix_t, true, BINARY_FILL>>(dconv, im);
+    case TOPDOWN_FILL:
+      return std::make_unique<ClusterMatrix<matrix_t, true, TOPDOWN_FILL>>(dconv, im);
+    default:
+      Rcpp::stop("unknown fill type");
     }
   } else {
-    if (do_binary_fill) {
-      return std::make_unique<ClusterMatrix<RcppParallel::RMatrix<int>, false, true, false>>(dconv, im);
-    } else if (do_topdown_fill) {
-      return std::make_unique<ClusterMatrix<RcppParallel::RMatrix<int>, false, false, true>>(dconv, im);
-    } else {
-      return std::make_unique<ClusterMatrix<RcppParallel::RMatrix<int>, false, false, false>>(dconv, im);
+    switch (fill_type) {
+    case LINEAR_FILL:
+      return std::make_unique<ClusterMatrix<matrix_t, false, LINEAR_FILL>>(dconv, im);
+    case BINARY_FILL:
+      return std::make_unique<ClusterMatrix<matrix_t, false, BINARY_FILL>>(dconv, im);
+    case TOPDOWN_FILL:
+      return std::make_unique<ClusterMatrix<matrix_t, false, TOPDOWN_FILL>>(dconv, im);
+    default:
+      Rcpp::stop("unknown fill type");
     }
   }
 }
@@ -84,11 +91,10 @@ Rcpp::IntegerMatrix single_linkage_matrix2(
     const int m,
     const int threads = 1,
     const bool do_binary_search = true,
-    const bool do_binary_fill = true,
-    const bool do_topdown_fill = false
+    const int fill_method = BINARY_FILL
 ) {
   Rcpp::IntegerMatrix im(m, seqnames.size());
-  auto cm = create_clustermatrix(dconv, im, do_binary_search, do_binary_fill, do_topdown_fill);
+  auto cm = create_clustermatrix(dconv, im, do_binary_search, fill_method);
   std::ifstream infile(file);
   if (!infile.is_open()) {
     Rcpp::stop("failed to open input file");
@@ -116,14 +122,12 @@ Rcpp::IntegerMatrix single_linkage_matrix2_uniform(
       const float dstep,
       const int threads = 1,
       const bool do_binary_search = true,
-      const bool do_binary_fill = true,
-      const bool do_topdown_fill = false
+      const int fill_method = 2
 ) {
    const UniformDistanceConverter dconv(dmin, dstep);
    const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
    return single_linkage_matrix2(file, seqnames, dconv, m, threads,
-                                 do_binary_search,
-                                 do_binary_fill, do_topdown_fill);
+                                 do_binary_search, fill_method);
 }
 
 //' @export
@@ -134,13 +138,12 @@ Rcpp::IntegerMatrix single_linkage_matrix2_array(
       const std::vector<double> &thresholds,
       const int threads = 1,
       const bool do_binary_search = true,
-      const bool do_binary_fill = true,
-      const bool do_topdown_fill = false
+      const int fill_method = 2
 ) {
    const ArrayDistanceConverter dconv(thresholds);
    const int m = thresholds.size();
    return single_linkage_matrix2(file, seqnames, dconv, m, threads,
-                                 do_binary_search, do_binary_fill, do_topdown_fill);
+                                 do_binary_search, fill_method);
 }
 
 //' @export
@@ -152,14 +155,12 @@ Rcpp::IntegerMatrix single_linkage_matrix2_cached(
       const double precision,
       const int threads = 1,
       const bool do_binary_search = true,
-      const bool do_binary_fill = true,
-      const bool do_topdown_fill = false
+      const int fill_method = 2
 ) {
    const CachedDistanceConverter dconv(thresholds, precision);
    const int m = thresholds.size();
    return single_linkage_matrix2(file, seqnames, dconv, m, threads,
-                                 do_binary_search,
-                                 do_binary_fill, do_topdown_fill);
+                                 do_binary_search, fill_method);
 }
 
 Rcpp::IntegerMatrix single_linkage_imatrix(

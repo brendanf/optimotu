@@ -114,18 +114,18 @@ adjusted_mutual_information <- function(k, c, threads = 1L) {
 }
 
 #' @export
-single_linkage_matrix2_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, do_binary_search = TRUE, do_binary_fill = TRUE, do_topdown_fill = FALSE) {
-    .Call(`_optimotu_single_linkage_matrix2_uniform`, file, seqnames, dmin, dmax, dstep, threads, do_binary_search, do_binary_fill, do_topdown_fill)
+single_linkage_matrix2_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, do_binary_search = TRUE, fill_method = 2L) {
+    .Call(`_optimotu_single_linkage_matrix2_uniform`, file, seqnames, dmin, dmax, dstep, threads, do_binary_search, fill_method)
 }
 
 #' @export
-single_linkage_matrix2_array <- function(file, seqnames, thresholds, threads = 1L, do_binary_search = TRUE, do_binary_fill = TRUE, do_topdown_fill = FALSE) {
-    .Call(`_optimotu_single_linkage_matrix2_array`, file, seqnames, thresholds, threads, do_binary_search, do_binary_fill, do_topdown_fill)
+single_linkage_matrix2_array <- function(file, seqnames, thresholds, threads = 1L, do_binary_search = TRUE, fill_method = 2L) {
+    .Call(`_optimotu_single_linkage_matrix2_array`, file, seqnames, thresholds, threads, do_binary_search, fill_method)
 }
 
 #' @export
-single_linkage_matrix2_cached <- function(file, seqnames, thresholds, precision, threads = 1L, do_binary_search = TRUE, do_binary_fill = TRUE, do_topdown_fill = FALSE) {
-    .Call(`_optimotu_single_linkage_matrix2_cached`, file, seqnames, thresholds, precision, threads, do_binary_search, do_binary_fill, do_topdown_fill)
+single_linkage_matrix2_cached <- function(file, seqnames, thresholds, precision, threads = 1L, do_binary_search = TRUE, fill_method = 2L) {
+    .Call(`_optimotu_single_linkage_matrix2_cached`, file, seqnames, thresholds, precision, threads, do_binary_search, fill_method)
 }
 
 #' @export

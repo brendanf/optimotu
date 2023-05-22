@@ -6,20 +6,17 @@
 #include <RcppParallel.h>
 #endif
 
-// #define BINARY_MAX  (uint8_t)0b00000001
-// #define BINARY_FILL (uint8_t)0b00000010
-// #define TOPDOWN_FILL (uint8_t)0b00000100
+#define LINEAR_FILL 1
+#define BINARY_FILL 2
+#define TOPDOWN_FILL 3
 
 // Matrix representation of a hierarchical clustering of n items at m different
 // thresholds.
 template <class ARRAY_T = std::vector<int>,
-          bool BINARY_MAX=true,
-          bool BINARY_FILL=true,
-          bool TOPDOWN_FILL=false>
+          bool BINARY_SEARCH=true, //alt would be linear
+          int FILL=2>
 struct ClusterMatrix : public ClusterAlgorithm {
-  static_assert(!(BINARY_FILL && TOPDOWN_FILL),
-                "cannot use both BINARY_FILL and TOPDOWN_FILL");
-  template<typename, bool, bool, bool> friend class ClusterMatrix;
+  template<typename, bool, int> friend class ClusterMatrix;
 private:
   ARRAY_T clust_array;
   int *const ca;
@@ -65,84 +62,84 @@ public:
 
 #ifdef OPTIMOTU_R
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
   const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 );
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, size_t n, int m) = delete;
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 );
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, size_t n, int m) = delete;
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 );
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, size_t n, int m) = delete;
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 );
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, size_t n, int m) = delete;
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 );
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, size_t n, int m) = delete;
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 );
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, size_t n, int m) = delete;
 
-template class ClusterMatrix<RcppParallel::RMatrix<int>, true, true, false>;
-template class ClusterMatrix<RcppParallel::RMatrix<int>, true, false, true>;
-template class ClusterMatrix<RcppParallel::RMatrix<int>, true, false, false>;
-template class ClusterMatrix<RcppParallel::RMatrix<int>, false, true, false>;
-template class ClusterMatrix<RcppParallel::RMatrix<int>, false, false, true>;
-template class ClusterMatrix<RcppParallel::RMatrix<int>, false, false, false>;
+template class ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>;
+template class ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>;
+template class ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>;
+template class ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>;
+template class ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>;
+template class ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>;
 #endif
 
-template class ClusterMatrix<std::vector<int>, true, true, false>;
-template class ClusterMatrix<std::vector<int>, true, false, true>;
-template class ClusterMatrix<std::vector<int>, true, false, false>;
-template class ClusterMatrix<std::vector<int>, false, true, false>;
-template class ClusterMatrix<std::vector<int>, false, false, true>;
-template class ClusterMatrix<std::vector<int>, false, false, false>;
+template class ClusterMatrix<std::vector<int>, true, LINEAR_FILL>;
+template class ClusterMatrix<std::vector<int>, true, BINARY_FILL>;
+template class ClusterMatrix<std::vector<int>, true, TOPDOWN_FILL>;
+template class ClusterMatrix<std::vector<int>, false, LINEAR_FILL>;
+template class ClusterMatrix<std::vector<int>, false, BINARY_FILL>;
+template class ClusterMatrix<std::vector<int>, false, TOPDOWN_FILL>;
 
 #endif

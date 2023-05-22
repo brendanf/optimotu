@@ -210,8 +210,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // single_linkage_matrix2_uniform
-Rcpp::IntegerMatrix single_linkage_matrix2_uniform(const std::string file, const Rcpp::CharacterVector& seqnames, const float dmin, const float dmax, const float dstep, const int threads, const bool do_binary_search, const bool do_binary_fill, const bool do_topdown_fill);
-RcppExport SEXP _optimotu_single_linkage_matrix2_uniform(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP do_binary_fillSEXP, SEXP do_topdown_fillSEXP) {
+Rcpp::IntegerMatrix single_linkage_matrix2_uniform(const std::string file, const Rcpp::CharacterVector& seqnames, const float dmin, const float dmax, const float dstep, const int threads, const bool do_binary_search, const int fill_method);
+RcppExport SEXP _optimotu_single_linkage_matrix2_uniform(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -222,15 +222,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const float >::type dstep(dstepSEXP);
     Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_binary_fill(do_binary_fillSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_topdown_fill(do_topdown_fillSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_matrix2_uniform(file, seqnames, dmin, dmax, dstep, threads, do_binary_search, do_binary_fill, do_topdown_fill));
+    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_matrix2_uniform(file, seqnames, dmin, dmax, dstep, threads, do_binary_search, fill_method));
     return rcpp_result_gen;
 END_RCPP
 }
 // single_linkage_matrix2_array
-Rcpp::IntegerMatrix single_linkage_matrix2_array(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds, const int threads, const bool do_binary_search, const bool do_binary_fill, const bool do_topdown_fill);
-RcppExport SEXP _optimotu_single_linkage_matrix2_array(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP do_binary_fillSEXP, SEXP do_topdown_fillSEXP) {
+Rcpp::IntegerMatrix single_linkage_matrix2_array(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds, const int threads, const bool do_binary_search, const int fill_method);
+RcppExport SEXP _optimotu_single_linkage_matrix2_array(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -239,15 +238,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
     Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_binary_fill(do_binary_fillSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_topdown_fill(do_topdown_fillSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_matrix2_array(file, seqnames, thresholds, threads, do_binary_search, do_binary_fill, do_topdown_fill));
+    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_matrix2_array(file, seqnames, thresholds, threads, do_binary_search, fill_method));
     return rcpp_result_gen;
 END_RCPP
 }
 // single_linkage_matrix2_cached
-Rcpp::IntegerMatrix single_linkage_matrix2_cached(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds, const double precision, const int threads, const bool do_binary_search, const bool do_binary_fill, const bool do_topdown_fill);
-RcppExport SEXP _optimotu_single_linkage_matrix2_cached(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP do_binary_fillSEXP, SEXP do_topdown_fillSEXP) {
+Rcpp::IntegerMatrix single_linkage_matrix2_cached(const std::string file, const Rcpp::CharacterVector& seqnames, const std::vector<double>& thresholds, const double precision, const int threads, const bool do_binary_search, const int fill_method);
+RcppExport SEXP _optimotu_single_linkage_matrix2_cached(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -257,9 +255,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
     Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_binary_fill(do_binary_fillSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_topdown_fill(do_topdown_fillSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_matrix2_cached(file, seqnames, thresholds, precision, threads, do_binary_search, do_binary_fill, do_topdown_fill));
+    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_matrix2_cached(file, seqnames, thresholds, precision, threads, do_binary_search, fill_method));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -465,9 +462,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_fmeasure_matrix", (DL_FUNC) &_optimotu_fmeasure_matrix, 3},
     {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 3},
     {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 3},
-    {"_optimotu_single_linkage_matrix2_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix2_uniform, 9},
-    {"_optimotu_single_linkage_matrix2_array", (DL_FUNC) &_optimotu_single_linkage_matrix2_array, 7},
-    {"_optimotu_single_linkage_matrix2_cached", (DL_FUNC) &_optimotu_single_linkage_matrix2_cached, 8},
+    {"_optimotu_single_linkage_matrix2_uniform", (DL_FUNC) &_optimotu_single_linkage_matrix2_uniform, 8},
+    {"_optimotu_single_linkage_matrix2_array", (DL_FUNC) &_optimotu_single_linkage_matrix2_array, 6},
+    {"_optimotu_single_linkage_matrix2_cached", (DL_FUNC) &_optimotu_single_linkage_matrix2_cached, 7},
     {"_optimotu_single_linkage_imatrix_uniform", (DL_FUNC) &_optimotu_single_linkage_imatrix_uniform, 5},
     {"_optimotu_single_linkage_imatrix_array", (DL_FUNC) &_optimotu_single_linkage_imatrix_array, 3},
     {"_optimotu_single_linkage_imatrix_cached", (DL_FUNC) &_optimotu_single_linkage_imatrix_cached, 4},

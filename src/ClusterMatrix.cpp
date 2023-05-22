@@ -1,7 +1,7 @@
 #include "ClusterMatrix.h"
 
-template<typename A, bool BM, bool BF, bool TF>
-void ClusterMatrix<A, BM, BF, TF>::initialize() {
+template<typename A, bool BM, int F>
+void ClusterMatrix<A, BM, F>::initialize() {
   auto ca = clust_array.begin();
   for (j_t j = 0; j < n; j++) {
     for (d_t i = 0; i < m; i++) {
@@ -11,8 +11,8 @@ void ClusterMatrix<A, BM, BF, TF>::initialize() {
   }
 };
 
-template<typename A, bool BM, bool BF, bool TF>
-void ClusterMatrix<A, BM, BF, TF>::operator()(j_t seq1, j_t seq2, d_t i) {
+template<typename A, bool BM, int F>
+void ClusterMatrix<A, BM, F>::operator()(j_t seq1, j_t seq2, d_t i) {
   if (i >= m) return;
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
@@ -96,7 +96,7 @@ void ClusterMatrix<A, BM, BF, TF>::operator()(j_t seq1, j_t seq2, d_t i) {
     } else {
       continue;
     }
-    if (TF) {
+    if (F==TOPDOWN_FILL) {
       int *icomp = ca + jcomp + imin;
       int *ito = &toclust[imin];
       while (*ii == *icomp) {
@@ -110,7 +110,7 @@ void ClusterMatrix<A, BM, BF, TF>::operator()(j_t seq1, j_t seq2, d_t i) {
       d_t copystart;
       auto ca = clust_array.begin() + jj;
       // Rcpp::Rcout << " setting cluster " << (jj / m);
-      if (BF) {
+      if (F==BINARY_FILL) {
         // iimin == last value of ii where this seq is not clustered with seq1 or seq2
         // copystart == first value of ii where this seq is clustered with seq1 or seq2
         size_t iimin = i;
@@ -164,8 +164,8 @@ void ClusterMatrix<A, BM, BF, TF>::operator()(j_t seq1, j_t seq2, d_t i) {
   );
 };
 
-template<typename A, bool BM, bool BF, bool TF>
-void ClusterMatrix<A, BM, BF, TF>::merge_into(DistanceConsumer &consumer) const {
+template<typename A, bool BM, int F>
+void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) const {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (size_t j = 1; j < n; ++j) {
     j_t i = j*m;
@@ -177,8 +177,8 @@ void ClusterMatrix<A, BM, BF, TF>::merge_into(DistanceConsumer &consumer) const 
   }
 };
 
-template<typename A, bool BM, bool BF, bool TF>
-void ClusterMatrix<A, BM, BF, TF>::merge_into(ClusterAlgorithm &consumer) const{
+template<typename A, bool BM, int F>
+void ClusterMatrix<A, BM, F>::merge_into(ClusterAlgorithm &consumer) const {
   // TODO check that the distance converters are really compatible
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (j_t j = 1; j < n; ++j) {
@@ -191,12 +191,12 @@ void ClusterMatrix<A, BM, BF, TF>::merge_into(ClusterAlgorithm &consumer) const{
   }
 };
 
-template<typename A, bool BM, bool BF, bool TF>
-ClusterAlgorithm * ClusterMatrix<A, BM, BF, TF>::make_child() {
+template<typename A, bool BM, int F>
+ClusterAlgorithm * ClusterMatrix<A, BM, F>::make_child() {
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   if (own_child) {
-    ClusterAlgorithm * child = new ClusterMatrix<std::vector<int>, BM, BF, TF>(this);
+    ClusterAlgorithm * child = new ClusterMatrix<std::vector<int>, BM, F>(this);
     this->children.insert(child);
     return child;
   }
@@ -204,8 +204,8 @@ ClusterAlgorithm * ClusterMatrix<A, BM, BF, TF>::make_child() {
   return this;
 }
 
-template<typename A, bool BM, bool BF, bool TF>
-double ClusterMatrix<A, BM, BF, TF>::max_relevant(j_t seq1, j_t seq2) const {
+template<typename A, bool BM, int F>
+double ClusterMatrix<A, BM, F>::max_relevant(j_t seq1, j_t seq2) const {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   if (seq1 == seq2) return 0.0;
   j_t j1 = seq1*m, j2 = seq2*m;
@@ -225,7 +225,7 @@ double ClusterMatrix<A, BM, BF, TF>::max_relevant(j_t seq1, j_t seq2) const {
 
 #ifdef OPTIMOTU_R
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
@@ -234,7 +234,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, true, false>::ClusterMatrix(
 };
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
@@ -243,7 +243,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, false, true>::ClusterMatrix(
 };
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
@@ -252,7 +252,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, false, false>::ClusterMatrix(
 };
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, true, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
@@ -261,7 +261,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, true, false>::ClusterMatrix(
 };
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, true>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
@@ -270,7 +270,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, false, true>::ClusterMatrix(
 };
 
 template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, false, false>::ClusterMatrix(
+ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
   ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
