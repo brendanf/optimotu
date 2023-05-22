@@ -2,33 +2,18 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @export
-single_linkage_hybrid_split_uniform <- function(seq, dmin, dmax, dstep, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_split_uniform`, seq, dmin, dmax, dstep, breakpoint, threads)
+single_linkage_hybrid_uniform <- function(seq, dmin, dmax, dstep, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
+    .Call(`_optimotu_single_linkage_hybrid_uniform`, seq, dmin, dmax, dstep, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
 }
 
 #' @export
-single_linkage_hybrid_split_array <- function(seq, thresholds, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_split_array`, seq, thresholds, breakpoint, threads)
+single_linkage_hybrid_array <- function(seq, thresholds, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
+    .Call(`_optimotu_single_linkage_hybrid_array`, seq, thresholds, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
 }
 
 #' @export
-single_linkage_hybrid_split_cached <- function(seq, thresholds, precision, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_split_cached`, seq, thresholds, precision, breakpoint, threads)
-}
-
-#' @export
-single_linkage_hybrid_concurrent_uniform <- function(seq, dmin, dmax, dstep, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_concurrent_uniform`, seq, dmin, dmax, dstep, breakpoint, threads)
-}
-
-#' @export
-single_linkage_hybrid_concurrent_array <- function(seq, thresholds, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_concurrent_array`, seq, thresholds, breakpoint, threads)
-}
-
-#' @export
-single_linkage_hybrid_concurrent_cached <- function(seq, thresholds, precision, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_concurrent_cached`, seq, thresholds, precision, breakpoint, threads)
+single_linkage_hybrid_cached <- function(seq, thresholds, precision, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
+    .Call(`_optimotu_single_linkage_hybrid_cached`, seq, thresholds, precision, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
 }
 
 #' Confusion matrix for a set of "test" partitions vs. a "true" partition

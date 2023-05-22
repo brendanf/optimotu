@@ -11,9 +11,9 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// single_linkage_hybrid_split_uniform
-Rcpp::IntegerMatrix single_linkage_hybrid_split_uniform(const std::vector<std::string>& seq, const float dmin, const float dmax, const float dstep, const double breakpoint, const int threads);
-RcppExport SEXP _optimotu_single_linkage_hybrid_split_uniform(SEXP seqSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
+// single_linkage_hybrid_uniform
+Rcpp::IntegerMatrix single_linkage_hybrid_uniform(const std::vector<std::string>& seq, const float dmin, const float dmax, const float dstep, const double breakpoint, const std::string method, const std::string parallelism, const int threads, const bool do_binary_search, const int fill_method);
+RcppExport SEXP _optimotu_single_linkage_hybrid_uniform(SEXP seqSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP breakpointSEXP, SEXP methodSEXP, SEXP parallelismSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,73 +22,36 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const float >::type dmax(dmaxSEXP);
     Rcpp::traits::input_parameter< const float >::type dstep(dstepSEXP);
     Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type parallelism(parallelismSEXP);
     Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_split_uniform(seq, dmin, dmax, dstep, breakpoint, threads));
+    Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
+    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_uniform(seq, dmin, dmax, dstep, breakpoint, method, parallelism, threads, do_binary_search, fill_method));
     return rcpp_result_gen;
 END_RCPP
 }
-// single_linkage_hybrid_split_array
-Rcpp::IntegerMatrix single_linkage_hybrid_split_array(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double breakpoint, const int threads);
-RcppExport SEXP _optimotu_single_linkage_hybrid_split_array(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
+// single_linkage_hybrid_array
+Rcpp::IntegerMatrix single_linkage_hybrid_array(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double breakpoint, const std::string method, const std::string parallelism, const int threads, const bool do_binary_search, const int fill_method);
+RcppExport SEXP _optimotu_single_linkage_hybrid_array(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP breakpointSEXP, SEXP methodSEXP, SEXP parallelismSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
     Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type parallelism(parallelismSEXP);
     Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_split_array(seq, thresholds, breakpoint, threads));
+    Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
+    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_array(seq, thresholds, breakpoint, method, parallelism, threads, do_binary_search, fill_method));
     return rcpp_result_gen;
 END_RCPP
 }
-// single_linkage_hybrid_split_cached
-Rcpp::IntegerMatrix single_linkage_hybrid_split_cached(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double precision, const double breakpoint, const int threads);
-RcppExport SEXP _optimotu_single_linkage_hybrid_split_cached(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
-    Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
-    Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
-    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_split_cached(seq, thresholds, precision, breakpoint, threads));
-    return rcpp_result_gen;
-END_RCPP
-}
-// single_linkage_hybrid_concurrent_uniform
-Rcpp::IntegerMatrix single_linkage_hybrid_concurrent_uniform(const std::vector<std::string>& seq, const float dmin, const float dmax, const float dstep, const double breakpoint, const int threads);
-RcppExport SEXP _optimotu_single_linkage_hybrid_concurrent_uniform(SEXP seqSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const float >::type dmin(dminSEXP);
-    Rcpp::traits::input_parameter< const float >::type dmax(dmaxSEXP);
-    Rcpp::traits::input_parameter< const float >::type dstep(dstepSEXP);
-    Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
-    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_concurrent_uniform(seq, dmin, dmax, dstep, breakpoint, threads));
-    return rcpp_result_gen;
-END_RCPP
-}
-// single_linkage_hybrid_concurrent_array
-Rcpp::IntegerMatrix single_linkage_hybrid_concurrent_array(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double breakpoint, const int threads);
-RcppExport SEXP _optimotu_single_linkage_hybrid_concurrent_array(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
-    Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
-    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_concurrent_array(seq, thresholds, breakpoint, threads));
-    return rcpp_result_gen;
-END_RCPP
-}
-// single_linkage_hybrid_concurrent_cached
-Rcpp::IntegerMatrix single_linkage_hybrid_concurrent_cached(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double precision, const double breakpoint, const int threads);
-RcppExport SEXP _optimotu_single_linkage_hybrid_concurrent_cached(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
+// single_linkage_hybrid_cached
+Rcpp::IntegerMatrix single_linkage_hybrid_cached(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double precision, const double breakpoint, const std::string method, const std::string parallelism, const int threads, const bool do_binary_search, const int fill_method);
+RcppExport SEXP _optimotu_single_linkage_hybrid_cached(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP breakpointSEXP, SEXP methodSEXP, SEXP parallelismSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -96,8 +59,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
     Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
     Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type parallelism(parallelismSEXP);
     Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_concurrent_cached(seq, thresholds, precision, breakpoint, threads));
+    Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
+    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(single_linkage_hybrid_cached(seq, thresholds, precision, breakpoint, method, parallelism, threads, do_binary_search, fill_method));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -375,12 +342,9 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_optimotu_single_linkage_hybrid_split_uniform", (DL_FUNC) &_optimotu_single_linkage_hybrid_split_uniform, 6},
-    {"_optimotu_single_linkage_hybrid_split_array", (DL_FUNC) &_optimotu_single_linkage_hybrid_split_array, 4},
-    {"_optimotu_single_linkage_hybrid_split_cached", (DL_FUNC) &_optimotu_single_linkage_hybrid_split_cached, 5},
-    {"_optimotu_single_linkage_hybrid_concurrent_uniform", (DL_FUNC) &_optimotu_single_linkage_hybrid_concurrent_uniform, 6},
-    {"_optimotu_single_linkage_hybrid_concurrent_array", (DL_FUNC) &_optimotu_single_linkage_hybrid_concurrent_array, 4},
-    {"_optimotu_single_linkage_hybrid_concurrent_cached", (DL_FUNC) &_optimotu_single_linkage_hybrid_concurrent_cached, 5},
+    {"_optimotu_single_linkage_hybrid_uniform", (DL_FUNC) &_optimotu_single_linkage_hybrid_uniform, 10},
+    {"_optimotu_single_linkage_hybrid_array", (DL_FUNC) &_optimotu_single_linkage_hybrid_array, 8},
+    {"_optimotu_single_linkage_hybrid_cached", (DL_FUNC) &_optimotu_single_linkage_hybrid_cached, 9},
     {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 6},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 7},

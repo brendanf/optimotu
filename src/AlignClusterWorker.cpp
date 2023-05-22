@@ -5,27 +5,43 @@
 #include <edlib.h>
 #include "pairwise_alignment.h"
 #include "ClusterAlgorithm.h"
+#include "ClusterMatrix.h"
 #include "ClusterIndexedMatrix.h"
+#include "ClusterTree.h"
 
-class HybridSplitClusterWorker : public RcppParallel::Worker {
+typedef RcppParallel::RMatrix<int> matrix_t;
 
+class AlignClusterWorker : public RcppParallel::Worker {
+protected:
   const std::vector<std::string> &seq;
   const double breakpoint;
   ClusterAlgorithm &clust_algo;
   const uint8_t threads;
-  size_t &prealigned, &aligned;
   std::mutex mutex;
+  size_t _prealigned = 0, _aligned = 0;
+  const bool verbose;
 public :
-  HybridSplitClusterWorker(
-    const std::vector<std::string> &seq,
-    const double breakpoint,
-    ClusterAlgorithm &clust_algo,
-    const uint8_t threads,
-    size_t &prealigned,
-    size_t &aligned
-  ) : seq(seq), breakpoint(breakpoint), clust_algo(clust_algo),
-  threads(threads), prealigned(prealigned), aligned(aligned) {};
+    AlignClusterWorker(
+      const std::vector<std::string> &seq,
+      const double breakpoint,
+      ClusterAlgorithm &clust_algo,
+      const uint8_t threads,
+      bool verbose = false
+    ) : seq(seq), breakpoint(breakpoint), clust_algo(clust_algo),
+    threads(threads), verbose(verbose) {};
 
+    size_t prealigned() {
+      return _prealigned;
+    }
+
+    size_t aligned() {
+      return _aligned;
+    }
+};
+
+class HybridSplitClusterWorker : public AlignClusterWorker {
+public :
+  using AlignClusterWorker::AlignClusterWorker;
   void operator()(std::size_t begin, std::size_t end) {
     double n = seq.size();
     double m = (n*n - 3.0*n + 2.0)/2.0;
@@ -43,10 +59,12 @@ public :
       begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
     }
     size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
-    mutex.lock();
-    std::cout << "HybridSplit thread " << begin << " entered; sequences [" <<
-      begin_i << ", "<< end_i << ")" << std::endl;
-    mutex.unlock();
+    if (verbose) {
+      mutex.lock();
+      std::cout << "HybridSplit thread " << begin << " entered; sequences [" <<
+        begin_i << ", "<< end_i << ")" << std::endl;
+      mutex.unlock();
+    }
     for (size_t i = begin_i; i < end_i; i++) {
       for (size_t j = 0; j < i; j++) {
         double threshold = my_algo->max_relevant(i, j);
@@ -64,7 +82,7 @@ public :
 
         double sim_threshold = 1.0 - threshold; // compiler can probably do this?
         if (l1/l2 < sim_threshold) continue;
-        ++prealigned;
+        ++my_prealigned;
         double sim_threshold_plus_1 = 2.0 - threshold;
         double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
         bool is_close = breakpoint >= 1 ? maxd1 < breakpoint : threshold < breakpoint;
@@ -88,97 +106,18 @@ public :
       }
     }
     mutex.lock();
-    aligned += my_aligned;
-    prealigned += my_prealigned;
+    if (verbose) std::cout << "thread " << begin << " ready to merge" << std::endl;
+    _aligned += my_aligned;
+    _prealigned += my_prealigned;
     mutex.unlock();
     my_algo->merge_into_parent();
-    std::cout << "thread " << begin << "done" << std::endl;
+    if (verbose) std::cout << "thread " << begin << " done" << std::endl;
   }
 };
 
-Rcpp::IntegerMatrix single_linkage_hybrid_split(
-    const std::vector<std::string> &seq,
-    const DistanceConverter &dconv,
-    const d_t m,
-    const double breakpoint = 0.1,
-    const uint8_t threads = 1
-) {
-  size_t prealigned = 0, aligned = 0;
-
-  Rcpp::IntegerMatrix im(m, seq.size());
-  ClusterIndexedMatrix<RcppParallel::RMatrix<int>> cm(dconv, im);
-  HybridSplitClusterWorker worker(seq, breakpoint, cm, threads, prealigned, aligned);
-  if (threads > 1) {
-    RcppParallel::parallelFor(0, threads, worker, 1, threads);
-  } else {
-    worker(0, 1);
-  }
-  std::cout << aligned << " aligned / "
-            << prealigned << " prealigned"
-            << std::endl;
-  return im;
-}
-
-//' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_split_uniform(
-     const std::vector<std::string> &seq,
-     const float dmin,
-     const float dmax,
-     const float dstep,
-     const double breakpoint = 0.1,
-     const int threads = 1
- ) {
-   const UniformDistanceConverter dconv(dmin, dmax, dstep);
-   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_hybrid_split(seq, dconv, m, breakpoint, threads);
- }
-
-//' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_split_array(
-     const std::vector<std::string> &seq,
-     const std::vector<double> &thresholds,
-     const double breakpoint = 0.1,
-     const int threads = 1
- ) {
-   const ArrayDistanceConverter dconv(thresholds);
-   const int m = thresholds.size();
-   return single_linkage_hybrid_split(seq, dconv, m, breakpoint, threads);
- }
-
-//' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_split_cached(
-     const std::vector<std::string> &seq,
-     const std::vector<double> &thresholds,
-     const double precision,
-     const double breakpoint = 0.1,
-     const int threads = 1
- ) {
-   const CachedDistanceConverter dconv(thresholds, precision);
-   const int m = thresholds.size();
-   return single_linkage_hybrid_split(seq, dconv, m, breakpoint, threads);
- }
-
-class HybridConcurrentClusterWorker : public RcppParallel::Worker {
-
-  const std::vector<std::string> &seq;
-  const double breakpoint;
-  ClusterAlgorithm &clust_algo;
-  const uint8_t threads;
-  size_t &prealigned, &aligned;
-  std::mutex mutex;
+class HybridConcurrentClusterWorker : public AlignClusterWorker {
 public :
-  HybridConcurrentClusterWorker(
-    const std::vector<std::string> &seq,
-    const double breakpoint,
-    ClusterAlgorithm &clust_algo,
-    const uint8_t threads,
-    size_t &prealigned,
-    size_t &aligned
-  ) : seq(seq), breakpoint(breakpoint), clust_algo(clust_algo),
-  threads(threads), prealigned(prealigned), aligned(aligned) {};
+  using AlignClusterWorker::AlignClusterWorker;
 
   void operator()(std::size_t begin, std::size_t end) {
     double n = seq.size();
@@ -202,10 +141,12 @@ public :
       begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
     }
     size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
-    mutex.lock();
-    std::cout << "HybridConcurrent thread " << begin << " entered; sequences [" <<
-      begin_i << ", "<< end_i << ")" << std::endl;
-    mutex.unlock();
+    if (verbose) {
+      mutex.lock();
+      std::cout << "HybridConcurrent thread " << begin << " entered; sequences [" <<
+        begin_i << ", "<< end_i << ")" << std::endl;
+      mutex.unlock();
+    }
     for (size_t i = begin_i; i < end_i; i++) {
       for (size_t j = 0; j < i; j++) {
         // mutex.lock();
@@ -255,85 +196,171 @@ public :
         //           << std::endl;
         // mutex.unlock();
         if (d < threshold) clust_algo(j, i, d);
-        mutex.lock();
+        // mutex.lock();
         // std::cout << "Thread " << begin
         //           << ": finished " << j
         //           << " and " << i
         //           << std::endl;
-        mutex.unlock();
+        // mutex.unlock();
         RcppThread::checkUserInterrupt();
       }
     }
     mutex.lock();
-    aligned += my_aligned;
-    prealigned += my_prealigned;
-    std::cout << "Exiting thread " << begin << std::endl;
+    _aligned += my_aligned;
+    _prealigned += my_prealigned;
+    // std::cout << "Exiting thread " << begin << std::endl;
     mutex.unlock();
   }
 };
 
-Rcpp::IntegerMatrix single_linkage_hybrid_concurrent(
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_algorithm(
+    const std::string &method,
+    const DistanceConverter &dconv,
+    init_matrix_t &im,
+    bool do_binary_search,
+    int fill_type
+) {
+  if (method == "matrix") {
+    if (do_binary_search) {
+      switch (fill_type) {
+      case LINEAR_FILL:
+        return std::make_unique<ClusterMatrix<true, LINEAR_FILL, internal_matrix_t>>(dconv, im);
+      case BINARY_FILL:
+        return std::make_unique<ClusterMatrix<true, BINARY_FILL, internal_matrix_t>>(dconv, im);
+      case TOPDOWN_FILL:
+        return std::make_unique<ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_t>>(dconv, im);
+      default:
+        Rcpp::stop("unknown fill type");
+      }
+    } else {
+      switch (fill_type) {
+      case LINEAR_FILL:
+        return std::make_unique<ClusterMatrix<false, LINEAR_FILL, internal_matrix_t>>(dconv, im);
+      case BINARY_FILL:
+        return std::make_unique<ClusterMatrix<false, BINARY_FILL, internal_matrix_t>>(dconv, im);
+      case TOPDOWN_FILL:
+        return std::make_unique<ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_t>>(dconv, im);
+      default:
+        Rcpp::stop("unknown fill type");
+      }
+    }
+  } else if (method == "index") {
+    return std::make_unique<ClusterIndexedMatrix<internal_matrix_t>>(dconv, im);
+  } else if (method == "tree") {
+    return std::make_unique<ClusterTree>(dconv, im);
+  } else {
+    Rcpp::stop("unknown cluster method");
+  }
+}
+
+std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
+  const std::string &type,
+  const std::vector<std::string> &seq,
+  const double breakpoint,
+  SingleClusterAlgorithm &cluster,
+  const uint8_t threads
+) {
+  if (type == "split") {
+    return std::make_unique<HybridSplitClusterWorker>(seq, breakpoint, cluster, threads);
+  } else if (type == "concurrent") {
+    return std::make_unique<HybridConcurrentClusterWorker>(seq, breakpoint, cluster, threads);
+  } else {
+    Rcpp::stop("invalid parallel type");
+  }
+}
+
+Rcpp::IntegerMatrix single_linkage_hybrid(
     const std::vector<std::string> &seq,
     const DistanceConverter &dconv,
     const d_t m,
     const double breakpoint = 0.1,
-    const uint8_t threads = 1
+    const std::string method = "matrix",
+    const std::string parallelism = "concurrent",
+    const uint8_t threads = 1,
+    const bool do_binary_search = false,
+    const int fill_method = 1,
+    const bool verbose = false
 ) {
-  size_t prealigned = 0, aligned = 0;
-
   Rcpp::IntegerMatrix im(m, seq.size());
-  ClusterIndexedMatrix<RcppParallel::RMatrix<int>> cm(dconv, im);
-  HybridConcurrentClusterWorker worker(seq, breakpoint, cm, threads, prealigned, aligned);
+  auto cm = create_cluster_algorithm(
+    method,
+    dconv,
+    im,
+    do_binary_search,
+    fill_method
+  );
+  auto worker = create_align_cluster_worker(parallelism, seq, breakpoint, *cm, threads);
   if (threads > 1) {
-    RcppParallel::parallelFor(0, threads, worker, 1, threads);
+    RcppParallel::parallelFor(0, threads, *worker, 1, threads);
   } else {
-    worker(0, 1);
+    (*worker)(0, 1);
   }
-  std::cout << "back in main function" << std::endl;
-  std::cout << aligned << " aligned / "
-            << prealigned << " prealigned"
-            << std::endl;
+  if (verbose) {
+    std::cout << "back in main function" << std::endl;
+    std::cout << worker->aligned() << " aligned / "
+              << worker->prealigned() << " prealigned"
+              << std::endl;
+  }
+  if (method == "tree") {
+    matrix_t m(im);
+    cm->write_to_matrix(m);
+  }
   return im;
 }
 
 //' @export
  // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_concurrent_uniform(
+ Rcpp::IntegerMatrix single_linkage_hybrid_uniform(
      const std::vector<std::string> &seq,
      const float dmin,
      const float dmax,
      const float dstep,
      const double breakpoint = 0.1,
-     const int threads = 1
+     const std::string method = "matrix",
+     const std::string parallelism = "concurrent",
+     const int threads = 1,
+     const bool do_binary_search = false,
+     const int fill_method = 1
  ) {
    const UniformDistanceConverter dconv(dmin, dmax, dstep);
    const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_hybrid_concurrent(seq, dconv, m, breakpoint, threads);
+   return single_linkage_hybrid(seq, dconv, m, breakpoint, method, parallelism,
+                                threads, do_binary_search, fill_method);
  }
 
 //' @export
  // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_concurrent_array(
+ Rcpp::IntegerMatrix single_linkage_hybrid_array(
      const std::vector<std::string> &seq,
      const std::vector<double> &thresholds,
      const double breakpoint = 0.1,
-     const int threads = 1
+     const std::string method = "matrix",
+     const std::string parallelism = "concurrent",
+     const int threads = 1,
+     const bool do_binary_search = false,
+     const int fill_method = 1
  ) {
    const ArrayDistanceConverter dconv(thresholds);
    const int m = thresholds.size();
-   return single_linkage_hybrid_concurrent(seq, dconv, m, breakpoint, threads);
+   return single_linkage_hybrid(seq, dconv, m, breakpoint, method, parallelism,
+                                threads, do_binary_search, fill_method);
  }
 
 //' @export
  // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_concurrent_cached(
+ Rcpp::IntegerMatrix single_linkage_hybrid_cached(
      const std::vector<std::string> &seq,
      const std::vector<double> &thresholds,
      const double precision,
      const double breakpoint = 0.1,
-     const int threads = 1
+     const std::string method = "matrix",
+     const std::string parallelism = "concurrent",
+     const int threads = 1,
+     const bool do_binary_search = false,
+     const int fill_method = 1
  ) {
    const CachedDistanceConverter dconv(thresholds, precision);
    const int m = thresholds.size();
-   return single_linkage_hybrid_concurrent(seq, dconv, m, breakpoint, threads);
+   return single_linkage_hybrid(seq, dconv, m, breakpoint, method, parallelism,
+                                threads, do_binary_search, fill_method);
  }
