@@ -396,3 +396,151 @@ parallel_hierarchical <- function(threads, shards) {
     class = "optimotu_parallel_config"
   )
 }
+
+#' Configuration helper for pairwise distance methods
+#'
+#' @param method (`character` string) method to use for distance calculations
+#' @param ... passed on to variants
+#'
+#' @return an object representing the pairwise distance method
+#' @export
+dist_config <- function(
+    method = c("wfa2", "edlib", "hybrid"),
+    ...
+) {
+  method = match.arg(method)
+  switch(
+    method,
+    wfa2 = dist_wfa2(...),
+    edlib = dist_edlib(...)
+  )
+}
+
+#' @param match (non-negative `integer` scalar) score for a match
+#' @param mismatch (non-negative `integer` scalar) penalty for a mismatch
+#' @param gap_open (non-negative `integer` scalar) penalty for gap opening
+#' @param gap_extend (non-negative `integer` scalar) penalty for gap extension
+#' @param gap_open2 (non-negative `integer` scalar) alternate penalty for gap
+#' opening
+#' @param gap_extend2 (non-negative `integer` scalar) alternate penalty for gap
+#' extension
+#'
+#' @export
+#' @describeIn dist_config helper function for method `"wfa2"`
+dist_wfa2 <- function(
+    match = 0L, mismatch = 1L,
+    gap_open = 0L, gap_extend = 1L,
+    gap_open2 = 0L, gap_extend2 = 1L
+) {
+  checkmate::check_count(match)
+  checkmate::check_count(mismatch)
+  checkmate::check_count(gap_open)
+  checkmate::check_count(gap_extend)
+  checkmate::check_count(gap_open2)
+  checkmate::check_count(gap_extend2)
+  structure(
+    list(
+      method = "wfa2", math = match, mismatch = mismatch, gap_open = gap_open,
+      gap_extend = gap_extend, gap_open2 = gap_open2, gap_extend2 = gap_extend2
+    ),
+    class = "optimotu_dist_config"
+  )
+}
+
+#' @export
+#' @describeIn dist_config helper function for method `"edlib"`
+dist_edlib <- function() {
+  structure(
+    list(method = "edlib"),
+    class = "optimotu_dist_config"
+  )
+}
+
+#' @export
+#' @describeIn dist_config helper function for method `"hybrid"`
+dist_hybrid <- function(cutoff = 0.1) {
+  checkmate::check_number(cutoff, lower = 0)
+  list(method = "hybrid", cutoff = cutoff)
+}
+
+#' Config helper for prealignment methods
+#'
+#' Prealignment methods are used to decide which sequence pairs need to have
+#' the full alignment method applied. This is only relevant when the
+#' prealignment method is both faster than the full alignment method, and will
+#' exclude a substantial fraction of all sequence pairs. The most common case
+#' for this is when using linear or affine gap alignment for the actual
+#' distance, but edit distance for the prealignment.  Kmer distance offers
+#' substantial speed increases for the prealignment step, but especially at
+#' dissimilarity thresholds greater than about 0.1, it cannot guarantee that all
+#' relevant sequence pairs are considered.
+#'
+#' @param method (`character` string) prealignment method to use
+#' @param ... passed on to variants
+#'
+#' @return an object representing the prealignment method
+#' @export
+prealign_config <- function(
+    method = c("kmer", "wfa2", "edlib", "sneakysnake"),
+    ...
+) {
+  method = match.arg(method)
+  switch(
+    method,
+    kmer = prealign_kmer(...),
+    wfa2 = prealign_wfa2(...),
+    edlib = prealign_edlib(...),
+    sneakysnake = prealign_sneakysnake(...)
+  )
+}
+
+#' @param udist_threshold (positive `numeric` scalar) kmer distance threshold
+#' for alignment. If <= 1, this is as a fraction of total kmers; if >1 this is
+#' a multiple of the relevant pairwise distance threshold (or 1, whichever is
+#' less). The current implementation uses 8-mers.
+#' @export
+#' @describeIn prealign_config helper function for method `"kmer"`
+prealign_kmer <- function(udist_threshold = 1) {
+  checkmate::check_number(udist_threshold, lower = 0)
+  structure(
+    list(
+      method = "kmer",
+      udist_threshold = udist_threshold
+    ),
+    class = "optimotu_prealign_config"
+  )
+}
+
+#' @export
+#' @describeIn prealign_config helper function for method `"wfa2"`. As a
+#' prealigner, wfa2 is always configured to use edit distance.
+prealign_wfa2 <- function() {
+  structure(
+    list(
+      method = "wfa2"
+    ),
+    class = "optimotu_prealign_config"
+  )
+}
+
+#' @export
+#' @describeIn prealign_config helper function for method `"edlib"`
+prealign_edlib <- function() {
+  structure(
+    list(
+      method = "edlib"
+    ),
+    class = "optimotu_prealign_config"
+  )
+}
+
+#' @export
+#' @describeIn prealign_config helper function for method `"sneakysnake"`
+prealign_sneakysnake <- function() {
+  structure(
+    list(
+      method = "sneakysnake"
+    ),
+    class = "optimotu_prealign_config"
+  )
+}

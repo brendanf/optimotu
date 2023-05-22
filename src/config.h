@@ -11,6 +11,8 @@
 
 #include "DistanceConverter.h"
 
+#include "AlignClusterWorker.h"
+
 std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config);
 std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     Rcpp::List config,
@@ -26,6 +28,11 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
   Rcpp::List config,
   ClusterAlgorithm * algo,
   std::istream &file
+);
+std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
+  Rcpp::List config,
+  DistanceConverter * dconv,
+  ClusterAlgorithm * algo
 );
 
 #endif //OPTIMOTU_R
