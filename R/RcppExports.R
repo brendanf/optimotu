@@ -2,18 +2,18 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @export
-single_linkage_hybrid_uniform <- function(seq, dmin, dmax, dstep, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_uniform`, seq, dmin, dmax, dstep, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
+seq_cluster_uniform <- function(seq, dmin, dmax, dstep, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
+    .Call(`_optimotu_seq_cluster_uniform`, seq, dmin, dmax, dstep, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
 }
 
 #' @export
-single_linkage_hybrid_array <- function(seq, thresholds, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_array`, seq, thresholds, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
+seq_cluster_array <- function(seq, thresholds, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
+    .Call(`_optimotu_seq_cluster_array`, seq, thresholds, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
 }
 
 #' @export
-single_linkage_hybrid_cached <- function(seq, thresholds, precision, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
-    .Call(`_optimotu_single_linkage_hybrid_cached`, seq, thresholds, precision, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
+seq_cluster_cached <- function(seq, thresholds, precision, breakpoint = 0.1, method = "matrix", parallelism = "concurrent", threads = 1L, do_binary_search = FALSE, fill_method = 1L) {
+    .Call(`_optimotu_seq_cluster_cached`, seq, thresholds, precision, breakpoint, method, parallelism, threads, do_binary_search, fill_method)
 }
 
 #' Confusion matrix for a set of "test" partitions vs. a "true" partition
@@ -50,14 +50,36 @@ distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method
     .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type)
 }
 
+#' Sparse distance matrix between DNA sequences
+#'
+#' @param seq (`character` vector) DNA sequences to calculate distances for
+#' @param dist_threshold (`numeric` scalar) maximum sequence distance (edit
+#' distance / alignment length) threshold for reporting
+#' @param constrain (`logical` flag) if `TRUE`, the alignment algorithm will
+#' use optimizations that will cause it to exit early if the optimal alignment
+#' has a distance greater than the distance threshold. This should not change
+#' the correctness of distance calculations below the threshold, and results in
+#' a large speedup. It is recommended to use `constrain=FALSE` only to verify
+#' that the results do not change.
+#' @param threads (`integer` count) number of parallel threads to use for
+#' computation.
+#'
+#' @return (`data.frame`) a sparse distance matrix; columns are `seq1` and
+#' `seq2` for the 0-based indices of two sequences; `score1` and `score2` are
+#' the optimal alignment score for the two sequences in the "prealignment" (if
+#' any) and "alignment" stages; `dist1` and `dist2` are the corresponding
+#' sequence distances.
+#'
 #' @export
-distmx_edlib <- function(seq, dist_threshold, constrain = TRUE, threads = 1L) {
-    .Call(`_optimotu_distmx_edlib`, seq, dist_threshold, constrain, threads)
+#' @rdname seq_distmx
+seq_distmx_edlib <- function(seq, dist_threshold, constrain = TRUE, threads = 1L) {
+    .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, constrain, threads)
 }
 
 #' @export
-distmx_hybrid <- function(seq, dist_threshold, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_distmx_hybrid`, seq, dist_threshold, breakpoint, threads)
+#' @rdname seq_distmx
+seq_distmx_hybrid <- function(seq, dist_threshold, breakpoint = 0.1, threads = 1L) {
+    .Call(`_optimotu_seq_distmx_hybrid`, seq, dist_threshold, breakpoint, threads)
 }
 
 #' Size of the intersection between two sorted sets
@@ -92,9 +114,13 @@ fmeasure_matrix <- function(k, c, ncpu = 1L) {
     .Call(`_optimotu_fmeasure_matrix`, k, c, ncpu)
 }
 
+#' @param udist_threshold (`numeric` scalar between 0 and 1) maximum udist
+#' (number of shared kmers / number of kmers in the shorter sequence) for full
+#' alignment.
 #' @export
-distmx <- function(seq, dist_threshold, udist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
-    .Call(`_optimotu_distmx`, seq, dist_threshold, udist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads)
+#' @rdname seq_distmx
+seq_distmx_kmer <- function(seq, dist_threshold, udist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
+    .Call(`_optimotu_seq_distmx_kmer`, seq, dist_threshold, udist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads)
 }
 
 #' Calculate similarity for a set of alternate "test" partitions vs. a "true" partition
@@ -135,13 +161,33 @@ align <- function(a, b, match = 0L, mismatch = 1L, gap = 1L, extend = 0L, gap2 =
     .Call(`_optimotu_align`, a, b, match, mismatch, gap, extend, gap2, extend2)
 }
 
+#' @param prealign (`logical` flag) if `TRUE`, do a prealignment using
+#' edit-distance as alignment score (`match = 0, mismatch = 1, gap_open = 0,
+#' gap_extend = 1, gap_open2 = 0, gap_extend2 = 1`) to test feasibility before
+#' aligning with alternate alignment scores. Note that, since pairwise distance
+#' is defined using edit distance, any other set of scores will always result
+#' in a pairwise distance which is equal to or greater than an alignment based
+#' on the edit distance score.
 #' @export
-distmx_prealign <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {
-    .Call(`_optimotu_distmx_prealign`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
+#' @rdname seq_distmx
+seq_distmx_wfa2 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {
+    .Call(`_optimotu_seq_distmx_wfa2`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
 }
 
+#' @param match (non-negative `integer`) alignment score for matching nucleotides
+#' @param mismatch (non-negative `integer`) alignment penalty for mismatched
+#' nucleotides.
+#' @param gap_open (non-negative `integer`) alignment penalty for opening a new
+#' gap (i.e., insertion or deletion).
+#' @param gap_extend (non-negative `integer`) alignment penalty for each
+#' position in a gap.
+#' @param gap_open2 (non-negative `integer`) alternate alignment penalty for
+#' opening a new gap (i.e., insertion or deletion).
+#' @param gap_extend2 (non-negative `integer`) alternate alignment penalty for
+#' each position in a gap.
+#' @rdname seq_distmx
 #' @export
-distmx_snsn <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, constrain = TRUE, threads = 1L) {
-    .Call(`_optimotu_distmx_snsn`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, constrain, threads)
+seq_distmx_snsn <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, constrain = TRUE, threads = 1L) {
+    .Call(`_optimotu_seq_distmx_snsn`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, constrain, threads)
 }
 

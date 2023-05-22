@@ -223,7 +223,7 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
   }
 }
 
-Rcpp::IntegerMatrix single_linkage_hybrid(
+Rcpp::IntegerMatrix seq_cluster(
     const std::vector<std::string> &seq,
     const DistanceConverter &dconv,
     const d_t m,
@@ -263,58 +263,58 @@ Rcpp::IntegerMatrix single_linkage_hybrid(
 }
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_uniform(
-     const std::vector<std::string> &seq,
-     const float dmin,
-     const float dmax,
-     const float dstep,
-     const double breakpoint = 0.1,
-     const std::string method = "matrix",
-     const std::string parallelism = "concurrent",
-     const int threads = 1,
-     const bool do_binary_search = false,
-     const int fill_method = 1
- ) {
-   const UniformDistanceConverter dconv(dmin, dmax, dstep);
-   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
-   return single_linkage_hybrid(seq, dconv, m, breakpoint, method, parallelism,
-                                threads, do_binary_search, fill_method);
- }
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix seq_cluster_uniform(
+    const std::vector<std::string> &seq,
+    const float dmin,
+    const float dmax,
+    const float dstep,
+    const double breakpoint = 0.1,
+    const std::string method = "matrix",
+    const std::string parallelism = "concurrent",
+    const int threads = 1,
+    const bool do_binary_search = false,
+    const int fill_method = 1
+) {
+  const UniformDistanceConverter dconv(dmin, dmax, dstep);
+  const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+  return seq_cluster(seq, dconv, m, breakpoint, method, parallelism,
+                     threads, do_binary_search, fill_method);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_array(
-     const std::vector<std::string> &seq,
-     const std::vector<double> &thresholds,
-     const double breakpoint = 0.1,
-     const std::string method = "matrix",
-     const std::string parallelism = "concurrent",
-     const int threads = 1,
-     const bool do_binary_search = false,
-     const int fill_method = 1
- ) {
-   const ArrayDistanceConverter dconv(thresholds);
-   const int m = thresholds.size();
-   return single_linkage_hybrid(seq, dconv, m, breakpoint, method, parallelism,
-                                threads, do_binary_search, fill_method);
- }
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix seq_cluster_array(
+    const std::vector<std::string> &seq,
+    const std::vector<double> &thresholds,
+    const double breakpoint = 0.1,
+    const std::string method = "matrix",
+    const std::string parallelism = "concurrent",
+    const int threads = 1,
+    const bool do_binary_search = false,
+    const int fill_method = 1
+) {
+  const ArrayDistanceConverter dconv(thresholds);
+  const int m = thresholds.size();
+  return seq_cluster(seq, dconv, m, breakpoint, method, parallelism,
+                     threads, do_binary_search, fill_method);
+}
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::IntegerMatrix single_linkage_hybrid_cached(
-     const std::vector<std::string> &seq,
-     const std::vector<double> &thresholds,
-     const double precision,
-     const double breakpoint = 0.1,
-     const std::string method = "matrix",
-     const std::string parallelism = "concurrent",
-     const int threads = 1,
-     const bool do_binary_search = false,
-     const int fill_method = 1
- ) {
-   const CachedDistanceConverter dconv(thresholds, precision);
-   const int m = thresholds.size();
-   return single_linkage_hybrid(seq, dconv, m, breakpoint, method, parallelism,
-                                threads, do_binary_search, fill_method);
- }
+// [[Rcpp::export]]
+Rcpp::IntegerMatrix seq_cluster_cached(
+    const std::vector<std::string> &seq,
+    const std::vector<double> &thresholds,
+    const double precision,
+    const double breakpoint = 0.1,
+    const std::string method = "matrix",
+    const std::string parallelism = "concurrent",
+    const int threads = 1,
+    const bool do_binary_search = false,
+    const int fill_method = 1
+) {
+  const CachedDistanceConverter dconv(thresholds, precision);
+  const int m = thresholds.size();
+  return seq_cluster(seq, dconv, m, breakpoint, method, parallelism,
+                     threads, do_binary_search, fill_method);
+}

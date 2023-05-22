@@ -148,47 +148,55 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   }
 };
 
+//' @param prealign (`logical` flag) if `TRUE`, do a prealignment using
+//' edit-distance as alignment score (`match = 0, mismatch = 1, gap_open = 0,
+//' gap_extend = 1, gap_open2 = 0, gap_extend2 = 1`) to test feasibility before
+//' aligning with alternate alignment scores. Note that, since pairwise distance
+//' is defined using edit distance, any other set of scores will always result
+//' in a pairwise distance which is equal to or greater than an alignment based
+//' on the edit distance score.
 //' @export
- // [[Rcpp::export]]
- Rcpp::DataFrame distmx_prealign(
-     std::vector<std::string> seq,
-     double dist_threshold,
-     int match = 1, int mismatch = 2,
-     int gap_open = 10, int gap_extend = 1,
-     int gap_open2 = 0, int gap_extend2 = 0,
-     bool prealign = true,
-     bool constrain = true,
-     uint8_t threads = 1) {
-   size_t prealigned = 0, aligned = 0;
+//' @rdname seq_distmx
+// [[Rcpp::export]]
+Rcpp::DataFrame seq_distmx_wfa2(
+    std::vector<std::string> seq,
+    double dist_threshold,
+    int match = 1, int mismatch = 2,
+    int gap_open = 10, int gap_extend = 1,
+    int gap_open2 = 0, int gap_extend2 = 0,
+    bool prealign = true,
+    bool constrain = true,
+    uint8_t threads = 1) {
+  size_t prealigned = 0, aligned = 0;
 
-   std::vector<size_t> seq1, seq2;
-   std::vector<int> score1, score2;
-   std::vector<double> dist1, dist2;
+  std::vector<size_t> seq1, seq2;
+  std::vector<int> score1, score2;
+  std::vector<double> dist1, dist2;
 
-   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
-   PrealignAlignWorker worker(seq,
-                              match, mismatch, gap_open, gap_extend, gap_open2,
-                              gap_extend2,
-                              dist_threshold, prealign, constrain, threads,
-                              sdm, prealigned, aligned);
-   if (threads > 1) {
-     RcppParallel::parallelFor(0, threads, worker, 1, threads);
-   } else {
-     worker(0, 1);
-   }
+  SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
+  PrealignAlignWorker worker(seq,
+                             match, mismatch, gap_open, gap_extend, gap_open2,
+                             gap_extend2,
+                             dist_threshold, prealign, constrain, threads,
+                             sdm, prealigned, aligned);
+  if (threads > 1) {
+    RcppParallel::parallelFor(0, threads, worker, 1, threads);
+  } else {
+    worker(0, 1);
+  }
 
-   Rcpp::Rcout << seq1.size() << " included / "
-               << aligned << " aligned / "
-               << prealigned << " prealigned"
-               << std::endl;
+  Rcpp::Rcout << seq1.size() << " included / "
+              << aligned << " aligned / "
+              << prealigned << " prealigned"
+              << std::endl;
 
-   Rcpp::DataFrame out = Rcpp::DataFrame::create(
-     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
-     Rcpp::Named("seq2") = Rcpp::wrap(seq2),
-     Rcpp::Named("score1") = Rcpp::wrap(score1),
-     Rcpp::Named("score2") = Rcpp::wrap(score2),
-     Rcpp::Named("dist1") = Rcpp::wrap(dist1),
-     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
-   );
-   return out;
- }
+  Rcpp::DataFrame out = Rcpp::DataFrame::create(
+    Rcpp::Named("seq1") = Rcpp::wrap(seq1),
+    Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+    Rcpp::Named("score1") = Rcpp::wrap(score1),
+    Rcpp::Named("score2") = Rcpp::wrap(score2),
+    Rcpp::Named("dist1") = Rcpp::wrap(dist1),
+    Rcpp::Named("dist2") = Rcpp::wrap(dist2)
+  );
+  return out;
+}

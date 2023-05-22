@@ -143,9 +143,21 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
   }
 };
 
+//' @param match (non-negative `integer`) alignment score for matching nucleotides
+//' @param mismatch (non-negative `integer`) alignment penalty for mismatched
+//' nucleotides.
+//' @param gap_open (non-negative `integer`) alignment penalty for opening a new
+//' gap (i.e., insertion or deletion).
+//' @param gap_extend (non-negative `integer`) alignment penalty for each
+//' position in a gap.
+//' @param gap_open2 (non-negative `integer`) alternate alignment penalty for
+//' opening a new gap (i.e., insertion or deletion).
+//' @param gap_extend2 (non-negative `integer`) alternate alignment penalty for
+//' each position in a gap.
+//' @rdname seq_distmx
 //' @export
- // [[Rcpp::export]]
- Rcpp::DataFrame distmx_snsn(
+// [[Rcpp::export]]
+ Rcpp::DataFrame seq_distmx_snsn(
      const std::vector<std::string> &seq,
      const double dist_threshold,
      const int match = 1,

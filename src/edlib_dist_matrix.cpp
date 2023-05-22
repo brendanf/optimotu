@@ -112,38 +112,59 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
   }
 };
 
+//' Sparse distance matrix between DNA sequences
+//'
+//' @param seq (`character` vector) DNA sequences to calculate distances for
+//' @param dist_threshold (`numeric` scalar) maximum sequence distance (edit
+//' distance / alignment length) threshold for reporting
+//' @param constrain (`logical` flag) if `TRUE`, the alignment algorithm will
+//' use optimizations that will cause it to exit early if the optimal alignment
+//' has a distance greater than the distance threshold. This should not change
+//' the correctness of distance calculations below the threshold, and results in
+//' a large speedup. It is recommended to use `constrain=FALSE` only to verify
+//' that the results do not change.
+//' @param threads (`integer` count) number of parallel threads to use for
+//' computation.
+//'
+//' @return (`data.frame`) a sparse distance matrix; columns are `seq1` and
+//' `seq2` for the 0-based indices of two sequences; `score1` and `score2` are
+//' the optimal alignment score for the two sequences in the "prealignment" (if
+//' any) and "alignment" stages; `dist1` and `dist2` are the corresponding
+//' sequence distances.
+//'
 //' @export
- // [[Rcpp::export]]
- Rcpp::DataFrame distmx_edlib(std::vector<std::string> seq, double dist_threshold,
-                         bool constrain = true, uint8_t threads = 1) {
-   size_t prealigned = 0, aligned = 0;
+//' @rdname seq_distmx
+// [[Rcpp::export]]
+Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold,
+                                 bool constrain = true, uint8_t threads = 1) {
+  size_t prealigned = 0, aligned = 0;
 
-   std::vector<size_t> seq1, seq2;
-   std::vector<int> score1, score2;
-   std::vector<double> dist1, dist2;
+  std::vector<size_t> seq1, seq2;
+  std::vector<int> score1, score2;
+  std::vector<double> dist1, dist2;
 
-   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
-   EdlibAlignWorker worker(seq,
-                           dist_threshold, constrain, threads,
-                           sdm, prealigned, aligned);
-   if (threads > 1) {
-     RcppParallel::parallelFor(0, threads, worker, 1, threads);
-   } else {
-     worker(0, 1);
-   }
+  SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
+  EdlibAlignWorker worker(seq,
+                          dist_threshold, constrain, threads,
+                          sdm, prealigned, aligned);
+  if (threads > 1) {
+    RcppParallel::parallelFor(0, threads, worker, 1, threads);
+  } else {
+    worker(0, 1);
+  }
 
-   Rcpp::Rcout << seq1.size() << " included / "
-               << aligned << " aligned / "
-               << prealigned << " prealigned"
-               << std::endl;
+  Rcpp::Rcout << seq1.size() << " included / "
+              << aligned << " aligned / "
+              << prealigned << " prealigned"
+              << std::endl;
 
-   Rcpp::DataFrame out = Rcpp::DataFrame::create(
-     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
-     Rcpp::Named("seq2") = Rcpp::wrap(seq2),
-     Rcpp::Named("score1") = Rcpp::wrap(score1),
-     Rcpp::Named("score2") = Rcpp::wrap(score2),
-     Rcpp::Named("dist1") = Rcpp::wrap(dist1),
-     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
-   );
-   return out;
- }
+  Rcpp::DataFrame out = Rcpp::DataFrame::create(
+    Rcpp::Named("seq1") = Rcpp::wrap(seq1),
+    Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+    Rcpp::Named("score1") = Rcpp::wrap(score1),
+    Rcpp::Named("score2") = Rcpp::wrap(score2),
+    Rcpp::Named("dist1") = Rcpp::wrap(dist1),
+    Rcpp::Named("dist2") = Rcpp::wrap(dist2)
+  );
+  return out;
+}

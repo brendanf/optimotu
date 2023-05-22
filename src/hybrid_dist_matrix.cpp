@@ -160,37 +160,38 @@ struct HybridAlignWorker : public RcppParallel::Worker {
 };
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::DataFrame distmx_hybrid(std::vector<std::string> seq, double dist_threshold,
-                               double breakpoint = 0.1, uint8_t threads = 1) {
-   size_t prealigned = 0, aligned = 0;
+//' @rdname seq_distmx
+// [[Rcpp::export]]
+Rcpp::DataFrame seq_distmx_hybrid(std::vector<std::string> seq, double dist_threshold,
+                                  double breakpoint = 0.1, uint8_t threads = 1) {
+  size_t prealigned = 0, aligned = 0;
 
-   std::vector<size_t> seq1, seq2;
-   std::vector<int> score1, score2;
-   std::vector<double> dist1, dist2;
+  std::vector<size_t> seq1, seq2;
+  std::vector<int> score1, score2;
+  std::vector<double> dist1, dist2;
 
-   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
-   HybridAlignWorker worker(seq,
-                            dist_threshold, breakpoint, threads,
-                            sdm, prealigned, aligned);
-   if (threads > 1) {
-     RcppParallel::parallelFor(0, threads, worker, 1, threads);
-   } else {
-     worker(0, 1);
-   }
+  SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
+  HybridAlignWorker worker(seq,
+                           dist_threshold, breakpoint, threads,
+                           sdm, prealigned, aligned);
+  if (threads > 1) {
+    RcppParallel::parallelFor(0, threads, worker, 1, threads);
+  } else {
+    worker(0, 1);
+  }
 
-   Rcpp::Rcout << seq1.size() << " included / "
-               << aligned << " aligned / "
-               << prealigned << " prealigned"
-               << std::endl;
+  Rcpp::Rcout << seq1.size() << " included / "
+              << aligned << " aligned / "
+              << prealigned << " prealigned"
+              << std::endl;
 
-   Rcpp::DataFrame out = Rcpp::DataFrame::create(
-     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
-     Rcpp::Named("seq2") = Rcpp::wrap(seq2),
-     Rcpp::Named("score1") = Rcpp::wrap(score1),
-     Rcpp::Named("score2") = Rcpp::wrap(score2),
-     Rcpp::Named("dist1") = Rcpp::wrap(dist1),
-     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
-   );
-   return out;
- }
+  Rcpp::DataFrame out = Rcpp::DataFrame::create(
+    Rcpp::Named("seq1") = Rcpp::wrap(seq1),
+    Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+    Rcpp::Named("score1") = Rcpp::wrap(score1),
+    Rcpp::Named("score2") = Rcpp::wrap(score2),
+    Rcpp::Named("dist1") = Rcpp::wrap(dist1),
+    Rcpp::Named("dist2") = Rcpp::wrap(dist2)
+  );
+  return out;
+}
