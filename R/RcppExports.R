@@ -38,8 +38,8 @@ align2 <- function(a, b) {
 }
 
 #' @export
-distmx <- function(seq, dist_threshold, threads = 1L) {
-    .Call(`_optimotu_distmx`, seq, dist_threshold, threads)
+distmx <- function(seq, dist_threshold, threads = 1L, heuristic = TRUE) {
+    .Call(`_optimotu_distmx`, seq, dist_threshold, threads, heuristic)
 }
 
 distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {
