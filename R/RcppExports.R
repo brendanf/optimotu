@@ -27,6 +27,14 @@ confusion_matrix <- function(k, c, threads = 1L) {
     .Call(`_optimotu_confusion_matrix`, k, c, threads)
 }
 
+cigar_wfa2 <- function(a, b, match = 0L, mismatch = 1L, open1 = 0L, extend1 = 1L, open2 = 0L, extend2 = 1L) {
+    .Call(`_optimotu_cigar_wfa2`, a, b, match, mismatch, open1, extend1, open2, extend2)
+}
+
+cigar_edlib <- function(a, b) {
+    .Call(`_optimotu_cigar_edlib`, a, b)
+}
+
 #' @export
 align <- function(a, b, match = 0L, mismatch = 1L, gap = 1L, extend = 0L, gap2 = 0L, extend2 = 0L) {
     .Call(`_optimotu_align`, a, b, match, mismatch, gap, extend, gap2, extend2)
@@ -43,8 +51,18 @@ distmx2 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 1
 }
 
 #' @export
-distmx3 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, ss_iterations = 100L, threads = 1L) {
-    .Call(`_optimotu_distmx3`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, ss_iterations, threads)
+distmx3 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, constrain = TRUE, threads = 1L) {
+    .Call(`_optimotu_distmx3`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, constrain, threads)
+}
+
+#' @export
+distmx4 <- function(seq, dist_threshold, constrain = TRUE, threads = 1L) {
+    .Call(`_optimotu_distmx4`, seq, dist_threshold, constrain, threads)
+}
+
+#' @export
+distmx_hybrid <- function(seq, dist_threshold, breakpoint = 0.1, threads = 1L) {
+    .Call(`_optimotu_distmx_hybrid`, seq, dist_threshold, breakpoint, threads)
 }
 
 distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {

@@ -5,6 +5,7 @@
 extern "C" {
 #include <SneakySnake.h>
 }
+#include <edlib.h>
 
 double distance(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
   auto status = aligner.alignEnd2End(a, b);
@@ -20,11 +21,78 @@ double distance(const std::string &a, const std::string &b, wfa::WFAligner &alig
   return 1.0 - double(match) / double(length);
 }
 
-std::pair<int, double> score_and_distance(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
-  auto status = aligner.alignEnd2End(a, b);
+// double distance(const std::string &a, const std::string &b, EdlibAlignConfig &aligner) {
+//   auto alignment = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(), aligner);
+//   if (alignment.status != EDLIB_STATUS_OK) return 1.0;
+//   auto cigar = alignment.alignment;
+//   int len = alignment.alignmentLength;
+//   uint16_t match = 0, length = 0, length1 = 0;
+//   for (size_t i = 0; i < len; ++i) {
+//     if (cigar[i] == 0) {
+//       match++;
+//       length1++;
+//     } else if (cigar[i] != 1) {
+//       length1++;
+//     }
+//     length++;
+//   }
+//   if (length1 < )
+//   return 1.0 - double(match) / double(length);
+// }
+
+// [[Rcpp::export]]
+std::string cigar_wfa2(const std::string &a, const std::string &b,
+                       int match = 0, int mismatch = 1,
+                       int open1 = 0, int extend1 = 1,
+                       int open2 = 0, int extend2 = 1) {
+  wfa::WFAlignerChoose aligner{match, mismatch, open1, extend1, open2, extend2,
+                               wfa::WFAligner::AlignmentScope::Alignment};
+  wfa::WFAligner::AlignmentStatus status;
+    status = aligner.alignEnd2End(a, b);
+  switch (status) {
+  case wfa::WFAligner::StatusOOM:
+    Rcpp::stop("Aligner out of memory.");
+    break;
+  case wfa::WFAligner::StatusUnfeasible:
+  case wfa::WFAligner::StatusMaxScoreReached:
+    Rcpp::stop("Alignment not feasible with given constraints.");
+    break;
+  case wfa::WFAligner::StatusSuccessful:
+    break;
+  }
+  return aligner.getAlignmentCigar();
+}
+
+// [[Rcpp::export]]
+std::string cigar_edlib(const std::string &a, const std::string &b) {
+  auto config = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW,
+                                    EdlibAlignTask::EDLIB_TASK_PATH, NULL, 0);
+  std::vector<char> key;
+  EdlibAlignResult alignment;
+    alignment = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(),
+                           config);
+    key = {'M', 'D', 'I', 'X'};
+  // Rcpp::Rcout << "a_len=" << a.size() << std::endl
+  //             << "b_len=" << b.size() << std::endl
+  //             << "aln_len=" << alignment.alignmentLength << std::endl
+  //             << "start_pos=" << alignment.startLocations[0] << std::endl
+  //             << "end_pos=" << alignment.endLocations[0] << std::endl;
+
+  std::string out{};
+  out.reserve(alignment.alignmentLength);
+  for (int i = 0; i < alignment.alignmentLength; ++i) {
+    out.push_back(key[alignment.alignment[i]]);
+  }
+  edlibFreeAlignResult(alignment);
+  return out;
+}
+
+std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
+  wfa::WFAligner::AlignmentStatus status;
+    status = aligner.alignEnd2End(a, b);
   if (status != wfa::WFAligner::StatusSuccessful) return {std::max(a.size(), b.size()), 1.0};
   auto cigar = aligner.getAlignmentCigar();
-  uint16_t match = 0, length = 0, edit = 0;
+  uint16_t match = 0, length = 0;
   for (char c : cigar) {
     if (c == 'M') {
       match++;
@@ -314,7 +382,7 @@ struct KmerAlignWorker : public RcppParallel::Worker {
         }
         if (d1 <= udist_threshold) {
           ++my_aligned;
-          auto d2 = score_and_distance(seq[match.first], seq[i], aligner);
+          auto d2 = score_and_distance_wfa2(seq[match.first], seq[i], aligner);
           if (d2.second <= dist_threshold) {
             my_seq1.push_back(match.first);
             my_seq2.push_back(i);
@@ -614,27 +682,31 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
     }
     size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
     sdm.mutex.lock();
-    std::cout << "Thread " << begin << " entered; sequences [" <<
+    std::cout << "PrealignAlignWorker thread " << begin << " entered; sequences [" <<
       begin_i << ", "<< end_i << ")" << std::endl;
     sdm.mutex.unlock();
     for (size_t i = begin_i; i < end_i; i++) {
       for (size_t j = 0; j < i; j++) {
-        double l1 = seq[i].size(), l2 = seq[j].size();
-        // // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
-        // //             << j << " (l2=" << l2 <<")####" << std::endl;
+        bool is_seqj_longer = seq[j].size() > seq[i].size();
+        size_t s1 = is_seqj_longer ? i : j;
+        size_t s2 = is_seqj_longer ? j : i;
+        double l1 = seq[s1].size(), l2 = seq[s2].size();
+        // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
+        //             << j << " (l2=" << l2 <<")####" << std::endl;
 
-        if (l1 / l2 < sim_threshold || l2/l1 < sim_threshold) continue;
+        if (l1/l2 < sim_threshold) continue;
         double maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
         int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
         int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
 
         std::pair<int, double> d1 = {0, 0};
         if (do_prealign) {
+          // std::cout << "Setting max score to " << min_k << ", " << max_k << std::endl;
           prealigner.setMaxAlignmentScore((int) maxd1 + 1);
-          // // std::cout << "(skipping) Setting band heuristics to " << min_k << ", " << max_k << std::endl;
+          // std::cout << "Setting band heuristics to " << min_k << ", " << max_k << std::endl;
           prealigner.setHeuristicBandedStatic(min_k, max_k);
           // std::cout << "Prealigning..." << std::endl;
-          auto status = prealigner.alignEnd2End(seq[i], seq[j]);
+          auto status = prealigner.alignEnd2End(seq[s1], seq[s2]);
           // std::cout << "Prealignment finished." << std::endl;
           ++my_prealigned;
           if (status != wfa::WFAligner::AlignmentStatus::StatusSuccessful) continue;
@@ -644,12 +716,17 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
           d1 = {sc1, (double)sc1*sim_threshold_plus_1 / (l1 + l2)};
         }
         if (is_constrained) {
+          // std::cout << "Setting band heuristics to " << min_k << ", " << max_k << std::endl;
           aligner.setHeuristicBandedStatic(min_k, max_k);
           if (is_score_constrained) {
+            // std::cout << "Setting max score to " << (int)maxd1 + 1 << std::endl;
             aligner.setMaxAlignmentScore((int)maxd1 + 1);
           }
         }
-        auto d2 = score_and_distance(seq[j], seq[i], aligner);
+        // std::cout << "Aligning..." << std::endl;
+        auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);
+        // std::cout << "Alignment successful." << std::endl;
+
         my_aligned++;
         if (d2.second <= dist_threshold) {
           my_seq1.push_back(j);
@@ -736,8 +813,9 @@ std::pair<char*, size_t> pad_strings(const std::vector<std::string> &seq) {
 struct SneakySnakeAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
   const std::pair<char*, size_t> pseq;
-  const int match, mismatch, gap, extend, gap2, extend2, ss_iterations;
+  const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
+  const bool is_constrained, is_score_constrained;
   const uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
@@ -750,16 +828,25 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
     const int extend,
     const int gap2,
     const int extend2,
-    const int ss_iterations,
     const double dist_threshold,
+    const bool constrain,
     const uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
     size_t &aligned
   ) : seq(seq), pseq(pad_strings(seq)),
-  match(match), mismatch(mismatch), gap(gap), extend(extend), gap2(gap2), extend2(extend2),
-  ss_iterations(ss_iterations), dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
-  sim_threshold_plus_1(1.0 + sim_threshold), threads(threads),
+  match(match), mismatch(mismatch), gap(gap), extend(extend), gap2(gap2), extend2(extend2), dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
+  sim_threshold_plus_1(1.0 + sim_threshold), is_constrained(constrain),
+  is_score_constrained(
+    constrain &&
+      match == 0 &&
+      mismatch == 1 &&
+      gap == 0 &&
+      extend == 1 &&
+      gap2 == 0 &&
+      (extend2 == 0 || extend2 == 1)
+  ),
+  threads(threads),
   sdm(sdm), prealigned(prealigned), aligned(aligned) {};
 
   ~SneakySnakeAlignWorker() {
@@ -810,19 +897,27 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
         int kmer_width = (int)round(2*(big_l - small_l * sim_threshold) / sim_threshold_plus_1);
         // Rcpp::Rcout << "maxd1=" << maxd1 << " kmer_width=" << kmer_width << std::endl;
         int d1 = SneakySnake(
-          std::max(l1, l2),
+          big_l,
           pseq.first + i*pseq.second,
           pseq.first + j*pseq.second,
           maxd1,
           kmer_width,
           0,
-          ss_iterations
+          big_l
         );
         // Rcpp::Rcout << "SneakySnake: " << d1 << std::endl;
         ++my_prealigned;
         if (d1 == 0) continue;
         // double d1 = 0;
-        auto d2 = score_and_distance(seq[j], seq[i], aligner);
+        if (is_constrained) {
+          int max_k = (int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
+          int min_k = -(int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+          aligner.setHeuristicBandedStatic(min_k, max_k);
+          if (is_score_constrained) {
+            aligner.setMaxAlignmentScore((int) maxd1 + 1);
+          }
+        }
+        auto d2 = score_and_distance_wfa2(seq[j], seq[i], aligner);
         my_aligned++;
         if (d2.second <= dist_threshold) {
           my_seq1.push_back(j);
@@ -860,7 +955,7 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
      const int gap_extend = 1,
      const int gap_open2 = 0,
      const int gap_extend2 = 0,
-     int ss_iterations = 100,
+     const bool constrain = true,
      uint8_t threads = 1
  ) {
    size_t prealigned = 0, aligned = 0;
@@ -872,9 +967,336 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
    SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
    SneakySnakeAlignWorker worker(seq,
                                  match, mismatch, gap_open, gap_extend, gap_open2,
-                                 gap_extend2, ss_iterations,
-                                 dist_threshold, threads,
+                                 gap_extend2,
+                                 dist_threshold, constrain, threads,
                                  sdm, prealigned, aligned);
+   if (threads > 1) {
+     RcppParallel::parallelFor(0, threads, worker, 1, threads);
+   } else {
+     worker(0, 1);
+   }
+
+   Rcpp::Rcout << seq1.size() << " included / "
+               << aligned << " aligned / "
+               << prealigned << " prealigned"
+               << std::endl;
+
+   Rcpp::DataFrame out = Rcpp::DataFrame::create(
+     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
+     Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+     Rcpp::Named("score1") = Rcpp::wrap(score1),
+     Rcpp::Named("score2") = Rcpp::wrap(score2),
+     Rcpp::Named("dist1") = Rcpp::wrap(dist1),
+     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
+   );
+   return out;
+ }
+
+struct EdlibAlignWorker : public RcppParallel::Worker {
+  const std::vector<std::string> &seq;
+  const double dist_threshold, sim_threshold, sim_threshold_plus_1;
+  const bool is_constrained;
+  const uint8_t threads;
+  SparseDistanceMatrix &sdm;
+  size_t &prealigned, &aligned;
+
+  EdlibAlignWorker(
+    const std::vector<std::string> &seq,
+    const double dist_threshold,
+    const bool constrain,
+    const uint8_t threads,
+    SparseDistanceMatrix &sdm,
+    size_t &prealigned,
+    size_t &aligned
+  ) : seq(seq),
+  dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
+  sim_threshold_plus_1(1.0 + sim_threshold),
+  is_constrained(constrain),
+  threads(threads),
+  sdm(sdm), prealigned(prealigned), aligned(aligned) {};
+
+  void operator()(std::size_t begin, std::size_t end) {
+    double n = seq.size();
+    double m = (n*n - 3.0*n + 2.0)/2.0;
+    size_t my_prealigned = 0;
+    size_t my_aligned = 0;
+    size_t begin_i;
+    std::vector<size_t> my_seq1;
+    my_seq1.reserve(1000);
+    std::vector<size_t> my_seq2;
+    my_seq2.reserve(1000);
+    std::vector<int> my_score1;
+    my_score1.reserve(1000);
+    std::vector<int> my_score2;
+    my_score2.reserve(1000);
+    std::vector<double> my_dist1;
+    my_dist1.reserve(1000);
+    std::vector<double> my_dist2;
+    my_dist2.reserve(1000);
+    KmerBitField match_hits;
+    EdlibAlignConfig aligner = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
+
+    if (begin == 0) {
+      begin_i = 1;
+    } else {
+      begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
+    }
+    size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
+    sdm.mutex.lock();
+    std::cout << "EdlibAlignWorker thread " << begin << " entered; sequences [" <<
+      begin_i << ", "<< end_i << ")" << std::endl;
+    sdm.mutex.unlock();
+    for (size_t i = begin_i; i < end_i; i++) {
+      for (size_t j = 0; j < i; j++) {
+        double l1 = seq[i].size(), l2 = seq[j].size();
+        // // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
+        // //             << j << " (l2=" << l2 <<")####" << std::endl;
+        bool is_seq2_larger = seq[j].size() > seq[i].size();
+        size_t s1 = is_seq2_larger ? i : j;
+        size_t s2 = is_seq2_larger ? j : i;
+        if (l1 / l2 < sim_threshold || l2/l1 < sim_threshold) continue;
+
+        std::pair<int, double> d1 = {0, 0};
+        if (is_constrained) {
+          double maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
+          aligner.k = (int)maxd1 + 1;
+        }
+        auto alignResult = edlibAlign(
+          seq[s1].c_str(), seq[s1].size(),
+          seq[s2].c_str(), seq[s2].size(),
+          aligner
+        );
+        my_prealigned++;
+        if (alignResult.status == EDLIB_STATUS_ERROR) continue;
+        if (alignResult.editDistance == -1) continue;
+        my_aligned++;
+        double d2 = (double)alignResult.editDistance / (double) alignResult.alignmentLength;
+        edlibFreeAlignResult(alignResult);
+        if (d2 <= dist_threshold) {
+          my_seq1.push_back(j);
+          my_seq2.push_back(i);
+          my_score1.push_back(d1.first);
+          my_score2.push_back(alignResult.editDistance);
+          my_dist1.push_back(d1.second);
+          my_dist2.push_back(d2);
+
+          if (my_seq1.size() == 1000) {
+            sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
+          }
+        }
+        RcppThread::checkUserInterrupt();
+      }
+    }
+    if (my_seq1.size() > 0) {
+      sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
+    }
+    sdm.mutex.lock();
+    aligned += my_aligned;
+    prealigned += my_prealigned;
+    sdm.mutex.unlock();
+  }
+};
+
+//' @export
+ // [[Rcpp::export]]
+ Rcpp::DataFrame distmx4(std::vector<std::string> seq, double dist_threshold,
+                         bool constrain = true, uint8_t threads = 1) {
+   size_t prealigned = 0, aligned = 0;
+
+   std::vector<size_t> seq1, seq2;
+   std::vector<int> score1, score2;
+   std::vector<double> dist1, dist2;
+
+   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
+   EdlibAlignWorker worker(seq,
+                              dist_threshold, constrain, threads,
+                              sdm, prealigned, aligned);
+   if (threads > 1) {
+     RcppParallel::parallelFor(0, threads, worker, 1, threads);
+   } else {
+     worker(0, 1);
+   }
+
+   Rcpp::Rcout << seq1.size() << " included / "
+               << aligned << " aligned / "
+               << prealigned << " prealigned"
+               << std::endl;
+
+   Rcpp::DataFrame out = Rcpp::DataFrame::create(
+     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
+     Rcpp::Named("seq2") = Rcpp::wrap(seq2),
+     Rcpp::Named("score1") = Rcpp::wrap(score1),
+     Rcpp::Named("score2") = Rcpp::wrap(score2),
+     Rcpp::Named("dist1") = Rcpp::wrap(dist1),
+     Rcpp::Named("dist2") = Rcpp::wrap(dist2)
+   );
+   return out;
+ }
+
+struct HybridAlignWorker : public RcppParallel::Worker {
+  const std::vector<std::string> &seq;
+    const std::pair<char*, size_t> pseq;
+  const double dist_threshold, sim_threshold, sim_threshold_plus_1;
+  const double breakpoint;
+  const uint8_t threads;
+  SparseDistanceMatrix &sdm;
+  size_t &prealigned, &aligned;
+
+  HybridAlignWorker(
+    const std::vector<std::string> &seq,
+    const double dist_threshold,
+    const double breakpoint,
+    const uint8_t threads,
+    SparseDistanceMatrix &sdm,
+    size_t &prealigned,
+    size_t &aligned
+  ) : seq(seq), pseq(pad_strings(seq)),
+  dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
+  sim_threshold_plus_1(1.0 + sim_threshold),
+  breakpoint(breakpoint),
+  threads(threads),
+  sdm(sdm), prealigned(prealigned), aligned(aligned) {};
+
+  void operator()(std::size_t begin, std::size_t end) {
+    double n = seq.size();
+    double m = (n*n - 3.0*n + 2.0)/2.0;
+    size_t my_prealigned = 0;
+    size_t my_aligned = 0;
+    size_t begin_i;
+    std::vector<size_t> my_seq1;
+    my_seq1.reserve(1000);
+    std::vector<size_t> my_seq2;
+    my_seq2.reserve(1000);
+    std::vector<int> my_score1;
+    my_score1.reserve(1000);
+    std::vector<int> my_score2;
+    my_score2.reserve(1000);
+    std::vector<double> my_dist1;
+    my_dist1.reserve(1000);
+    std::vector<double> my_dist2;
+    my_dist2.reserve(1000);
+    KmerBitField match_hits;
+    EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
+    wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
+
+    if (begin == 0) {
+      begin_i = 1;
+    } else {
+      begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
+    }
+    size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
+    sdm.mutex.lock();
+    std::cout << "Thread " << begin << " entered; sequences [" <<
+      begin_i << ", "<< end_i << ")" << std::endl;
+    sdm.mutex.unlock();
+    for (size_t i = begin_i; i < end_i; i++) {
+      for (size_t j = 0; j < i; j++) {
+        double l1 = seq[i].size(), l2 = seq[j].size();
+        int big_l = std::max(l1, l2), small_l = std::min(l1, l2);
+        // // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
+        // //             << j << " (l2=" << l2 <<")####" << std::endl;
+        size_t ii = i, jj = j;
+        if (l2 > l1) {
+          ii = j;
+          jj = i;
+        }
+        if (l1 / l2 < sim_threshold || l2/l1 < sim_threshold) continue;
+        double maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
+        bool is_close = false;
+        std::pair<int, double> d1 = {0, 0};
+        if (breakpoint >= 1) {
+          // edit distance, not pairwise dissimilarity
+          is_close = SneakySnake(
+            big_l,
+            pseq.first + ii*pseq.second,
+            pseq.first + jj*pseq.second,
+            (int) breakpoint,
+            (int) breakpoint * 2 + 1,
+            0,
+            big_l
+          );
+          ++my_prealigned;
+          if (!is_close && maxd1 <= breakpoint) continue;
+        } else {
+          int kmer_width = (int)round(2*(big_l - small_l * sim_threshold) /
+                            sim_threshold_plus_1);
+          is_close = SneakySnake(
+            big_l,
+            pseq.first + ii*pseq.second,
+            pseq.first + jj*pseq.second,
+            (int) maxd1,
+            kmer_width,
+            0,
+            big_l
+          );
+          ++my_prealigned;
+          if (!is_close && dist_threshold <= breakpoint) continue;
+        }
+        int s2;
+        double d2;
+        if (is_close) {
+          int max_k = (int)ceil((small_l - big_l * sim_threshold) / sim_threshold_plus_1);
+          int min_k = -(int)ceil((big_l - small_l * sim_threshold) / sim_threshold_plus_1);
+          wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
+          wfa_aligner.setMaxAlignmentScore((int)maxd1 + 1);
+          auto sd2 = score_and_distance_wfa2(seq[ii], seq[jj], wfa_aligner);
+          s2 = sd2.first;
+          d2 = sd2.second;
+          my_aligned++;
+        } else {
+          ed_aligner.k = (int)maxd1 + 1;
+
+          auto alignResult = edlibAlign(
+            seq[ii].c_str(), seq[ii].size(),
+            seq[jj].c_str(), seq[jj].size(),
+            ed_aligner
+          );
+          my_aligned++;
+          if (alignResult.status == EDLIB_STATUS_ERROR) continue;
+          if (alignResult.editDistance == -1) continue;
+          s2 = alignResult.editDistance;
+          d2 = (double)alignResult.editDistance / (double) alignResult.alignmentLength;
+          edlibFreeAlignResult(alignResult);
+        }
+        if (d2 <= dist_threshold) {
+          my_seq1.push_back(j);
+          my_seq2.push_back(i);
+          my_score1.push_back(d1.first);
+          my_score2.push_back(s2);
+          my_dist1.push_back(d1.second);
+          my_dist2.push_back(d2);
+
+          if (my_seq1.size() == 1000) {
+            sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
+          }
+        }
+        RcppThread::checkUserInterrupt();
+      }
+    }
+    if (my_seq1.size() > 0) {
+      sdm.append(my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
+    }
+    sdm.mutex.lock();
+    aligned += my_aligned;
+    prealigned += my_prealigned;
+    sdm.mutex.unlock();
+  }
+};
+
+//' @export
+ // [[Rcpp::export]]
+ Rcpp::DataFrame distmx_hybrid(std::vector<std::string> seq, double dist_threshold,
+                         double breakpoint = 0.1, uint8_t threads = 1) {
+   size_t prealigned = 0, aligned = 0;
+
+   std::vector<size_t> seq1, seq2;
+   std::vector<int> score1, score2;
+   std::vector<double> dist1, dist2;
+
+   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
+   HybridAlignWorker worker(seq,
+                           dist_threshold, breakpoint, threads,
+                           sdm, prealigned, aligned);
    if (threads > 1) {
      RcppParallel::parallelFor(0, threads, worker, 1, threads);
    } else {
