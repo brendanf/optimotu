@@ -84,6 +84,21 @@ adjusted_mutual_information <- function(k, c, threads = 1L) {
 }
 
 #' @export
+single_linkage_matrix2_uniform <- function(file, seqnames, dmin, dmax, dstep, do_binary_search = 3L) {
+    .Call(`_optimotu_single_linkage_matrix2_uniform`, file, seqnames, dmin, dmax, dstep, do_binary_search)
+}
+
+#' @export
+single_linkage_matrix2_array <- function(file, seqnames, thresholds, do_binary_search = 3L) {
+    .Call(`_optimotu_single_linkage_matrix2_array`, file, seqnames, thresholds, do_binary_search)
+}
+
+#' @export
+single_linkage_matrix2_cached <- function(file, seqnames, thresholds, precision, do_binary_search = 3L) {
+    .Call(`_optimotu_single_linkage_matrix2_cached`, file, seqnames, thresholds, precision, do_binary_search)
+}
+
+#' @export
 single_linkage_matrix_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, minsplit = 1L) {
     .Call(`_optimotu_single_linkage_matrix_uniform`, file, seqnames, dmin, dmax, dstep, threads, minsplit)
 }
