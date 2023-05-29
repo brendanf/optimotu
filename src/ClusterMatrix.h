@@ -1,5 +1,5 @@
-#ifndef _ClusterMatrix_
-#define _ClusterMatrix_
+#ifndef OPTIMOTU_CLUSTERMATRIX_H_INCLUDED
+#define OPTIMOTU_CLUSTERMATRIX_H_INCLUDED
 
 #include "ClusterAlgorithm.h"
 #ifdef OPTIMOTU_R
@@ -142,4 +142,4 @@ template class ClusterMatrix<std::vector<int>, false, LINEAR_FILL>;
 template class ClusterMatrix<std::vector<int>, false, BINARY_FILL>;
 template class ClusterMatrix<std::vector<int>, false, TOPDOWN_FILL>;
 
-#endif
+#endif //OPTIMOTU_CLUSTERMATRIX_H_INCLUDED

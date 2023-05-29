@@ -1,5 +1,6 @@
-#ifndef _CLUSTER_TREE_
-#define _CLUSTER_TREE_
+#ifndef OPTIMOTU_CLUSTERTREE_H_INCLUDED
+#define OPTIMOTU_CLUSTERTREE_H_INCLUDED
+
 #include "single_linkage.h"
 #include "ClusterAlgorithm.h"
 #include <deque>
@@ -140,4 +141,4 @@ public:
    virtual double max_relevant(j_t seq1, j_t seq2) const override;
 };
 
-#endif
+#endif //OPTIMOTU_CLUSTERTREE_H_INCLUDED

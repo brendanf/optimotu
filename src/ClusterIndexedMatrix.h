@@ -1,5 +1,5 @@
-#ifndef _ClusterIndexedMatrix_
-#define _ClusterIndexedMatrix_
+#ifndef OPTIMOTU_CLUSTERINDEXEDMATRIX_H_INCLUDED
+#define OPTIMOTU_CLUSTERINDEXEDMATRIX_H_INCLUDED
 
 #include "ClusterAlgorithm.h"
 #ifdef OPTIMOTU_R
@@ -105,4 +105,4 @@ ClusterIndexedMatrix<RcppParallel::RMatrix<int>>::ClusterIndexedMatrix(
 template class ClusterIndexedMatrix<RcppParallel::RMatrix<int>>;
 #endif
 
-#endif
+#endif //OPTIMOTU_CLUSTERINDEXEDMATRIX_H_INCLUDED

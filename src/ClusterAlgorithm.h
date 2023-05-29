@@ -1,5 +1,5 @@
-#ifndef _CLUSTER_ALGORITHM_
-#define _CLUSTER_ALGORITHM_
+#ifndef OPTIMOTU_CLUSTERALGORITHM_H_INCLUDED
+#define OPTIMOTU_CLUSTERALGORITHM_H_INCLUDED
 
 #include "single_linkage.h"
 #include "DistanceConverter.h"
@@ -98,4 +98,4 @@ public:
 
 };
 
-#endif
+#endif //OPTIMOTU_CLUSTERALGORITHM_H_INCLUDED

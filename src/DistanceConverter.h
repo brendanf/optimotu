@@ -1,5 +1,5 @@
-#ifndef _DISTANCE_CONVERTER_
-#define _DISTANCE_CONVERTER_
+#ifndef OPTIMOTU_DISTANCECONVERTER_H_INCLUDED
+#define OPTIMOTU_DISTANCECONVERTER_H_INCLUDED
 
 #include <vector>
 #include "single_linkage.h"
@@ -41,4 +41,4 @@ public:
    CachedDistanceConverter(std::vector<double> thresholds, double precision);
 };
 
-#endif
+#endif //OPTIMOTU_DISTANCECONVERTER_H_INCLUDED

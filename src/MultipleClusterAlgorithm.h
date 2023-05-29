@@ -1,14 +1,16 @@
-#ifndef _MULTIPLE_CLUSTER_ALGORITHM_
-#define _MULTIPLE_CLUSTER_ALGORITHM_
+#ifndef OPTIMOTU_MULTIPLECLUSTERALGORITHM_H_INCLUDED
+#define OPTIMOTU_MULTIPLECLUSTERALGORITHM_H_INCLUDED
+
 #include "single_linkage.h"
 #include "DistanceConverter.h"
 #include "ClusterAlgorithm.h"
 #include <cassert>
 #include <algorithm>
+
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
 #include "ClusterTree.h"
-#endif
+#endif //OPTIMOTU_R
 
 template <class CLUST_T>
 class MultipleClusterAlgorithm : public DistanceConsumer {
@@ -102,7 +104,7 @@ public:
     }
   }
   Rcpp::List as_hclust() = delete;
-#endif
+#endif //OPTIMOTU_R
 };
 
 #ifdef OPTIMOTU_R
@@ -114,6 +116,6 @@ Rcpp::List MultipleClusterAlgorithm<ClusterTree>::as_hclust() {
   }
   return Rcpp::wrap(out);
 }
-#endif
+#endif //OPTIMOTU_R
 
-#endif
+#endif //OPTIMOTU_MULTIPLECLUSTERALGORITHM_H_INCLUDED
