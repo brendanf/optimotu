@@ -1,5 +1,6 @@
-#ifndef _AlignClusterWorker_
-#define _AlignClusterWorker_
+#ifndef OPTIMOTU_ALIGNCLUSTERWORKER_H_INCLUDED
+#define OPTIMOTU_ALIGNCLUSTERWORKER_H_INCLUDED
+
 #include <Rcpp.h>
 #include <RcppParallel.h>
 #include <RcppThread.h>
@@ -51,4 +52,4 @@ public :
   void operator()(std::size_t begin, std::size_t end);
 };
 
-#endif
+#endif //OPTIMOTU_ALIGNCLUSTERWORKER_H_INCLUDED

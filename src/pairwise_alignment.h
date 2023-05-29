@@ -1,5 +1,5 @@
-#ifndef _PAIRWISE_ALIGNMENT_
-#define _PAIRWISE_ALIGNMENT_
+#ifndef OPTIMOTU_PAIRWISE_ALIGNMENT_H_INCLUDED
+#define OPTIMOTU_PAIRWISE_ALIGNMENT_H_INCLUDED
 
 #include <vector>
 #include <string>
@@ -9,7 +9,7 @@
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
-#endif
+#endif //OPTIMOTU_R
 
 double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner);
 
@@ -45,4 +45,4 @@ double align(const std::string a, const std::string b,
              int match = 0, int mismatch = 1,
              int gap = 1, int extend = 0,
              int gap2 = 0, int extend2 = 0);
-#endif
+#endif //OPTIMOTU_PAIRWISE_ALIGNMENT_H_INCLUDED

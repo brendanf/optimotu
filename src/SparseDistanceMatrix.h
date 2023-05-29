@@ -1,5 +1,6 @@
-#ifndef _SparseDistanceMatrix_
-#define _SparseDistanceMatrix_
+#ifndef OPTIMOTU_SPARSEDISTANCEMATRIX_H_INCLUDED
+#define OPTIMOTU_SPARSEDISTANCEMATRIX_H_INCLUDED
+
 #include <vector>
 #include <mutex>
 
@@ -29,4 +30,4 @@ struct SparseDistanceMatrix {
       std::vector<double> &dist2new
   );
 };
-#endif
+#endif //OPTIMOTU_SPARSEDISTANCEMATRIX_H_INCLUDED
