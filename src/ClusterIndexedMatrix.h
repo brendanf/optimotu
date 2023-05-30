@@ -65,6 +65,9 @@ public:
 
   void write_to_matrix(internal_matrix_t &out) override;
 
+#ifdef OPTIMOTU_R
+  Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
+#endif
 };
 
 template<>

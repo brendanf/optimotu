@@ -251,6 +251,89 @@ void ClusterMatrix<BM, F, A>::write_to_matrix(internal_matrix_t &out) {
   std::copy(clust_array.begin(), clust_array.end(), out.begin());
 }
 
+#ifdef OPTIMOTU_R
 
+struct OrderElement {
+  OrderElement * next;
+  int i;
+};
 
+template<bool BM, int F, typename A>
+Rcpp::List ClusterMatrix<BM, F, A>::as_hclust(
+    const Rcpp::CharacterVector &seqnames
+) const {
+  // output objects
+  Rcpp::IntegerMatrix merge(this->n - 1, 2);
+  Rcpp::NumericVector height(this->n-1);
+  Rcpp::IntegerVector order(this->n);
 
+  // keep track of which cluster the active tips are in at each stage of clustering
+  std::vector<int> clust_id;
+  // ordering of later tips in the same cluster
+  std::vector<OrderElement> ordering;
+  // last element of each cluster (forward_list does not know this)
+  std::vector<OrderElement*> last;
+  clust_id.reserve(this->n);
+  ordering.reserve(this->n);
+  last.reserve(this->n);
+  // which tips are still "active"
+  std::array<std::deque<int>, 2> remaining;
+  // keep two versions
+  int this_remaining = 0, next_remaining = 1;
+  for (int i = 0; i < (int)n;) {
+    remaining[this_remaining].push_back(i);
+    ++i;
+    clust_id.push_back(-i);
+    ordering.push_back({NULL, i});
+    last.push_back(&ordering.back());
+  }
+  int last_clust = 0;
+  {
+    tbb::queuing_rw_mutex::scoped_lock lock{mutex, true};
+    for (int j = 0; j < this->m * this->n; j += this->n) {
+      double d = this->dconv.inverse(j);
+      for (int i : remaining[this_remaining]) {
+        int clust = this->ca[j+i];
+        if (clust == i) {
+          remaining[next_remaining].push_back(i);
+        } else {
+          merge(last_clust, 0) = clust_id[i];
+          merge(last_clust, 1) = clust_id[clust];
+          height[last_clust] = d;
+          last[clust]->next = &ordering[i];
+          last[clust] = last[i];
+          clust_id[clust] = ++last_clust;
+        }
+        remaining[this_remaining].pop_front();
+      }
+      next_remaining++;
+      next_remaining %= 2;
+      this_remaining++;
+      this_remaining %= 2;
+    }
+  }
+  int j = 0;
+  for (int i : remaining[this_remaining]) {
+    if (i > 0) {
+      merge(last_clust, 0) = i;
+      merge(last_clust, 1) = clust_id[0];
+      height[last_clust] = 1.0;
+      clust_id[0] = ++last_clust;
+    }
+    OrderElement * e = &ordering[i];
+    while (e != NULL) {
+      order[j] = e->i;
+      ++j;
+      e = e->next;
+    }
+  }
+  Rcpp::List out;
+  out["merge"] = merge;
+  out["height"] = height;
+  out["order"] = order;
+  out["labels"] = seqnames;
+  out["method"] = "single";
+  out.attr("class") = "hclust";
+  return out;
+}
+#endif

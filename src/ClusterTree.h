@@ -137,7 +137,7 @@ public:
 #ifdef OPTIMOTU_R
    void write_to_matrix(RcppParallel::RMatrix<int> &out) override;
 
-   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const;
+   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 #endif
 
    // send consumer() pairwise distances to ensure it is up-to-date with this

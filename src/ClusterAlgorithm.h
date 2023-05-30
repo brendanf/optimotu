@@ -95,6 +95,8 @@ public:
   };
 
 #ifdef OPTIMOTU_R
+  // convert the clustering results to an hclust object
+  virtual Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const =0;
 #endif
 
 };
