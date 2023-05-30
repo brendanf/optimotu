@@ -929,7 +929,8 @@ Rcpp::List distmx_cluster_mtree(
   RcppThread::ThreadPool::globalInstance().setNumThreads(threads);
   const auto namestrings = Rcpp::as<std::vector<std::string>>(seqnames);
   const auto pcstrings = Rcpp::as<std::vector<std::vector<std::string>>>(preclust);
-  MultipleClusterAlgorithm<ClusterTree> algo(dconv, namestrings, pcstrings);
+  ClusterTreeFactory factory(dconv);
+  MultipleClusterAlgorithm algo(factory, namestrings, pcstrings);
 
   std::ifstream infile(file);
   j_t seq1, seq2;

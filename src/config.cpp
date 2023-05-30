@@ -144,6 +144,21 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
   }
 }
 
+MultipleClusterAlgorithm create_multiple_cluster_algorithm(
+  Rcpp::List parallel_config,
+  ClusterAlgorithmFactory &factory,
+  Rcpp::CharacterVector seqnames,
+  Rcpp::ListOf<Rcpp::CharacterVector> subset_names
+) {
+  int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  return MultipleClusterAlgorithm(
+    factory,
+    Rcpp::as<std::vector<std::string>>(seqnames),
+    Rcpp::as<std::vector<std::vector<std::string>>>(subset_names),
+    threads
+  );
+}
+
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     Rcpp::List config,
     ClusterAlgorithm * algo,
