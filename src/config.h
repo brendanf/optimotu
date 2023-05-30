@@ -5,17 +5,14 @@
 
 #include <Rcpp.h>
 
-#include "ClusterTree.h"
-#include "ClusterMatrix.h"
-#include "ClusterIndexedMatrix.h"
+#include "ClusterAlgorithmFactory.h"
 
 #include "DistanceConverter.h"
 
 std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config);
-std::unique_ptr<ClusterAlgorithm> create_cluster_algorithm(
+std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     Rcpp::List config,
-    DistanceConverter * dconv,
-    Rcpp::IntegerMatrix &im
+    DistanceConverter * dconv
 );
 
 #endif //OPTIMOTU_R

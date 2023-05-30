@@ -121,10 +121,9 @@ std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config) 
   Rcpp::stop("invalid `threshold_config`: unknown method: " + method);
 }
 
-std::unique_ptr<ClusterAlgorithm> create_cluster_algorithm(
+std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     Rcpp::List config,
-    DistanceConverter * dconv,
-    Rcpp::IntegerMatrix &im
+    DistanceConverter * dconv
 ) {
   if (!config.inherits("optimotu_cluster_config")) {
     Rcpp::stop(
@@ -135,33 +134,11 @@ std::unique_ptr<ClusterAlgorithm> create_cluster_algorithm(
   if (method == "matrix") {
     bool do_binary_search = element_as_bool(config, "binary_search", "cluster_matrix");
     int fill_type = element_as_int(config, "fill_method", "cluster_matrix");
-    if (do_binary_search) {
-      switch (fill_type) {
-      case LINEAR_FILL:
-        return std::make_unique<ClusterMatrix<matrix_t, true, LINEAR_FILL>>(*dconv, im);
-      case BINARY_FILL:
-        return std::make_unique<ClusterMatrix<matrix_t, true, BINARY_FILL>>(*dconv, im);
-      case TOPDOWN_FILL:
-        return std::make_unique<ClusterMatrix<matrix_t, true, TOPDOWN_FILL>>(*dconv, im);
-      default:
-        Rcpp::stop("unknown fill type");
-      }
-    } else {
-      switch (fill_type) {
-      case LINEAR_FILL:
-        return std::make_unique<ClusterMatrix<matrix_t, false, LINEAR_FILL>>(*dconv, im);
-      case BINARY_FILL:
-        return std::make_unique<ClusterMatrix<matrix_t, false, BINARY_FILL>>(*dconv, im);
-      case TOPDOWN_FILL:
-        return std::make_unique<ClusterMatrix<matrix_t, false, TOPDOWN_FILL>>(*dconv, im);
-      default:
-        Rcpp::stop("unknown fill type");
-      }
-    }
+    return std::make_unique<ClusterMatrixFactory>(*dconv, do_binary_search, fill_type);
   } else if (method == "index") {
-    return std::make_unique<ClusterIndexedMatrix<matrix_t>>(*dconv, im);
+    return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
   } else if (method == "tree") {
-    return std::make_unique<ClusterTree>(*dconv, im.ncol(), im.nrow());
+    return std::make_unique<ClusterTreeFactory>(*dconv);
   } else {
     Rcpp::stop("unknown cluster method");
   }
