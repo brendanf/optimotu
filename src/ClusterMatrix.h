@@ -15,7 +15,7 @@
 template <bool BINARY_SEARCH=true, //alt would be linear
           int FILL=2,
           class ARRAY_T = std::vector<int>>
-struct ClusterMatrix : public ClusterAlgorithm {
+struct ClusterMatrix : public SingleClusterAlgorithm {
   template<bool, int, typename> friend class ClusterMatrix;
 private:
   ARRAY_T clust_array;
@@ -25,19 +25,21 @@ private:
 protected:
   void initialize();
 
-  ClusterMatrix(ClusterAlgorithm * parent) :
-  ClusterAlgorithm(parent), clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
+  ClusterMatrix(SingleClusterAlgorithm * parent) :
+    SingleClusterAlgorithm(parent),
+    clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
     initialize();
   };
 
 public:
   ClusterMatrix(const DistanceConverter &dconv, size_t n) :
-  ClusterAlgorithm(dconv, n), clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
+  SingleClusterAlgorithm(dconv, n),
+  clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
     initialize();
   };
 
   ClusterMatrix(const DistanceConverter &dconv, init_matrix_t im) :
-    ClusterAlgorithm(dconv, im),
+    SingleClusterAlgorithm(dconv, im),
     clust_array(im), ca(&clust_array[0]), toclust(m, 0) {
     initialize();
   };
@@ -50,7 +52,7 @@ public:
 
   void merge_into(ClusterAlgorithm &consumer) override final;
 
-  ClusterAlgorithm * make_child() override;
+  SingleClusterAlgorithm * make_child() override;
 
   double max_relevant(j_t seq1, j_t seq2) const override;
 

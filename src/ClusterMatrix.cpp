@@ -193,7 +193,7 @@ void ClusterMatrix<BM, F, A>::merge_into(ClusterAlgorithm &consumer) {
 }
 
 template<bool BM, int F, typename A>
-ClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
+SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   if (own_child) {

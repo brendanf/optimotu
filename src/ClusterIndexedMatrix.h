@@ -11,7 +11,7 @@
 // Matrix representation of a hierarchical clustering of n items at m different
 // thresholds.
 template <class ARRAY_T = std::vector<int>>
-struct ClusterIndexedMatrix : public ClusterAlgorithm {
+struct ClusterIndexedMatrix : public SingleClusterAlgorithm {
   template<typename> friend class ClusterIndexedMatrix;
 
 private:
@@ -32,7 +32,7 @@ protected:
 
   void initialize();
 
-  ClusterIndexedMatrix(ClusterAlgorithm * parent);
+  ClusterIndexedMatrix(SingleClusterAlgorithm * parent);
 
 public:
   ClusterIndexedMatrix(const DistanceConverter &dconv, size_t n);
@@ -59,7 +59,7 @@ public:
 
   void merge_into(ClusterAlgorithm &consumer) override;
 
-  ClusterAlgorithm * make_child() override;
+  SingleClusterAlgorithm * make_child() override;
 
   double max_relevant(j_t seq1, j_t seq2) const override;
 
@@ -85,7 +85,7 @@ cim_internal::ClusterIndexedMatrix(
 
 template<>
 cim_internal::ClusterIndexedMatrix(
-    ClusterAlgorithm * parent
+    SingleClusterAlgorithm * parent
 ) = delete;
 
 template class cim_internal;

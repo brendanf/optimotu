@@ -43,7 +43,6 @@ public:
 class ClusterAlgorithm : public DistanceConsumer {
 protected:
   const DistanceConverter &dconv;
-  const j_t n;
   const d_t m;
   mutable tbb::queuing_rw_mutex mutex;
   ClusterAlgorithm * const parent = nullptr;
@@ -52,13 +51,13 @@ protected:
 
   // constructor for child objects
   ClusterAlgorithm(ClusterAlgorithm * parent) :
-    dconv(parent->dconv), n(parent->n), m(parent->m), parent(parent) {};
+    dconv(parent->dconv), m(parent->m), parent(parent) {};
 public:
   using DistanceConsumer::operator();
 
   // construct a ClusterAlgorithm with the given DistanceConverter
-  ClusterAlgorithm(const DistanceConverter &dconv, j_t n) :
-  dconv(dconv), n(n), m(dconv.m) {};
+  ClusterAlgorithm(const DistanceConverter &dconv) :
+  dconv(dconv),  m(dconv.m) {};
 
   // move constructor
   // ClusterAlgorithm(ClusterAlgorithm&& c) : dconv(c.dconv), m(c.m),
@@ -96,9 +95,40 @@ public:
   };
 
 #ifdef OPTIMOTU_R
-  virtual void write_to_matrix(RcppParallel::RMatrix<int> &out)=0;
 #endif
 
+};
+
+class SingleClusterAlgorithm : public ClusterAlgorithm {
+protected:
+  const j_t n;
+
+  // constructor for child objects
+  SingleClusterAlgorithm(SingleClusterAlgorithm * parent) :
+    ClusterAlgorithm(parent), n(parent->n) {};
+
+  // construct a SingleClusterAlgorithm with the given DistanceConverter, to cluster
+  // n objects at m thresholds.
+  SingleClusterAlgorithm(const DistanceConverter &dconv, const j_t n) :
+    ClusterAlgorithm(dconv), n(n) {};
+
+  // construct a SingleClusterAlgorithm with the given DistanceConverter, to cluster
+  // at m thresholds, with the number of objects determined by the size of im.
+  // Optionally im can also be used as internal storage
+  SingleClusterAlgorithm(const DistanceConverter &dconv, init_matrix_t im) :
+    ClusterAlgorithm(dconv), n(im.size() / dconv.m) {};
+
+  // move constructor
+  // SingleClusterAlgorithm(SingleClusterAlgorithm&& c) : ClusterAlgorithm(c), n(c.n) {};
+
+public:
+
+  // write results to the provided clustering matrix
+  virtual void write_to_matrix(internal_matrix_t &out)=0;
+
+  // create a copy of this algorithm, which will merge its results into this one
+  // when it is finished
+  virtual SingleClusterAlgorithm * make_child() = 0;
 };
 
 #endif //OPTIMOTU_CLUSTERALGORITHM_H_INCLUDED

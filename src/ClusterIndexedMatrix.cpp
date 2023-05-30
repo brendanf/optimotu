@@ -29,7 +29,7 @@ void ClusterIndexedMatrix<A>::initialize() {
 
 template <>
 ClusterIndexedMatrix<>::ClusterIndexedMatrix(SingleClusterAlgorithm * parent) :
-  ClusterAlgorithm(parent), clust_array(m*n), ca(&clust_array[0]) {
+  SingleClusterAlgorithm(parent), clust_array(m*n), ca(&clust_array[0]) {
   initialize();
 }
 
@@ -37,7 +37,7 @@ template<class A>
 ClusterIndexedMatrix<A>::ClusterIndexedMatrix(
     const DistanceConverter &dconv,
     size_t n
-) : ClusterAlgorithm(dconv, n),
+) : SingleClusterAlgorithm(dconv, n),
 clust_array(dconv.m*n),
 ca(&clust_array[0])
 {
@@ -48,7 +48,7 @@ template<class A>
 ClusterIndexedMatrix<A>::ClusterIndexedMatrix(
   const DistanceConverter &dconv,
   init_matrix_t &im
-) : ClusterAlgorithm(dconv, im), clust_array(im), ca(&clust_array[0]) {
+) : SingleClusterAlgorithm(dconv, im), clust_array(im), ca(&clust_array[0]) {
   initialize();
 }
 
@@ -453,7 +453,7 @@ void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) {
 }
 
 template <class A>
-ClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
+SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   if (own_child) {
     auto child_ptr = new ClusterIndexedMatrix<>(this);
@@ -461,7 +461,7 @@ ClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
       (ClusterAlgorithm*)child_ptr
     );
     this->children.push_back(std::move(child));
-    return (ClusterAlgorithm *)child_ptr;
+    return (SingleClusterAlgorithm *)child_ptr;
   }
   this->own_child = true;
   return this;

@@ -14,7 +14,7 @@
 // #define SINGLE_LINK_TEST
 
 
-class ClusterTree : public ClusterAlgorithm {
+class ClusterTree : public SingleClusterAlgorithm {
 protected:
 
   struct cluster {
@@ -95,7 +95,7 @@ protected:
   void assign_ids();
 
   ClusterTree(SingleClusterAlgorithm * parent) :
-    ClusterAlgorithm(parent),
+    SingleClusterAlgorithm(parent),
     pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
     tip0(pool0), tipend(tip0 + n),
     node0(tipend), nodeend(node0+n) {
@@ -103,7 +103,7 @@ protected:
   };
 public:
    ClusterTree(const DistanceConverter &dconv, const j_t n):
-     ClusterAlgorithm(dconv, n),
+     SingleClusterAlgorithm(dconv, n),
      pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
      tip0(pool0), tipend(tip0 + n),
      node0(tipend), nodeend(node0+n) {
@@ -111,14 +111,14 @@ public:
    };
 
   ClusterTree(const DistanceConverter &dconv, init_matrix_t im):
-    ClusterAlgorithm(dconv, im),
+    SingleClusterAlgorithm(dconv, im),
     pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
     tip0(pool0), tipend(tip0 + n),
     node0(tipend), nodeend(node0+n) {
     initialize();
   };
 
-  ClusterTree(ClusterTree&& c) : ClusterAlgorithm(std::move(c)),
+  ClusterTree(ClusterTree&& c) : SingleClusterAlgorithm(std::move(c)),
   freeclusters(std::move(c.freeclusters)),
   pool(std::move(c.pool)),
   pool0(pool.data()), poolend(pool0 + 2*n),
