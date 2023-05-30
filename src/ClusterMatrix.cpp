@@ -1,7 +1,8 @@
 #include "ClusterMatrix.h"
 
-template<typename A, bool BM, int F>
-void ClusterMatrix<A, BM, F>::initialize() {
+
+template<bool BM, int F, typename A>
+void ClusterMatrix<BM, F, A>::initialize() {
   auto ca = clust_array.begin();
   for (j_t j = 0; j < n; j++) {
     for (d_t i = 0; i < m; i++) {
@@ -11,8 +12,8 @@ void ClusterMatrix<A, BM, F>::initialize() {
   }
 }
 
-template<typename A, bool BM, int F>
-void ClusterMatrix<A, BM, F>::operator()(j_t seq1, j_t seq2, d_t i) {
+template<bool BM, int F, typename A>
+void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i) {
   if (i >= m) return;
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
@@ -164,8 +165,8 @@ void ClusterMatrix<A, BM, F>::operator()(j_t seq1, j_t seq2, d_t i) {
   );
 }
 
-template<typename A, bool BM, int F>
-void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) {
+template<bool BM, int F, typename A>
+void ClusterMatrix<BM, F, A>::merge_into(DistanceConsumer &consumer) {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (size_t j = 1; j < n; ++j) {
     j_t i = j*m;
@@ -177,8 +178,8 @@ void ClusterMatrix<A, BM, F>::merge_into(DistanceConsumer &consumer) {
   }
 }
 
-template<typename A, bool BM, int F>
-void ClusterMatrix<A, BM, F>::merge_into(ClusterAlgorithm &consumer) {
+template<bool BM, int F, typename A>
+void ClusterMatrix<BM, F, A>::merge_into(ClusterAlgorithm &consumer) {
   // TODO check that the distance converters are really compatible
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (j_t j = 1; j < n; ++j) {
@@ -191,8 +192,8 @@ void ClusterMatrix<A, BM, F>::merge_into(ClusterAlgorithm &consumer) {
   }
 }
 
-template<typename A, bool BM, int F>
-ClusterAlgorithm * ClusterMatrix<A, BM, F>::make_child() {
+template<bool BM, int F, typename A>
+ClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   if (own_child) {
@@ -204,8 +205,8 @@ ClusterAlgorithm * ClusterMatrix<A, BM, F>::make_child() {
   return this;
 }
 
-template<typename A, bool BM, int F>
-double ClusterMatrix<A, BM, F>::max_relevant(j_t seq1, j_t seq2) const {
+template<bool BM, int F, typename A>
+double ClusterMatrix<BM, F, A>::max_relevant(j_t seq1, j_t seq2) const {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   if (seq1 == seq2) return 0.0;
   j_t j1 = seq1*m, j2 = seq2*m;
@@ -239,58 +240,14 @@ double ClusterMatrix<A, BM, F>::max_relevant(j_t seq1, j_t seq2) const {
   }
 }
 
-#ifdef OPTIMOTU_R
-template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
-) :
-  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
-  toclust(m, 0) {
-  initialize();
+template<bool BM, int F, typename A>
+void ClusterMatrix<BM, F, A>::write_to_matrix(internal_matrix_t &out) {
+  // shortcut if this is already our data matrix
+  if (intptr_t(&out[0]) == intptr_t(&clust_array[0])) return;
+  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::copy(clust_array.begin(), clust_array.end(), out.begin());
 }
 
-template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
-) :
-  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
-  toclust(m, 0) {
-  initialize();
-}
 
-template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
-) :
-  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
-  toclust(m, 0) {
-  initialize();
-}
 
-template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
-) :
-  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
-  toclust(m, 0) {
-  initialize();
-}
 
-template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
-) :
-  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
-  toclust(m, 0) {
-  initialize();
-}
-
-template<>
-ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
-) :
-  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
-  toclust(m, 0) {
-  initialize();
-}
-#endif

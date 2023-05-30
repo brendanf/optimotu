@@ -121,8 +121,6 @@ std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config) 
   Rcpp::stop("invalid `threshold_config`: unknown method: " + method);
 }
 
-typedef RcppParallel::RMatrix<int> matrix_t;
-
 std::unique_ptr<ClusterAlgorithm> create_cluster_algorithm(
     Rcpp::List config,
     DistanceConverter * dconv,

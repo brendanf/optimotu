@@ -25,11 +25,30 @@ void ClusterIndexedMatrix<A>::initialize() {
   }
   index[0].prev = nullptr; // fix from above
   index[n-1].next = nullptr; // fix from above
-};
+}
 
-template <class A>
-ClusterIndexedMatrix<A>::ClusterIndexedMatrix(ClusterAlgorithm * parent) :
+template <>
+ClusterIndexedMatrix<>::ClusterIndexedMatrix(SingleClusterAlgorithm * parent) :
   ClusterAlgorithm(parent), clust_array(m*n), ca(&clust_array[0]) {
+  initialize();
+}
+
+template<class A>
+ClusterIndexedMatrix<A>::ClusterIndexedMatrix(
+    const DistanceConverter &dconv,
+    size_t n
+) : ClusterAlgorithm(dconv, n),
+clust_array(dconv.m*n),
+ca(&clust_array[0])
+{
+  initialize();
+}
+
+template<class A>
+ClusterIndexedMatrix<A>::ClusterIndexedMatrix(
+  const DistanceConverter &dconv,
+  init_matrix_t &im
+) : ClusterAlgorithm(dconv, im), clust_array(im), ca(&clust_array[0]) {
   initialize();
 }
 
@@ -437,7 +456,7 @@ template <class A>
 ClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   if (own_child) {
-    ClusterAlgorithm * child = new ClusterIndexedMatrix<std::vector<int>>(this);
+    ClusterAlgorithm * child = new ClusterIndexedMatrix<>(this);
     this->children.insert(child);
     return child;
   }
@@ -465,18 +484,11 @@ double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2) const {
   return dconv.inverse(c1 - ca - j1 - 1);
 }
 
-#ifdef OPTIMOTU_R
 template <class A>
-void ClusterIndexedMatrix<A>::write_to_matrix(RcppParallel::RMatrix<int> &out) {
+void ClusterIndexedMatrix<A>::write_to_matrix(internal_matrix_t &out) {
+  if (intptr_t(&out[0]) == intptr_t(&clust_array[0])) return;
   std::copy(clust_array.begin(), clust_array.end(), out.begin());
 }
 
-template<>
-ClusterIndexedMatrix<RcppParallel::RMatrix<int>>::ClusterIndexedMatrix(
-    const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
-) :
-  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0])
-{
-  initialize();
 };
 #endif

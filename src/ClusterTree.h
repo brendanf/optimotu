@@ -109,6 +109,11 @@ public:
     c.my_pool = nullptr;
   };
 
+  ClusterTree(const DistanceConverter &dconv, init_matrix_t im):
+    ClusterAlgorithm(dconv, im) {
+    initialize();
+  };
+
   ClusterTree * make_child() override;
 
    ~ClusterTree() {

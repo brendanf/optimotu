@@ -96,12 +96,12 @@ public:
     }
   };
 
-#ifdef OPTIMOTU_R
-  void write_to_matrix(std::vector<RcppParallel::RMatrix<int>> &matrix_list) {
+  void write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {
     for (size_t i = 0; i < this->subsets.size(); i++) {
       this->subsets[i].template write_to_matrix(matrix_list[i]);
     }
   }
+#ifdef OPTIMOTU_R
   Rcpp::List as_hclust() = delete;
 #endif //OPTIMOTU_R
 };

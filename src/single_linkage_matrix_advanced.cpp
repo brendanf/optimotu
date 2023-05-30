@@ -6,8 +6,6 @@
 #include "ClusterMatrix.h"
 #include "ClusterIndexedMatrix.h"
 
-typedef RcppParallel::RMatrix<int> matrix_t;
-
 std::unique_ptr<ClusterAlgorithm> create_clustermatrix(
     const DistanceConverter &dconv,
     Rcpp::IntegerMatrix im,
@@ -17,22 +15,22 @@ std::unique_ptr<ClusterAlgorithm> create_clustermatrix(
   if (do_binary_search) {
     switch (fill_type) {
     case LINEAR_FILL:
-      return std::make_unique<ClusterMatrix<matrix_t, true, LINEAR_FILL>>(dconv, im);
+      return std::make_unique<ClusterMatrix<true, LINEAR_FILL, internal_matrix_t>>(dconv, im);
     case BINARY_FILL:
-      return std::make_unique<ClusterMatrix<matrix_t, true, BINARY_FILL>>(dconv, im);
+      return std::make_unique<ClusterMatrix<true, BINARY_FILL, internal_matrix_t>>(dconv, im);
     case TOPDOWN_FILL:
-      return std::make_unique<ClusterMatrix<matrix_t, true, TOPDOWN_FILL>>(dconv, im);
+      return std::make_unique<ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_t>>(dconv, im);
     default:
       Rcpp::stop("unknown fill type");
     }
   } else {
     switch (fill_type) {
     case LINEAR_FILL:
-      return std::make_unique<ClusterMatrix<matrix_t, false, LINEAR_FILL>>(dconv, im);
+      return std::make_unique<ClusterMatrix<false, LINEAR_FILL, internal_matrix_t>>(dconv, im);
     case BINARY_FILL:
-      return std::make_unique<ClusterMatrix<matrix_t, false, BINARY_FILL>>(dconv, im);
+      return std::make_unique<ClusterMatrix<false, BINARY_FILL, internal_matrix_t>>(dconv, im);
     case TOPDOWN_FILL:
-      return std::make_unique<ClusterMatrix<matrix_t, false, TOPDOWN_FILL>>(dconv, im);
+      return std::make_unique<ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_t>>(dconv, im);
     default:
       Rcpp::stop("unknown fill type");
     }
@@ -173,7 +171,7 @@ Rcpp::IntegerMatrix distmx_cluster_imatrix(
     const int m
 ) {
   Rcpp::IntegerMatrix im(m, seqnames.size());
-  ClusterIndexedMatrix<RcppParallel::RMatrix<int>> cm(dconv, im);
+  ClusterIndexedMatrix<internal_matrix_t> cm(dconv, im);
   std::ifstream infile(file);
   std::size_t seq1, seq2;
   double dist;

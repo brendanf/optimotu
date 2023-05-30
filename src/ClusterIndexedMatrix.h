@@ -35,20 +35,9 @@ protected:
   ClusterIndexedMatrix(ClusterAlgorithm * parent);
 
 public:
-  ClusterIndexedMatrix(
-    const DistanceConverter &dconv,
-    size_t n,
-    uint8_t do_binary_search = 3
-  ) : ClusterAlgorithm(dconv, n),
-  clust_array(m*n),
-  ca(&clust_array[0])
-  {
-    initialize();
-  };
+  ClusterIndexedMatrix(const DistanceConverter &dconv, size_t n);
 
-#ifdef OPTIMOTU_R
-  ClusterIndexedMatrix(const DistanceConverter &dconv, Rcpp::IntegerMatrix &source) = delete;
-#endif
+  ClusterIndexedMatrix(const DistanceConverter &dconv, init_matrix_t &im);
 
   ~ClusterIndexedMatrix();
 
@@ -74,33 +63,33 @@ public:
 
   double max_relevant(j_t seq1, j_t seq2) const override;
 
-#ifdef OPTIMOTU_R
-  void write_to_matrix(RcppParallel::RMatrix<int> &out) override;
-#endif
+  void write_to_matrix(internal_matrix_t &out) override;
+
 };
+
+template<>
+ClusterIndexedMatrix<>::ClusterIndexedMatrix(
+  const DistanceConverter &dconv,
+  init_matrix_t &im
+) = delete;
 
 template class ClusterIndexedMatrix<>;
 
-#ifdef OPTIMOTU_R
+#define cim_internal ClusterIndexedMatrix<internal_matrix_t>
 
 template<>
-ClusterIndexedMatrix<RcppParallel::RMatrix<int>>::ClusterIndexedMatrix(
+cim_internal::ClusterIndexedMatrix(
     const DistanceConverter &dconv,
-    size_t n,
-    uint8_t do_binary_search) = delete;
+    size_t n
+    ) = delete;
 
 template<>
-ClusterIndexedMatrix<RcppParallel::RMatrix<int>>::ClusterIndexedMatrix(
+cim_internal::ClusterIndexedMatrix(
     ClusterAlgorithm * parent
 ) = delete;
 
-template<>
-ClusterIndexedMatrix<RcppParallel::RMatrix<int>>::ClusterIndexedMatrix(
-  const DistanceConverter &dconv,
-  Rcpp::IntegerMatrix &im
-);
+template class cim_internal;
 
-template class ClusterIndexedMatrix<RcppParallel::RMatrix<int>>;
-#endif
+#undef cim_internal
 
 #endif //OPTIMOTU_CLUSTERINDEXEDMATRIX_H_INCLUDED

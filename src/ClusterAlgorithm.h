@@ -14,6 +14,11 @@
 #include <Rcpp.h>
 // [[Rcpp::depends(RcppParallel)]]
 #include <RcppParallel.h>
+using internal_matrix_t = RcppParallel::RMatrix<int>;
+using init_matrix_t = Rcpp::IntegerMatrix;
+#else
+using internal_matrix_t = std::vector<int>&;
+using init_matrix_t = std::vector<int>&;
 #endif
 
 struct DistanceElement{
