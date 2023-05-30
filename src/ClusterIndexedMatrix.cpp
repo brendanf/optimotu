@@ -456,9 +456,12 @@ template <class A>
 ClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   if (own_child) {
-    ClusterAlgorithm * child = new ClusterIndexedMatrix<>(this);
-    this->children.insert(child);
-    return child;
+    auto child_ptr = new ClusterIndexedMatrix<>(this);
+    auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm*)child_ptr
+    );
+    this->children.push_back(std::move(child));
+    return (ClusterAlgorithm *)child_ptr;
   }
   this->own_child = true;
   return this;

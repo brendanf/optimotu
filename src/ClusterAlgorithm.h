@@ -48,27 +48,21 @@ protected:
   mutable tbb::queuing_rw_mutex mutex;
   ClusterAlgorithm * const parent = nullptr;
   bool own_child = false;
-  std::set<ClusterAlgorithm *> children;
+  std::deque<std::unique_ptr<ClusterAlgorithm>> children;
 
+  // constructor for child objects
   ClusterAlgorithm(ClusterAlgorithm * parent) :
     dconv(parent->dconv), n(parent->n), m(parent->m), parent(parent) {};
 public:
   using DistanceConsumer::operator();
 
-  ClusterAlgorithm(ClusterAlgorithm&& c) : dconv(c.dconv), n(c.n), m(c.m),
-  parent(c.parent), own_child(c.own_child), children(std::move(c.children)){
-    c.children.clear();
-  };
-
   // construct a ClusterAlgorithm with the given DistanceConverter
   ClusterAlgorithm(const DistanceConverter &dconv, j_t n) :
   dconv(dconv), n(n), m(dconv.m) {};
 
-  virtual ~ClusterAlgorithm() {
-    for (auto c : children) {
-      delete c;
-    }
-  };
+  // move constructor
+  // ClusterAlgorithm(ClusterAlgorithm&& c) : dconv(c.dconv), m(c.m),
+  // parent(c.parent), own_child(c.own_child), children(std::move(c.children)) {};
 
   // send consumer() pairwise distances to ensure it is up-to-date with this
   // clustering
@@ -83,6 +77,8 @@ public:
     if (parent && !own_child) this->merge_into(*parent);
   }
 
+  // create a copy of this algorithm, which will merge its results into this one
+  // when it is finished
   virtual ClusterAlgorithm * make_child() = 0;
 
   // calculate the maximum distance between seq1 and seq2 which would actually

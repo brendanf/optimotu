@@ -703,9 +703,12 @@ ClusterTree * ClusterTree::make_child() {
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   if (own_child) {
-    ClusterTree * child = new ClusterTree(this);
-    this->children.insert(child);
-    return child;
+    auto child_ptr = new ClusterTree(this);
+    auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm*)child_ptr
+    );
+    this->children.push_back(std::move(child));
+    return child_ptr;
   }
   this->own_child = true;
   return this;
