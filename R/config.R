@@ -36,7 +36,7 @@
 #' @return an object describing the clustering algorithm, to pass to
 #' `distmx_cluster()` or `seq_cluster()`
 #' @export
-clust_config<- function(method = c("tree", "matrix", "index"), ...) {
+clust_config <- function(method = c("tree", "matrix", "index"), ...) {
   method = match.arg(method)
   switch(
     method,
@@ -50,7 +50,10 @@ clust_config<- function(method = c("tree", "matrix", "index"), ...) {
 #' @export
 #' @describeIn clust_config helper function for method `"tree"`
 clust_tree <- function() {
-  list(method = "tree")
+  structure(
+    list(method = "tree"),
+    class = "optimotu_cluster_config"
+  )
 }
 
 #' @param binary_search (`logical` flag) if `TRUE`, use binary search instead
@@ -71,17 +74,23 @@ clust_matrix <- function(
     fill_method = c("binary", "linear", "topdown")
 ) {
   fill_method = match.arg(fill_method)
-  list(
-    method = "matrix",
-    binary_search = binary_search,
-    fill_method = switch(fill_method(linear = 1L, binary = 2L, topdown = 2L))
+  structure(
+    list(
+      method = "matrix",
+      binary_search = binary_search,
+      fill_method = switch(fill_method(linear = 1L, binary = 2L, topdown = 2L))
+    ),
+    class = "optimotu_cluster_config"
   )
 }
 
 #' @export
 #' @describeIn clust_config helper function for method `"index"`
 clust_index <- function() {
-  list(method = "index")
+  structure(
+    list(method = "index"),
+    class = "optimotu_cluster_config"
+  )
 }
 
 #' Configuration for threshold representations
@@ -108,7 +117,10 @@ threshold_config <- function(type = c("uniform", "set", "lookup"), ...) {
 #' @describeIn threshold_config helper function for type `"uniform"`
 threshold_uniform <- function(from, to, by) {
   verify_threshold_steps(from, to, by)
-  list(type = "uniform", from = from, to = to, by = by)
+  structure(
+    list(type = "uniform", from = from, to = to, by = by),
+    class = "optimotu_threshold_config"
+  )
 }
 
 gcd <- function(a, b) {
@@ -126,7 +138,7 @@ gcd <- function(a, b) {
 #' @describeIn threshold_config helper function for method `"set"`
 threshold_set <- function(thresholds) {
   verify_thresholds(thresholds)
-  if (length(thresholds) == 1) {
+  out <- if (length(thresholds) == 1) {
     list(
       type = "uniform",
       from = thresholds[1],
@@ -149,6 +161,7 @@ threshold_set <- function(thresholds) {
       list(type = "lookup", thresholds = thresholds, precision = g)
     }
   }
+  structure(out, class = "optimotu_threshold_config")
 }
 
 #' @param precision (`numeric` scalar) precision for distances; this is used to
@@ -158,5 +171,8 @@ threshold_set <- function(thresholds) {
 threshold_cached <- function(thresholds, precision) {
   verify_thresholds(thresholds)
   verify_precision(precision)
-  list(type = "lookup", thresholds = thresholds, precision = precision)
+  structure(
+    list(type = "lookup", thresholds = thresholds, precision = precision),
+    class = "optimotu_threshold_config"
+  )
 }
