@@ -176,3 +176,92 @@ threshold_cached <- function(thresholds, precision) {
     class = "optimotu_threshold_config"
   )
 }
+
+#' Configuration for parallelization options
+#'
+#' @details
+#'
+#' # Merge method
+#'
+#' In the merge method, each thread works on an independent clustering of the
+#' data, based on its own (disjoint) subset of the distance matrix. When each
+#' thread finishes clustering, it merges its results into the master clustering.
+#' This avoids concurrency collisions between the threads during the main
+#' clustering, although collisions occur if multiple threads are trying to
+#' merge at the same time.
+#'
+#' # Concurrent method
+#'
+#' In the concurrent method, all threads work jointly on the same clustering of
+#' the data. Although many threads can simultaneously read the clustering to
+#' determine whether a new pairwise distance will lead to an update (most do
+#' not), only one thread can update the clustering at a time, so this method
+#' can lead to more concurrency collisions when many threads are in use.
+#' However, sharing the state of the clustering between threads leads to fewer
+#' total updates than the merge method.
+#'
+#' # Hierarchical method
+#'
+#' The hierarchical method is a combination of several "shards", each of which
+#' in turn has multiple threads. Each shard has one clustering object, which the
+#' threads within the shard update concurrently. When all threads in the shard
+#' have finished, then the results from the shard are merged into the master
+#' clustering. This is probably the most efficient method when there are very
+#' many threads, but the optimal number of shards varies between data sets.
+#'
+#' @param method (`character` string) parallelization method.
+#' @param threads (positive `integer` scalar) total number of threads to use
+#' @param ... passed on to variants
+#'
+#' @return an object representing the thresholds
+#' @export
+parallel_config <- function(method = c("merge", "concurrent", "hierarchical"), ...) {
+  method = match.arg(method)
+  switch(
+    method,
+    merge = parallel_merge(...),
+    concurrent = parallel_concurrent(...),
+    hierarchical = parallel_hierarchical(...)
+  )
+}
+
+
+#' @export
+#' @describeIn parallel_config helper function for method `"merge"`
+parallel_merge <- function(threads) {
+  checkmate::assert_integerish(threads, lower = 1L)
+  structure(
+    list(method = "merge", threads = as.integer(threads)),
+    class = "optimotu_parallel_config"
+  )
+}
+
+
+#' @export
+#' @describeIn parallel_config helper function for method `"concurrent"`
+parallel_concurrent <- function(threads) {
+  checkmate::assert_integerish(threads, lower = 1L)
+  structure(
+    list(method = "concurrent", threads = as.integer(threads)),
+    class = "optimotu_parallel_config"
+  )
+}
+
+#' @param shards (positive `integer` scalar) number of independent working
+#' units for clustering. Must be less than or equal to `threads` (and in order
+#' for the result to actually be hierarchical, should be at least 2 and at most
+#' `threads`/2)
+#' @export
+#' @describeIn parallel_config helper function for method `"hierarchical"`
+parallel_hierarchical <- function(threads, shards) {
+  checkmate::assert_integerish(threads, lower = 1L)
+  checkmate::assert_integerish(shards, lower = 1L, upper = threads)
+  structure(
+    list(
+      method = "hierarchical",
+      threads = as.integer(threads),
+      shards = as.integer(shards)
+    ),
+    class = "optimotu_parallel_config"
+  )
+}

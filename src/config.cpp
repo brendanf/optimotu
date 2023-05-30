@@ -143,3 +143,27 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     Rcpp::stop("unknown cluster method");
   }
 }
+
+std::unique_ptr<ClusterWorker> create_cluster_worker(
+    Rcpp::List config,
+    ClusterAlgorithm * algo,
+    std::istream &file
+) {
+  if (!config.inherits("optimotu_parallel_config")) {
+    Rcpp::stop(
+      "'parallel_config' must be of class 'optimotu_parallel_config'"
+    );
+  }
+  std::string method = element_as_string(config, "method", "parallel_config");
+  int threads = element_as_int(config, "threads", "parallel_config");
+  if (method == "merge") {
+    return std::make_unique<MergeClusterWorker>(algo, file, threads);
+  } else if (method == "concurrent") {
+    return std::make_unique<ConcurrentClusterWorker>(algo, file, threads);
+  } else if (method == "hierarchical") {
+    int shards = element_as_int(config, "shards", "parallel_config");
+    return std::make_unique<HierarchicalClusterWorker>(algo, file, threads, shards);
+  } else {
+    Rcpp::stop("unknown parallelization method");
+  }
+}
