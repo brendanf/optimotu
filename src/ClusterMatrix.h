@@ -31,8 +31,8 @@ protected:
   };
 
 public:
-  ClusterMatrix(const DistanceConverter &dconv, size_t n, int m) :
-  ClusterAlgorithm(dconv, n, m), clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
+  ClusterMatrix(const DistanceConverter &dconv, size_t n) :
+  ClusterAlgorithm(dconv, n), clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
     initialize();
   };
 
@@ -70,7 +70,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, size_t n, int m) = delete;
+    const DistanceConverter &dconv, size_t n) = delete;
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
@@ -81,7 +81,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, size_t n, int m) = delete;
+    const DistanceConverter &dconv, size_t n) = delete;
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
@@ -92,7 +92,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, size_t n, int m) = delete;
+    const DistanceConverter &dconv, size_t n) = delete;
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
@@ -103,7 +103,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, size_t n, int m) = delete;
+    const DistanceConverter &dconv, size_t n) = delete;
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
@@ -114,7 +114,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, size_t n, int m) = delete;
+    const DistanceConverter &dconv, size_t n) = delete;
 
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
@@ -125,7 +125,7 @@ ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
     ClusterAlgorithm * parent) = delete;
 template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
-    const DistanceConverter &dconv, size_t n, int m) = delete;
+    const DistanceConverter &dconv, size_t n) = delete;
 
 template class ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>;
 template class ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>;

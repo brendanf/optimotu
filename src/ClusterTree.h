@@ -98,8 +98,8 @@ protected:
     initialize();
   };
 public:
-   ClusterTree(const DistanceConverter &dconv, const j_t n, const d_t m):
-     ClusterAlgorithm(dconv, n, m) {
+   ClusterTree(const DistanceConverter &dconv, const j_t n):
+     ClusterAlgorithm(dconv, n) {
      initialize();
    };
 

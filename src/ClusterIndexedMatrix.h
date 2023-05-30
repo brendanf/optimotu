@@ -38,9 +38,8 @@ public:
   ClusterIndexedMatrix(
     const DistanceConverter &dconv,
     size_t n,
-    int m,
     uint8_t do_binary_search = 3
-  ) : ClusterAlgorithm(dconv, n, m),
+  ) : ClusterAlgorithm(dconv, n),
   clust_array(m*n),
   ca(&clust_array[0])
   {
@@ -88,7 +87,6 @@ template<>
 ClusterIndexedMatrix<RcppParallel::RMatrix<int>>::ClusterIndexedMatrix(
     const DistanceConverter &dconv,
     size_t n,
-    int m,
     uint8_t do_binary_search) = delete;
 
 template<>

@@ -125,8 +125,8 @@ Rcpp::IntegerMatrix distmx_cluster_matrix2_uniform(
       const bool do_binary_search = true,
       const int fill_method = 2
 ) {
-   const UniformDistanceConverter dconv(dmin, dstep);
-   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
+   const UniformDistanceConverter dconv(dmin, dmax, dstep);
+   const int m = (int) ceil((dmax - dmin)/dstep) + 1;
    return distmx_cluster_matrix2(file, seqnames, dconv, m, threads,
                                  do_binary_search, fill_method);
 }
@@ -193,7 +193,7 @@ Rcpp::IntegerMatrix distmx_cluster_imatrix_uniform(
     const float dmax,
     const float dstep
 ) {
-  const UniformDistanceConverter dconv(dmin, dstep);
+  const UniformDistanceConverter dconv(dmin, dmax, dstep);
   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
   return distmx_cluster_imatrix(file, seqnames, dconv, m);
 }

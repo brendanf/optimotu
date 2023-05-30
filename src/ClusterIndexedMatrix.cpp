@@ -463,7 +463,7 @@ double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2) const {
   }
   // maybe try binary search?
   return dconv.inverse(c1 - ca - j1 - 1);
-};
+}
 
 #ifdef OPTIMOTU_R
 template <class A>
@@ -475,7 +475,7 @@ template<>
 ClusterIndexedMatrix<RcppParallel::RMatrix<int>>::ClusterIndexedMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
-  ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0])
+  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0])
 {
   initialize();
 };

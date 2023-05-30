@@ -7,8 +7,12 @@
 class DistanceConverter
 {
 public:
-   virtual d_t convert(double dist) const = 0;
-   virtual double inverse(d_t d) const = 0;
+  const d_t m;
+  const double dmax;
+  DistanceConverter(const d_t m, const double dmax) : m(m), dmax(dmax) {};
+
+  virtual d_t convert(double dist) const = 0;
+  virtual double inverse(d_t d) const = 0;
 };
 
 class UniformDistanceConverter : public DistanceConverter
@@ -18,14 +22,13 @@ protected:
 public:
    d_t convert(double dist) const override;
    double inverse(d_t d) const override;
-   UniformDistanceConverter(const double dmin, const double dstep);
+   UniformDistanceConverter(const double dmin, const double dmax, const double dstep);
 };
 
 class ArrayDistanceConverter : public DistanceConverter
 {
 protected:
    const std::vector<double> thresholds;
-   const double max_threshold;
 public:
    d_t convert(double dist) const override;
    double inverse(d_t d) const override;

@@ -960,7 +960,7 @@ Rcpp::RObject distmx_cluster_pool_uniform(
     const float dstep,
     const std::string output_type
 ) {
-  const UniformDistanceConverter dconv(dmin, dstep);
+  const UniformDistanceConverter dconv(dmin, dmax, dstep);
   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
   return distmx_cluster_pool(file, seqnames, dconv, output_type, m);
 }
@@ -1201,7 +1201,7 @@ Rcpp::List distmx_cluster_multi_uniform(
       const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
       const size_t threads=1
 ) {
-   const UniformDistanceConverter dconv(dmin, dstep);
+   const UniformDistanceConverter dconv(dmin, dmax, dstep);
    const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
    return distmx_cluster_multi(file, seqnames, dconv, output_type, m, preclust, threads);
 }

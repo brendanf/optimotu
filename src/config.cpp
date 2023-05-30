@@ -105,7 +105,7 @@ std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config) 
     double from = element_as_double(config, "from", "threshold_uniform");
     double to = element_as_double(config, "to", "threshold_uniform");
     double by = element_as_double(config, "by", "threshold_uniform");
-    return std::make_unique<UniformDistanceConverter>(from, by);
+    return std::make_unique<UniformDistanceConverter>(from, to, by);
   }
   if (method == "set") {
     std::vector<double> thresholds =

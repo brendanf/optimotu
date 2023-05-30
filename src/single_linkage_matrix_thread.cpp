@@ -124,7 +124,7 @@ Rcpp::IntegerMatrix distmx_cluster_matrix_uniform(
       const int threads=1,
       const int minsplit=1
 ) {
-   const UniformDistanceConverter dconv(dmin, dstep);
+   const UniformDistanceConverter dconv(dmin, dmax, dstep);
    const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
    return distmx_cluster_matrix(file, seqnames, dconv, m, threads, minsplit);
 }

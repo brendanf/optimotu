@@ -244,7 +244,7 @@ template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, LINEAR_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
-  ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
+  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
 }
@@ -253,7 +253,7 @@ template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
-  ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
+  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
 }
@@ -262,7 +262,7 @@ template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, true, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
-  ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
+  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
 }
@@ -271,7 +271,7 @@ template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, LINEAR_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
-  ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
+  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
 }
@@ -280,7 +280,7 @@ template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, BINARY_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
-  ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
+  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
 }
@@ -289,7 +289,7 @@ template<>
 ClusterMatrix<RcppParallel::RMatrix<int>, false, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, Rcpp::IntegerMatrix &im
 ) :
-  ClusterAlgorithm(dconv, im.ncol(), im.nrow()), clust_array(im), ca(&clust_array[0]),
+  ClusterAlgorithm(dconv, im.ncol()), clust_array(im), ca(&clust_array[0]),
   toclust(m, 0) {
   initialize();
 }

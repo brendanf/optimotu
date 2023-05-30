@@ -49,13 +49,15 @@ protected:
     dconv(parent->dconv), n(parent->n), m(parent->m), parent(parent) {};
 public:
   using DistanceConsumer::operator();
-  ClusterAlgorithm(const DistanceConverter &dconv, const j_t n, const d_t m) :
-  dconv(dconv), n(n), m(m) {};
 
   ClusterAlgorithm(ClusterAlgorithm&& c) : dconv(c.dconv), n(c.n), m(c.m),
   parent(c.parent), own_child(c.own_child), children(std::move(c.children)){
     c.children.clear();
   };
+
+  // construct a ClusterAlgorithm with the given DistanceConverter
+  ClusterAlgorithm(const DistanceConverter &dconv, j_t n) :
+  dconv(dconv), n(n), m(dconv.m) {};
 
   virtual ~ClusterAlgorithm() {
     for (auto c : children) {

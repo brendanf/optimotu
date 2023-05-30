@@ -30,9 +30,8 @@ public:
   MultipleClusterAlgorithm(
     const DistanceConverter &dconv,
     const std::vector<std::string> &names,
-    const std::vector<std::vector<std::string>> &subset_names,
-    const d_t m
-  ) : dconv(dconv), m(m), names(names), subset_names(subset_names), subsets(),
+    const std::vector<std::vector<std::string>> &subset_names
+  ) : dconv(dconv), m(dconv.m), names(names), subset_names(subset_names), subsets(),
   subset_key(names.size()), fwd_map(subset_names.size()) {
     subsets.reserve(subset_names.size());
     whichsets.reserve(subset_names.size());

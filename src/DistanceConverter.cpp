@@ -2,7 +2,7 @@
 #include <cmath>
 
 d_t UniformDistanceConverter::convert(double dist) const {
-   d_t i = std::max((int) ceilf((dist - dmin) / dstep), 0);
+   d_t i = std::max((int) ceil((dist - dmin) / dstep), 0);
    return i;
 }
 
@@ -13,28 +13,30 @@ double UniformDistanceConverter::inverse(d_t d) const {
 
 UniformDistanceConverter::UniformDistanceConverter(
    const double dmin,
+   const double dmax,
    const double dstep
-): dmin(dmin), dstep(dstep) {}
+): DistanceConverter(std::ceil((dmax - dmin)/dstep) + 1, dmax), dmin(dmin),
+dstep(dstep) {}
 
 d_t ArrayDistanceConverter::convert(double dist) const {
-   if (dist > max_threshold) return thresholds.size();
+   if (dist > dmax) return thresholds.size();
    auto thresh_i = std::lower_bound(thresholds.begin(), thresholds.end(), dist);
    d_t i = std::distance(thresholds.begin(), thresh_i);
    return i;
 }
 
 double ArrayDistanceConverter::inverse(d_t d) const {
-   if (d >= (d_t)thresholds.size()) return max_threshold;
+   if (d >= (d_t)thresholds.size()) return dmax;
    if (d < 0) return thresholds[0];
    return thresholds[d];
 }
 
 ArrayDistanceConverter::ArrayDistanceConverter(std::vector<double> thresholds):
-      thresholds(thresholds),
-      max_threshold(thresholds[thresholds.size() - 1]) {}
+  DistanceConverter(thresholds.size() - 1, thresholds[thresholds.size() - 1]),
+      thresholds(thresholds) {}
 
 d_t CachedDistanceConverter::convert(double dist) const {
-   if (dist > max_threshold) return thresholds.size();
+   if (dist > dmax) return thresholds.size();
    size_t i = 0;
    if (dist > thresholds[0]) {
       i = (size_t)round((dist - thresholds[0])/precision);
@@ -65,5 +67,5 @@ CachedDistanceConverter::CachedDistanceConverter(
 ):
    ArrayDistanceConverter(thresholds),
    precision(precision),
-   cache(init_cache(thresholds, max_threshold, precision)) {}
+   cache(init_cache(thresholds, dmax, precision)) {}
 

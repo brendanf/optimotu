@@ -838,7 +838,7 @@ Rcpp::RObject distmx_cluster_tree(
   // keep track of which clusters are free
   // clusters 0 to n-1 are always used (they are the tips)
   // to start with n to 2n-2 are free.
-  ClusterTree ct(dconv, n, m);
+  ClusterTree ct(dconv, n);
 
   std::ifstream infile(file);
   j_t seq1, seq2;
@@ -877,7 +877,7 @@ Rcpp::RObject distmx_cluster_tree_uniform(
     const float dstep,
     const std::string output_type
 ) {
-  const UniformDistanceConverter dconv(dmin, dstep);
+  const UniformDistanceConverter dconv(dmin, dmax, dstep);
   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
   return distmx_cluster_tree(file, seqnames, dconv, output_type, m);
 }
@@ -923,7 +923,7 @@ Rcpp::List distmx_cluster_mtree(
   RcppThread::ThreadPool::globalInstance().setNumThreads(threads);
   const auto namestrings = Rcpp::as<std::vector<std::string>>(seqnames);
   const auto pcstrings = Rcpp::as<std::vector<std::vector<std::string>>>(preclust);
-  MultipleClusterAlgorithm<ClusterTree> algo(dconv, namestrings, pcstrings, m);
+  MultipleClusterAlgorithm<ClusterTree> algo(dconv, namestrings, pcstrings);
 
   std::ifstream infile(file);
   j_t seq1, seq2;
@@ -965,7 +965,7 @@ Rcpp::List distmx_cluster_mtree_uniform(
     const Rcpp::ListOf<Rcpp::CharacterVector> &preclust,
     const size_t threads=1
 ) {
-  const UniformDistanceConverter dconv(dmin, dstep);
+  const UniformDistanceConverter dconv(dmin, dmax, dstep);
   const int m = (int) ceilf((dmax - dmin)/dstep) + 1;
   return distmx_cluster_mtree(file, seqnames, dconv, output_type, m, preclust, threads);
 }
