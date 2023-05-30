@@ -33,9 +33,9 @@ inline std::istream & operator >> (std::istream &in, DistanceElement &d) {
 
 class DistanceConsumer {
 public:
-  virtual void operator()(j_t seq1, j_t seq2, double dist)=0;
-  virtual void operator()(DistanceElement d) {
-    this->operator()(d.seq1, d.seq2, d.dist);
+  virtual void operator()(j_t seq1, j_t seq2, double dist, int thread = 0)=0;
+  virtual void operator()(DistanceElement d, int thread = 0) {
+    this->operator()(d.seq1, d.seq2, d.dist, thread);
   };
   virtual ~DistanceConsumer()=default;
 };
@@ -82,13 +82,13 @@ public:
 
   // calculate the maximum distance between seq1 and seq2 which would actually
   // cause an update
-  virtual double max_relevant(j_t seq1, j_t seq2) const=0;
+  virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const=0;
 
   // update clustering based on pairwise distance index between seq1 and seq2
-  virtual void operator()(j_t seq1, j_t seq2, d_t i)=0;
+  virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0)=0;
 
   // update clustering based on pairwise distance between seq1 and seq2
-  void operator()(j_t seq1, j_t seq2, double dist) override {
+  void operator()(j_t seq1, j_t seq2, double dist, int thread = 0) override {
     if (seq1 == seq2) return;
     d_t i = dconv.convert(dist);
     (*this)(seq1, seq2, i);

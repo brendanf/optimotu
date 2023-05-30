@@ -132,7 +132,7 @@ public:
     return pool0 + j;
   };
 
-   virtual void operator()(j_t seq1, j_t seq2, d_t i) override;
+  virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
 
 #ifdef OPTIMOTU_R
    void write_to_matrix(RcppParallel::RMatrix<int> &out) override;
@@ -150,7 +150,7 @@ public:
 
    // calculate the maximum distance between seq1 and seq2 which would actually
    // cause an update
-   virtual double max_relevant(j_t seq1, j_t seq2) const override;
+   virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
 };
 
 #endif //OPTIMOTU_CLUSTERTREE_H_INCLUDED

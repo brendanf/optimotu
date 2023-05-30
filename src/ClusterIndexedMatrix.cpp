@@ -273,7 +273,7 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
 }
 
 template <class A>
-void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i) {
+void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (i >= m) return;
   tbb::queuing_rw_mutex::scoped_lock lock{mutex, true};
   if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) {
@@ -468,7 +468,7 @@ SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
 }
 
 template <class A>
-double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2) const {
+double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2, int thread) const {
   if (seq1 == seq2) return 0.0;
   tbb::queuing_rw_mutex::scoped_lock lock(mutex, true);
   j_t j1 = seq1*m, j2 = seq2*m;

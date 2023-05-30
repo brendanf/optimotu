@@ -46,7 +46,7 @@ public:
 
   using ClusterAlgorithm::operator();
 
-  void operator()(j_t seq1, j_t seq2, d_t i) override;
+  void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
 
   void merge_into(DistanceConsumer &consumer) override final;
 
@@ -54,7 +54,7 @@ public:
 
   SingleClusterAlgorithm * make_child() override;
 
-  double max_relevant(j_t seq1, j_t seq2) const override;
+  double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
 
   void write_to_matrix(internal_matrix_t &out) override;
 

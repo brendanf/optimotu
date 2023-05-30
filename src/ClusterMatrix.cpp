@@ -13,7 +13,7 @@ void ClusterMatrix<BM, F, A>::initialize() {
 }
 
 template<bool BM, int F, typename A>
-void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i) {
+void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (i >= m) return;
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
@@ -209,7 +209,7 @@ SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
 }
 
 template<bool BM, int F, typename A>
-double ClusterMatrix<BM, F, A>::max_relevant(j_t seq1, j_t seq2) const {
+double ClusterMatrix<BM, F, A>::max_relevant(j_t seq1, j_t seq2, int thread) const {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   if (seq1 == seq2) return 0.0;
   j_t j1 = seq1*m, j2 = seq2*m;

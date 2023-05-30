@@ -8,7 +8,7 @@
 // [[Rcpp::depends(RcppThread)]]
 #include <RcppThread.h>
 
-void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i) {
+void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   cluster* c1 = get_cluster(seq1);
@@ -936,7 +936,7 @@ Rcpp::List distmx_cluster_mtree(
   double dist;
   while(infile >> seq1 >> seq2 >> dist) {
     if (seq1 == seq2) continue;
-    algo(seq1, seq2, dist);
+    algo(seq1, seq2, dist, 0);
   }
   if (output_type == "matrix")
     {
