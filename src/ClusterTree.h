@@ -13,25 +13,27 @@
 // #define SINGLE_LINK_DEBUG
 // #define SINGLE_LINK_TEST
 
-struct cluster {
-   d_t min_d = NO_DIST;
-   j_t id = NO_CLUST;
-   uint32_t n_child = 0;
-   cluster *parent = nullptr, *first_child = nullptr, *last_child = nullptr,
-      *prev_sib = nullptr, *next_sib = nullptr;
-   bool allocated = false;
-   d_t max_d() {
-      if (parent == nullptr) return NO_DIST;
-      return parent->min_d;
-   };
-};
-
 
 class ClusterTree : public ClusterAlgorithm {
 protected:
+
+  struct cluster {
+    d_t min_d = NO_DIST;
+    j_t id = NO_CLUST;
+    uint32_t n_child = 0;
+    cluster *parent = nullptr, *first_child = nullptr, *last_child = nullptr,
+      *prev_sib = nullptr, *next_sib = nullptr;
+    bool allocated = false;
+    d_t max_d() {
+      if (parent == nullptr) return NO_DIST;
+      return parent->min_d;
+    };
+  };
+
    // tracks which clusters from the pool are currently used.
    std::deque<cluster*> freeclusters;
-   cluster *my_pool;
+   std::vector<cluster> pool;
+   cluster *const pool0, * const poolend, * const tip0, * const tipend, * const node0, * const nodeend;
 
    void delete_cluster(cluster * c) {
      freeclusters.push_back(c);
@@ -78,52 +80,57 @@ protected:
 #endif
 
   void initialize() {
-    my_pool = new cluster[2*n];
     j_t j;
     cluster *c;
-    for (j = 0, c = my_pool; j < n; j++, c++) {
+    for (j = 0, c = tip0; c != tipend; j++, c++) {
       c->id = j; // id is smallest id of a descendent tip
       c->min_d = -1; // no minimum distance
       c->allocated = true;
     }
-    for (; c < my_pool + 2*n; c++) {
+    for (; c < nodeend; c++) {
       freeclusters.push_back(c);
     }
   };
 
   void assign_ids();
 
-  ClusterTree(ClusterAlgorithm * parent) :
-    ClusterAlgorithm(parent) {
+  ClusterTree(SingleClusterAlgorithm * parent) :
+    ClusterAlgorithm(parent),
+    pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
+    tip0(pool0), tipend(tip0 + n),
+    node0(tipend), nodeend(node0+n) {
     initialize();
   };
 public:
    ClusterTree(const DistanceConverter &dconv, const j_t n):
-     ClusterAlgorithm(dconv, n) {
+     ClusterAlgorithm(dconv, n),
+     pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
+     tip0(pool0), tipend(tip0 + n),
+     node0(tipend), nodeend(node0+n) {
      initialize();
    };
 
-  ClusterTree(ClusterTree&& c) : ClusterAlgorithm(std::move(c)),
-  freeclusters(std::move(c.freeclusters)),
-  my_pool(c.my_pool) {
-    c.my_pool = nullptr;
-  };
-
   ClusterTree(const DistanceConverter &dconv, init_matrix_t im):
-    ClusterAlgorithm(dconv, im) {
+    ClusterAlgorithm(dconv, im),
+    pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
+    tip0(pool0), tipend(tip0 + n),
+    node0(tipend), nodeend(node0+n) {
     initialize();
   };
 
+  ClusterTree(ClusterTree&& c) : ClusterAlgorithm(std::move(c)),
+  freeclusters(std::move(c.freeclusters)),
+  pool(std::move(c.pool)),
+  pool0(pool.data()), poolend(pool0 + 2*n),
+  tip0(pool0), tipend(tip0 + n),
+  node0(tipend), nodeend(node0+n) {};
+
   ClusterTree * make_child() override;
 
-   ~ClusterTree() {
-      delete[] my_pool;
-   };
-
-   cluster* get_cluster(j_t j) const {
-      if (j == NO_CLUST) return nullptr;
-      return my_pool + j;
-   };
+  cluster* get_cluster(j_t j) const {
+    if (j == NO_CLUST) return nullptr;
+    return pool0 + j;
+  };
 
    virtual void operator()(j_t seq1, j_t seq2, d_t i) override;
 

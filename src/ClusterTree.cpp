@@ -449,13 +449,13 @@ int ClusterTree::hclust_ordering(cluster * top, int start, Rcpp::IntegerVector &
   cluster *c = top->first_child;
   if (c == nullptr) {
     // Rcpp::Rcout << i << ": " << top << std::endl;
-    order[i++] = (top - this->my_pool) + 1;
+    order[i++] = (top - this->pool0) + 1;
   } else {
     do {
       // Rcpp::Rcout << "getting cluster " << j << std::endl;
-      if (c < my_pool + n) {
+      if (c < this->tipend) {
         // Rcpp::Rcout << i << ": " << j << std::endl;
-        order[i++] = c - my_pool + 1;
+        order[i++] = c - this->pool0 + 1;
         // i++;
         // Rcpp::Rcout << "i=" << i << std::endl;
       } else {
@@ -471,7 +471,7 @@ int ClusterTree::hclust_ordering(cluster * top, int start, Rcpp::IntegerVector &
 void ClusterTree::assign_ids() {
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
   for (j_t i = 0; i < n; ++i) {
-    cluster * c = my_pool + i;
+    cluster * c = &pool[i];
     while(c->parent && c->parent->id > i) {
       c->parent->id = i;
       c = c->parent;
@@ -483,7 +483,7 @@ void ClusterTree::merge_into(DistanceConsumer &consumer) {
   this->assign_ids();
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
-  for (auto c = this->my_pool + this->n; c < this->my_pool + 2*this->n; ++c) {
+  for (auto c = this->node0; c < this->nodeend; ++c) {
     if (c->allocated) {
       if (c->first_child) {
         cluster * next = c->first_child->next_sib;
@@ -500,21 +500,21 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
   this->assign_ids();
   // std::lock_guard<std::mutex> lock{this->mutex};
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
-  for (auto c = this->my_pool + this->n; c < this->my_pool + 2*this->n; ++c) {
-    // std::cout << "merging cluster " << c - my_pool
+  for (auto c = this->node0; c < this->nodeend; ++c) {
+    // std::cout << "merging cluster " << c - this->pool0
     //           << " (" << c
     //           << ") with ID " << c->id
     //           << std::endl;
     if (c->allocated) {
       // std::cout << " - cluster is allocated" << std::endl;
       if (c->first_child) {
-        // std::cout << " - first child is cluster " << c->first_child - my_pool
+        // std::cout << " - first child is cluster " << c->first_child - this->pool0
         //           << " (" << c->first_child
         //           << ") with ID " << c->first_child->id
         //           << std::endl;
         cluster * next = c->first_child->next_sib;
         while (next) {
-          // std::cout << " - next child is cluster " << next - my_pool
+          // std::cout << " - next child is cluster " << next - this->pool0
           //           << " (" << next
           //           << ") with ID " << next->id
           //           << std::endl;
@@ -526,7 +526,7 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
   }
 }
 
-double ClusterTree::max_relevant(j_t seq1, j_t seq2) const {
+double ClusterTree::max_relevant(j_t seq1, j_t seq2, int thread) const {
   // std::lock_guard<std::mutex> lock(this->mutex);
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   cluster* c1 = this->get_cluster(seq1);
@@ -595,7 +595,7 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   // Rcpp::Rcout << "making cluster/distance pairs" << std::endl;
   // depths and indices of the valid clusters
   std::vector<std::pair<d_t, cluster*>> cluster_dj;
-  for (cluster *c = this->my_pool; c < this->my_pool + 2*this->n; ++c) {
+  for (cluster *c = this->pool0; c < this->poolend; ++c) {
     // Rcpp::Rcout << "adding cluster " << c << " at depth " << c->min_d << std::endl;
     if (c->allocated) cluster_dj.emplace_back(c->min_d, c);
   }
@@ -617,9 +617,9 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
     cluster *left = child_c;
     bool first_pass = TRUE;
     do {
-      if (left - this->my_pool < this->n && first_pass) {
+      if (left - this->pool0 < this->n && first_pass) {
         // Rcpp::Rcout << "left child = " << -left << std::endl;
-        *merge1 = this->my_pool - left - 1;
+        *merge1 = this->pool0 - left - 1;
       } else if (first_pass) {
         // Rcpp::Rcout << "left child = " << row_key[child_j] << std::endl;
         *merge1 = row_key[child_c];
@@ -627,9 +627,9 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
         // Rcpp::Rcout << "left child = " << row << std::endl;
         *merge1 = row; //not incremented yet; this is the previous row
       }
-      if (next_c - this->my_pool < this->n) {
+      if (next_c - this->pool0 < this->n) {
         // Rcpp::Rcout << "right child = " << -(int)next_j << std::endl;
-        *merge2 = (int)(this->my_pool - next_c - 1);
+        *merge2 = (int)(this->pool0 - next_c - 1);
       } else {
         // Rcpp::Rcout << "right child = " << row_key[next_j] << std::endl;
         *merge2 = row_key[next_c];
@@ -652,7 +652,7 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   }
   // Rcpp::Rcout << "finished processing clusters" << std::endl;
   // find parentless singletons
-  for (cluster * c = this->my_pool; c < this->my_pool + this->n; c++) {
+  for (cluster * c = this->tip0; c < this->tipend; c++) {
     if (c->parent == nullptr) {
       parentless.push_back(c);
     }
@@ -660,15 +660,15 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   if (parentless.size() > 1) {
     // Rcpp::Rcout << "adding dummy parent for parentless clusters" << std::endl;
     int left;
-    if (parentless[0] - this->my_pool < this->n) {
-      left = (int)(this->my_pool - parentless[0] - 1);
+    if (parentless[0] < this->tipend) {
+      left = (int)(this->pool0 - parentless[0] - 1);
     } else {
       left = row_key[parentless[0]];
     }
     for (size_t i = 1; i < parentless.size(); i++) {
       int right;
-      if (parentless[i] - this->my_pool < this->n) {
-        right = (int)(this->my_pool - parentless[i] - 1);
+      if (parentless[i] < this->tipend) {
+        right = (int)(this->pool0 - parentless[i] - 1);
       } else {
         right = row_key[parentless[i]];
       }
@@ -717,7 +717,7 @@ void ClusterTree::validate() const {
 #ifdef SINGLE_LINK_DEBUG
   Rcpp::Rcerr << "validating..." << std::endl;
 #endif
-  for (cluster * c = my_pool; c < my_pool + 2*n; ++c) {
+  for (cluster * c = this->pool0; c < this->poolend; ++c) {
     if (!c->allocated) continue;
 
     if (c->min_d < -1 || (c->min_d >= m && c->min_d != NO_DIST)) {
@@ -737,7 +737,8 @@ void ClusterTree::validate() const {
                   << " which is less than its min_d: " << c->min_d << std::endl;
       err = true;
     }
-    if (c->parent && (c->parent < my_pool + n || c->parent > my_pool + 2*n)) {
+    if (c->parent && (c->parent < this->node0 ||
+        c->parent > this->nodeend)) {
       Rcpp::Rcerr << "validation error: cluster " << clust(c)
                   << " has invalid parent: " << clust(c->parent)
                   << std::endl;
@@ -753,7 +754,8 @@ void ClusterTree::validate() const {
                   << " has exactly one child." << std::endl;
       err = true;
     }
-    if (c -> first_child && (c->first_child < my_pool || c->first_child > my_pool + 2*n)) {
+    if (c -> first_child && (c->first_child < this->pool0
+                               || c->first_child > this->poolend])) {
       Rcpp::Rcerr << "validation error: cluster " << clust(c)
                   << " has invalid first_child: " << clust(c->first_child) << std::endl;
       err = true;
@@ -784,7 +786,8 @@ void ClusterTree::validate() const {
                   << std::endl;
       err = true;
     }
-    if (c -> next_sib && (c->next_sib < my_pool || c->next_sib > my_pool + 2*n)) {
+    if (c -> next_sib && (c->next_sib < this->pool0
+                            || c->next_sib > this->poolend)) {
       Rcpp::Rcerr << "validation error: cluster " << clust(c)
                   << " has invalid next_sib: " << clust(c->next_sib)
                   << std::endl;
@@ -806,7 +809,7 @@ void ClusterTree::validate() const {
       err = true;
     }
     if (c->next_sib && c->next_sib->prev_sib != c) {
-      Rcpp::Rcerr << "validation error: cluster " << c - my_pool
+      Rcpp::Rcerr << "validation error: cluster " << c - this->pool0
                   << " with parent " << clust(c->parent)
                   << " has sibling " << clust(c->next_sib)
                   << " whose previous sibling is " << clust(c->next_sib->prev_sib)
