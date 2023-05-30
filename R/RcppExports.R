@@ -4,37 +4,37 @@
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_tree_uniform <- function(file, seqnames, dmin, dmax, dstep, output_type) {
-    .Call('_optimotu_distmx_cluster_tree_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, output_type)
+    .Call(`_optimotu_distmx_cluster_tree_uniform`, file, seqnames, dmin, dmax, dstep, output_type)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_tree_array <- function(file, seqnames, thresholds, output_type) {
-    .Call('_optimotu_distmx_cluster_tree_array', PACKAGE = 'optimotu', file, seqnames, thresholds, output_type)
+    .Call(`_optimotu_distmx_cluster_tree_array`, file, seqnames, thresholds, output_type)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_tree_cached <- function(file, seqnames, thresholds, precision, output_type) {
-    .Call('_optimotu_distmx_cluster_tree_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, output_type)
+    .Call(`_optimotu_distmx_cluster_tree_cached`, file, seqnames, thresholds, precision, output_type)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_mtree_uniform <- function(file, seqnames, output_type, dmin, dmax, dstep, preclust, threads = 1L) {
-    .Call('_optimotu_distmx_cluster_mtree_uniform', PACKAGE = 'optimotu', file, seqnames, output_type, dmin, dmax, dstep, preclust, threads)
+    .Call(`_optimotu_distmx_cluster_mtree_uniform`, file, seqnames, output_type, dmin, dmax, dstep, preclust, threads)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_mtree_array <- function(file, seqnames, output_type, thresholds, preclust, threads = 1L) {
-    .Call('_optimotu_distmx_cluster_mtree_array', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, preclust, threads)
+    .Call(`_optimotu_distmx_cluster_mtree_array`, file, seqnames, output_type, thresholds, preclust, threads)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_mtree_cached <- function(file, seqnames, output_type, thresholds, precision, preclust, threads = 1L) {
-    .Call('_optimotu_distmx_cluster_mtree_cached', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, precision, preclust, threads)
+    .Call(`_optimotu_distmx_cluster_mtree_cached`, file, seqnames, output_type, thresholds, precision, preclust, threads)
 }
 
 #' Confusion matrix for a set of "test" partitions vs. a "true" partition
@@ -60,7 +60,15 @@ distmx_cluster_mtree_cached <- function(file, seqnames, output_type, thresholds,
 #' @export
 #' @inheritParams mutual_information
 confusion_matrix <- function(k, c, threads = 1L) {
-    .Call('_optimotu_confusion_matrix', PACKAGE = 'optimotu', k, c, threads)
+    .Call(`_optimotu_confusion_matrix`, k, c, threads)
+}
+
+distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {
+    .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, method_config, parallel_config, output_type)
+}
+
+distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method_config, parallel_config, output_type = "matrix") {
+    .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type)
 }
 
 #' Size of the intersection between two sorted sets
@@ -74,25 +82,25 @@ confusion_matrix <- function(k, c, threads = 1L) {
 #' @return (`integer` count) the number of elements which occur in both sets
 #' @export
 intersect_length <- function(c, k) {
-    .Call('_optimotu_intersect_length', PACKAGE = 'optimotu', c, k)
+    .Call(`_optimotu_intersect_length`, c, k)
 }
 
 #' @export
 #' @rdname intersect_length
 intersect_length_string <- function(c, k) {
-    .Call('_optimotu_intersect_length_string', PACKAGE = 'optimotu', c, k)
+    .Call(`_optimotu_intersect_length_string`, c, k)
 }
 
 inner_fmeasure <- function(cj, kpartition, nk) {
-    .Call('_optimotu_inner_fmeasure', PACKAGE = 'optimotu', cj, kpartition, nk)
+    .Call(`_optimotu_inner_fmeasure`, cj, kpartition, nk)
 }
 
 fmeasure_list <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_fmeasure_list', PACKAGE = 'optimotu', k, c, ncpu)
+    .Call(`_optimotu_fmeasure_list`, k, c, ncpu)
 }
 
 fmeasure_matrix <- function(k, c, ncpu = 1L) {
-    .Call('_optimotu_fmeasure_matrix', PACKAGE = 'optimotu', k, c, ncpu)
+    .Call(`_optimotu_fmeasure_matrix`, k, c, ncpu)
 }
 
 #' Calculate similarity for a set of alternate "test" partitions vs. a "true" partition
@@ -110,101 +118,101 @@ fmeasure_matrix <- function(k, c, ncpu = 1L) {
 #' of the alternative partitions and the "true" partition.
 #' @export
 mutual_information <- function(k, c, threads = 1L) {
-    .Call('_optimotu_mutual_information', PACKAGE = 'optimotu', k, c, threads)
+    .Call(`_optimotu_mutual_information`, k, c, threads)
 }
 
 #' @rdname mutual_information
 #' @export
 adjusted_mutual_information <- function(k, c, threads = 1L) {
-    .Call('_optimotu_adjusted_mutual_information', PACKAGE = 'optimotu', k, c, threads)
+    .Call(`_optimotu_adjusted_mutual_information`, k, c, threads)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_matrix2_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, do_binary_search = TRUE, fill_method = 2L) {
-    .Call('_optimotu_distmx_cluster_matrix2_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, threads, do_binary_search, fill_method)
+    .Call(`_optimotu_distmx_cluster_matrix2_uniform`, file, seqnames, dmin, dmax, dstep, threads, do_binary_search, fill_method)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_matrix2_array <- function(file, seqnames, thresholds, threads = 1L, do_binary_search = TRUE, fill_method = 2L) {
-    .Call('_optimotu_distmx_cluster_matrix2_array', PACKAGE = 'optimotu', file, seqnames, thresholds, threads, do_binary_search, fill_method)
+    .Call(`_optimotu_distmx_cluster_matrix2_array`, file, seqnames, thresholds, threads, do_binary_search, fill_method)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_matrix2_cached <- function(file, seqnames, thresholds, precision, threads = 1L, do_binary_search = TRUE, fill_method = 2L) {
-    .Call('_optimotu_distmx_cluster_matrix2_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, threads, do_binary_search, fill_method)
+    .Call(`_optimotu_distmx_cluster_matrix2_cached`, file, seqnames, thresholds, precision, threads, do_binary_search, fill_method)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_imatrix_uniform <- function(file, seqnames, dmin, dmax, dstep) {
-    .Call('_optimotu_distmx_cluster_imatrix_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep)
+    .Call(`_optimotu_distmx_cluster_imatrix_uniform`, file, seqnames, dmin, dmax, dstep)
 }
 
 #' @export
 distmx_cluster_imatrix_array <- function(file, seqnames, thresholds) {
-    .Call('_optimotu_distmx_cluster_imatrix_array', PACKAGE = 'optimotu', file, seqnames, thresholds)
+    .Call(`_optimotu_distmx_cluster_imatrix_array`, file, seqnames, thresholds)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_imatrix_cached <- function(file, seqnames, thresholds, precision) {
-    .Call('_optimotu_distmx_cluster_imatrix_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision)
+    .Call(`_optimotu_distmx_cluster_imatrix_cached`, file, seqnames, thresholds, precision)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_matrix_uniform <- function(file, seqnames, dmin, dmax, dstep, threads = 1L, minsplit = 1L) {
-    .Call('_optimotu_distmx_cluster_matrix_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, threads, minsplit)
+    .Call(`_optimotu_distmx_cluster_matrix_uniform`, file, seqnames, dmin, dmax, dstep, threads, minsplit)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_matrix_array <- function(file, seqnames, thresholds, threads = 1L, minsplit = 1L) {
-    .Call('_optimotu_distmx_cluster_matrix_array', PACKAGE = 'optimotu', file, seqnames, thresholds, threads, minsplit)
+    .Call(`_optimotu_distmx_cluster_matrix_array`, file, seqnames, thresholds, threads, minsplit)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_matrix_cached <- function(file, seqnames, thresholds, precision, threads = 1L, minsplit = 1L) {
-    .Call('_optimotu_distmx_cluster_matrix_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, threads, minsplit)
+    .Call(`_optimotu_distmx_cluster_matrix_cached`, file, seqnames, thresholds, precision, threads, minsplit)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_pool_uniform <- function(file, seqnames, dmin, dmax, dstep, output_type) {
-    .Call('_optimotu_distmx_cluster_pool_uniform', PACKAGE = 'optimotu', file, seqnames, dmin, dmax, dstep, output_type)
+    .Call(`_optimotu_distmx_cluster_pool_uniform`, file, seqnames, dmin, dmax, dstep, output_type)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_pool_array <- function(file, seqnames, thresholds, output_type) {
-    .Call('_optimotu_distmx_cluster_pool_array', PACKAGE = 'optimotu', file, seqnames, thresholds, output_type)
+    .Call(`_optimotu_distmx_cluster_pool_array`, file, seqnames, thresholds, output_type)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_pool_cached <- function(file, seqnames, thresholds, precision, output_type) {
-    .Call('_optimotu_distmx_cluster_pool_cached', PACKAGE = 'optimotu', file, seqnames, thresholds, precision, output_type)
+    .Call(`_optimotu_distmx_cluster_pool_cached`, file, seqnames, thresholds, precision, output_type)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_multi_uniform <- function(file, seqnames, output_type, dmin, dmax, dstep, preclust, threads = 1L) {
-    .Call('_optimotu_distmx_cluster_multi_uniform', PACKAGE = 'optimotu', file, seqnames, output_type, dmin, dmax, dstep, preclust, threads)
+    .Call(`_optimotu_distmx_cluster_multi_uniform`, file, seqnames, output_type, dmin, dmax, dstep, preclust, threads)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_multi_array <- function(file, seqnames, output_type, thresholds, preclust, threads = 1L) {
-    .Call('_optimotu_distmx_cluster_multi_array', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, preclust, threads)
+    .Call(`_optimotu_distmx_cluster_multi_array`, file, seqnames, output_type, thresholds, preclust, threads)
 }
 
 #' @export
 #' @rdname distmx_cluster
 distmx_cluster_multi_cached <- function(file, seqnames, output_type, thresholds, precision, preclust, threads = 1L) {
-    .Call('_optimotu_distmx_cluster_multi_cached', PACKAGE = 'optimotu', file, seqnames, output_type, thresholds, precision, preclust, threads)
+    .Call(`_optimotu_distmx_cluster_multi_cached`, file, seqnames, output_type, thresholds, precision, preclust, threads)
 }
 
