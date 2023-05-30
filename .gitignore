@@ -9,3 +9,4 @@ src/*.dll
 renv.lock
 renv
 sample.profile*
+*.profile
