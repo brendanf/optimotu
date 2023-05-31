@@ -78,7 +78,7 @@ clust_matrix <- function(
     list(
       method = "matrix",
       binary_search = binary_search,
-      fill_method = switch(fill_method(linear = 1L, binary = 2L, topdown = 2L))
+      fill_method = switch(fill_method, linear = 1L, binary = 2L, topdown = 3L)
     ),
     class = "optimotu_cluster_config"
   )

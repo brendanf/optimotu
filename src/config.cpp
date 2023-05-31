@@ -1,97 +1,102 @@
 #include "config.h"
 
 double element_as_double(Rcpp::List obj, std::string e, std::string name) {
-  if (obj[e] == R_NilValue) {
+  if (!obj.containsElementNamed(e.c_str())) {
     Rcpp::stop(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
-  if (!Rcpp::is<Rcpp::NumericVector>(obj[e])) {
+  Rcpp::RObject item = obj[e];
+  if (!Rcpp::is<Rcpp::NumericVector>(item)) {
     Rcpp::stop(
       "invalid `" + name + "`: member `" + e + "` is not numeric"
     );
   }
-  auto item = Rcpp::as<Rcpp::NumericVector>(obj);
-  if (item.length() != 1) {
+  auto item_dbl = Rcpp::as<Rcpp::NumericVector>(item);
+  if (item_dbl.length() != 1) {
     Rcpp::stop(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
-  return item[0];
+  return item_dbl[0];
 }
 
 std::vector<double> element_as_double_vector(Rcpp::List obj, std::string e, std::string name) {
-  if (obj[e] == R_NilValue) {
+  if (!obj.containsElementNamed(e.c_str())) {
     Rcpp::stop(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
-  if (!Rcpp::is<Rcpp::NumericVector>(obj[e])) {
+  Rcpp::RObject item = obj[e];
+  if (!Rcpp::is<Rcpp::NumericVector>(item)) {
     Rcpp::stop(
       "invalid `" + name + "`: member `" + e + "` is not numeric"
     );
   }
-  return Rcpp::as<std::vector<double>>(obj);
+  return Rcpp::as<std::vector<double>>(item);
 }
 
 int element_as_int(Rcpp::List obj, std::string e, std::string name) {
-  if (obj[e] == R_NilValue) {
+  if (!obj.containsElementNamed(e.c_str())) {
     Rcpp::stop(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
-  if (!Rcpp::is<Rcpp::IntegerVector>(obj[e])) {
+  Rcpp::RObject item = obj[e];
+  if (!Rcpp::is<Rcpp::IntegerVector>(item)) {
     Rcpp::stop(
       "invalid `" + name + "`: member `" + e + "` is not an integer"
     );
   }
-  auto item = Rcpp::as<Rcpp::IntegerVector>(obj);
-  if (item.length() != 1) {
+  auto item_int = Rcpp::as<Rcpp::IntegerVector>(item);
+  if (item_int.length() != 1) {
     Rcpp::stop(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
-  return item[0];
+  return item_int[0];
 }
 
 std::string element_as_string(Rcpp::List obj, std::string e, std::string name) {
-  if (obj[e] == R_NilValue) {
+  if (!obj.containsElementNamed(e.c_str())) {
     Rcpp::stop(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
-  if (!Rcpp::is<Rcpp::CharacterVector>(obj[e])) {
+  Rcpp::RObject item = obj[e];
+  if (!Rcpp::is<Rcpp::CharacterVector>(item)) {
     Rcpp::stop(
       "invalid `" + name + "`: member `" + e + "` is not of type character"
     );
   }
-  auto item = Rcpp::as<Rcpp::CharacterVector>(obj);
-  if (item.length() != 1) {
+  auto item_str = Rcpp::as<Rcpp::CharacterVector>(item);
+  if (item_str.length() != 1) {
     Rcpp::stop(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
-  return Rcpp::as<std::string>(item[0]);
+  return Rcpp::as<std::string>(item_str[0]);
 }
 
 bool element_as_bool(Rcpp::List obj, std::string e, std::string name) {
-  if (obj[e] == R_NilValue) {
+  if (!obj.containsElementNamed(e.c_str())) {
     Rcpp::stop(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
-  if (!Rcpp::is<Rcpp::LogicalVector>(obj[e])) {
+  Rcpp::RObject item = obj[e];
+  if (!Rcpp::is<Rcpp::LogicalVector>(item)) {
     Rcpp::stop(
       "invalid `" + name + "`: member `" + e + "` is not logical"
     );
   }
-  auto item = Rcpp::as<Rcpp::LogicalVector>(obj);
-  if (item.length() != 1) {
+  auto item_bool = Rcpp::as<Rcpp::LogicalVector>(item);
+  if (item_bool.length() != 1) {
     Rcpp::stop(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
-  return item[0];
+  return item_bool[0];
 }
 
 std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config) {
@@ -100,25 +105,25 @@ std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config) 
       "'threshold_config' must be of class 'optimotu_threshold_config'"
     );
   }
-  std::string method = element_as_string(config, "method", "threshold_config");
-  if (method == "uniform") {
+  std::string type = element_as_string(config, "type", "threshold_config");
+  if (type == "uniform") {
     double from = element_as_double(config, "from", "threshold_uniform");
     double to = element_as_double(config, "to", "threshold_uniform");
     double by = element_as_double(config, "by", "threshold_uniform");
     return std::make_unique<UniformDistanceConverter>(from, to, by);
   }
-  if (method == "set") {
+  if (type == "set") {
     std::vector<double> thresholds =
       element_as_double_vector(config, "thresholds", "threshold_set");
     return std::make_unique<ArrayDistanceConverter>(thresholds);
   }
-  if (method == "lookup") {
+  if (type == "lookup") {
     std::vector<double> thresholds =
       element_as_double_vector(config, "thresholds", "threshold_lookup");
     double precision = element_as_double(config, "precision", "threshold_lookup");
     return std::make_unique<CachedDistanceConverter>(thresholds, precision);
   }
-  Rcpp::stop("invalid `threshold_config`: unknown method: " + method);
+  Rcpp::stop("invalid `threshold_config`: unknown type: " + type);
 }
 
 std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
