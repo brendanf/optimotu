@@ -32,6 +32,8 @@ Rcpp::RObject distmx_cluster_single(
   worker->finalize();
   Rcpp::RObject output = R_NilValue;
   if (output_type == "matrix") {
+    RcppParallel::RMatrix<int> im2(im);
+    algo->write_to_matrix(im2);
     output = im;
   } else if (output_type == "hclust") {
     output = algo->as_hclust(seqnames);
