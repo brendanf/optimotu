@@ -1,8 +1,21 @@
 #include "DistanceConverter.h"
 #include <cmath>
 
+double constexpr sqrtNewtonRaphson(double x, double curr, double prev)
+{
+  return curr == prev
+  ? curr
+  : sqrtNewtonRaphson(x, 0.5 * (curr + x / curr), curr);
+}
+
+double constexpr eps = sqrtNewtonRaphson(
+  std::numeric_limits<double>::epsilon(),
+  std::numeric_limits<double>::epsilon(),
+  0
+);
+
 d_t UniformDistanceConverter::convert(double dist) const {
-   d_t i = std::max((int) ceil((dist - dmin) / dstep), 0);
+   d_t i = std::max((int) ceil((dist - dmin) / dstep - eps), 0);
    return i;
 }
 
@@ -20,7 +33,7 @@ dstep(dstep) {}
 
 d_t ArrayDistanceConverter::convert(double dist) const {
    if (dist > dmax) return thresholds.size();
-   auto thresh_i = std::lower_bound(thresholds.begin(), thresholds.end(), dist);
+   auto thresh_i = std::lower_bound(thresholds.begin(), thresholds.end(), dist - eps);
    d_t i = std::distance(thresholds.begin(), thresh_i);
    return i;
 }
@@ -32,7 +45,7 @@ double ArrayDistanceConverter::inverse(d_t d) const {
 }
 
 ArrayDistanceConverter::ArrayDistanceConverter(std::vector<double> thresholds):
-  DistanceConverter(thresholds.size() - 1, thresholds[thresholds.size() - 1]),
+  DistanceConverter(thresholds.size(), thresholds[thresholds.size() - 1]),
       thresholds(thresholds) {}
 
 d_t CachedDistanceConverter::convert(double dist) const {
@@ -55,7 +68,7 @@ std::vector<d_t> init_cache(
    d_t i = 0;
    for (size_t j = 0; j <= cache_size; j++) {
       double t = thresholds[0] + precision * j;
-      while(t - thresholds[i] > sqrt(std::numeric_limits<double>::epsilon())) i++;
+      while(t - thresholds[i] > eps) i++;
       cache.push_back(i);
    }
    return cache;
