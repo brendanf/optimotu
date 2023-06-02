@@ -12,8 +12,13 @@ points = lapply(centroids, rep, each = m) |>
   lapply(rnorm, n = n, sd = 0.1) |>
   as.data.frame()
 
-# euclidian distance matrix aroudn the points
-distmx <- dist(points)
+# take some subsets for testing subset clustering
+subsets <- lapply(5:20, sample.int, n = n)
+
+# euclidian distance matrix around the points, rounded to precision of 0.05
+distmx <- round(dist(points) / 0.05) * 0.05
+subsetdistmx <- lapply(subsets, \(i) round(dist(as.matrix(points)[i,]) / 0.05)*0.05)
+
 
 # convert distance matrix to "sparse" format
 dist_table <- data.frame(
@@ -25,130 +30,99 @@ dist_table <- dist_table[dist_table$dist <= 1,]
 # write as a temp file
 distmx_file <- tempfile(fileext = ".distmx")
 write.table(dist_table, distmx_file, sep = "\t", row.names = FALSE, col.names = FALSE)
-withr::defer(unlink(distmx_file), teardown_env())
+# withr::defer(unlink(distmx_file), teardown_env())
 
-hclust_matrix <- hclust(distmx, method = "single") |>
-  lapply(0:20 / 20, cutree, k = NULL, tree = _) |>
-  lapply(function(x) {
-    for (i in seq_along(x)) {if (x[i] < i) x[x >= i] = x[x >= i] + 1L}
-    x
-  }) |>
-  do.call(rbind, args = _)
-hclust_matrix <- hclust_matrix - 1L
+hclust2matrix <- function(distmx, thresholds) {
+  hclust(pmax(distmx - 1e-8, 0), method = "single") |>
+    lapply(thresholds, cutree, k = NULL, tree = _) |>
+    lapply(function(x) {
+      for (i in seq_along(x)) {if (x[i] < i) x[x >= i] = x[x >= i] + 1L}
+      x
+    }) |>
+    do.call(rbind, args = _) |>
+    magrittr::subtract(1L)
+}
 
-uniform_thresh <- threshold_uniform(0, 1, 0.05)
-set_thresh <- threshold_set(0:20 / 20)
-cache_thresh <- threshold_cached(0:20/20, 0.05)
+hclust_matrix <- hclust2matrix(distmx, 0:20 / 20)
+subset_hclust_matrix <- lapply(subsetdistmx, hclust2matrix, 0:20 / 20)
 
-test_that("distmx_cluster index method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_index(),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
+thresholds <- list(
+  set_thresh = threshold_set(0:20 / 20),
+  uniform_thresh = threshold_uniform(0, 1, 0.05),
+  cache_thresh = threshold_cached(0:20 / 20, 0.05)
+)
 
-test_that("distmx_cluster tree method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_tree(),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
+algorithms <- list(
+  tree = clust_tree(),
+  matrix_binary_binary = clust_matrix(binary_search = TRUE, fill_method = "binary"),
+  matrix_binary_linear = clust_matrix(binary_search = TRUE, fill_method = "linear"),
+  matrix_binary_topdown = clust_matrix(binary_search = TRUE, fill_method = "topdown"),
+  matrix_linear_binary = clust_matrix(binary_search = FALSE, fill_method = "binary"),
+  matrix_linear_linear = clust_matrix(binary_search = FALSE, fill_method = "linear"),
+  matrix_linear_topdown = clust_matrix(binary_search = FALSE, fill_method = "topdown"),
+  index = clust_index()
+)
 
-test_that("distmx_cluster matrix (binary, binary) method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_matrix(TRUE, "binary"),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
+parallels <- list(
+  merge = parallel_merge(4),
+  serial = parallel_concurrent(1),
+  concurrent = parallel_concurrent(4),
+  hierarchical = parallel_hierarchical(2, 2)
+)
 
-test_that("distmx_cluster matrix (binary, linear) method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_matrix(TRUE, "linear"),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
-
-test_that("distmx_cluster matrix (binary, topdown) method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_matrix(TRUE, "topdown"),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
-
-test_that("distmx_cluster matrix (linear, binary) method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_matrix(FALSE, "binary"),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
-
-test_that("distmx_cluster matrix (linear, linear) method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_matrix(FALSE, "linear"),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
-
-test_that("distmx_cluster matrix (linear, topdown) method agrees with hclust", {
-  expect_equal(
-    optimotu:::distmx_cluster_single(
-      file = distmx_file,
-      seqnames = as.character(1:n),
-      threshold_config = uniform_thresh,
-      method_config = clust_matrix(FALSE, "topdown"),
-      parallel_config = parallel_concurrent(1),
-      output_type = "matrix"
-    ),
-    hclust_matrix
-  )
-})
+for (p in names(parallels)) {
+  for (t in names(thresholds)) {
+    for (a in names(algorithms)) {
+      # cat(sprintf(
+      #   "%s distmx_cluster_single %s method with %s thresholds agrees with hclust\n",
+      #   p, a, t
+      # ))
+      test_that(
+        sprintf(
+          "%s distmx_cluster_single %s method with %s thresholds agrees with hclust",
+          p, a, t
+        ),
+        {
+          expect_equal(
+            optimotu:::distmx_cluster_single(
+              file = distmx_file,
+              seqnames = as.character(1:n),
+              threshold_config = thresholds[[t]],
+              method_config = algorithms[[a]],
+              parallel_config = parallels[[p]],
+              output_type = "matrix"
+            ),
+            hclust_matrix
+          )
+        }
+      )
+      # cat(
+      #   sprintf(
+      #     "%s distmx_cluster_multi %s method with %s thresholds agrees with hclust\n",
+      #     p, a, t
+      #   )
+      # )
+      test_that(
+        sprintf(
+          "%s distmx_cluster_multi %s method with %s thresholds agrees with hclust",
+          p, a, t
+        ),
+        {
+          expect_equal(
+            optimotu:::distmx_cluster_multi(
+              file = distmx_file,
+              seqnames = as.character(1:n),
+              which = lapply(subsets, as.character),
+              threshold_config = thresholds[[t]],
+              method_config = algorithms[[a]],
+              parallel_config = parallels[[p]],
+              output_type = "matrix"
+            ),
+            subset_hclust_matrix
+          )
+        }
+      )
+    }
+  }
+}
 
