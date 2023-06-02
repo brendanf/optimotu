@@ -10,10 +10,10 @@
 class MultipleClusterAlgorithm : public ClusterAlgorithm {
 protected:
   const ClusterAlgorithmFactory & factory;
-  const std::vector<std::string> &names;
-  const std::vector<std::vector<std::string>> &subset_names;
+  const std::vector<std::string> names;
+  const std::vector<std::vector<std::string>> subset_names;
   const int threads;
-  std::vector<std::unique_ptr<SingleClusterAlgorithm>> subsets;
+  std::vector<SingleClusterAlgorithm*> subsets;
   // for each element, which subsets does it belong to? sorted
   std::vector<std::vector<j_t>> subset_key;
   // for each subset, map from universal index to index in the subset
@@ -22,6 +22,7 @@ protected:
   mutable std::vector<std::vector<j_t>> whichsets;
   // remember which the last sequence pairs were
   mutable std::vector<std::pair<j_t, j_t>> ws_keys;
+  std::vector<std::unique_ptr<SingleClusterAlgorithm>> owned_subsets;
 
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
 

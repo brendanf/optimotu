@@ -18,7 +18,8 @@ MCA::MultipleClusterAlgorithm(
   subsets(),
   subset_key(names.size()),
   fwd_map(subset_names.size()),
-  whichsets(threads)
+  whichsets(threads),
+  ws_keys(threads)
 {
   subsets.reserve(subset_names.size());
   for (auto & ws : whichsets)
@@ -28,13 +29,23 @@ MCA::MultipleClusterAlgorithm(
     namekey.emplace(names[i], i);
   }
   for (j_t i = 0; i < subset_names.size(); ++i) {
-    subsets.push_back(factory.create(subset_names[i].size()));
+    owned_subsets.emplace_back(std::move(factory.create(subset_names[i].size())));
+    subsets.push_back(owned_subsets.back().get());
     fwd_map[i].reserve(subset_names[i].size());
     for (j_t j = 0; j < subset_names[i].size(); ++j) {
       auto f = namekey.find(subset_names[i][j]);
       assert(f != namekey.end());
+      // std::cout << "adding seq " << f->second
+      //           << " (" << subset_names[i][j]
+      //           << ") to precluster " << i
+      //           << " at position " << fwd_map[i].size() << std::endl;
       subset_key[f->second].push_back(i);
       fwd_map[i].emplace(f->second, j);
+      // std::cout << "seq " << f->second
+      //           << " now found in " << subset_key[j].size()
+      //           << " preclusters \n precluster " << i
+      //           << " now has " << fwd_map[i].size()
+      //           << "sequences" << std::endl;
     }
   }
 }
@@ -48,14 +59,15 @@ MCA::MultipleClusterAlgorithm(MCA * parent) :
   subsets{},
   subset_key(parent->subset_key),
   fwd_map(parent->fwd_map),
-  whichsets(parent->threads)
+  whichsets(parent->threads),
+  ws_keys(parent->threads)
   {
-    subsets.reserve(subset_names.size());
+    subsets.reserve(fwd_map.size());
     for (auto & ss : parent->subsets) {
-      subsets.emplace_back(std::move(ss->make_child()));
+      subsets.push_back(ss->make_child());
     }
     for (auto & ws : whichsets)
-      ws.reserve(subset_names.size());
+      ws.reserve(fwd_map.size());
 }
 
 // does not anything directly!
@@ -70,19 +82,61 @@ void MCA::operator()(j_t seq1, j_t seq2, double dist, int thread) {
 void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
   // in practice, we should always be able to rely on the 'whichsets'
   // which was calculated in "max_relevant", if it was called.
-  if (ws_keys[i] != std::pair<j_t, j_t>{seq1, seq2}) {
+
+  // std::cout << "in operator() for MultipleClusterAlgorithm thread " << thread
+  //           // << std::endl << "length of whichsets is " << whichsets.size()
+  //           // << std::endl << "length of ws_keys is " << ws_keys.size()
+  //           << std::endl << "finding overlap sets for item " << seq1
+  //           << " in sets:";
+  // for (auto pc : subset_key[seq1]) std::cout << " " << pc;
+  // std::cout << std::endl
+  //           << "and seq " << seq2 << " in sets:";
+  // for (auto pc : subset_key[seq2]) std::cout << " " << pc;
+  // std::cout << std::endl
+  //           << "cached overlaps are for pair " << ws_keys[thread].first
+  //           << ", " << ws_keys[thread].second
+  //           << std::endl;
+
+  if (ws_keys[thread] != std::pair<j_t, j_t>{seq1, seq2}) {
+    // std::cout << "calculating..." << std::flush;
     whichsets[thread].clear();
     std::set_intersection(
       subset_key[seq1].begin(),
       subset_key[seq1].end(),
       subset_key[seq2].begin(),
       subset_key[seq2].end(),
-      whichsets[thread].begin()
+      std::back_inserter(whichsets[thread])
     );
     ws_keys[thread] = {seq1, seq2};
+  } else {
+    // std::cout << "using cached values..." << std::flush;
   }
+
   for (j_t j : whichsets[thread]) {
-    (*subsets[j])(fwd_map[j][seq1], fwd_map[j][seq2], i);
+    // if (j == 0) {std::cout << "in operator() for MultipleClusterAlgorithm thread " << thread
+    //   // << std::endl << "length of whichsets is " << whichsets.size()
+    //   // << std::endl << "length of ws_keys is " << ws_keys.size()
+    //      << std::endl << "finding overlap sets for item " << seq1
+    //      << " in sets:";
+    //   for (auto pc : subset_key[seq1]) std::cout << " " << pc;
+    //   std::cout << std::endl
+    //             << "and seq " << seq2 << " in sets:";
+    //   for (auto pc : subset_key[seq2]) std::cout << " " << pc;
+    //   std::cout << std::endl
+    //             << "cached overlaps are for pair " << ws_keys[thread].first
+    //             << ", " << ws_keys[thread].second
+    //             << std::endl;
+    //   std::cout << "found " << whichsets[thread].size()
+    //             << " overlaps:";
+    //   for (auto pc : whichsets[thread]) std::cout << " " << pc;
+    //   std::cout << std::endl;
+    //   std::cout << "sending seq1=" << fwd_map[j][seq1]
+    //             << " seq2=" << fwd_map[j][seq2]
+    //             << " i=" << i
+    //             << " to subset " << j
+    //             << std::endl;
+    // }
+    (*subsets[j])(fwd_map[j][seq1], fwd_map[j][seq2], i, thread);
   }
 }
 
@@ -96,7 +150,7 @@ double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
     subset_key[seq1].end(),
     subset_key[seq2].begin(),
     subset_key[seq2].end(),
-    whichsets[thread].begin()
+    std::back_inserter(whichsets[thread])
   );
   ws_keys[thread] = {seq1, seq2};
   for (j_t j : whichsets[thread]) {
@@ -148,7 +202,14 @@ MultipleClusterAlgorithm * MCA::make_child() {
 
 void MCA::write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {
   for (size_t i = 0; i < this->subsets.size(); i++) {
+    // std::cout << "writing to matrix " << i << "..." << std::flush;
+    //           << "matrix size is " << matrix_list[i].nrow()
+    //           << "x" << matrix_list[i].ncol()
+    //           << std::endl << "subset size is " << this->m
+    //           << "x" << subsets[i]->n
+    //           << std::endl;
     this->subsets[i]->write_to_matrix(matrix_list[i]);
+    // std::cout << "done" << std::endl;
   }
 }
 
