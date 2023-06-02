@@ -12,6 +12,7 @@ protected:
   const int threads;
 public:
   ClusterWorker(std::istream &file, const int threads);
+  virtual ~ClusterWorker() = default;
   virtual void finalize()=0;
   int n_threads();
 };

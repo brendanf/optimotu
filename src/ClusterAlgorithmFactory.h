@@ -9,6 +9,8 @@ protected:
 public:
   const DistanceConverter & dconv;
 
+  virtual ~ClusterAlgorithmFactory() = default;
+
   virtual std::unique_ptr<SingleClusterAlgorithm> create(j_t n) const = 0;
   virtual std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im) const = 0;
 };
