@@ -121,13 +121,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx_cluster_single
-Rcpp::RObject distmx_cluster_single(const std::string file, const Rcpp::CharacterVector& seqnames, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type);
+Rcpp::RObject distmx_cluster_single(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type);
 RcppExport SEXP _optimotu_distmx_cluster_single(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector >::type seqnames(seqnamesSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type threshold_config(threshold_configSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type method_config(method_configSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type parallel_config(parallel_configSEXP);
@@ -137,14 +137,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx_cluster_multi
-Rcpp::RObject distmx_cluster_multi(const std::string file, const Rcpp::CharacterVector& seqnames, const Rcpp::ListOf<Rcpp::CharacterVector>& which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type);
+Rcpp::RObject distmx_cluster_multi(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type);
 RcppExport SEXP _optimotu_distmx_cluster_multi(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP whichSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seqnames(seqnamesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::ListOf<Rcpp::CharacterVector>& >::type which(whichSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::ListOf<Rcpp::CharacterVector> >::type which(whichSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type threshold_config(threshold_configSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type method_config(method_configSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type parallel_config(parallel_configSEXP);
