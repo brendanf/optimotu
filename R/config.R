@@ -138,30 +138,33 @@ gcd <- function(a, b) {
 #' @describeIn threshold_config helper function for method `"set"`
 threshold_set <- function(thresholds) {
   verify_thresholds(thresholds)
-  out <- if (length(thresholds) == 1) {
-    list(
-      type = "uniform",
-      from = thresholds[1],
-      to = thresholds[1],
-      by = 1
-    )
-  } else if (length(thresholds) == 2) {
-    list(
-      type = "uniform",
-      from = thresholds[1],
-      to = thresholds[2],
-      by = thresholds[2] - thresholds[1]
-    )
-  } else {
-    g = thresholds[2] - thresholds[1]
-    for (x in thresholds[-(1:2)] - thresholds[1]) g <- gcd(g, x)
-    if ((thresholds[length(thresholds)] - thresholds[1]) / g / length(thresholds) > 100) {
-      list(type = "set", thresholds = thresholds)
-    } else {
-      list(type = "lookup", thresholds = thresholds, precision = g)
-    }
-  }
-  structure(out, class = "optimotu_threshold_config")
+  # out <- if (length(thresholds) == 1) {
+  #   list(
+  #     type = "uniform",
+  #     from = thresholds[1],
+  #     to = thresholds[1],
+  #     by = 1
+  #   )
+  # } else if (length(thresholds) == 2) {
+  #   list(
+  #     type = "uniform",
+  #     from = thresholds[1],
+  #     to = thresholds[2],
+  #     by = thresholds[2] - thresholds[1]
+  #   )
+  # } else {
+  #   g = thresholds[2] - thresholds[1]
+  #   for (x in thresholds[-(1:2)] - thresholds[1]) g <- gcd(g, x)
+  #   if ((thresholds[length(thresholds)] - thresholds[1]) / g / length(thresholds) > 100) {
+  #     list(type = "set", thresholds = thresholds)
+  #   } else {
+  #     list(type = "lookup", thresholds = thresholds, precision = g)
+  #   }
+  # }
+  structure(
+    list(type = "set", thresholds = thresholds),
+    class = "optimotu_threshold_config"
+  )
 }
 
 #' @param precision (`numeric` scalar) precision for distances; this is used to
