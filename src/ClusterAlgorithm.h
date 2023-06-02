@@ -41,9 +41,10 @@ public:
 };
 
 class ClusterAlgorithm : public DistanceConsumer {
-protected:
+public:
   const DistanceConverter &dconv;
   const d_t m;
+protected:
   mutable tbb::queuing_rw_mutex mutex;
   ClusterAlgorithm * const parent = nullptr;
   bool own_child = false;
@@ -102,8 +103,9 @@ public:
 };
 
 class SingleClusterAlgorithm : public ClusterAlgorithm {
-protected:
+public:
   const j_t n;
+protected:
 
   // constructor for child objects
   SingleClusterAlgorithm(SingleClusterAlgorithm * parent) :
