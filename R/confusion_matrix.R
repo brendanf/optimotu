@@ -3,6 +3,7 @@
 #' @param x (either a `data.frame` as returned by `confusion_matrix()`, or an
 #' `m` x `n` matrix, as described for `k`) data for which to calculate the
 #' index.
+#' @param ... passed on to methods
 #' @rdname confusion_matrix
 rand_index <- function(x, ...) {
   UseMethod("rand_index", x)

@@ -57,6 +57,8 @@ objects.}
 \item{x}{(either a \code{data.frame} as returned by \code{confusion_matrix()}, or an
 \code{m} x \code{n} matrix, as described for \code{k}) data for which to calculate the
 index.}
+
+\item{...}{passed on to methods}
 }
 \value{
 (\code{data.frame} with \code{m} rows) for each "test" partition, the number
