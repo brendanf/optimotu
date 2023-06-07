@@ -35,13 +35,13 @@ MCA::MultipleClusterAlgorithm(
     for (j_t j = 0; j < subset_names[i].size(); ++j) {
       auto f = namekey.find(subset_names[i][j]);
       assert(f != namekey.end());
-      // std::cout << "adding seq " << f->second
+      // OPTIMOTU_COUT << "adding seq " << f->second
       //           << " (" << subset_names[i][j]
       //           << ") to precluster " << i
       //           << " at position " << fwd_map[i].size() << std::endl;
       subset_key[f->second].push_back(i);
       fwd_map[i].emplace(f->second, j);
-      // std::cout << "seq " << f->second
+      // OPTIMOTU_COUT << "seq " << f->second
       //           << " now found in " << subset_key[j].size()
       //           << " preclusters \n precluster " << i
       //           << " now has " << fwd_map[i].size()
@@ -83,22 +83,22 @@ void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
   // in practice, we should always be able to rely on the 'whichsets'
   // which was calculated in "max_relevant", if it was called.
 
-  // std::cout << "in operator() for MultipleClusterAlgorithm thread " << thread
+  // OPTIMOTU_COUT << "in operator() for MultipleClusterAlgorithm thread " << thread
   //           // << std::endl << "length of whichsets is " << whichsets.size()
   //           // << std::endl << "length of ws_keys is " << ws_keys.size()
   //           << std::endl << "finding overlap sets for item " << seq1
   //           << " in sets:";
-  // for (auto pc : subset_key[seq1]) std::cout << " " << pc;
-  // std::cout << std::endl
+  // for (auto pc : subset_key[seq1]) OPTIMOTU_COUT << " " << pc;
+  // OPTIMOTU_COUT << std::endl
   //           << "and seq " << seq2 << " in sets:";
-  // for (auto pc : subset_key[seq2]) std::cout << " " << pc;
-  // std::cout << std::endl
+  // for (auto pc : subset_key[seq2]) OPTIMOTU_COUT << " " << pc;
+  // OPTIMOTU_COUT << std::endl
   //           << "cached overlaps are for pair " << ws_keys[thread].first
   //           << ", " << ws_keys[thread].second
   //           << std::endl;
 
   if (ws_keys[thread] != std::pair<j_t, j_t>{seq1, seq2}) {
-    // std::cout << "calculating..." << std::flush;
+    // OPTIMOTU_COUT << "calculating..." << std::flush;
     whichsets[thread].clear();
     std::set_intersection(
       subset_key[seq1].begin(),
@@ -109,28 +109,28 @@ void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
     );
     ws_keys[thread] = {seq1, seq2};
   } else {
-    // std::cout << "using cached values..." << std::flush;
+    // OPTIMOTU_COUT << "using cached values..." << std::flush;
   }
 
   for (j_t j : whichsets[thread]) {
-    // if (j == 0) {std::cout << "in operator() for MultipleClusterAlgorithm thread " << thread
+    // if (j == 0) {OPTIMOTU_COUT << "in operator() for MultipleClusterAlgorithm thread " << thread
     //   // << std::endl << "length of whichsets is " << whichsets.size()
     //   // << std::endl << "length of ws_keys is " << ws_keys.size()
     //      << std::endl << "finding overlap sets for item " << seq1
     //      << " in sets:";
-    //   for (auto pc : subset_key[seq1]) std::cout << " " << pc;
-    //   std::cout << std::endl
+    //   for (auto pc : subset_key[seq1]) OPTIMOTU_COUT << " " << pc;
+    //   OPTIMOTU_COUT << std::endl
     //             << "and seq " << seq2 << " in sets:";
-    //   for (auto pc : subset_key[seq2]) std::cout << " " << pc;
-    //   std::cout << std::endl
+    //   for (auto pc : subset_key[seq2]) OPTIMOTU_COUT << " " << pc;
+    //   OPTIMOTU_COUT << std::endl
     //             << "cached overlaps are for pair " << ws_keys[thread].first
     //             << ", " << ws_keys[thread].second
     //             << std::endl;
-    //   std::cout << "found " << whichsets[thread].size()
+    //   OPTIMOTU_COUT << "found " << whichsets[thread].size()
     //             << " overlaps:";
-    //   for (auto pc : whichsets[thread]) std::cout << " " << pc;
-    //   std::cout << std::endl;
-    //   std::cout << "sending seq1=" << fwd_map[j][seq1]
+    //   for (auto pc : whichsets[thread]) OPTIMOTU_COUT << " " << pc;
+    //   OPTIMOTU_COUT << std::endl;
+    //   OPTIMOTU_COUT << "sending seq1=" << fwd_map[j][seq1]
     //             << " seq2=" << fwd_map[j][seq2]
     //             << " i=" << i
     //             << " to subset " << j
@@ -202,14 +202,14 @@ MultipleClusterAlgorithm * MCA::make_child() {
 
 void MCA::write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {
   for (size_t i = 0; i < this->subsets.size(); i++) {
-    // std::cout << "writing to matrix " << i << "..." << std::flush;
+    // OPTIMOTU_COUT << "writing to matrix " << i << "..." << std::flush;
     //           << "matrix size is " << matrix_list[i].nrow()
     //           << "x" << matrix_list[i].ncol()
     //           << std::endl << "subset size is " << this->m
     //           << "x" << subsets[i]->n
     //           << std::endl;
     this->subsets[i]->write_to_matrix(matrix_list[i]);
-    // std::cout << "done" << std::endl;
+    // OPTIMOTU_COUT << "done" << std::endl;
   }
 }
 

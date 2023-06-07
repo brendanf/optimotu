@@ -12,4 +12,11 @@ typedef std::int32_t d_t;
 static const j_t NO_CLUST = std::numeric_limits<std::uint32_t>::max();
 static const d_t NO_DIST = std::numeric_limits<std::int32_t>::max();
 
+#ifdef OPTIMOTU_R
+#define OPTIMOTU_COUT Rcpp::Rcout
+#define OPTIMOTU_CERR Rcpp::Rcerr
+#else
+#define OPTIMOTU_COUT std::cout
+#define OPTIMOTU_CERR std::cerr
+#endif
 #endif //OPTIMOTU_SINGLELINKAGE_H_INCLUDED

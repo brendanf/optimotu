@@ -501,20 +501,20 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
   // std::lock_guard<std::mutex> lock{this->mutex};
   tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
   for (auto c = this->node0; c < this->nodeend; ++c) {
-    // std::cout << "merging cluster " << c - this->pool0
+    // OPTIMOTU_COUT << "merging cluster " << c - this->pool0
     //           << " (" << c
     //           << ") with ID " << c->id
     //           << std::endl;
     if (c->allocated) {
-      // std::cout << " - cluster is allocated" << std::endl;
+      // OPTIMOTU_COUT << " - cluster is allocated" << std::endl;
       if (c->first_child) {
-        // std::cout << " - first child is cluster " << c->first_child - this->pool0
+        // OPTIMOTU_COUT << " - first child is cluster " << c->first_child - this->pool0
         //           << " (" << c->first_child
         //           << ") with ID " << c->first_child->id
         //           << std::endl;
         cluster * next = c->first_child->next_sib;
         while (next) {
-          // std::cout << " - next child is cluster " << next - this->pool0
+          // OPTIMOTU_COUT << " - next child is cluster " << next - this->pool0
           //           << " (" << next
           //           << ") with ID " << next->id
           //           << std::endl;
