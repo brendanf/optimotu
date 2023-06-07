@@ -4,3 +4,5 @@
 ^\.Rproj\.user$
 ^README\.Rmd$
 ^data-raw$
+^\.github$
+^codecov\.yml$
