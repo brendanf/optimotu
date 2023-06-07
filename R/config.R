@@ -267,7 +267,7 @@ threshold_set <- function(thresholds) {
 #' generate a look-up table for distances to the smallest encompassing threshold.
 #' @export
 #' @describeIn threshold_config helper function for method `"lookup"`
-threshold_cached <- function(thresholds, precision) {
+threshold_lookup <- function(thresholds, precision) {
   verify_thresholds(thresholds)
   verify_precision(precision)
   structure(

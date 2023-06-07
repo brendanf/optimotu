@@ -4,7 +4,7 @@
 \alias{threshold_config}
 \alias{threshold_uniform}
 \alias{threshold_set}
-\alias{threshold_cached}
+\alias{threshold_lookup}
 \title{Configuration for threshold representations}
 \usage{
 threshold_config(type = c("uniform", "set", "lookup"), ...)
@@ -13,7 +13,7 @@ threshold_uniform(from, to, by)
 
 threshold_set(thresholds)
 
-threshold_cached(thresholds, precision)
+threshold_lookup(thresholds, precision)
 }
 \arguments{
 \item{type}{(\code{character} string) representation of thresholds.}
@@ -44,6 +44,6 @@ Configuration for threshold representations
 
 \item \code{threshold_set()}: helper function for method \code{"set"}
 
-\item \code{threshold_cached()}: helper function for method \code{"lookup"}
+\item \code{threshold_lookup()}: helper function for method \code{"lookup"}
 
 }}
