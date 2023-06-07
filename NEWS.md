@@ -1,3 +1,26 @@
+# optimotu (development version)
+
+* New backend C++ code unifies methods for various algorithms for clustering
+based on a distance matrix.  All of these are now accessed through one
+user-visible function, `distmx_cluster()`.
+* Added a new "index"ed matrix clustering method, which is the default for
+`distmx_cluster()`.
+* Some options which were previously only available for the "tree" clustering
+method (i.e., hclust output and subset clustering with the "which" option) are
+now available for the "matrix" clustering method, as well as the new "index"
+method.
+* Speed of the "matrix" clustering method has been improved.
+* All clustering methods can be run in three multithreaded modes, controlled by
+the option "parallel_config". The "concurrent" mode uses read-write locks on the
+data structure to ensure that only one thread writes at the same time. The
+"merge" mode keeps separate copies of the data structure, which are merged once
+the full input has been processed.  The "hierarchical" mode uses several
+copies of the data structure, each of which is operated on a small number of
+threads in "concurrent" mode; the different copies are then merged as in "merge"
+mode. The benefits of parallel processing for a sparse distance matrix stored
+in a file or read from a pipe are fairly minor, since only one thread can read
+from the input at a time.
+
 # optimotu 0.5.1
 
 * Fix bug which prevented installation on systems without gproftools installed.
