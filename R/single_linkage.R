@@ -1,110 +1,15 @@
-verify_which <- function(which, method, seqnames) {
+verify_which <- function(which, seqnames) {
    checkmate::assert_list(
       which,
-      types = "character",
       any.missing = FALSE
    )
    if (!all(vapply(lapply(which, `%in%`, table = seqnames), all, TRUE))) {
       stop("Elements of 'which' must all be in 'seqnames'.")
    }
-   if (method=="matrix") {
-      warning("Method 'matrix' is not yet implemented for subset clustering.",
-              "Falling back to method 'tree'.")
-   }
    invisible(TRUE)
 }
 
-verify_threshold_steps <- function(thresh_min, thresh_max, thresh_step) {
-   if (is.null(thresh_min) || is.null(thresh_max) || is.null(thresh_step)) {
-      stop("either 'thresholds' or 'thresh_min', 'thresh_max', and 'thresh_step' must be given")
-   }
-   if (!is.numeric(thresh_min) || !is.numeric(thresh_max) || !is.numeric(thresh_step)) {
-      stop("'thresh_min', 'thresh_max', and 'thresh_step' must all be numbers.")
-   }
-   if (length(thresh_min) != 1L || length(thresh_max) != 1L || length(thresh_step) != 1L) {
-      stop("'thresh_min', 'thresh_max', and 'thresh_step' must all be of length 1.")
-   }
-   if (is.na(thresh_min) || is.na(thresh_max) || is.na(thresh_step)) {
-      stop("'thresh_min', 'thresh_max', and 'thresh_step' may not be NA.")
-   }
-   if (is.nan(thresh_min) || is.nan(thresh_max) || is.nan(thresh_step)) {
-      stop("'thresh_min', 'thresh_max', and 'thresh_step' may not be NaN.")
-   }
-   if (thresh_step <= 0) {
-      stop("'thresh_step' must be positive.")
-   }
-   if (thresh_max < thresh_min) {
-      stop("'thresh_max' must be greater than or equal to 'thresh_min'.")
-   }
-}
 
-verify_thresholds <- function(thresholds) {
-   if (!is.numeric(thresholds)) {
-      stop("'thresholds' must be numeric.")
-   }
-   if (length(thresholds) == 0) {
-      stop("At least one threshold must be given in 'thresholds'.")
-   }
-   if (any(is.na(thresholds))) {
-      stop("'thresholds' may not have NA values.")
-   }
-   if (any(is.nan(thresholds))) {
-      stop("'thresholds' may not have NaN values.")
-   }
-   if (any(thresholds < 0)) {
-      stop("'thresholds' may not contain negative values.")
-   }
-   if (any(utils::head(thresholds, -1) > utils::tail(thresholds, -1))) {
-      stop("'thresholds' must be non-decreasing.")
-   }
-   invisible(TRUE)
-}
-
-deduplicate_thresholds <- function(thresholds) {
-   out <- list()
-   if (all(utils::head(thresholds, -1) < utils::tail(thresholds, -1))) {
-      out$thresholds <- thresholds
-      out$threshold_order <- seq_along(thresholds)
-   } else {
-      d <- duplicated(thresholds)
-      out$thresholds <- thresholds[!d]
-      out$threshold_order <- match(thresholds, thresholds[!d])
-   }
-   out
-}
-
-reduplicate_thresholds <- function(out, dedup) {
-   UseMethod("reduplicate_thresholds", out)
-}
-
-reduplicate_thresholds.matrix <- function(out, dedup) {
-   if (isTRUE(all.equal(dedup$threshold_order, seq_len(nrow(out))))) {
-      out
-   } else {
-      out[dedup$threshold_order,]
-   }
-}
-
-reduplicate_thresholds.hclust <- function(out, dedup) {
-   out
-}
-
-verify_precision <- function(precision) {
-   checkmate::assert_number(
-      precision,
-      na.ok = FALSE,
-      null.ok = TRUE,
-      finite = TRUE,
-      lower = .Machine$double.xmin
-   )
-}
-
-verify_method_output_type <- function(method, output_type) {
-   if (output_type == "hclust" && method == "matrix") {
-      stop("output_type 'hclust' is not available for method 'matrix'.")
-   }
-   invisible(TRUE)
-}
 
 is_list_of_character <- function(x) {
   all(vapply(x, is.character, TRUE))
@@ -134,44 +39,30 @@ is_list_of_character <- function(x) {
 #' the sparse distance matrix with integer indices, an alternate version of the
 #' input may be used, where the "real" names are replaced with integers. These
 #' are the "real" names.
-#' @param method (`character`) The algorithm to use; one of "tree" or "matrix".
-#' The "tree" algorithm is faster in at least some large cases, but tends to be
-#' slower in smaller cases, and cannot take advantage of parallel computation
-#' unless multiple overlapping subsets are specified in `which`. The two
-#' algorithms give identical results.
+#' @param threshold_config (`optimotu_threshold_config` object returned by
+#' [threshold_config()] or one of its helper functions) Definition of the
+#' thresholds to use for clustering.
+#' @param clust_config (`optimotu_cluster_config` object returned by
+#' [clust_config()] or one of its helpers) The clustering algorithm to use; all
+#' algorithms give identical results, but may have different performance
+#' characteristics on different problems. The default is [cluster_index()].
+#' @param parallel_config (`optimotu_parallel_config` object returned by
+#' [parallel_config()] or one of its helpers) The method to use for
+#' parallel clustering. For single-threaded clustering, use the default value
+#' ([parallel_concurrent()] with `threads = 1`).
 #' @param output_type (`character`) Which type of output to give; one of
 #' `"matrix"` or `"hclust"`. `"matrix"` returns an integer matrix giving
 #' clustering results, where the element in row `i` and column `j` gives the
 #' 0-based index of the first member of the cluster to which sequence `j`
 #' belongs when clustered at the `i`th clustering threshold. `"hclust"` returns
 #' an object as returned by [stats::hclust()], which requires less memory,
-#' especially for large problems, but is only supported for method `"tree"`. If
-#' `which` is given, then either `output_type` returns a list whose elements are
-#' of the chosen type.
-#' @param thresh_min (`numeric` scalar) The minimum distance threshold for
-#' clustering; should not be given if explicit `thresholds` are specified.
-#' @param thresh_max (`numeric` scalar) The maximum distance threshold for
-#' clustering; should not be given if explicit `thresholds` are specified.
-#' @param thresh_step (`numeric` scalar) The spacing between subsequent distance
-#' thresholds for clustering; should not be given if explicit `thresholds` are
-#' specified.
-#' @param thresholds (sorted `numeric` vector) An explicit list of clustering
-#' thresholds to try.  These do not need to be evenly spaced but must be
-#' non-decreasing.
-#' @param precision (`numeric` scalar) The precision of the distances in the
-#' distance matrix; providing this may give a slight speedup when explicit
-#' `thresholds` are provided. If the actual precision of numbers in the distance
-#' matrix is smaller than this value, then distances will be rounded to this
-#' precision without warning.
+#' especially for large problems. If `which` is given, then both `output_type`s
+#' instead return a list whose elements are of the chosen type.
 #' @param which (`list` of `character` vectors) Instead of performing clustering
 #' on all input sequences, perform independent clustering on subsets of the
 #' sequences defined by the elements of `which`. Subsets do not need to be
 #' disjoint (and indeed, if they are it is probably faster to calculate the
-#' distance matrices separately.) Currently `which` is only implemented for the
-#' `"tree"` algorithm.
-#' @param threads (`integer` scalar) Maximum number of parallel threads.
-#' @param minsplit (`integer` scalar) Controls the granularity of parallel
-#' processing in the "matrix" algorithm.
+#' distance matrices separately.)
 #'
 #' @return An [`integer matrix`][methods::structure-class] if
 #' `output_type=="matrix"`, an [`hclust`][stats::hclust] object if
@@ -180,89 +71,35 @@ is_list_of_character <- function(x) {
 distmx_cluster = function(
    distmx,
    names,
-   method = c("tree", "matrix"),
+   threshold_config,
+   clust_config = clust_index(),
+   parallel_config = parallel_concurrent(1),
    output_type = c("matrix", "hclust"),
-   thresh_min = NULL,
-   thresh_max = NULL,
-   thresh_step = NULL,
-   thresholds = NULL,
-   precision = NULL,
-   which = NULL,
-   threads = 1L,
-   minsplit = 1L
+   which = NULL
 ) {
-   method = match.arg(method)
-   output_type = match.arg(output_type)
-   verify_method_output_type(method, output_type)
-   if (is.null(thresholds)) {
-      if (!is.null(precision)) {
-         warning("'precision' has no effect when 'thresholds' is not given. Ignoring.\n")
-      }
-      verify_threshold_steps(thresh_min, thresh_max, thresh_step)
-      if (!is.null(which) && !isTRUE(which)) {
-         verify_which(which, method, names)
-         distmx_cluster_multi_uniform(
-            distmx,
-            names,
-            output_type,
-            thresh_min,
-            thresh_max,
-            thresh_step,
-            which,
-            threads
-         )
-      } else {
-         switch(
-            method,
-            tree = distmx_cluster_pool_uniform(
-               distmx,
-               names,
-               thresh_min,
-               thresh_max,
-               thresh_step,
-               output_type
-            ),
-            matrix = distmx_cluster_matrix_uniform(
-               distmx,
-               names,
-               thresh_min,
-               thresh_max,
-               thresh_step,
-               threads,
-               minsplit
-            )
-         )
-      }
-   } else if (!is.null(thresh_min) || !is.null(thresh_max) || !is.null(thresh_step)) {
-      stop("If 'thresholds' is given, 'thresh_min', 'thresh_max', and 'thresh_step' must not be.")
-   } else {
-      verify_thresholds(thresholds)
-      verify_precision(precision)
-      dedup <- deduplicate_thresholds(thresholds)
-      out <- if (!is.null(which) && !isTRUE(which)) {
-         verify_which(which, method, names)
-         if (is.null(precision)) {
-            distmx_cluster_multi_array(distmx, names, output_type, dedup$thresholds, which, threads)
-         } else {
-            distmx_cluster_multi_cached(distmx, names, output_type, dedup$thresholds, precision, which, threads)
-         }
-      } else {
-         if (is.null(precision)) {
-            switch(
-               method,
-               tree = distmx_cluster_pool_array(distmx, names, dedup$thresholds, output_type),
-               matrix = distmx_cluster_matrix_array(distmx, names, dedup$thresholds, threads, minsplit)
-            )
-         } else {
-            switch(
-               method,
-               tree = distmx_cluster_pool_cached(distmx, names, dedup$thresholds, precision, output_type),
-               matrix = distmx_cluster_matrix_cached(distmx, names, dedup$thresholds, precision, threads, minsplit)
-            )
-         }
-      }
-      reduplicate_thresholds(out, dedup)
-   }
+  output_type = match.arg(output_type)
+  out <- if (!is.null(which) && !isTRUE(which)) {
+    verify_which(which, names)
+    distmx_cluster_multi(
+      distmx,
+      names,
+      which,
+      threshold_config,
+      clust_config,
+      parallel_config,
+      output_type
+    )
+  } else {
+    distmx_cluster_single(
+      distmx,
+      names,
+      threshold_config,
+      clust_config,
+      parallel_config,
+      output_type
+    )
+  }
+  reduplicate_thresholds(out, threshold_config)
 }
 
 #' Do single-linkage clustering at a series of increasing similarity thresholds
@@ -511,7 +348,7 @@ do_usearch_singlelink <- function(
       usearch_thresh_max <- max(thresholds)
    }
    if (is.list(which)) {
-      verify_which(which, method, seq_id)
+      verify_which(which, seq_id)
    }
    checkmate::assert(
       checkmate::check_null(thresh_names),

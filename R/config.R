@@ -1,3 +1,98 @@
+verify_threshold_steps <- function(thresh_min, thresh_max, thresh_step) {
+  if (is.null(thresh_min) || is.null(thresh_max) || is.null(thresh_step)) {
+    stop("either 'thresholds' or 'thresh_min', 'thresh_max', and 'thresh_step' must be given")
+  }
+  if (!is.numeric(thresh_min) || !is.numeric(thresh_max) || !is.numeric(thresh_step)) {
+    stop("'thresh_min', 'thresh_max', and 'thresh_step' must all be numbers.")
+  }
+  if (length(thresh_min) != 1L || length(thresh_max) != 1L || length(thresh_step) != 1L) {
+    stop("'thresh_min', 'thresh_max', and 'thresh_step' must all be of length 1.")
+  }
+  if (is.na(thresh_min) || is.na(thresh_max) || is.na(thresh_step)) {
+    stop("'thresh_min', 'thresh_max', and 'thresh_step' may not be NA.")
+  }
+  if (is.nan(thresh_min) || is.nan(thresh_max) || is.nan(thresh_step)) {
+    stop("'thresh_min', 'thresh_max', and 'thresh_step' may not be NaN.")
+  }
+  if (thresh_step <= 0) {
+    stop("'thresh_step' must be positive.")
+  }
+  if (thresh_max < thresh_min) {
+    stop("'thresh_max' must be greater than or equal to 'thresh_min'.")
+  }
+}
+
+verify_thresholds <- function(thresholds) {
+  if (!is.numeric(thresholds)) {
+    stop("'thresholds' must be numeric.")
+  }
+  if (length(thresholds) == 0) {
+    stop("At least one threshold must be given in 'thresholds'.")
+  }
+  if (any(is.na(thresholds))) {
+    stop("'thresholds' may not have NA values.")
+  }
+  if (any(is.nan(thresholds))) {
+    stop("'thresholds' may not have NaN values.")
+  }
+  if (any(thresholds < 0)) {
+    stop("'thresholds' may not contain negative values.")
+  }
+  if (any(utils::head(thresholds, -1) > utils::tail(thresholds, -1))) {
+    stop("'thresholds' must be non-decreasing.")
+  }
+  invisible(TRUE)
+}
+
+deduplicate_thresholds <- function(thresholds) {
+  out <- list()
+  if (all(utils::head(thresholds, -1) < utils::tail(thresholds, -1))) {
+    out$thresholds <- thresholds
+    out$threshold_order <- seq_along(thresholds)
+  } else {
+    d <- duplicated(thresholds)
+    out$thresholds <- thresholds[!d]
+    out$threshold_order <- match(thresholds, thresholds[!d])
+  }
+  out
+}
+
+reduplicate_thresholds <- function(out, thresholds) {
+  UseMethod("reduplicate_thresholds", out)
+}
+
+#' @method reduplicate_thresholds matrix
+reduplicate_thresholds.matrix <- function(out, thresholds) {
+  checkmate::assert_class(thresholds, "optimotu_threshold_config")
+  if (thresholds$type == "uniform") {
+    out
+  } else if (isTRUE(all.equal(thresholds$threshold_order, seq_len(nrow(out))))) {
+    out
+  } else {
+    out[thresholds$threshold_order,]
+  }
+}
+
+#' @method reduplicate_thresholds hclust
+reduplicate_thresholds.hclust <- function(out, thresholds) {
+  out
+}
+
+#' @method reduplicate_thresholds list
+reduplicate_thresholds.list <- function(out, thresholds) {
+  lapply(out, function(x) reduplicate_thresholds(x, thresholds = thresholds))
+}
+
+verify_precision <- function(precision) {
+  checkmate::assert_number(
+    precision,
+    na.ok = FALSE,
+    null.ok = TRUE,
+    finite = TRUE,
+    lower = .Machine$double.xmin
+  )
+}
+
 #' Configuration for clustering algorithms
 #'
 #' @details
@@ -138,6 +233,7 @@ gcd <- function(a, b) {
 #' @describeIn threshold_config helper function for method `"set"`
 threshold_set <- function(thresholds) {
   verify_thresholds(thresholds)
+  dedup <- deduplicate_thresholds(thresholds)
   # out <- if (length(thresholds) == 1) {
   #   list(
   #     type = "uniform",
@@ -162,7 +258,7 @@ threshold_set <- function(thresholds) {
   #   }
   # }
   structure(
-    list(type = "set", thresholds = thresholds),
+    c(list(type = "set"), deduplicate_thresholds(thresholds)),
     class = "optimotu_threshold_config"
   )
 }
@@ -175,7 +271,11 @@ threshold_cached <- function(thresholds, precision) {
   verify_thresholds(thresholds)
   verify_precision(precision)
   structure(
-    list(type = "lookup", thresholds = thresholds, precision = precision),
+    c(
+      list(type = "lookup"),
+      deduplicate_thresholds(thresholds),
+      list(precision = precision)
+    ),
     class = "optimotu_threshold_config"
   )
 }

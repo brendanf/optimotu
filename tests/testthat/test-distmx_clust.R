@@ -33,14 +33,14 @@ write.table(dist_table, distmx_file, sep = "\t", row.names = FALSE, col.names = 
 # withr::defer(unlink(distmx_file), teardown_env())
 
 hclust2matrix <- function(distmx, thresholds) {
-  hclust(pmax(distmx - 1e-8, 0), method = "single") |>
+  out <- hclust(pmax(distmx - 1e-8, 0), method = "single") |>
     lapply(thresholds, cutree, k = NULL, tree = _) |>
     lapply(function(x) {
       for (i in seq_along(x)) {if (x[i] < i) x[x >= i] = x[x >= i] + 1L}
       x
     }) |>
-    do.call(rbind, args = _) |>
-    magrittr::subtract(1L)
+    do.call(rbind, args = _)
+  out - 1L
 }
 
 hclust_matrix <- hclust2matrix(distmx, 0:20 / 20)
@@ -84,11 +84,11 @@ for (p in names(parallels)) {
         ),
         {
           expect_equal(
-            optimotu:::distmx_cluster_single(
-              file = distmx_file,
-              seqnames = as.character(1:n),
+            distmx_cluster(
+              distmx = distmx_file,
+              names = as.character(1:n),
               threshold_config = thresholds[[t]],
-              method_config = algorithms[[a]],
+              clust_config = algorithms[[a]],
               parallel_config = parallels[[p]],
               output_type = "matrix"
             ),
@@ -109,12 +109,12 @@ for (p in names(parallels)) {
         ),
         {
           expect_equal(
-            optimotu:::distmx_cluster_multi(
-              file = distmx_file,
-              seqnames = as.character(1:n),
+            distmx_cluster(
+              distmx = distmx_file,
+              names = as.character(1:n),
               which = lapply(subsets, as.character),
               threshold_config = thresholds[[t]],
-              method_config = algorithms[[a]],
+              clust_config = algorithms[[a]],
               parallel_config = parallels[[p]],
               output_type = "matrix"
             ),

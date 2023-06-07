@@ -94,4 +94,3 @@ std::unique_ptr<SingleClusterAlgorithm> CTF::create(init_matrix_t & im) const {
   return std::make_unique<ClusterTree>(this->dconv, im);
 }
 
-
