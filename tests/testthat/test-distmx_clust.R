@@ -49,7 +49,7 @@ subset_hclust_matrix <- lapply(subsetdistmx, hclust2matrix, 0:20 / 20)
 thresholds <- list(
   set_thresh = threshold_set(0:20 / 20),
   uniform_thresh = threshold_uniform(0, 1, 0.05),
-  cache_thresh = threshold_cached(0:20 / 20, 0.05)
+  lookup_thresh = threshold_lookup(0:20 / 20, 0.05)
 )
 
 algorithms <- list(

@@ -201,7 +201,7 @@ threshold_config <- function(type = c("uniform", "set", "lookup"), ...) {
     type,
     uniform = threshold_uniform(...),
     set = threshold_array(...),
-    lookup = threshold_cached(...)
+    lookup = threshold_lookup(...)
   )
 }
 
