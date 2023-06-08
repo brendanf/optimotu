@@ -8,16 +8,12 @@ using USEARCH to calculate sequence similarities.}
 seq_cluster_usearch(
   seq,
   seq_id = names(seq),
-  method = c("tree", "matrix"),
+  threshold_config,
+  clust_config = clust_index(),
+  parallel_config = parallel_concurrent(1),
   output_type = c("matrix", "hclust"),
-  thresh_min = NULL,
-  thresh_max = NULL,
-  thresh_step = NULL,
-  thresholds = NULL,
-  precision = if (is.null(thresholds)) NULL else 0.001,
-  thresh_names = names(thresholds),
   which = TRUE,
-  ncpu = NULL,
+  usearch_ncpu = NULL,
   usearch = Sys.which("usearch")
 )
 }
@@ -30,11 +26,19 @@ seq_cluster_usearch(
 already named, this will replace the names.  Has no effect if \code{seq} is a
 filename.}
 
-\item{method}{(\code{character}) The algorithm to use; one of "tree" or "matrix".
-The "tree" algorithm is faster in at least some large cases, but tends to be
-slower in smaller cases, and cannot take advantage of parallel computation
-unless multiple overlapping subsets are specified in \code{which}. The two
-algorithms give identical results.}
+\item{threshold_config}{(\code{optimotu_threshold_config} object returned by
+\code{\link[=threshold_config]{threshold_config()}} or one of its helper functions) Definition of the
+thresholds to use for clustering.}
+
+\item{clust_config}{(\code{optimotu_cluster_config} object returned by
+\code{\link[=clust_config]{clust_config()}} or one of its helpers) The clustering algorithm to use; all
+algorithms give identical results, but may have different performance
+characteristics on different problems.}
+
+\item{parallel_config}{(\code{optimotu_parallel_config} object returned by
+\code{\link[=parallel_config]{parallel_config()}} or one of its helpers) The method to use for
+parallel clustering. For single-threaded clustering, use the default value
+(\code{\link[=parallel_concurrent]{parallel_concurrent()}} with \code{threads = 1}).}
 
 \item{output_type}{(\code{character}) Which type of output to give; one of
 \code{"matrix"} or \code{"hclust"}. \code{"matrix"} returns an integer matrix giving
@@ -42,39 +46,18 @@ clustering results, where the element in row \code{i} and column \code{j} gives 
 0-based index of the first member of the cluster to which sequence \code{j}
 belongs when clustered at the \code{i}th clustering threshold. \code{"hclust"} returns
 an object as returned by \code{\link[stats:hclust]{stats::hclust()}}, which requires less memory,
-especially for large problems, but is only supported for method \code{"tree"}. If
-\code{which} is given, then either \code{output_type} returns a list whose elements are
-of the chosen type.}
+especially for large problems. If \code{which} is given, then both \code{output_type}s
+instead return a list whose elements are of the chosen type.}
 
-\item{thresh_min}{(\code{numeric}) minimum sequence dissimilarity threshold for
-clustering. Number between 0 and 1.}
+\item{which}{(\code{list} of \code{character} vectors) Instead of performing clustering
+on all input sequences, perform independent clustering on subsets of the
+sequences defined by the elements of \code{which}. Subsets do not need to be
+disjoint (and indeed, if they are it is probably faster to calculate the
+distance matrices separately.)}
 
-\item{thresh_max}{(\code{numeric}) maximum sequence dissimilarity threshold for
-clustering. Number between 0 and 1.}
-
-\item{thresh_step}{(\code{numeric}) difference between successive percentage
-similarity thresholds for clustering. Number <= thresh_max - thresh_min.}
-
-\item{thresholds}{(sorted \code{numeric} vector) An explicit list of clustering
-thresholds to try.  These do not need to be evenly spaced but must be
-non-decreasing.}
-
-\item{precision}{(\code{numeric} scalar) The precision of the distances in the
-distance matrix; providing this may give a slight speedup when explicit
-\code{thresholds} are provided. If the actual precision of numbers in the distance
-matrix is smaller than this value, then distances will be rounded to this
-precision without warning.}
-
-\item{thresh_names}{(\code{character} vector) names for the thresholds.}
-
-\item{which}{(\code{logical}, \code{character} or \code{integer} vector, or a list of these)
-subset(s) of \code{seq} to operate on.  If \code{seq} is a filename, then the distance
-matrix for the full file will be calculated, but only the selected sequences
-will be clustered.  Otherwise, distances will only be calculated for
-sequences occurring in the subset(s)}
-
-\item{ncpu}{(\code{integer} scalar) number of threads to use for calculating the
-distance matrix and clustering}
+\item{usearch_ncpu}{(\code{integer} scalar) number of threads to use for
+calculating the distance matrix.  The number of threads for clustering is
+specified in the "parallel_config" argument.}
 
 \item{usearch}{(\code{character} scalar) path to usearch executable}
 }

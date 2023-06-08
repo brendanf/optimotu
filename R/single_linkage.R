@@ -45,7 +45,7 @@ is_list_of_character <- function(x) {
 #' @param clust_config (`optimotu_cluster_config` object returned by
 #' [clust_config()] or one of its helpers) The clustering algorithm to use; all
 #' algorithms give identical results, but may have different performance
-#' characteristics on different problems. The default is [cluster_index()].
+#' characteristics on different problems.
 #' @param parallel_config (`optimotu_parallel_config` object returned by
 #' [parallel_config()] or one of its helpers) The method to use for
 #' parallel clustering. For single-threaded clustering, use the default value
@@ -116,48 +116,16 @@ distmx_cluster = function(
 #' or higher) should be installed separately; it is available with a free
 #' license for most users at https://www.drive5.com/usearch/.
 #'
+#' @inheritParams distmx_cluster
 #' @param seq (`character` vector, filename,
 #' [DNAStringSet][Biostrings::DNAStringSet()], or `data.frame` with columns
 #' "seq_id" (`character`) and "seq" (`character`)) sequences to cluster
 #' @param seq_id (`character` vector) names for the sequences.  If they are
 #' already named, this will replace the names.  Has no effect if `seq` is a
 #' filename.
-#' @param method (`character`) The algorithm to use; one of "tree" or "matrix".
-#' The "tree" algorithm is faster in at least some large cases, but tends to be
-#' slower in smaller cases, and cannot take advantage of parallel computation
-#' unless multiple overlapping subsets are specified in `which`. The two
-#' algorithms give identical results.
-#' @param output_type (`character`) Which type of output to give; one of
-#' `"matrix"` or `"hclust"`. `"matrix"` returns an integer matrix giving
-#' clustering results, where the element in row `i` and column `j` gives the
-#' 0-based index of the first member of the cluster to which sequence `j`
-#' belongs when clustered at the `i`th clustering threshold. `"hclust"` returns
-#' an object as returned by [stats::hclust()], which requires less memory,
-#' especially for large problems, but is only supported for method `"tree"`. If
-#' `which` is given, then either `output_type` returns a list whose elements are
-#' of the chosen type.
-#' @param thresh_min (`numeric`) minimum sequence dissimilarity threshold for
-#' clustering. Number between 0 and 1.
-#' @param thresh_max (`numeric`) maximum sequence dissimilarity threshold for
-#' clustering. Number between 0 and 1.
-#' @param thresh_step (`numeric`) difference between successive percentage
-#' similarity thresholds for clustering. Number <= thresh_max - thresh_min.
-#' @param thresholds (sorted `numeric` vector) An explicit list of clustering
-#' thresholds to try.  These do not need to be evenly spaced but must be
-#' non-decreasing.
-#' @param precision (`numeric` scalar) The precision of the distances in the
-#' distance matrix; providing this may give a slight speedup when explicit
-#' `thresholds` are provided. If the actual precision of numbers in the distance
-#' matrix is smaller than this value, then distances will be rounded to this
-#' precision without warning.
-#' @param thresh_names (`character` vector) names for the thresholds.
-#' @param which (`logical`, `character` or `integer` vector, or a list of these)
-#' subset(s) of `seq` to operate on.  If `seq` is a filename, then the distance
-#' matrix for the full file will be calculated, but only the selected sequences
-#' will be clustered.  Otherwise, distances will only be calculated for
-#' sequences occurring in the subset(s)
-#' @param ncpu (`integer` scalar) number of threads to use for calculating the
-#' distance matrix and clustering
+#' @param usearch_ncpu (`integer` scalar) number of threads to use for
+#' calculating the distance matrix.  The number of threads for clustering is
+#' specified in the "parallel_config" argument.
 #' @param usearch (`character` scalar) path to usearch executable
 #'
 #' @return An [`integer matrix`][methods::structure-class] if
@@ -168,14 +136,12 @@ distmx_cluster = function(
 seq_cluster_usearch <- function(
    seq,
    seq_id = names(seq),
-   method = c("tree", "matrix"),
+   threshold_config,
+   clust_config = clust_index(),
+   parallel_config = parallel_concurrent(1),
    output_type = c("matrix", "hclust"),
-   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
-   thresholds = NULL,
-   precision = if (is.null(thresholds)) NULL else 0.001,
-   thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = NULL,
+   usearch_ncpu = NULL,
    usearch = Sys.which("usearch")) {
    UseMethod("seq_cluster_usearch", seq)
 }
@@ -185,14 +151,12 @@ seq_cluster_usearch <- function(
 seq_cluster_usearch.data.frame <- function(
    seq,
    seq_id = seq$seq_id,
-   method = c("tree", "matrix"),
+   threshold_config,
+   clust_config = clust_index(),
+   parallel_config = parallel_concurrent(1),
    output_type = c("matrix", "hclust"),
-   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
-   thresholds = NULL,
-   precision = NULL,
-   thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = NULL,
+   usearch_ncpu = NULL,
    usearch = Sys.which("usearch")
 ) {
    mycall <- match.call()
@@ -212,19 +176,15 @@ seq_cluster_usearch.data.frame <- function(
 seq_cluster_usearch.character <- function(
    seq,
    seq_id = names(seq),
-   method = c("tree", "matrix"),
+   threshold_config,
+   clust_config = clust_index(),
+   parallel_config = parallel_concurrent(1),
    output_type = c("matrix", "hclust"),
-   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
-   thresholds = NULL,
-   precision = NULL,
-   thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = NULL,
+   usearch_ncpu = NULL,
    usearch = Sys.which("usearch")
 ) {
-   method = match.arg(method)
    output_type = match.arg(output_type)
-   verify_method_output_type(method, output_type)
    if (length(seq) == 1 && file.exists(seq)) {
       index <- Biostrings::fasta.seqlengths(seq)
       if (!missing(seq_id))
@@ -252,16 +212,12 @@ seq_cluster_usearch.character <- function(
       do_usearch_singlelink(
          seq_file = tf,
          seq_id = names(index),
-         method = method,
+         threshold_config = threshold_config,
+         clust_config = clust_config,
+         parallel_config = parallel_config,
          output_type = output_type,
-         thresh_min = thresh_min,
-         thresh_max = thresh_max,
-         thresh_step = thresh_step,
-         thresholds = thresholds,
-         precision = precision,
-         thresh_names = thresh_names,
          which = which,
-         ncpu = ncpu,
+         usearch_ncpu = usearch_ncpu,
          usearch = usearch
       )
    } else {
@@ -278,19 +234,15 @@ seq_cluster_usearch.character <- function(
 seq_cluster_usearch.DNAStringSet <- function(
    seq,
    seq_id = names(seq),
-   method = c("tree", "matrix"),
+   threshold_config,
+   clust_config = clust_index(),
+   parallel_config = parallel_concurrent(1),
    output_type = c("matrix", "hclust"),
-   thresh_min = NULL, thresh_max = NULL, thresh_step = NULL,
-   thresholds = NULL,
-   precision = NULL,
-   thresh_names = names(thresholds),
    which = TRUE,
-   ncpu = NULL,
+   usearch_ncpu = NULL,
    usearch = Sys.which("usearch")
 ) {
-   method = match.arg(method)
    output_type = match.arg(output_type)
-   verify_method_output_type(method, output_type)
    # rename the sequences if necessary
    if (!isTRUE(all.equal(names(seq), seq_id))) names(seq) <- seq_id
    if (is.list(which)) {
@@ -315,16 +267,12 @@ seq_cluster_usearch.DNAStringSet <- function(
    do_usearch_singlelink(
       seq_file = tf,
       seq_id = names(seq),
-      method = method,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
       output_type = output_type,
-      thresh_min = thresh_min,
-      thresh_max = thresh_max,
-      thresh_step = thresh_step,
-      thresholds = thresholds,
-      precision = precision,
-      thresh_names = thresh_names,
       which = which,
-      ncpu = ncpu,
+      usearch_ncpu = usearch_ncpu,
       usearch = usearch
    )
 }
@@ -332,95 +280,72 @@ seq_cluster_usearch.DNAStringSet <- function(
 do_usearch_singlelink <- function(
    seq_file,
    seq_id,
-   method,
+   threshold_config,
+   clust_config,
+   parallel_config,
    output_type,
-   thresh_min, thresh_max, thresh_step,
-   thresholds,
-   precision,
-   thresh_names,
    which,
-   ncpu,
-   usearch = Sys.which("usearch")
+   usearch_ncpu,
+   usearch
 ) {
-
-   if (is.null(thresholds)) {
-      verify_threshold_steps(thresh_min, thresh_max, thresh_step)
-      nthresh <- length(seq(thresh_min, thresh_max, thresh_step))
-      usearch_thresh_max <- thresh_max
+  checkmate::assert_class(threshold_config, "optimotu_threshold_config")
+  usearch_thresh_max <- if (threshold_config$type == "uniform") threshold_config$to else
+    tail(threshold_config$thresholds, 1L)
+  checkmate::assert_class(clust_config, "optimotu_cluster_config")
+  checkmate::assert_class(parallel_config, "optimotu_parallel_config")
+  if (is.list(which)) {
+    verify_which(which, seq_id)
+  }
+  checkmate::assert(
+    checkmate::check_integer(which, lower = 1, upper = length(seq_id), any.missing = FALSE),
+    checkmate::check_subset(which, seq_id),
+    checkmate::check_logical(which, any.missing = FALSE),
+    checkmate::check_list(which, types = "logical", any.missing = FALSE, min.len = 1),
+    checkmate::check_list(which, types = "integerish", any.missing = FALSE, min.len = 1),
+    checkmate::check_list(which, types = "character", any.missing = FALSE, min.len = 1)
+  )
+  if (is.list(which) && !is.character(which[[1]])) {
+    which <- lapply(which, `[`, x = seq_id)
+  }
+  fifoname <- tempfile("fifo")
+  stopifnot(system2("mkfifo", fifoname) == 0)
+  on.exit(unlink(fifoname), TRUE)
+  args <- c(
+    "-calc_distmx", seq_file, # input file
+    "-tabbedout", fifoname, # output fifo
+    "-maxdist", usearch_thresh_max, # similarity threshold
+    "-termdist", min(1, 2*usearch_thresh_max), # threshold for udist
+    "-lopen", "1", # gap opening
+    "-lext", "1" # gap extend
+  )
+   if (!is.null(usearch_ncpu)) {
+     checkmate::assert_count(usearch_ncpu, positive = TRUE)
+     args <- c(args, "-threads", usearch_ncpu)
    } else {
-      verify_thresholds(thresholds)
-      verify_precision(precision)
-      nthresh <- length(thresholds)
-      usearch_thresh_max <- max(thresholds)
+     usearch_ncpu <- 1L
    }
-   if (is.list(which)) {
-      verify_which(which, seq_id)
-   }
-   checkmate::assert(
-      checkmate::check_null(thresh_names),
-      checkmate::check_character(thresh_names, len = nthresh)
-   )
-   checkmate::assert(
-      checkmate::check_integer(which, lower = 1, upper = length(seq_id), any.missing = FALSE),
-      checkmate::check_subset(which, seq_id),
-      checkmate::check_logical(which, any.missing = FALSE),
-      checkmate::check_list(which, types = "logical", any.missing = FALSE, min.len = 1),
-      checkmate::check_list(which, types = "integerish", any.missing = FALSE, min.len = 1),
-      checkmate::check_list(which, types = "character", any.missing = FALSE, min.len = 1)
-   )
-   if (is.list(which) && !is.character(which[[1]])) {
-      which <- lapply(which, `[`, x = seq_id)
-   }
-   fifoname <- tempfile("fifo")
-   stopifnot(system2("mkfifo", fifoname) == 0)
-   on.exit(unlink(fifoname), TRUE)
-   args <- c(
-      "-calc_distmx", seq_file, # input file
-      "-tabbedout", fifoname, # output fifo
-      "-maxdist", usearch_thresh_max, # similarity threshold
-      "-termdist", min(1, 2*usearch_thresh_max), # threshold for udist
-      "-lopen", "1", # gap opening
-      "-lext", "1" # gap extend
-   )
-   if (!is.null(ncpu)) {
-      checkmate::assert_count(ncpu, positive = TRUE)
-      args <- c(args, "-threads", ncpu)
-   } else {
-      ncpu <- 1L
-   }
-   if (system2(usearch, "-version", stdout = NULL, stderr = NULL) != 0) {
-      stop("usearch could not be found at path: ", usearch)
-   }
-   system2(usearch, args, wait = FALSE)
-   if (is.list(which)) {
-      out <- distmx_cluster(
-         distmx = fifoname,
-         seq_id,
-         thresh_min = thresh_min,
-         thresh_max = thresh_max,
-         thresh_step = thresh_step,
-         thresholds = thresholds,
-         precision = precision,
-         method = method,
-         output_type = output_type,
-         which = which,
-         threads = ncpu
-      )
-      out <- lapply(out, `rownames<-`, thresh_names)
-   } else {
-      out <- distmx_cluster(
-         distmx = fifoname,
-         seq_id,
-         thresh_min = thresh_min,
-         thresh_max = thresh_max,
-         thresh_step = thresh_step,
-         thresholds = thresholds,
-         precision = precision,
-         method = method,
-         output_type = output_type,
-         threads = ncpu
-      )
-      row.names(out) <- thresh_names
-   }
-   out
+  if (system2(usearch, "-version", stdout = NULL, stderr = NULL) != 0) {
+    stop("usearch could not be found at path: ", usearch)
+  }
+  system2(usearch, args, wait = FALSE)
+  if (is.list(which)) {
+    distmx_cluster(
+      distmx = fifoname,
+      names = seq_id,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
+      output_type = output_type,
+      which = which
+    )
+  } else {
+    distmx_cluster(
+      distmx = fifoname,
+      names = seq_id,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
+      output_type = output_type
+    )
+  }
 }

@@ -36,7 +36,7 @@ thresholds to use for clustering.}
 \item{clust_config}{(\code{optimotu_cluster_config} object returned by
 \code{\link[=clust_config]{clust_config()}} or one of its helpers) The clustering algorithm to use; all
 algorithms give identical results, but may have different performance
-characteristics on different problems. The default is \code{\link[=cluster_index]{cluster_index()}}.}
+characteristics on different problems.}
 
 \item{parallel_config}{(\code{optimotu_parallel_config} object returned by
 \code{\link[=parallel_config]{parallel_config()}} or one of its helpers) The method to use for
