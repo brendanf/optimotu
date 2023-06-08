@@ -210,10 +210,10 @@ threshold_config <- function(type = c("uniform", "set", "lookup"), ...) {
 #' @param by (`numeric` scalar) step size
 #' @export
 #' @describeIn threshold_config helper function for type `"uniform"`
-threshold_uniform <- function(from, to, by) {
+threshold_uniform <- function(from, to, by, thresh_names = NULL) {
   verify_threshold_steps(from, to, by)
   structure(
-    list(type = "uniform", from = from, to = to, by = by),
+    list(type = "uniform", from = from, to = to, by = by, thresh_names = thresh_names),
     class = "optimotu_threshold_config"
   )
 }
@@ -231,9 +231,8 @@ gcd <- function(a, b) {
 #' sorted in ascending order.
 #' @export
 #' @describeIn threshold_config helper function for method `"set"`
-threshold_set <- function(thresholds) {
+threshold_set <- function(thresholds, thresh_names = names(thresholds)) {
   verify_thresholds(thresholds)
-  dedup <- deduplicate_thresholds(thresholds)
   # out <- if (length(thresholds) == 1) {
   #   list(
   #     type = "uniform",
@@ -258,7 +257,11 @@ threshold_set <- function(thresholds) {
   #   }
   # }
   structure(
-    c(list(type = "set"), deduplicate_thresholds(thresholds)),
+    c(
+      list(type = "set"),
+      deduplicate_thresholds(thresholds),
+      list(thresh_names = thresh_names)
+    ),
     class = "optimotu_threshold_config"
   )
 }
@@ -267,14 +270,14 @@ threshold_set <- function(thresholds) {
 #' generate a look-up table for distances to the smallest encompassing threshold.
 #' @export
 #' @describeIn threshold_config helper function for method `"lookup"`
-threshold_lookup <- function(thresholds, precision) {
+threshold_lookup <- function(thresholds, precision, thresh_names = names(thresholds)) {
   verify_thresholds(thresholds)
   verify_precision(precision)
   structure(
     c(
       list(type = "lookup"),
       deduplicate_thresholds(thresholds),
-      list(precision = precision)
+      list(precision = precision, thresh_names = thresh_names)
     ),
     class = "optimotu_threshold_config"
   )

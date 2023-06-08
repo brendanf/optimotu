@@ -20,6 +20,9 @@ threads in "concurrent" mode; the different copies are then merged as in "merge"
 mode. The benefits of parallel processing for a sparse distance matrix stored
 in a file or read from a pipe are fairly minor, since only one thread can read
 from the input at a time.
+* `threshold_config()` and helpers have a "thresh_names" argument.  These names
+are used as rownames in clustering output matrices. This behavior was previously
+only implemented in `seq_clust_usearch()`.
 
 # optimotu 0.5.1
 

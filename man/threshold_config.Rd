@@ -9,11 +9,11 @@
 \usage{
 threshold_config(type = c("uniform", "set", "lookup"), ...)
 
-threshold_uniform(from, to, by)
+threshold_uniform(from, to, by, thresh_names = NULL)
 
-threshold_set(thresholds)
+threshold_set(thresholds, thresh_names = names(thresholds))
 
-threshold_lookup(thresholds, precision)
+threshold_lookup(thresholds, precision, thresh_names = names(thresholds))
 }
 \arguments{
 \item{type}{(\code{character} string) representation of thresholds.}

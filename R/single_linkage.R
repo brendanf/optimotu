@@ -99,7 +99,13 @@ distmx_cluster = function(
       output_type
     )
   }
-  reduplicate_thresholds(out, threshold_config)
+  out <- reduplicate_thresholds(out, threshold_config)
+  if (output_type == "matrix" && !is.null(threshold_config$thresh_names))
+    if (is.list(out)) {
+      out <- lapply(out, `rownames<-`, threshold_config$thresh_names)
+    }
+    rownames(out) <- threshold_config$thresh_names
+  out
 }
 
 #' Do single-linkage clustering at a series of increasing similarity thresholds
