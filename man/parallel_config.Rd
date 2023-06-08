@@ -47,7 +47,7 @@ In the merge method, each thread works on an independent clustering of the
 data, based on its own (disjoint) subset of the distance matrix. When each
 thread finishes clustering, it merges its results into the master clustering.
 This avoids concurrency collisions between the threads during the main
-clustering, although collisions occur if multiple threads are trying to
+clustering, although collisions can still occur if multiple threads try to
 merge at the same time.
 }
 

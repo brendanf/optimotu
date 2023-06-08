@@ -58,10 +58,9 @@ The tree method maintains the state of the clustering algorithm using a
 tree structure. When there are more than a few thresholds, it uses less
 memory than the other methods, and requires fewer operations to update.
 However, because its data structure is less cache friendly and it requires
-multiple checks to determine whether an incoming pairwise distance will
-lead to a cluster update, it is often slower than the matrix-based methods.
-It is the only data structure whose result can currently be returned as
-an \code{hclust} object.
+multiple memory accesses to determine whether an incoming pairwise distance
+will lead to a cluster update, it is often slower than the matrix-based
+methods.
 }
 
 \section{Matrix method}{
@@ -75,9 +74,10 @@ distances and good cache locality.
 }
 
 \section{Index(ed matrix) method}{
-The indexed matrix method uses a linked-list index to order the columns of
-the matrix methods such that clusters are contiguous.  This adds some
-overhead to updates in order to maintain the index, but drastically reduces
-the number of matrix columns which must be accessed during an update.
+The indexed matrix method uses a linked-list index which maintains a
+permutation of the columns of the cluster matrix such that all clusters are
+contiguous.  This adds some overhead to updates in order to maintain the
+index, but significantly reduces the number of matrix columns which must be
+accessed during each update.
 }
 
