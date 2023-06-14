@@ -16,6 +16,7 @@ Description: OptimOTU calculates single-linkage clusters at multiple thresholds
     Routines for quickly counting the measure of the intersection of sorted
     sets, and for calculating the multiclass F-measure, are also included.
 License: MIT
+SystemRequirements: GNU make, C++14
 Imports:
    checkmate,
    Biostrings,
