@@ -8,6 +8,7 @@
 #include <shared_mutex>
 #include <iostream>
 #include <deque>
+#include <memory>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
