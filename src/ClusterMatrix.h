@@ -25,24 +25,12 @@ private:
 protected:
   void initialize();
 
-  ClusterMatrix(SingleClusterAlgorithm * parent) :
-    SingleClusterAlgorithm(parent),
-    clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
-    initialize();
-  };
+  ClusterMatrix(SingleClusterAlgorithm * parent);
 
 public:
-  ClusterMatrix(const DistanceConverter &dconv, size_t n) :
-  SingleClusterAlgorithm(dconv, n),
-  clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
-    initialize();
-  };
+  ClusterMatrix(const DistanceConverter &dconv, size_t n);
 
-  ClusterMatrix(const DistanceConverter &dconv, init_matrix_t im) :
-    SingleClusterAlgorithm(dconv, im),
-    clust_array(im), ca(&clust_array[0]), toclust(m, 0) {
-    initialize();
-  };
+  ClusterMatrix(const DistanceConverter &dconv, init_matrix_t im);
 
   using ClusterAlgorithm::operator();
 

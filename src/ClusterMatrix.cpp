@@ -3,6 +3,29 @@
 #include <cstring>
 #include "ClusterMatrix.h"
 
+template<bool BM, int F, typename A>
+ClusterMatrix<BM, F, A>::ClusterMatrix(SingleClusterAlgorithm * parent):
+SingleClusterAlgorithm(parent),
+clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
+  initialize();
+}
+
+template<bool BM, int F, typename A>
+ClusterMatrix<BM, F, A>::ClusterMatrix(const DistanceConverter &dconv, size_t n) :
+  SingleClusterAlgorithm(dconv, n),
+  clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
+  initialize();
+}
+
+template<bool BM, int F, typename A>
+ClusterMatrix<BM, F, A>::ClusterMatrix(
+    const DistanceConverter &dconv,
+    init_matrix_t im
+) :
+  SingleClusterAlgorithm(dconv, im),
+  clust_array(im), ca(&clust_array[0]), toclust(m, 0) {
+  initialize();
+}
 
 template<bool BM, int F, typename A>
 void ClusterMatrix<BM, F, A>::initialize() {
