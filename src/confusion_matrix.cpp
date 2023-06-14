@@ -143,6 +143,13 @@ Rcpp::DataFrame confusion_matrix(
     Rcpp::Named("FN") = false_negative,
     Rcpp::Named("TN") = true_negative
   );
+  if (k.hasAttribute("dimnames")) {
+    Rcpp::List dimnames = k.attr("dimnames");
+    Rcpp::RObject rownames = dimnames[0];
+    if (rownames != R_NilValue) {
+      out.attr("row.names") = Rcpp::as<Rcpp::List>(k.attr("dimnames"))[0];
+    }
+  }
 
   return out;
 }

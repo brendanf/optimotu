@@ -618,7 +618,15 @@ public:
    Rcpp::NumericVector ami = (mi - emi) / (Hmax - emi);
    auto out = Rcpp::DataFrame::create(
      Rcpp::Named("MI") = mi,
+     Rcpp::Named("EMI") = emi,
      Rcpp::Named("AMI") = ami
    );
+   if (k.hasAttribute("dimnames")) {
+     Rcpp::List dimnames = k.attr("dimnames");
+     Rcpp::RObject rownames = dimnames[0];
+     if (rownames != R_NilValue) {
+       out.attr("row.names") = Rcpp::as<Rcpp::List>(k.attr("dimnames"))[0];
+     }
+   }
    return out;
  }
