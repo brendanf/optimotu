@@ -2,6 +2,7 @@
 #define OPTIMOTU_CLUSTERALGORITHMFACTORY_H_INCLUDED
 
 #include "ClusterAlgorithm.h"
+#include <memory>
 
 class ClusterAlgorithmFactory {
 protected:

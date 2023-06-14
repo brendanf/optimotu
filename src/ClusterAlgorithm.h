@@ -4,12 +4,10 @@
 #include "single_linkage.h"
 #include "DistanceConverter.h"
 #include <vector>
-#include <unordered_map>
-#include <map>
 #include <mutex>
 #include <shared_mutex>
-#include <set>
 #include <iostream>
+#include <deque>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>

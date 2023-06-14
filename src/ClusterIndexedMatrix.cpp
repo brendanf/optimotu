@@ -1,5 +1,6 @@
 #include <deque>
 #include <array>
+#include <cstring>
 #include "ClusterIndexedMatrix.h"
 
 template <class A>
@@ -343,10 +344,10 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
   // OPTIMOTU_COUT << "t1->column=" << t1min->column << "=clust_array["
   //           << (t1min->column - ca) / m << ", " << (t1min->column-ca) % m << "]"
   //           << std::endl;
-  memcpy(t1min->column + i, buffer + i, (imax - i) * sizeof(int));
+  std::memcpy(t1min->column + i, buffer + i, (imax - i) * sizeof(int));
   // OPTIMOTU_COUT << "filling t2; t2=" << t2min << "=index[" << t2min - index << "]"
   //           << std::endl;
-  memcpy(t2min->column + i, buffer + i, (imax - i) * sizeof(int));
+  std::memcpy(t2min->column + i, buffer + i, (imax - i) * sizeof(int));
   bool merged = false;
   while (i < imax) {
     // OPTIMOTU_COUT << "filling at i=" << i << std::endl;
@@ -359,7 +360,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << buffer + i << ":" << buffer + imax
       //           << " -> " << t1min->column + i << ":" << t1min->column + imax
       //           << std::endl;
-      memcpy(t1min->column + i, buffer + i, (imax - i) * sizeof(int));
+      std::memcpy(t1min->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) {
         // OPTIMOTU_COUT << "infinite loop" << std::endl;
         Rcpp::stop("infinite loop");
@@ -375,7 +376,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << buffer + i << ":" << buffer + imax
       //           << " -> " << t1max->column + i << ":" << t1max->column + imax
       //           << std::endl;
-      memcpy(t1max->column + i, buffer + i, (imax - i) * sizeof(int));
+      std::memcpy(t1max->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) {
         // OPTIMOTU_COUT << "infinite loop" << std::endl;
         Rcpp::stop("infinite loop");
@@ -396,7 +397,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << buffer + i << ":" << buffer + imax
       //           << " -> " << t2min->column + i << ":" << t2min->column + imax
       //           << std::endl;
-      memcpy(t2min->column + i, buffer + i, (imax - i) * sizeof(int));
+      std::memcpy(t2min->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) Rcpp::stop("infinite loop");
     }
     // OPTIMOTU_COUT << "finished t2min" << std::endl;
@@ -409,7 +410,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << buffer + i << ":" << buffer + imax
       //           << " -> " << t2max->column + i << ":" << t2max->column + imax
       //           << std::endl;
-      memcpy(t2max->column + i, buffer + i, (imax - i) * sizeof(int));
+      std::memcpy(t2max->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) Rcpp::stop("infinite loop");
     }
     // OPTIMOTU_COUT << "finished t2max" << std::endl;

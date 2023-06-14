@@ -1,5 +1,6 @@
 #include <deque>
 #include <array>
+#include <cstring>
 #include "ClusterMatrix.h"
 
 
@@ -149,19 +150,19 @@ void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
         // Rcpp::Rcout << "cluster " << jj/m << " matching to " << jcomp/m <<
         // "; updating from " << copystart << " to " << imin << std::endl;
       }
-      memcpy(
+      std::memcpy(
         &*ca,
         &*(toclust.begin()) + copystart,
         (imax - copystart) * sizeof(int)
       );
     }
   }
-  memcpy(
+  std::memcpy(
     &*clust_array.begin() + j1m + i,
     &*toclust.begin() + i,
     (imax - i) * sizeof(int)
   );
-  memcpy(
+  std::memcpy(
     &*clust_array.begin() + j2m + i,
     &*toclust.begin() + i,
     (imax - i) * sizeof(int)

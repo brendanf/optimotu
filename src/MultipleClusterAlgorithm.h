@@ -6,6 +6,7 @@
 #include "ClusterAlgorithm.h"
 #include "ClusterAlgorithmFactory.h"
 #include "ClusterTree.h"
+#include <unordered_map>
 
 class MultipleClusterAlgorithm : public ClusterAlgorithm {
 protected:
