@@ -97,6 +97,9 @@ struct MutualInformationWorker : public RcppParallel::Worker
       // calculate entropy based on final counts
       for (auto &ki : k_count) {
         if (ki.second.n > 1) ki.second.H = ki.second.n/N;
+        // Rcpp::Rcerr << "k" << ki.first
+        //             << " has " << ki.second.n
+        //             << " members and H=" << ki.second.H << std::endl;
       }
       // traverse true clusters
       auto ci = c_sort.begin();
@@ -115,8 +118,17 @@ struct MutualInformationWorker : public RcppParallel::Worker
           ++ci;
         }
         for (const auto counti : intersects) {
+          // Rcpp::Rcerr << "intersections between k" << counti.first
+          //             << " and c" << c_clust
+          //             << ": " << counti.second << std::endl;
           Hij = (double)counti.second / N;
-          result[j] += Hij * log(Hij / c_count.at(c_clust).H / k_count.at(kj[counti.first]).H);
+          // Rcpp::Rcerr << "mutual information terms: "
+          //             << "Hij = " << Hij << std::endl
+          //             << "Hi = " << c_count.at(c_clust).H << std::endl
+          //             << "Hj = " << k_count.at(counti.first).H << std::endl
+          //             << "MIij = " << Hij * log(Hij / c_count.at(c_clust).H / k_count.at(counti.first).H)
+          //             << std::endl;
+          result[j] += Hij * log(Hij / c_count.at(c_clust).H / k_count.at(counti.first).H);
         }
       }
     }
@@ -230,22 +242,24 @@ AdjustedMutualInformationWorker1(
         cluster_sizes.push_back(k_counts[j]);
       }
       // Rcpp::Rcerr << "sorting size counts" << std::endl;
-      // std::sort(cluster_sizes.begin(), cluster_sizes.end());
+      std::sort(cluster_sizes.begin(), cluster_sizes.end());
 
       // Rcpp::Rcerr << "filling my_k_counts" << std::endl;
-      size_t pre_size = my_k_counts.size();
+      // size_t pre_size = my_k_counts.size();
+      Hk = 0.0;
       auto cs_i = cluster_sizes.begin();
       auto cs_end = cluster_sizes.end();
       while (cs_i != cs_end) {
         auto cs_start = cs_i;
         while (cs_i != cs_end && *cs_i == *cs_start) ++cs_i;
-        my_k_counts.push_back({*cs_start, size_t(cs_i - cs_start), j});
+        size_t num = cs_i - cs_start;
+        my_k_counts.push_back({*cs_start, num, j});
+        Hk -= num * double(*cs_start) / N * log(double(*cs_start) / N);
       }
       // Rcpp::Rcerr << "found k clusters with " << my_k_counts.size() - pre_size
       //             << " different sizes" << std::endl;
 
       // Rcpp::Rcerr << "calculating MI" << std::endl;
-      Hk = 0.0;
       auto ci = c_sort.begin();
       auto c_end = c_sort.end();
       while(ci != c_end) {
@@ -264,7 +278,7 @@ AdjustedMutualInformationWorker1(
           // Rcpp::Rcerr << "  - calculating MI for intersect with k cluster " << *i_i << std::endl;
            // Rcpp::Rcerr << "  - k cluster " << *i_i << " has " << (i_i - i_start) << " items in common with c cluster " << ci->first << std::endl;
           Hij = double(intersects[i_i]) / N;
-          mi[j] += Hij * log(Hij / c_count.at(c_clust).H / double(k_counts[kj[i_i]]) * N);
+          mi[j] += Hij * log(Hij / c_count.at(c_clust).H / double(k_counts[i_i]) * N);
           intersects_used.pop_front();
           intersects[i_i] = 0;
         }
@@ -392,6 +406,10 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
   }
 
   double emi_term(size_t ai, size_t bi, double precalc) {
+    // Rcpp::Rcerr << "emi_term for ai=" << ai
+    //             << ", bi=" << bi
+    //             << ", precalc=" << precalc
+    //             << std::endl;
     size_t nijmin = 1;
     if (ai + bi > N) nijmin = ai + bi - N;
     double E = NEGINF;
@@ -399,16 +417,21 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
     double logN = log(N);
     double logab = log(ai) + log(bi);
     for (size_t nij = bi + 1; nij-- > nijmin;) {
+      // Rcpp::Rcerr << "nij=" << nij << std::endl;
       double lognij = log(nij);
-      double det = logN - logab - lognij;
+      // Rcpp::Rcerr << "log(nij)=" << lognij << std::endl;
+      double det = logN - logab + lognij;
+      // Rcpp::Rcerr << "det=" << det << std::endl;
       double all_but_log = lognij - logN + precalc
         - lfact[nij] - lfact[ai - nij]
         - lfact[bi - nij] - lfact[N - ai - bi + nij];
+        // Rcpp::Rcerr << "all_but_log=" << all_but_log << std::endl;
       if (det > 0) {
         E = log_plus(E, all_but_log + log(det));
       } else if (det < 0) {
         E = log_minus(E, all_but_log + log(-det));
       }
+      // Rcpp::Rcerr << "E=" << E << std::endl;
     }
     // Rcpp::Rcerr << ", Eij=" << E << std::flush;
     return E;
@@ -438,9 +461,9 @@ public:
     size_t min_calc = size_t((double)n_calc / (double)n_shard * (double)begin);
     size_t max_calc = size_t((double)n_calc / (double)n_shard * double(end));
     // Rcpp::Rcerr << "will perform calculations " << min_calc
-    //             << " to " << max_calc
-    //             << " of " << n_calc
-    //             << std::endl;
+                // << " to " << max_calc
+                // << " of " << n_calc
+                // << std::endl;
     std::vector<double> log_emi(emi.size(), NEGINF);
 
     auto calc_i = cum_calc.rbegin();
@@ -462,7 +485,7 @@ public:
         // Rcpp::Rcerr << "beginning calculations for larger cluster size " << asize
         //                << " (calculations up to " << *calc_i
         //                << ")" << std::endl;
-                    // << std::flush;
+        // << std::flush;
         double a_part = lfact[asize] + lfact[N - asize] - lfact[N];
         if (cc_i->size == kc_i->size) {
           // Rcpp::Rcerr << " (case 1: both)" << std::endl;
@@ -479,24 +502,30 @@ public:
             double cEij;
             // add terms for cc_i vs kc_j
             if (kc_j != kc_end && kc_j->size == bsize) {
-              // Rcpp::Rcerr << "adding terms for cc_i vs kc_j..." << std::flush;
+              // Rcpp::Rcerr << "adding terms for cc_i vs kc_j..." << std::endl;
               cEij = log(cc_i->n) + Eij;
               while (kc_j != kc_end && kc_j->size == bsize) {
                 log_add_to(log_emi[kc_j->j], cEij + log(kc_j->n));
+                // Rcpp::Rcerr << "log(emi[" << kc_j->j
+                            // << "]) = " << log_emi[kc_j->j] << std::endl;
                 ++kc_j;
               }
               // Rcpp::Rcerr << "done" << std::endl;
             }
             // add terms for kc_i vs cc_j
             if (cc_j != cc_end && cc_j->size == bsize) {
-              // Rcpp::Rcerr << "adding terms for kc_i vs cc_j..." << std::flush;
-              auto kc_k = kc_i;
-              cEij = log(cc_j->n) + Eij;
-              while (kc_k != kc_end && kc_k->size == asize) {
-                log_add_to(log_emi[kc_k->j], cEij + log(kc_k->n));
-                ++kc_k;
+              if (asize != bsize) {
+                // Rcpp::Rcerr << "adding terms for kc_i vs cc_j..." << std::flush;
+                auto kc_k = kc_i;
+                cEij = log(cc_j->n) + Eij;
+                while (kc_k != kc_end && kc_k->size == asize) {
+                  log_add_to(log_emi[kc_k->j], cEij + log(kc_k->n));
+                  // Rcpp::Rcerr << "log(emi[" << kc_k->j
+                  //             << "]) = " << log_emi[kc_k->j] << std::endl;
+                  ++kc_k;
+                }
+                // Rcpp::Rcerr << "done" << std::endl;
               }
-              // Rcpp::Rcerr << "done" << std::endl;
               ++cc_j;
             }
           } while (cc_j != cc_end || kc_j != kc_end);
