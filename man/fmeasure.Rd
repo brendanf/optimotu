@@ -4,7 +4,7 @@
 \alias{fmeasure}
 \title{Calculate multiclass F measure}
 \usage{
-fmeasure(k, c, ncpu)
+fmeasure(k, c, ncpu = 1)
 }
 \arguments{
 \item{k}{(\code{integer} matrix or \code{list} of \code{list}s of \code{integer} vectors) "test" clusters. See Details}

@@ -36,8 +36,8 @@
 #' @return `numeric` vector giving the F-measure for each row
 #' (matrix representation) or top-level element (set representation) of k.
 #' @export
-fmeasure <- function(k, c, ncpu) {
-  if (is.integer(k) && is.matrix(k) && is.integer(c)) {
+fmeasure <- function(k, c, ncpu = 1) {
+  if (is.integer(k) && is.matrix(k) && (is.integer(c) || is.factor((c)))) {
     fmeasure_matrix(k, c, ncpu)
   } else {
     fmeasure_list(k, c, ncpu)
