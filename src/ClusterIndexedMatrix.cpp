@@ -1,3 +1,4 @@
+#include <deque>
 #include "ClusterIndexedMatrix.h"
 
 template <class A>
