@@ -11,7 +11,7 @@
 // Matrix representation of a hierarchical clustering of n items at m different
 // thresholds.
 template <class ARRAY_T = std::vector<int>>
-struct ClusterIndexedMatrix : public SingleClusterAlgorithm {
+class ClusterIndexedMatrix : public SingleClusterAlgorithm {
   template<typename> friend class ClusterIndexedMatrix;
 
 private:
