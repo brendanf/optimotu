@@ -29,7 +29,7 @@ MCA::MultipleClusterAlgorithm(
     namekey.emplace(names[i], i);
   }
   for (j_t i = 0; i < subset_names.size(); ++i) {
-    owned_subsets.emplace_back(std::move(factory.create(subset_names[i].size())));
+    owned_subsets.emplace_back(factory.create(subset_names[i].size()));
     subsets.push_back(owned_subsets.back().get());
     fwd_map[i].reserve(subset_names[i].size());
     for (j_t j = 0; j < subset_names[i].size(); ++j) {

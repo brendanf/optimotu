@@ -13,6 +13,7 @@ public:
 
   virtual d_t convert(double dist) const = 0;
   virtual double inverse(d_t d) const = 0;
+  virtual ~DistanceConverter() = default;
 };
 
 class UniformDistanceConverter : public DistanceConverter
