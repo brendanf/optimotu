@@ -26,6 +26,9 @@ threshold_lookup(thresholds, precision, thresh_names = names(thresholds))
 
 \item{by}{(\code{numeric} scalar) step size}
 
+\item{thresh_names}{(\code{character} vector) optional names for the thresholds;
+will be used as row names in clustering matrix.}
+
 \item{thresholds}{(\code{numeric} vector) explicit list of thresholds.  Should be
 sorted in ascending order.}
 

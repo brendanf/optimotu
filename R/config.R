@@ -208,6 +208,8 @@ threshold_config <- function(type = c("uniform", "set", "lookup"), ...) {
 #' @param from (`numeric` scalar) smallest threshold; typically between 0 and 1
 #' @param to (`numeric` scalar) largest threshold; typically between 0 and 1
 #' @param by (`numeric` scalar) step size
+#' @param thresh_names (`character` vector) optional names for the thresholds;
+#' will be used as row names in clustering matrix.
 #' @export
 #' @describeIn threshold_config helper function for type `"uniform"`
 threshold_uniform <- function(from, to, by, thresh_names = NULL) {
