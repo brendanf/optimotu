@@ -6,7 +6,7 @@
 #include <Rcpp.h>
 // [[Rcpp::depends(RcppParallel)]]
 #include <RcppParallel.h>
-#endif
+#endif // OPTIMOTU_R
 
 // Matrix representation of a hierarchical clustering of n items at m different
 // thresholds.
@@ -67,7 +67,7 @@ public:
 
 #ifdef OPTIMOTU_R
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
-#endif
+#endif // OPTIMOTU_R
 };
 
 template<>
@@ -78,7 +78,7 @@ ClusterIndexedMatrix<>::ClusterIndexedMatrix(
 
 template class ClusterIndexedMatrix<>;
 
-#define cim_internal ClusterIndexedMatrix<internal_matrix_t>
+#define cim_internal ClusterIndexedMatrix<internal_matrix_ref_t>
 
 template<>
 cim_internal::ClusterIndexedMatrix(

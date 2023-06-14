@@ -4,7 +4,7 @@
 #include "ClusterAlgorithm.h"
 #ifdef OPTIMOTU_R
 #include <RcppParallel.h>
-#endif
+#endif // OPTIMOTU_R
 
 #define LINEAR_FILL 1
 #define BINARY_FILL 2
@@ -60,7 +60,7 @@ public:
 
 #ifdef OPTIMOTU_R
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
-#endif
+#endif // OPTIMOTU_R
 };
 
 template<>
@@ -98,27 +98,27 @@ cm::ClusterMatrix(SingleClusterAlgorithm * parent) = delete;         \
 template<>                                                     \
 cm::ClusterMatrix(const DistanceConverter &dconv, size_t n) = delete
 
-#define cm ClusterMatrix<true, LINEAR_FILL, internal_matrix_t>
+#define cm ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t>
 deleted_funcs;
-#define cm ClusterMatrix<true, BINARY_FILL, internal_matrix_t>
+#define cm ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t>
 deleted_funcs;
-#define cm ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_t>
+#define cm ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t>
 deleted_funcs;
-#define cm ClusterMatrix<false, LINEAR_FILL, internal_matrix_t>
+#define cm ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t>
 deleted_funcs;
-#define cm ClusterMatrix<false, BINARY_FILL, internal_matrix_t>
+#define cm ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t>
 deleted_funcs;
-#define cm ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_t>
+#define cm ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t>
 deleted_funcs;
 #undef cm
 #undef deleted_funcs
 
-template class ClusterMatrix<true, LINEAR_FILL, internal_matrix_t>;
-template class ClusterMatrix<true, BINARY_FILL, internal_matrix_t>;
-template class ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_t>;
-template class ClusterMatrix<false, LINEAR_FILL, internal_matrix_t>;
-template class ClusterMatrix<false, BINARY_FILL, internal_matrix_t>;
-template class ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_t>;
+template class ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t>;
+template class ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t>;
+template class ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t>;
+template class ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t>;
+template class ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t>;
+template class ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t>;
 
 template class ClusterMatrix<true, LINEAR_FILL>;
 template class ClusterMatrix<true, BINARY_FILL>;

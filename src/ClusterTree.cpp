@@ -44,18 +44,18 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
     Rcpp::Rcout << "max_d1:" << c1->max_d()
                 << ", max_d2:" << c2->max_d()
                 << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
     cluster *cnew;
 #ifdef SINGLE_LINK_DEBUG
          Rcpp::Rcout << "j1p:" << clust(c1p)
                      << ", j2p:" << clust(c2p)
                      << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
     if (i == c1->min_d) {
       // we don't need to create a new cluster for c1, we can just modify this
 #ifdef SINGLE_LINK_DEBUG
             Rcpp::Rcout << "modifying first cluster: " << clust(c1) << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
       cnew = c1;
       if (i == c2->min_d) {
         remove_child(c2p, c2);
@@ -79,7 +79,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       // we don't need to define a new cluster, we can re-use c2
 #ifdef SINGLE_LINK_DEBUG
             Rcpp::Rcout << "modifying second cluster: " << clust(c2) << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
       cnew = c2;
       remove_child(c1p, c1);
       add_child(cnew, c1);
@@ -87,7 +87,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
     } else if (c1p && c1p == c2p && c1p->n_child == 2) {
 #ifdef SINGLE_LINK_DEBUG
             Rcpp::Rcout << "modifying common parent cluster: " << clust(c1p) << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
       // the two clusters to be merged have the same parent, and they are
       // the only children of that parent.
       // thus we can move the minimum distance of the parent rather than
@@ -113,14 +113,14 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       c2->parent = cnew;
 #ifdef SINGLE_LINK_DEBUG
             Rcpp::Rcout << "finished initializing cluster " << clust(cnew) << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
     }
     if (c1p && (c2p == nullptr || c2p->min_d >= c1p->min_d)) {
 #ifdef SINGLE_LINK_DEBUG
             Rcpp::Rcout << "parent of new/modified cluster " << clust(cnew)
                         << " should be " << clust(c1p)
                         << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
       if (cnew->parent != c1p) {
         remove_child(cnew->parent, cnew);
         cnew->parent = c1p;
@@ -135,7 +135,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
             Rcpp::Rcout << "parent of new/modified cluster " << clust(cnew)
                         << " should be " << clust(c2p)
                         << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
       if (cnew->parent != c2p) {
         remove_child(cnew->parent, cnew);
         cnew->parent = c2p;
@@ -186,7 +186,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   }
 #ifdef SINGLE_LINK_TEST
   validate();
-#endif
+#endif // SINGLE_LINK_TEST
 }
 
 void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
@@ -194,14 +194,14 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
    Rcpp::Rcout << "-merging children of cluster " << clust(csrc)
                << " into cluster " << clust(cdest)
                << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
   // CASE 1: the source is null
   // nothing to do
   if (csrc == nullptr) {
 #ifdef SINGLE_LINK_DEBUG
          Rcpp::Rcout << " -finished merging children of cluster " << clust(csrc)
                      << " into cluster " << clust(cdest) << " (no-op)" << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
     return;
   }
 #ifdef SINGLE_LINK_DEBUG
@@ -210,7 +210,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
                   << ", first_child=" << clust(csrc->first_child)
                   << ", last_child=" << clust(csrc->last_child)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
   // Reassign the parents
   // this is the slow part O(n)
   auto src_child = csrc->first_child;
@@ -219,11 +219,11 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
          Rcpp::Rcout << " - destination cluster " << clust(cdest)
                      << " is null" << std::endl
                      << " - removing children from source cluster..." << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
     while (src_child) {
 #ifdef SINGLE_LINK_FULL_DEBUG
             Rcpp::Rcout << "  - removing child " << clust(src_child) << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
       src_child->parent = nullptr;
       src_child->prev_sib = nullptr;
       src_child->next_sib = nullptr;
@@ -240,7 +240,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
                      << ", first_child=" << clust(csrc->first_child)
                      << ", last_child=" << clust(csrc->last_child)
                      << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
   } else {
 #ifdef SINGLE_LINK_DEBUG
          Rcpp::Rcout << "  - destination cluster " << clust(cdest)
@@ -248,7 +248,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
                      << ", first_child=" << clust(cdest->first_child)
                      << ", last_child=" << clust(cdest->last_child)
                      << std::endl << " - merging..." << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
     // both clusters exist, so do the splice
     auto dest_child = cdest->last_child;
     if (dest_child && src_child) {
@@ -264,7 +264,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
     while (src_child) {
 #ifdef SINGLE_LINK_FULL_DEBUG
             Rcpp::Rcout << "  - transferring child " << clust(src_child) << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
       src_child->parent = cdest;
       csrc->n_child--;
       cdest->n_child++;
@@ -284,7 +284,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
                      << ", first_child=" << clust(cdest->first_child)
                      << ", last_child=" << clust(cdest->last_child)
                      << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
   }
   return;
 }
@@ -294,13 +294,13 @@ void ClusterTree::remove_child(cluster *parent, cluster *child) {
       Rcpp::Rcout << "-removing child " << clust(child)
                   << " from cluster " << clust(parent)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
   if (parent == nullptr) {
 #ifdef SINGLE_LINK_FULL_DEBUG
          Rcpp::Rcout << " -finished removing child " << clust(child)
                      << " from cluster " << clust(parent)
                      << " (no-op)" << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
     return;
   }
 #ifdef SINGLE_LINK_FULL_DEBUG
@@ -313,7 +313,7 @@ void ClusterTree::remove_child(cluster *parent, cluster *child) {
                   << ": prev_sib=" << clust(child->prev_sib)
                   << ", next_sib=" << clust(child->next_sib)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
 
   auto prev = child->prev_sib;
   auto next = child->next_sib;
@@ -348,7 +348,7 @@ void ClusterTree::remove_child(cluster *parent, cluster *child) {
                   << ": prev_sib=" << clust(child->prev_sib)
                   << ", next_sib=" << clust(child->next_sib)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
   return;
 }
 
@@ -357,13 +357,13 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
       Rcpp::Rcout << "-adding child " << clust(child)
                   << " to cluster " << clust(parent)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
   if (parent == nullptr) {
 #ifdef SINGLE_LINK_FULL_DEBUG
          Rcpp::Rcout << " -finished adding child " << clust(child)
                      << " to cluster " << clust(parent)
                      << " (no-op)" << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
     return;
   }
 #ifdef SINGLE_LINK_FULL_DEBUG
@@ -376,7 +376,7 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
                   << ": prev_sib=" << clust(child->prev_sib)
                   << ", next_sib=" << clust(child->next_sib)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
   if (parent->last_child == nullptr) {
     parent->first_child = parent->last_child = child;
     parent->n_child++;
@@ -393,7 +393,7 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
                      << ": prev_sib=" << clust(child->prev_sib)
                      << ", next_sib=" << clust(child->next_sib)
                      << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
     return;
   }
 
@@ -415,7 +415,7 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
                   << ": prev_sib=" << clust(child->prev_sib)
                   << ", next_sib=" << clust(child->next_sib)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
   return;
 }
 
@@ -424,20 +424,20 @@ void ClusterTree::shift_to_parent(cluster *& c, cluster *& cp) const {
       Rcpp::Rcout << "-shifting from child " << clust(c)
                   << " to parent " << clust(cp)
                   << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
   c = cp;
   if (cp == nullptr) {
 #ifdef SINGLE_LINK_FULL_DEBUG
          Rcpp::Rcout << " -finished shifting to parent " << clust(c)
                      << " (NO_CLUST)"
                      << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
     return;
   }
   cp = cp->parent;
 #ifdef SINGLE_LINK_FULL_DEBUG
       Rcpp::Rcout << " -finished shifting to parent " << clust(c) << std::endl;
-#endif
+#endif // SINGLE_LINK_FULL_DEBUG
   return;
 }
 
@@ -465,7 +465,7 @@ int ClusterTree::hclust_ordering(cluster * top, int start, Rcpp::IntegerVector &
   }
   return i;
 }
-#endif
+#endif // OPTIMOTU_R
 
 void ClusterTree::assign_ids() {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
@@ -691,7 +691,7 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   out.attr("class") = "hclust";
   return out;
 }
-#endif
+#endif // OPTIMOTU_R
 
 ClusterTree * ClusterTree::make_child() {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
@@ -712,7 +712,7 @@ void ClusterTree::validate() const {
   bool err = false;
 #ifdef SINGLE_LINK_DEBUG
   Rcpp::Rcerr << "validating..." << std::endl;
-#endif
+#endif // SINGLE_LINK_DEBUG
   for (cluster * c = this->pool0; c < this->poolend; ++c) {
     if (!c->allocated) continue;
 
@@ -813,11 +813,11 @@ void ClusterTree::validate() const {
       err = true;
     }
     if (c->next_sib == c ) {
-      Rcpp::Rcerr << "validation error: cluster " << clust(c)
+      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " is its own next sibling" << std::endl;
       err = true;
     }
   }
-  if (err) Rcpp::stop("found validation errors");
+  if (err) OPTIMOTU_STOP("found validation errors");
 }
-#endif
+#endif // SINGLE_LINK_TEST

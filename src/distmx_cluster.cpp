@@ -1,3 +1,5 @@
+#ifdef OPTIMOTU_R
+
 #include <fstream>
 #include <Rcpp.h>
 #include "single_linkage.h"
@@ -99,3 +101,4 @@ Rcpp::RObject distmx_cluster_multi(
   }
   return output;
 }
+#endif // OPTIMOTU_R

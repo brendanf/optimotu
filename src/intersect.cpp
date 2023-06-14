@@ -1,3 +1,5 @@
+#ifdef OPTIMOTU_R
+
 #include <Rcpp.h>
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -219,3 +221,5 @@ Rcpp::NumericVector fmeasure_matrix(
   }
   return fm;
 }
+
+#endif // OPTIMOTU_R

@@ -1,3 +1,4 @@
+#ifdef OPTIMOTU_R
 #include <Rcpp.h>
 #include <RcppParallel.h>
 
@@ -153,3 +154,5 @@ Rcpp::DataFrame confusion_matrix(
 
   return out;
 }
+
+#endif // OPTIMOTU_R

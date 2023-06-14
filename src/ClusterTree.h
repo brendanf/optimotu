@@ -7,7 +7,7 @@
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
-#endif
+#endif // OPTIMOTU_R
 
 // #define SINGLE_LINK_FULL_DEBUG
 // #define SINGLE_LINK_DEBUG
@@ -71,13 +71,13 @@ protected:
      if (c) return std::to_string(c->id);
      return "none";
    };
-#endif
+#endif // SINGLE_LINK_TEST
 
 #ifdef OPTIMOTU_R
 
    int hclust_ordering(cluster * top, int start, Rcpp::IntegerVector &order) const;
 
-#endif
+#endif // OPTIMOTU_R
 
   void initialize() {
     j_t j;
@@ -127,11 +127,11 @@ public:
 
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
 
-#ifdef OPTIMOTU_R
-   void write_to_matrix(RcppParallel::RMatrix<int> &out) override;
+  void write_to_matrix(internal_matrix_t &out) override;
 
-   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
-#endif
+#ifdef OPTIMOTU_R
+  Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
+#endif // OPTIMOTU_R
 
    // send consumer() pairwise distances to ensure it is up-to-date with this
    // clustering

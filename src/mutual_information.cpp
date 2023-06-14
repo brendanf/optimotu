@@ -1,3 +1,4 @@
+#ifdef OPTIMOTU_R
 #include <Rcpp.h>
 #include <RcppParallel.h>
 
@@ -630,3 +631,4 @@ public:
    }
    return out;
  }
+#endif //OPTIMOTU_R

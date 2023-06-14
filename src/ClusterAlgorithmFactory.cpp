@@ -28,7 +28,7 @@ std::unique_ptr<SingleClusterAlgorithm> CMF::create(j_t n) const {
     case TOPDOWN_FILL:
       return std::make_unique<ClusterMatrix<true, TOPDOWN_FILL>>(this->dconv, n);
     default:
-      Rcpp::stop("unknown fill type");
+      OPTIMOTU_STOP("unknown fill type");
     }
   } else {
     switch (fill_type) {
@@ -39,7 +39,7 @@ std::unique_ptr<SingleClusterAlgorithm> CMF::create(j_t n) const {
     case TOPDOWN_FILL:
       return std::make_unique<ClusterMatrix<false, TOPDOWN_FILL>>(this->dconv, n);
     default:
-      Rcpp::stop("unknown fill type");
+      OPTIMOTU_STOP("unknown fill type");
     }
   }
 }
@@ -48,24 +48,24 @@ std::unique_ptr<SingleClusterAlgorithm> CMF::create(init_matrix_t & im) const {
   if (this->binary_search) {
     switch (this->fill_type) {
     case LINEAR_FILL:
-      return std::make_unique<ClusterMatrix<true, LINEAR_FILL, internal_matrix_t>>(this->dconv, im);
+      return std::make_unique<ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t>>(this->dconv, im);
     case BINARY_FILL:
-      return std::make_unique<ClusterMatrix<true, BINARY_FILL, internal_matrix_t>>(this->dconv, im);
+      return std::make_unique<ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t>>(this->dconv, im);
     case TOPDOWN_FILL:
-      return std::make_unique<ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_t>>(this->dconv, im);
+      return std::make_unique<ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t>>(this->dconv, im);
     default:
-      Rcpp::stop("unknown fill type");
+      OPTIMOTU_STOP("unknown fill type");
     }
   } else {
     switch (fill_type) {
     case LINEAR_FILL:
-      return std::make_unique<ClusterMatrix<false, LINEAR_FILL, internal_matrix_t>>(this->dconv, im);
+      return std::make_unique<ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t>>(this->dconv, im);
     case BINARY_FILL:
-      return std::make_unique<ClusterMatrix<false, BINARY_FILL, internal_matrix_t>>(this->dconv, im);
+      return std::make_unique<ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t>>(this->dconv, im);
     case TOPDOWN_FILL:
-      return std::make_unique<ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_t>>(this->dconv, im);
+      return std::make_unique<ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t>>(this->dconv, im);
     default:
-      Rcpp::stop("unknown fill type");
+      OPTIMOTU_STOP("unknown fill type");
     }
   }
 }
@@ -79,7 +79,7 @@ std::unique_ptr<SingleClusterAlgorithm> CIMF::create(j_t n) const {
 }
 
 std::unique_ptr<SingleClusterAlgorithm> CIMF::create(init_matrix_t & im) const {
-  return std::make_unique<ClusterIndexedMatrix<internal_matrix_t>>(this->dconv, im);
+  return std::make_unique<ClusterIndexedMatrix<internal_matrix_ref_t>>(this->dconv, im);
 }
 
 using CTF = ClusterTreeFactory;

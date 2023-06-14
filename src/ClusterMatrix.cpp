@@ -340,4 +340,4 @@ Rcpp::List ClusterMatrix<BM, F, A>::as_hclust(
   out.attr("class") = "hclust";
   return out;
 }
-#endif
+#endif // OPTIMOTU_R

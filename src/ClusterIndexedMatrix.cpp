@@ -115,12 +115,12 @@ void ClusterIndexedMatrix<A>::verify_index() {
     i++;
     if (i == n) {
       dump_index();
-      Rcpp::stop("circular reference formed");
+      OPTIMOTU_STOP("circular reference formed");
     }
   }
   if (i < n - 1) {
     dump_index();
-    Rcpp::stop("broken list");
+    OPTIMOTU_STOP("broken list");
   }
 }
 
@@ -363,7 +363,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       std::memcpy(t1min->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) {
         // OPTIMOTU_COUT << "infinite loop" << std::endl;
-        Rcpp::stop("infinite loop");
+        OPTIMOTU_STOP("infinite loop");
       }
     }
     // OPTIMOTU_COUT << "finished t1min" << std::endl;
@@ -379,7 +379,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       std::memcpy(t1max->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) {
         // OPTIMOTU_COUT << "infinite loop" << std::endl;
-        Rcpp::stop("infinite loop");
+        OPTIMOTU_STOP("infinite loop");
       }
     }
     // OPTIMOTU_COUT << "finished t1max" << std::endl;
@@ -398,7 +398,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << " -> " << t2min->column + i << ":" << t2min->column + imax
       //           << std::endl;
       std::memcpy(t2min->column + i, buffer + i, (imax - i) * sizeof(int));
-      if (total++ > n) Rcpp::stop("infinite loop");
+      if (total++ > n) OPTIMOTU_STOP("infinite loop");
     }
     // OPTIMOTU_COUT << "finished t2min" << std::endl;
     total = 0;
@@ -411,7 +411,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << " -> " << t2max->column + i << ":" << t2max->column + imax
       //           << std::endl;
       std::memcpy(t2max->column + i, buffer + i, (imax - i) * sizeof(int));
-      if (total++ > n) Rcpp::stop("infinite loop");
+      if (total++ > n) OPTIMOTU_STOP("infinite loop");
     }
     // OPTIMOTU_COUT << "finished t2max" << std::endl;
     nexti = t2max->next_d < nexti ? t2max->next_d : nexti;
@@ -585,4 +585,4 @@ Rcpp::List ClusterIndexedMatrix<A>::as_hclust(
   out.attr("class") = "hclust";
   return out;
 }
-#endif
+#endif // OPTIMOTU_R

@@ -1,5 +1,6 @@
 #include "config.h"
 
+#ifdef OPTIMOTU_R
 double element_as_double(Rcpp::List obj, std::string e, std::string name) {
   if (!obj.containsElementNamed(e.c_str())) {
     Rcpp::stop(
@@ -188,3 +189,4 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
     Rcpp::stop("unknown parallelization method");
   }
 }
+#endif // OPTIMOTU_R
