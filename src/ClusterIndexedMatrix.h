@@ -76,8 +76,6 @@ ClusterIndexedMatrix<>::ClusterIndexedMatrix(
   init_matrix_t &im
 ) = delete;
 
-template class ClusterIndexedMatrix<>;
-
 #define cim_internal ClusterIndexedMatrix<internal_matrix_ref_t>
 
 template<>
@@ -90,8 +88,6 @@ template<>
 cim_internal::ClusterIndexedMatrix(
     SingleClusterAlgorithm * parent
 ) = delete;
-
-template class cim_internal;
 
 #undef cim_internal
 

@@ -586,3 +586,6 @@ Rcpp::List ClusterIndexedMatrix<A>::as_hclust(
   return out;
 }
 #endif // OPTIMOTU_R
+
+template class ClusterIndexedMatrix<>;
+template class ClusterIndexedMatrix<internal_matrix_ref_t>;
