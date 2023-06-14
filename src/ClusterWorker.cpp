@@ -1,6 +1,7 @@
 #include "ClusterWorker.h"
 
-ClusterWorker::ClusterWorker(std::istream &file, const int threads) : file(file), threads(threads) {};
+ClusterWorker::ClusterWorker(std::istream &file, const int threads) :
+  file(file), threads(threads) {}
 
 int ClusterWorker::n_threads() {
   return this->threads;
@@ -18,7 +19,7 @@ MergeClusterWorker::MergeClusterWorker(
     algo_list[i] = algo->make_child();
   }
   // OPTIMOTU_COUT << "done" << std::endl;
-};
+}
 
 void MergeClusterWorker::operator()(size_t begin, size_t end) {
   DistanceElement d;
@@ -48,7 +49,7 @@ void MergeClusterWorker::operator()(size_t begin, size_t end) {
   // mutex.unlock();
 }
 
-void MergeClusterWorker::finalize() {};
+void MergeClusterWorker::finalize() {}
 
 ConcurrentClusterWorker::ConcurrentClusterWorker(
   ClusterAlgorithm *algo,
@@ -56,7 +57,7 @@ ConcurrentClusterWorker::ConcurrentClusterWorker(
   const int threads
 ) :
   ClusterWorker(file, threads),
-  algo(algo) {};
+  algo(algo) {}
 
 void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   DistanceElement d;
@@ -84,15 +85,15 @@ void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   // mutex.unlock();
 }
 
-void ConcurrentClusterWorker::finalize() {};
+void ConcurrentClusterWorker::finalize() {}
 
 HierarchicalClusterWorker::HierarchicalClusterWorker(
   ClusterAlgorithm *algo,
   std::istream &file,
   const int threads,
   const int shards
-) : ClusterWorker(file, threads), algo_list(shards), shards(shards),
-thread_count(shards) {
+) : ClusterWorker(file, threads), algo_list(shards),
+thread_count(shards), shards(shards) {
   // OPTIMOTU_COUT << "HieararchicalClusterWorker constructor start...";
   for (int i = 0; i < shards; ++i) {
     algo_list[i] = algo->make_child();

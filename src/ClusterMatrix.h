@@ -100,14 +100,19 @@ cm::ClusterMatrix(const DistanceConverter &dconv, size_t n) = delete
 
 #define cm ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t>
 deleted_funcs;
+#undef cm
 #define cm ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t>
 deleted_funcs;
+#undef cm
 #define cm ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t>
 deleted_funcs;
+#undef cm
 #define cm ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t>
 deleted_funcs;
+#undef cm
 #define cm ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t>
 deleted_funcs;
+#undef cm
 #define cm ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t>
 deleted_funcs;
 #undef cm

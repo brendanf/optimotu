@@ -48,7 +48,12 @@ protected:
   std::vector<std::atomic_size_t> thread_count;
   const int shards;
 public:
-  HierarchicalClusterWorker(ClusterAlgorithm *algo, std::istream &file, const int threads, const int shards);
+  HierarchicalClusterWorker(
+    ClusterAlgorithm *algo,
+    std::istream &file,
+    const int threads,
+    const int shards
+  );
 
   void operator()(size_t begin, size_t end) override;
 
