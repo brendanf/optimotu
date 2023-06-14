@@ -1,4 +1,4 @@
-# optimotu (development version)
+# optimotu 0.6.0
 
 * New backend C++ code unifies methods for various algorithms for clustering
 based on a distance matrix.  All of these are now accessed through one
@@ -23,6 +23,7 @@ from the input at a time.
 * `threshold_config()` and helpers have a "thresh_names" argument.  These names
 are used as rownames in clustering output matrices. This behavior was previously
 only implemented in `seq_clust_usearch()`.
+* Test builds now work on Windows and OSX in addition to Linux.
 
 # optimotu 0.5.1
 
