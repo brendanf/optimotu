@@ -21,7 +21,7 @@ using init_matrix_t = Rcpp::IntegerMatrix;
 using internal_matrix_t = std::vector<int>;
 using internal_matrix_ref_t = std::vector<int>&;
 using init_matrix_t = std::vector<int>&;
-#endif
+#endif //OPTIMOTU_R
 
 struct DistanceElement{
   std::size_t seq1, seq2;
@@ -100,7 +100,7 @@ public:
 #ifdef OPTIMOTU_R
   // convert the clustering results to an hclust object
   virtual Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const =0;
-#endif
+#endif //OPTIMOTU_R
 
 };
 
