@@ -1,4 +1,5 @@
 #include <deque>
+#include <array>
 #include "ClusterIndexedMatrix.h"
 
 template <class A>
