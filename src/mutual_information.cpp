@@ -179,7 +179,7 @@ struct ClusterCount {
   n, //number of clusters
   j; // which j this is a part of
 
-  bool operator<(ClusterCount x) {
+  bool operator<(const ClusterCount &x) const {
     return size < x.size;
   }
 };
