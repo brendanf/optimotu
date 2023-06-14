@@ -247,7 +247,7 @@ seq_cluster_usearch.DNAStringSet <- function(
    if (!isTRUE(all.equal(names(seq), seq_id))) names(seq) <- seq_id
    if (is.list(which)) {
       if (all(vapply(which, is.logical, TRUE))) {
-         seq <- seq[Reduce(magrittr::or, which)]
+         seq <- seq[Reduce(`|`, which)]
       } else if (all(vapply(which, is.integer, TRUE))) {
          seq <- seq[sort(unique(unlist(which)))]
       } else if (is_list_of_character(which)) {
