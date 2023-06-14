@@ -1,3 +1,5 @@
+#include <deque>
+#include <array>
 #include "ClusterMatrix.h"
 
 

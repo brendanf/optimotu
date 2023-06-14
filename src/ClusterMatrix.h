@@ -15,7 +15,7 @@
 template <bool BINARY_SEARCH=true, //alt would be linear
           int FILL=2,
           class ARRAY_T = std::vector<int>>
-struct ClusterMatrix : public SingleClusterAlgorithm {
+class ClusterMatrix : public SingleClusterAlgorithm {
   template<bool, int, typename> friend class ClusterMatrix;
 private:
   ARRAY_T clust_array;
