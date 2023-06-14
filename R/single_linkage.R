@@ -290,7 +290,7 @@ do_usearch_singlelink <- function(
 ) {
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   usearch_thresh_max <- if (threshold_config$type == "uniform") threshold_config$to else
-    tail(threshold_config$thresholds, 1L)
+    threshold_config$thresholds[length(threshold_config$thresholds)]
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   if (is.list(which)) {
