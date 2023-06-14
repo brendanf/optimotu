@@ -9,8 +9,7 @@
 #include <RcppThread.h>
 
 void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
-  // std::lock_guard<std::mutex> lock(this->mutex);
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   cluster* c1 = get_cluster(seq1);
   cluster* c1p = c1->parent;
   cluster* c2 = get_cluster(seq2);
@@ -469,7 +468,7 @@ int ClusterTree::hclust_ordering(cluster * top, int start, Rcpp::IntegerVector &
 #endif
 
 void ClusterTree::assign_ids() {
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t i = 0; i < n; ++i) {
     cluster * c = &pool[i];
     while(c->parent && c->parent->id > i) {
@@ -481,8 +480,7 @@ void ClusterTree::assign_ids() {
 
 void ClusterTree::merge_into(DistanceConsumer &consumer) {
   this->assign_ids();
-  // std::lock_guard<std::mutex> lock(this->mutex);
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (auto c = this->node0; c < this->nodeend; ++c) {
     if (c->allocated) {
       if (c->first_child) {
@@ -498,8 +496,7 @@ void ClusterTree::merge_into(DistanceConsumer &consumer) {
 
 void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
   this->assign_ids();
-  // std::lock_guard<std::mutex> lock{this->mutex};
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (auto c = this->node0; c < this->nodeend; ++c) {
     // OPTIMOTU_COUT << "merging cluster " << c - this->pool0
     //           << " (" << c
@@ -527,8 +524,7 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
 }
 
 double ClusterTree::max_relevant(j_t seq1, j_t seq2, int thread) const {
-  // std::lock_guard<std::mutex> lock(this->mutex);
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   cluster* c1 = this->get_cluster(seq1);
   cluster* c1p = c1->parent;
   cluster* c2 = this->get_cluster(seq2);
@@ -560,8 +556,7 @@ double ClusterTree::max_relevant(j_t seq1, j_t seq2, int thread) const {
 
 #ifdef OPTIMOTU_R
 void ClusterTree::write_to_matrix(RcppParallel::RMatrix<int> &out) {
-  // std::lock_guard<std::mutex> lock(this->mutex);
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   j_t j;
   cluster *c, *c1p;
   std::size_t k = 0;
@@ -586,8 +581,7 @@ void ClusterTree::write_to_matrix(RcppParallel::RMatrix<int> &out) {
 }
 
 Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
-  // std::lock_guard<std::mutex> lock{this->mutex};
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   Rcpp::IntegerMatrix merge(this->n - 1, 2);
   Rcpp::NumericVector height(this->n-1);
   Rcpp::IntegerVector order(this->n);
@@ -700,8 +694,7 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
 #endif
 
 ClusterTree * ClusterTree::make_child() {
-  // std::lock_guard<std::mutex> lock(this->mutex);
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   if (own_child) {
     auto child_ptr = new ClusterTree(this);
     auto child = std::unique_ptr<ClusterAlgorithm>(

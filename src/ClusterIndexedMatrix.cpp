@@ -277,11 +277,13 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
 template <class A>
 void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (i >= m) return;
-  tbb::queuing_rw_mutex::scoped_lock lock{mutex, true};
-  if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) {
-    return;
+  {
+    std::shared_lock<std::shared_timed_mutex> lock{mutex};
+    if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) {
+      return;
+    }
   }
-  lock.upgrade_to_writer();
+  std::unique_lock<std::shared_timed_mutex> lock{mutex};
   // OPTIMOTU_COUT << std::endl << "#### seq1=" << seq1
   //           << " seq2=" << seq2
   //           << " i=" << i << std::endl;
@@ -435,7 +437,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
 
 template <class A>
 void ClusterIndexedMatrix<A>::merge_into(DistanceConsumer &consumer) {
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   tip * t = index;
   while (t->next != nullptr) {
     if (t->next_d != NO_DIST) consumer(t->j, t->next->j, dconv.inverse(t->next_d));
@@ -445,7 +447,7 @@ void ClusterIndexedMatrix<A>::merge_into(DistanceConsumer &consumer) {
 
 template <class A>
 void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) {
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   // TODO check that the distance converters are really compatible
   tip * t = index;
   while (t->next != nullptr) {
@@ -456,7 +458,7 @@ void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) {
 
 template <class A>
 SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   if (own_child) {
     auto child_ptr = new ClusterIndexedMatrix<>(this);
     auto child = std::unique_ptr<ClusterAlgorithm>(
@@ -472,7 +474,7 @@ SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
 template <class A>
 double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2, int thread) const {
   if (seq1 == seq2) return 0.0;
-  tbb::queuing_rw_mutex::scoped_lock lock(mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   j_t j1 = seq1*m, j2 = seq2*m;
   auto c1 = ca + j1, c2 = ca + j2,
     c1max = c1+m;
@@ -535,7 +537,7 @@ Rcpp::List ClusterIndexedMatrix<A>::as_hclust(
   }
   int last_clust = 0;
   {
-    tbb::queuing_rw_mutex::scoped_lock lock{mutex, true};
+    std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
     for (int j = 0; j < this->m * this->n; j += this->n) {
       double d = this->dconv.inverse(j);
       for (int i : remaining[this_remaining]) {

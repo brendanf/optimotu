@@ -16,7 +16,7 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     Rcpp::List config,
     DistanceConverter * dconv
 );
-MultipleClusterAlgorithm create_multiple_cluster_algorithm(
+std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     Rcpp::List parallel_config,
     ClusterAlgorithmFactory &factory,
     Rcpp::CharacterVector seqnames,

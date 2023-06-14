@@ -69,7 +69,7 @@ Rcpp::RObject distmx_cluster_multi(
   auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seqnames, which);
   // Rcpp::Rcout << "done" << std::endl
   //             << "creating ClusterWorker..." << std::flush;
-  auto worker = create_cluster_worker(parallel_config, &algo, infile);
+  auto worker = create_cluster_worker(parallel_config, algo.get(), infile);
   // Rcpp::Rcout << "done" << std::endl
   //             << "clustering..." << std::flush;
 
@@ -92,10 +92,10 @@ Rcpp::RObject distmx_cluster_multi(
       outlist[i] = outi;
       internal_out.emplace_back(outi);
     }
-    algo.write_to_matrix(internal_out);
+    algo->write_to_matrix(internal_out);
     output = outlist;
   } else if (output_type == "hclust") {
-    output = algo.as_hclust();
+    output = algo->as_hclust();
   }
   return output;
 }

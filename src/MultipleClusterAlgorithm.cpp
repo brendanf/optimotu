@@ -187,7 +187,7 @@ void MCA::merge_into_parent() {
 }
 
 MultipleClusterAlgorithm * MCA::make_child() {
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   if (own_child) {
     auto child_ptr = new MultipleClusterAlgorithm(this);
     auto child = std::unique_ptr<ClusterAlgorithm>(

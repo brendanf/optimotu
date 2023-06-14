@@ -17,10 +17,11 @@ void ClusterMatrix<BM, F, A>::initialize() {
 template<bool BM, int F, typename A>
 void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (i >= m) return;
-  // std::lock_guard<std::mutex> lock(this->mutex);
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
-  if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) return;
-  lock.upgrade_to_writer();
+  {
+    std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
+    if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) return;
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   // check again in case the lock had to be released
   if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) return;
 
@@ -169,7 +170,7 @@ void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
 
 template<bool BM, int F, typename A>
 void ClusterMatrix<BM, F, A>::merge_into(DistanceConsumer &consumer) {
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (size_t j = 1; j < n; ++j) {
     j_t i = j*m;
     if (clust_array[i + m - 1] == (int)j) continue;
@@ -183,7 +184,7 @@ void ClusterMatrix<BM, F, A>::merge_into(DistanceConsumer &consumer) {
 template<bool BM, int F, typename A>
 void ClusterMatrix<BM, F, A>::merge_into(ClusterAlgorithm &consumer) {
   // TODO check that the distance converters are really compatible
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 1; j < n; ++j) {
     j_t i = j*m;
     if (clust_array[i + m - 1] == (int)j) continue;
@@ -197,7 +198,7 @@ void ClusterMatrix<BM, F, A>::merge_into(ClusterAlgorithm &consumer) {
 template<bool BM, int F, typename A>
 SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
   // std::lock_guard<std::mutex> lock(this->mutex);
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex);
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   if (own_child) {
     auto child_ptr = new ClusterMatrix<BM,F>(this);
     auto child = std::unique_ptr<ClusterAlgorithm>(
@@ -212,7 +213,7 @@ SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
 
 template<bool BM, int F, typename A>
 double ClusterMatrix<BM, F, A>::max_relevant(j_t seq1, j_t seq2, int thread) const {
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   if (seq1 == seq2) return 0.0;
   j_t j1 = seq1*m, j2 = seq2*m;
   auto c1 = ca + j1, c2 = ca + j2,
@@ -249,7 +250,7 @@ template<bool BM, int F, typename A>
 void ClusterMatrix<BM, F, A>::write_to_matrix(internal_matrix_t &out) {
   // shortcut if this is already our data matrix
   if (intptr_t(&out[0]) == intptr_t(&clust_array[0])) return;
-  tbb::queuing_rw_mutex::scoped_lock lock(this->mutex, true);
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   std::copy(clust_array.begin(), clust_array.end(), out.begin());
 }
 
@@ -291,7 +292,7 @@ Rcpp::List ClusterMatrix<BM, F, A>::as_hclust(
   }
   int last_clust = 0;
   {
-    tbb::queuing_rw_mutex::scoped_lock lock{mutex, true};
+    std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
     for (int j = 0; j < this->m * this->n; j += this->n) {
       double d = this->dconv.inverse(j);
       for (int i : remaining[this_remaining]) {

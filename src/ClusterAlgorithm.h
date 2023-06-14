@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <map>
 #include <mutex>
+#include <shared_mutex>
 #include <set>
 #include <iostream>
 
@@ -45,7 +46,7 @@ public:
   const DistanceConverter &dconv;
   const d_t m;
 protected:
-  mutable tbb::queuing_rw_mutex mutex;
+  mutable std::shared_timed_mutex mutex;
   ClusterAlgorithm * const parent = nullptr;
   bool own_child = false;
   std::deque<std::unique_ptr<ClusterAlgorithm>> children;

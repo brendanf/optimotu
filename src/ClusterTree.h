@@ -118,13 +118,6 @@ public:
     initialize();
   };
 
-  ClusterTree(ClusterTree&& c) : SingleClusterAlgorithm(std::move(c)),
-  freeclusters(std::move(c.freeclusters)),
-  pool(std::move(c.pool)),
-  pool0(pool.data()), poolend(pool0 + 2*n),
-  tip0(pool0), tipend(tip0 + n),
-  node0(tipend), nodeend(node0+n) {};
-
   ClusterTree * make_child() override;
 
   cluster* get_cluster(j_t j) const {
