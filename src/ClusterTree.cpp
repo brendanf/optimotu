@@ -553,9 +553,7 @@ double ClusterTree::max_relevant(j_t seq1, j_t seq2, int thread) const {
 }
 
 
-
-#ifdef OPTIMOTU_R
-void ClusterTree::write_to_matrix(RcppParallel::RMatrix<int> &out) {
+void ClusterTree::write_to_matrix(internal_matrix_t &out) {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   j_t j;
   cluster *c, *c1p;
@@ -580,6 +578,7 @@ void ClusterTree::write_to_matrix(RcppParallel::RMatrix<int> &out) {
   }
 }
 
+#ifdef OPTIMOTU_R
 Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   Rcpp::IntegerMatrix merge(this->n - 1, 2);
