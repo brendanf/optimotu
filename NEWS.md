@@ -1,3 +1,7 @@
+# optimotu 0.6.1
+
+* Added error checking to detect possible infinite loops in "tree" algorithm.
+
 # optimotu 0.6.0
 
 * New backend C++ code unifies methods for various algorithms for clustering
