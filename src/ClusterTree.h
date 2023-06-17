@@ -9,9 +9,10 @@
 #include <Rcpp.h>
 #endif // OPTIMOTU_R
 
-// #define SINGLE_LINK_FULL_DEBUG
-// #define SINGLE_LINK_DEBUG
-// #define SINGLE_LINK_TEST
+// #define CLUSTER_TREE_VERBOSE_DEBUG
+// #define CLUSTER_TREE_DEBUG
+#define CLUSTER_TREE_TEST
+// #define CLUSTER_TREE_FULL_TEST
 
 
 class ClusterTree : public SingleClusterAlgorithm {
@@ -59,11 +60,12 @@ protected:
 
    void shift_to_parent(cluster *& c, cluster *& cp) const;
 
-#ifdef SINGLE_LINK_TEST
+#ifdef CLUSTER_TREE_TEST
+
    void validate() const;
 
    std::string clust(const cluster * c) const {
-     if (c) return std::to_string(c - my_pool);
+     if (c) return std::to_string(c - pool0);
      return "none";
    };
 
@@ -71,7 +73,7 @@ protected:
      if (c) return std::to_string(c->id);
      return "none";
    };
-#endif // SINGLE_LINK_TEST
+#endif // CLUSTER_TREE_TEST
 
 #ifdef OPTIMOTU_R
 
