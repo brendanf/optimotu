@@ -25,10 +25,7 @@ protected:
     cluster *parent = nullptr, *first_child = nullptr, *last_child = nullptr,
       *prev_sib = nullptr, *next_sib = nullptr;
     bool allocated = false;
-    d_t max_d() {
-      if (parent == nullptr) return NO_DIST;
-      return parent->min_d;
-    };
+    d_t max_d();
   };
 
    // tracks which clusters from the pool are currently used.
@@ -36,15 +33,9 @@ protected:
    std::vector<cluster> pool;
    cluster *const pool0, * const poolend, * const tip0, * const tipend, * const node0, * const nodeend;
 
-   void delete_cluster(cluster * c) {
-     freeclusters.push_back(c);
-   };
+   void delete_cluster(cluster * c);
 
-   cluster * allocate_cluster() {
-     cluster * c = freeclusters.front();
-     freeclusters.pop_front();
-     return c;
-   };
+   cluster * allocate_cluster();
 
    // assign all of the children of `csrc` to `cdest`
    // this DOES reassign the parent of all the children.
@@ -64,15 +55,9 @@ protected:
 
    void validate() const;
 
-   std::string clust(const cluster * c) const {
-     if (c) return std::to_string(c - pool0);
-     return "none";
-   };
+   std::string clust(const cluster * c) const;
 
-   std::string clust_id(const cluster * c) const {
-     if (c) return std::to_string(c->id);
-     return "none";
-   };
+   std::string clust_id(const cluster * c) const;
 #endif // CLUSTER_TREE_TEST
 
 #ifdef OPTIMOTU_R
@@ -81,28 +66,12 @@ protected:
 
 #endif // OPTIMOTU_R
 
-  void initialize() {
-    j_t j;
-    cluster *c;
-    for (j = 0, c = tip0; c != tipend; j++, c++) {
-      c->id = j; // id is smallest id of a descendent tip
-      c->min_d = -1; // no minimum distance
-      c->allocated = true;
-    }
-    for (; c < nodeend; c++) {
-      freeclusters.push_back(c);
-    }
-  };
+  void initialize();
 
   void assign_ids();
 
-  ClusterTree(SingleClusterAlgorithm * parent) :
-    SingleClusterAlgorithm(parent),
-    pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
-    tip0(pool0), tipend(tip0 + n),
-    node0(tipend), nodeend(node0+n) {
-    initialize();
-  };
+  ClusterTree(SingleClusterAlgorithm * parent)
+    ;
 public:
    ClusterTree(const DistanceConverter &dconv, const j_t n):
      SingleClusterAlgorithm(dconv, n),

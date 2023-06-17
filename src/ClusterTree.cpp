@@ -224,6 +224,42 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
 #endif // CLUSTER_TREE_FULL_TEST
 }
 
+d_t ClusterTree::cluster::max_d() {
+  if (parent == nullptr) return NO_DIST;
+  return parent->min_d;
+}
+
+void ClusterTree::delete_cluster(cluster * c) {
+  freeclusters.push_back(c);
+}
+
+ClusterTree::cluster * ClusterTree::allocate_cluster() {
+  cluster * c = freeclusters.front();
+  freeclusters.pop_front();
+  return c;
+}
+
+void ClusterTree::initialize() {
+  j_t j;
+  cluster *c;
+  for (j = 0, c = tip0; c != tipend; j++, c++) {
+    c->id = j; // id is smallest id of a descendent tip
+    c->min_d = -1; // no minimum distance
+    c->allocated = true;
+  }
+  for (; c < nodeend; c++) {
+    freeclusters.push_back(c);
+  }
+}
+
+ClusterTree::ClusterTree(SingleClusterAlgorithm * parent) :
+  SingleClusterAlgorithm(parent),
+  pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
+  tip0(pool0), tipend(tip0 + n),
+  node0(tipend), nodeend(node0+n) {
+  initialize();
+}
+
 void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
 #ifdef CLUSTER_TREE_DEBUG
    Rcpp::Rcout << "-merging children of cluster " << clust(csrc)
@@ -762,6 +798,17 @@ ClusterTree * ClusterTree::make_child() {
 }
 
 #ifdef CLUSTER_TREE_TEST
+std::string ClusterTree::clust(const cluster * c) const {
+  if (c) return std::to_string(c - pool0);
+  return "none";
+}
+
+std::string ClusterTree::clust_id(const cluster * c) const {
+  if (c) return std::to_string(c->id);
+  return "none";
+}
+
+
 void ClusterTree::validate() const {
   bool err = false;
 #ifdef CLUSTER_TREE_DEBUG
