@@ -229,6 +229,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
     delete_cluster(c1);
   }
 #ifdef CLUSTER_TREE_TEST
+  validate_touched();
 #ifndef CLUSTER_TREE_FULL_TEST
   if (step_count % 100000 == 0) {
 #endif //CLUSTER_TREE_FULL_TEST
