@@ -1,5 +1,7 @@
 # optimotu (development version)
 
+* Fixed missing images in README.
+
 # optimotu 0.6.1
 
 * Added error checking to detect possible infinite loops in "tree" algorithm.
