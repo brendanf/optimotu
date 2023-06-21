@@ -28,10 +28,31 @@ protected:
     d_t max_d();
   };
 
+#ifdef CLUSTER_TREE_TEST
+  struct cluster_int {
+    const d_t min_d;
+    const j_t id;
+    const uint32_t n_child;
+    const int32_t self, parent, first_child, last_child, prev_sib, next_sib;
+    const bool allocated;
+
+    cluster_int(const cluster * const c, const cluster * const pool0);
+  };
+
+  friend std::ostream& operator<<(std::ostream &out, const ClusterTree::cluster_int &c);
+#endif
+
    // tracks which clusters from the pool are currently used.
    std::deque<cluster*> freeclusters;
    std::vector<cluster> pool;
    cluster *const pool0, * const poolend, * const tip0, * const tipend, * const node0, * const nodeend;
+
+#ifdef CLUSTER_TREE_TEST
+   size_t step_count = 0;
+   mutable std::vector<cluster_int> touched_clusters;
+   j_t current_seq1, current_seq2;
+   d_t current_i;
+#endif
 
    void delete_cluster(cluster * c);
 
@@ -52,8 +73,11 @@ protected:
    void shift_to_parent(cluster *& c, cluster *& cp) const;
 
 #ifdef CLUSTER_TREE_TEST
+   bool validate_cluster(cluster * c) const;
 
-   void validate() const;
+   void validate_all() const;
+
+   void validate_touched() const;
 
    std::string clust(const cluster * c) const;
 

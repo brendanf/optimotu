@@ -20,6 +20,15 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   d_t max_d1 = c1->max_d();
   d_t max_d2 = c2->max_d();
 #ifdef CLUSTER_TREE_TEST
+  ++step_count;
+  current_seq1 = seq1;
+  current_seq2 = seq2;
+  current_i = i;
+  touched_clusters.clear();
+  touched_clusters.emplace_back(c1, this->pool0);
+  if (c1p) touched_clusters.emplace_back(c1p, this->pool0);
+  touched_clusters.emplace_back(c2, this->pool0);
+  if (c2p) touched_clusters.emplace_back(c2p, this->pool0);
   int j = 0;
 #endif
   while (c1 != c2 && (max_d1 <= i || max_d2 <= i)) {
@@ -37,7 +46,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       OPTIMOTU_CERR << "infinite loop searching for clusters for sequences "
                     << seq1 << " and " << seq2
                     << " at threshold " << i << std::endl;
-      validate();
+      validate_all();
       OPTIMOTU_STOP("infinite loop searching for clusters");
     }
 #endif
@@ -192,7 +201,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
         OPTIMOTU_CERR << "infinite loop recursing to parents "
                       << seq1 << " and " << seq2
                       << " at threshold" << i << std::endl;
-        validate();
+        validate_touched();
         OPTIMOTU_STOP("infinite loop recursing to parents");
       }
 #endif
@@ -203,7 +212,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       OPTIMOTU_CERR << "infinite loop zipping subtrees for "
                     << seq1 << " and " << seq2
                     << " at threshold" << i << std::endl;
-      validate();
+      validate_touched();
       OPTIMOTU_STOP("infinite loop zipping subtrees");
     }
 #endif
@@ -219,15 +228,35 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
     c1->prev_sib = nullptr;
     delete_cluster(c1);
   }
-#ifdef CLUSTER_TREE_FULL_TEST
-  validate();
-#endif // CLUSTER_TREE_FULL_TEST
+#ifdef CLUSTER_TREE_TEST
+#ifndef CLUSTER_TREE_FULL_TEST
+  if (step_count % 100000 == 0) {
+#endif //CLUSTER_TREE_FULL_TEST
+  validate_all();
+  OPTIMOTU_CERR << "finished " << step_count << " distances" << std::endl;
+#ifndef CLUSTER_TREE_FULL_TEST
+  }
+#endif //CLUSTER_TREE_FULL_TEST
+#endif // CLUSTER_TREE_TEST
 }
 
 d_t ClusterTree::cluster::max_d() {
   if (parent == nullptr) return NO_DIST;
   return parent->min_d;
 }
+
+#ifdef CLUSTER_TREE_TEST
+ClusterTree::cluster_int::cluster_int(const cluster * const c, const cluster * const pool0):
+  min_d(c->min_d), id(c->id), n_child(c->n_child),
+  self(c - pool0),
+  parent(c->parent ? c->parent - pool0 : -1),
+  first_child(c->first_child ? c->first_child - pool0 : -1),
+  last_child(c->last_child ? c->last_child - pool0 : -1),
+  prev_sib(c->prev_sib ? c->prev_sib - pool0 : -1),
+  next_sib(c->next_sib ? c->next_sib - pool0 : -1),
+  allocated(c->allocated)
+{}
+#endif // CLUSTER_TREE_TEST
 
 void ClusterTree::delete_cluster(cluster * c) {
   freeclusters.push_back(c);
@@ -243,7 +272,7 @@ void ClusterTree::initialize() {
   j_t j;
   cluster *c;
   for (j = 0, c = tip0; c != tipend; j++, c++) {
-    c->id = j; // id is smallest id of a descendent tip
+    c->id = j; // id is smallest id of a descendant tip
     c->min_d = -1; // no minimum distance
     c->allocated = true;
   }
@@ -293,12 +322,13 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
 #endif // CLUSTER_TREE_DEBUG
     while (src_child) {
 #ifdef CLUSTER_TREE_TEST
+      touched_clusters.emplace_back(src_child, this->pool0);
       if (csrc->n_child == 0) {
         OPTIMOTU_CERR << "number of children larger than n_child in cluster "
                       << clust(csrc)
                       << " while merging with cluster "
                       << clust(cdest) << std::endl;
-        validate();
+        validate_touched();
         OPTIMOTU_STOP("too many children");
       }
 #endif // CLUSTER_TREE_TEST
@@ -333,6 +363,9 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
     // both clusters exist, so do the splice
     auto dest_child = cdest->last_child;
     if (dest_child && src_child) {
+#ifdef CLUSTER_TREE_TEST
+      touched_clusters.emplace_back(dest_child, this->pool0);
+#endif // CLUSTER_TREE_TEST
       dest_child->next_sib = src_child;
       src_child->prev_sib = dest_child;
     } else {
@@ -347,12 +380,13 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
             Rcpp::Rcout << "  - transferring child " << clust(src_child) << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
 #ifdef CLUSTER_TREE_TEST
+      touched_clusters.emplace_back(src_child, this->pool0);
       if (csrc->n_child == 0) {
         OPTIMOTU_CERR << "number of children larger than n_child in cluster "
                       << clust(csrc)
                       << " while merging with cluster "
                       << clust(cdest) << std::endl;
-        validate();
+        validate_touched();
         OPTIMOTU_STOP("too many children");
       }
 #endif // CLUSTER_TREE_TEST
@@ -469,6 +503,14 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
                   << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
   if (parent->last_child == nullptr) {
+#ifdef CLUSTER_TREE_TEST
+    if (parent < this->node0) {
+      OPTIMOTU_CERR << "attempting to add child " << clust(child)
+                    << " to leaf node " << clust(parent)
+                    << std::endl;
+      OPTIMOTU_STOP("tried to add child to leaf node");
+    }
+#endif // CLUSTER_TREE_TEST
     parent->first_child = parent->last_child = child;
     parent->n_child++;
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
@@ -526,6 +568,11 @@ void ClusterTree::shift_to_parent(cluster *& c, cluster *& cp) const {
     return;
   }
   cp = cp->parent;
+#ifdef CLUSTER_TREE_TEST
+  if (cp != nullptr) {
+    touched_clusters.emplace_back(cp, this->pool0);
+  }
+#endif // CLUSTER_TREE_TEST
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
       Rcpp::Rcout << " -finished shifting to parent " << clust(c) << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
@@ -808,117 +855,168 @@ std::string ClusterTree::clust_id(const cluster * c) const {
   return "none";
 }
 
+inline std::ostream& operator<<(std::ostream &out, const ClusterTree::cluster_int &c)
+{
+  out << "  -" << std::endl
+      << "    self: " << c.self << std::endl
+      << "    allocated: " << c.allocated << std::endl
+      << "    id: " << c.id << std::endl
+      << "    min_d: " << c.min_d << std::endl
+      << "    parent: " << c.parent << std::endl
+      << "    first_child: " << c.first_child << std::endl
+      << "    last_child: " << c.last_child << std::endl
+      << "    n_child: " << c.n_child << std::endl
+      << "    prev_sib: " << c.prev_sib << std::endl
+      << "    next_sib: " << c.next_sib << std::endl;
+  return out;
+}
 
-void ClusterTree::validate() const {
-  bool err = false;
-#ifdef CLUSTER_TREE_DEBUG
-  OPTIMOTU_CERR << "validating..." << std::endl;
-#endif // CLUSTER_TREE_DEBUG
-  for (cluster * c = this->pool0; c < this->poolend; ++c) {
-    if (!c->allocated) continue;
+bool ClusterTree::validate_cluster(cluster * c) const {
 
-    if (c->min_d < -1 || (c->min_d >= m && c->min_d != NO_DIST)) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+  if (!c->allocated) return true;
+
+  bool status = true;
+
+  if (c->min_d < -1 || (c->min_d >= m && c->min_d != NO_DIST)) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has invalid min_d: " << c->min_d << std::endl;
-      err = true;
-    }
-    std::int32_t max = c->max_d();
-    if (max < 0 || (max >= m && max != NO_DIST)) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  std::int32_t max = c->max_d();
+  if (max < 0 || (max >= m && max != NO_DIST)) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has invalid max_d: " << max << std::endl;
-      err = true;
-    }
-    if (max < c->min_d) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  if (max < c->min_d) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has invalid max_d: " << max
                   << " which is less than its min_d: " << c->min_d << std::endl;
-      err = true;
-    }
-    if (c->parent && (c->parent < this->node0 ||
-        c->parent > this->nodeend)) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  if (c->parent && (c->parent < this->node0 ||
+      c->parent > this->nodeend)) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has invalid parent: " << clust(c->parent)
                   << std::endl;
-      err = true;
-    } else if (c->parent && !c->parent->allocated) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  } else if (c->parent && !c->parent->allocated) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << "'s parent " << clust(c->parent) << " is not allocated "
                   << std::endl;
-      err = true;
-    }
-    if (c->n_child == 1) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  if (c->n_child == 1) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has exactly one child." << std::endl;
-      err = true;
-    }
-    if (c -> first_child && (c->first_child < this->pool0
-                               || c->first_child > this->poolend)) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  if (c -> first_child && (c->first_child < this->pool0
+                             || c->first_child > this->poolend)) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has invalid first_child: " << clust(c->first_child) << std::endl;
-      err = true;
-    }
-    auto next = c->first_child;
-    std::uint32_t kids = 0;
-    while (next) {
-      kids++;
-      if (next->parent != c) {
-        OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  auto next = c->first_child;
+  std::uint32_t kids = 0;
+  while (next) {
+    kids++;
+    if (next->parent != c) {
+      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                     << "'s child " << clust(next)
                     << " instead has parent " << clust(next->parent)
                     << std::endl;
-        err = true;
-      }
-      if (!next->allocated) {
-        OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+      status = false;
+    }
+    if (!next->allocated) {
+      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                     << "'s child " << clust(next)
                     << " is not allocated " << std::endl;
-        err = true;
-      }
-      next = next->next_sib;
+      status = false;
     }
-    if (kids != c->n_child) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    next = next->next_sib;
+  }
+  if (kids != c->n_child) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has " << kids
                   << " children but n_child=" << c->n_child
                   << std::endl;
-      err = true;
-    }
-    if (c -> next_sib && (c->next_sib < this->pool0
-                            || c->next_sib > this->poolend)) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  if (c -> next_sib && (c->next_sib < this->pool0
+                          || c->next_sib > this->poolend)) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has invalid next_sib: " << clust(c->next_sib)
                   << std::endl;
-      err = true;
-    }
-    if (c->next_sib && c->next_sib->parent != c->parent) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  if (c->next_sib && c->next_sib->parent != c->parent) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " with parent " << clust(c->parent)
                   << " has sibling " <<  clust(c->next_sib)
                   << " which instead has parent " << clust(c->next_sib->parent)
                   << std::endl;
-      err = true;
-    }
-    if (c->next_sib && !c->next_sib->allocated) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+    status = false;
+  }
+  if (c->next_sib && !c->next_sib->allocated) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " with parent " << clust(c->parent)
                   << " has sibling " << clust(c->next_sib)
                   << " which is not allocated " << std::endl;
-      err = true;
-    }
-    if (c->next_sib && c->next_sib->prev_sib != c) {
-      OPTIMOTU_CERR << "validation error: cluster " << c - this->pool0
+    status = false;
+  }
+  if (c->next_sib && c->next_sib->prev_sib != c) {
+    OPTIMOTU_CERR << "validation error: cluster " << c - this->pool0
                   << " with parent " << clust(c->parent)
                   << " has sibling " << clust(c->next_sib)
                   << " whose previous sibling is " << clust(c->next_sib->prev_sib)
                   << std::endl;
-      err = true;
-    }
-    if (c->next_sib == c ) {
-      OPTIMOTU_CERR << "validation error: cluster " << clust(c)
-                  << " is its own next sibling" << std::endl;
-      err = true;
-    }
+    status = false;
   }
-  if (err) OPTIMOTU_STOP("found validation errors");
+  if (c->next_sib == c ) {
+    OPTIMOTU_CERR << "validation error: cluster " << clust(c)
+                  << " is its own next sibling" << std::endl;
+    status = false;
+  }
+  return status;
 }
+
+void ClusterTree::validate_all() const {
+  bool status = true;
+#ifdef CLUSTER_TREE_DEBUG
+  OPTIMOTU_CERR << "validating all clusters..." << std::endl;
+#endif // CLUSTER_TREE_DEBUG
+  for (cluster * c = this->pool0; c < this->poolend; ++c) {
+    status &= validate_cluster(c);
+  }
+  if (!status) OPTIMOTU_STOP("found validation errors");
+}
+
+void ClusterTree::validate_touched() const {
+  bool status = true;
+#ifdef CLUSTER_TREE_DEBUG
+  OPTIMOTU_CERR << "validating touched clusters..." << std::endl;
+#endif //CLUSTER_TREE_DEBUG
+  for (const cluster_int &c : touched_clusters) {
+    status &= validate_cluster(this->pool0 + c.self);
+  }
+  if (!status) {
+    OPTIMOTU_CERR << "error while processing pairwise distance "
+                  << step_count
+                  << " between seq1=" << this->current_seq1
+                  << ", seq2=" << this->current_seq2
+                  << ", i=" << this->current_i
+                  << std::endl
+                  << "---" << std::endl
+                  << "clusters:" << std::endl;
+    for (const cluster_int &c : touched_clusters) {
+      OPTIMOTU_CERR << c;
+    }
+    OPTIMOTU_CERR << "---" << std::endl;
+    OPTIMOTU_STOP("found validation errors");
+  }
+
+}
+
+
 #endif // CLUSTER_TREE_TEST
