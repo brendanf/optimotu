@@ -876,10 +876,15 @@ inline std::ostream& operator<<(std::ostream &out, const ClusterTree::cluster_in
 
 bool ClusterTree::validate_cluster(cluster * c) const {
 
-  if (!c->allocated) return true;
-
   bool status = true;
-
+  if (!c->allocated) {
+    if (c < this->tipend) {
+      OPTIMOTU_CERR << "validation error: cluter " << clust(c)
+                    << " is a tip but is not allocated." << std::endl;
+      status = false;
+    } else {
+      return true;
+    }
   if (c->min_d < -1 || (c->min_d >= m && c->min_d != NO_DIST)) {
     OPTIMOTU_CERR << "validation error: cluster " << clust(c)
                   << " has invalid min_d: " << c->min_d << std::endl;
