@@ -9,6 +9,29 @@
 #include <RcppThread.h>
 
 void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
+#ifdef CLUSTER_TREE_TEST
+  ++step_count;
+#endif
+  if (seq1 >= this->n) {
+    OPTIMOTU_CERR << "error"
+#ifdef CLUSTER_TREE_TEST
+                  << " at step " << step_count
+#endif
+                  << ": seq1=" << seq1
+                  << " but total number of sequences is " << this->n
+                  << std::endl;
+    OPTIMOTU_STOP("invalid sequence index");
+  }
+  if (seq2 >= this->n) {
+    OPTIMOTU_CERR << "error"
+#ifdef CLUSTER_TREE_TEST
+                  << " at step " << step_count
+#endif
+                  << ": seq2=" << seq2
+                  << " but total number of sequences is " << this->n
+                  << std::endl;
+    OPTIMOTU_STOP("invalid sequence index");
+  }
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   cluster* c1 = get_cluster(seq1);
   cluster* c1p = c1->parent;
@@ -20,7 +43,6 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   d_t max_d1 = c1->max_d();
   d_t max_d2 = c2->max_d();
 #ifdef CLUSTER_TREE_TEST
-  ++step_count;
   current_seq1 = seq1;
   current_seq2 = seq2;
   current_i = i;
