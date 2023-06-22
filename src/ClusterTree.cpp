@@ -86,15 +86,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       if (i == c2->min_d) {
         remove_child(c2p, c2);
         // c2 is not needed anymore, so we need to assign its children to c1
-        merge_children(c1, c2);
-        // and mark it as unused
-        c2->allocated = false;
-        c2->parent = nullptr;
-        c2->first_child = nullptr;
-        c2->last_child = nullptr;
-        c2->next_sib = nullptr;
-        c2->prev_sib = nullptr;
-        delete_cluster(c2);
+        merge_clusters(c1, c2);
       } else {
         //add c2 as a child of cnew (aka c1)
         remove_child(c2p, c2);
@@ -221,14 +213,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   }
   if (c1 && c1 == c2 && c1->n_child < 2) {
     remove_child(c1p, c1);
-    merge_children(c1p, c1);
-    c1->parent = nullptr;
-    c1->allocated = false;
-    c1->first_child = nullptr;
-    c1->last_child = nullptr;
-    c1->next_sib = nullptr;
-    c1->prev_sib = nullptr;
-    delete_cluster(c1);
+    merge_clusters(c1p, c1);
   }
 #ifdef CLUSTER_TREE_TEST
   validate_touched();
@@ -262,12 +247,21 @@ ClusterTree::cluster_int::cluster_int(const cluster * const c, const cluster * c
 #endif // CLUSTER_TREE_TEST
 
 void ClusterTree::delete_cluster(cluster * c) {
+  c->allocated = false;
+  c->parent = nullptr;
+  c->first_child = nullptr;
+  c->last_child = nullptr;
+  c->next_sib = nullptr;
+  c->prev_sib = nullptr;
+  c->min_d = NO_DIST;
+  c->id = NO_CLUST;
   freeclusters.push_back(c);
 }
 
 ClusterTree::cluster * ClusterTree::allocate_cluster() {
   cluster * c = freeclusters.front();
   freeclusters.pop_front();
+  c->allocated = true;
   return c;
 }
 
@@ -292,9 +286,9 @@ ClusterTree::ClusterTree(SingleClusterAlgorithm * parent) :
   initialize();
 }
 
-void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
+void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
 #ifdef CLUSTER_TREE_DEBUG
-   Rcpp::Rcout << "-merging children of cluster " << clust(csrc)
+   Rcpp::Rcout << "-merging cluster " << clust(csrc)
                << " into cluster " << clust(cdest)
                << std::endl;
 #endif // CLUSTER_TREE_DEBUG
@@ -302,7 +296,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
   // nothing to do
   if (csrc == nullptr) {
 #ifdef CLUSTER_TREE_DEBUG
-         Rcpp::Rcout << " -finished merging children of cluster " << clust(csrc)
+         Rcpp::Rcout << " -finished merging cluster " << clust(csrc)
                      << " into cluster " << clust(cdest) << " (no-op)" << std::endl;
 #endif // CLUSTER_TREE_DEBUG
     return;
@@ -414,6 +408,7 @@ void ClusterTree::merge_children(cluster *cdest, cluster *csrc) {
                      << std::endl;
 #endif // CLUSTER_TREE_DEBUG
   }
+  delete_cluster(csrc);
   return;
 }
 

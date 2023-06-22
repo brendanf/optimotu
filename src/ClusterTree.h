@@ -54,16 +54,18 @@ protected:
    d_t current_i;
 #endif
 
+   // marks the cluster as not-allocated and adds it to freeclusters
    void delete_cluster(cluster * c);
 
+   // marks a new cluster as allocated, removes if from freeclusters
    cluster * allocate_cluster();
 
-   // assign all of the children of `csrc` to `cdest`
+   // assign all of the children of `csrc` to `cdest` and delete `csrc`
    // this DOES reassign the parent of all the children.
-   void merge_children(cluster *cdest, cluster *csrc);
+   void merge_clusters(cluster *cdest, cluster *csrc);
 
    // remove `child` from the linked child list belonging to `parent`
-   // this DOES NOT reassign `c[child].parent`.
+   // this DOES NOT reassign `child->parent` or delete `child`.
    void remove_child(cluster *parent, cluster *child);
 
    // add cluster `child` as a child of `parent`.
