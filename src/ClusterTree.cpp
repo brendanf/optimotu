@@ -58,23 +58,25 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
     /* we need to merge c1 and c2, and all their parents, starting at i and
      going up to m. */
 #ifdef CLUSTER_TREE_DEBUG
-    Rcpp::Rcout << "j1:" << clust(c1)
-                << ", j2:" << clust(c2)
-                << ", i:" << i
-                << std::endl;
-    Rcpp::Rcout << "min_d1:" << c1->min_d
-                << ", min_d2:" << c2->min_d
-                << std::endl;
-    Rcpp::Rcout << "max_d1:" << c1->max_d()
-                << ", max_d2:" << c2->max_d()
-                << std::endl;
+    OPTIMOTU_COUT
+#ifdef CLUSTER_TREE_TEST
+    << "step: " << step_count << ", "
+#endif
+    << "j1:" << clust(c1)
+    << ", j2:" << clust(c2)
+    << ", i:" << i
+    << std::endl
+    << "min_d1:" << c1->min_d
+    << ", min_d2:" << c2->min_d
+    << std::endl
+    << "max_d1:" << c1->max_d()
+    << ", max_d2:" << c2->max_d()
+    << std::endl
+    << "j1p:" << clust(c1p)
+    << ", j2p:" << clust(c2p)
+    << std::endl;
 #endif // CLUSTER_TREE_DEBUG
     cluster *cnew;
-#ifdef CLUSTER_TREE_DEBUG
-         Rcpp::Rcout << "j1p:" << clust(c1p)
-                     << ", j2p:" << clust(c2p)
-                     << std::endl;
-#endif // CLUSTER_TREE_DEBUG
     if (i == c1->min_d) {
       // we don't need to create a new cluster for c1, we can just modify this
 #ifdef CLUSTER_TREE_DEBUG
