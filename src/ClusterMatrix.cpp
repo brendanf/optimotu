@@ -75,22 +75,22 @@ void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
     imax=c1max - (ca + seq1*m);
     imin=imax-1;
   } else {
-    // Rcpp::Rcout << "initializing linear search for join of " << seq1 << " and "
+    // OPTIMOTU_COUT << "initializing linear search for join of " << seq1 << " and "
     //             << seq2 << " at i=" << i << std::endl;
     auto c1 = ca + std::min(seq1, seq2)*m + i;
     auto c2 = ca + std::max(seq1, seq2)*m + i;
-    // Rcpp::Rcout << "searching";
+    // OPTIMOTU_COUT << "searching";
     imax=i;
     while(imax < m && *c2 != *c1) {
-      // Rcpp::Rcout << ".";
+      // OPTIMOTU_COUT << ".";
       ++c1;
       ++c2;
       ++imax;
     }
-    // Rcpp::Rcout << "done" << std::endl;
+    // OPTIMOTU_COUT << "done" << std::endl;
     imin = imax - 1;
   }
-  // Rcpp::Rcout << " imax=" << imax << std::endl;
+  // OPTIMOTU_COUT << " imax=" << imax << std::endl;
   size_t j1m, j2m;
   if (seq1 > seq2) {
     j1m = seq2*m;
@@ -101,12 +101,12 @@ void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
   }
   // cache the new clusters for seq1 and seq2 at each level where they
   // need to be joined
-  // Rcpp::Rcout << "newclust=";
+  // OPTIMOTU_COUT << "newclust=";
   for (d_t ii = i; ii < imax; ii++) {
     toclust[ii] = std::min(clust_array[ii + j1m], clust_array[ii + j2m]);
-    // Rcpp::Rcout << toclust[ii] << " ";
+    // OPTIMOTU_COUT << toclust[ii] << " ";
   }
-  // Rcpp::Rcout << "done" << std::endl;
+  // OPTIMOTU_COUT << "done" << std::endl;
   // for each sequence which is clustered with seq1 or seq2 at imin,
   // assign it to newclust in the same range where it is
   std::size_t jjmin = std::max(clust_array[j1m + imin], clust_array[j2m + imin])*m;
@@ -137,7 +137,7 @@ void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
     } else {
       d_t copystart;
       auto ca = clust_array.begin() + jj;
-      // Rcpp::Rcout << " setting cluster " << (jj / m);
+      // OPTIMOTU_COUT << " setting cluster " << (jj / m);
       if (F==BINARY_FILL) {
         // iimin == last value of ii where this seq is not clustered with seq1 or seq2
         // copystart == first value of ii where this seq is clustered with seq1 or seq2
@@ -157,20 +157,20 @@ void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
           }
         }
         ca += copystart;
-        // Rcpp::Rcout << " from " << iimax << " to " << imin << std::endl;
+        // OPTIMOTU_COUT << " from " << iimax << " to " << imin << std::endl;
         // assign
       } else {
-        // Rcpp::Rcout << "starting fill linear search for j=" << jj/m << " i=" << i << std::endl;
+        // OPTIMOTU_COUT << "starting fill linear search for j=" << jj/m << " i=" << i << std::endl;
         copystart = i;
         ca += i;
         auto jc = clust_array.begin() + jcomp + i;
         while (*ca != *jc) {
-          // Rcpp::Rcout << "ca=" << *ca << " jc=" << *jc << " j=" << copystart << std::endl;
+          // OPTIMOTU_COUT << "ca=" << *ca << " jc=" << *jc << " j=" << copystart << std::endl;
           ++ca;
           ++jc;
           ++copystart;
         }
-        // Rcpp::Rcout << "cluster " << jj/m << " matching to " << jcomp/m <<
+        // OPTIMOTU_COUT << "cluster " << jj/m << " matching to " << jcomp/m <<
         // "; updating from " << copystart << " to " << imin << std::endl;
       }
       std::memcpy(

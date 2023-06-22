@@ -102,7 +102,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
     if (i == c1->min_d) {
       // we don't need to create a new cluster for c1, we can just modify this
 #ifdef CLUSTER_TREE_DEBUG
-            Rcpp::Rcout << "modifying first cluster: " << clust(c1) << std::endl;
+            OPTIMOTU_COUT << "modifying first cluster: " << clust(c1) << std::endl;
 #endif // CLUSTER_TREE_DEBUG
       cnew = c1;
       if (i == c2->min_d) {
@@ -118,7 +118,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
     } else if (i == c2->min_d) {
       // we don't need to define a new cluster, we can re-use c2
 #ifdef CLUSTER_TREE_DEBUG
-            Rcpp::Rcout << "modifying second cluster: " << clust(c2) << std::endl;
+            OPTIMOTU_COUT << "modifying second cluster: " << clust(c2) << std::endl;
 #endif // CLUSTER_TREE_DEBUG
       cnew = c2;
       remove_child(c1p, c1);
@@ -126,7 +126,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       c1->parent = cnew;
     } else if (c1p && c1p == c2p && c1p->n_child == 2) {
 #ifdef CLUSTER_TREE_DEBUG
-            Rcpp::Rcout << "modifying common parent cluster: " << clust(c1p) << std::endl;
+            OPTIMOTU_COUT << "modifying common parent cluster: " << clust(c1p) << std::endl;
 #endif // CLUSTER_TREE_DEBUG
       // the two clusters to be merged have the same parent, and they are
       // the only children of that parent.
@@ -152,12 +152,12 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       add_child(cnew, c2); //sets cnew->n_child
       c2->parent = cnew;
 #ifdef CLUSTER_TREE_DEBUG
-            Rcpp::Rcout << "finished initializing cluster " << clust(cnew) << std::endl;
+            OPTIMOTU_COUT << "finished initializing cluster " << clust(cnew) << std::endl;
 #endif // CLUSTER_TREE_DEBUG
     }
     if (c1p && (c2p == nullptr || c2p->min_d >= c1p->min_d)) {
 #ifdef CLUSTER_TREE_DEBUG
-            Rcpp::Rcout << "parent of new/modified cluster " << clust(cnew)
+            OPTIMOTU_COUT << "parent of new/modified cluster " << clust(cnew)
                         << " should be " << clust(c1p)
                         << std::endl;
 #endif // CLUSTER_TREE_DEBUG
@@ -172,7 +172,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
       // b) only c2p is non-null
       // c) both are non-null but c1p > c2p
 #ifdef CLUSTER_TREE_DEBUG
-            Rcpp::Rcout << "parent of new/modified cluster " << clust(cnew)
+            OPTIMOTU_COUT << "parent of new/modified cluster " << clust(cnew)
                         << " should be " << clust(c2p)
                         << std::endl;
 #endif // CLUSTER_TREE_DEBUG
@@ -310,21 +310,21 @@ ClusterTree::ClusterTree(SingleClusterAlgorithm * parent) :
 
 void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
 #ifdef CLUSTER_TREE_DEBUG
-   Rcpp::Rcout << "-merging cluster " << clust(csrc)
+   OPTIMOTU_COUT << "-merging cluster " << clust(csrc)
                << " into cluster " << clust(cdest)
                << std::endl;
 #endif // CLUSTER_TREE_DEBUG
-  // CASE 1: the source is null
+  // CASE 1: the source is null or a tip
   // nothing to do
-  if (csrc == nullptr) {
+  if (csrc == nullptr || csrc < this->tipend) {
 #ifdef CLUSTER_TREE_DEBUG
-         Rcpp::Rcout << " -finished merging cluster " << clust(csrc)
+         OPTIMOTU_COUT << " -finished merging cluster " << clust(csrc)
                      << " into cluster " << clust(cdest) << " (no-op)" << std::endl;
 #endif // CLUSTER_TREE_DEBUG
     return;
   }
 #ifdef CLUSTER_TREE_DEBUG
-      Rcpp::Rcout << " - source cluster " << clust(csrc)
+      OPTIMOTU_COUT << " - source cluster " << clust(csrc)
                   << ": n_child=" << csrc->n_child
                   << ", first_child=" << clust(csrc->first_child)
                   << ", last_child=" << clust(csrc->last_child)
@@ -333,10 +333,10 @@ void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
   // Reassign the parents
   // this is the slow part O(n)
   auto src_child = csrc->first_child;
-  if (cdest == nullptr) {
+  if (cdest == nullptr || cdest < this->tipend) {
 #ifdef CLUSTER_TREE_DEBUG
-         Rcpp::Rcout << " - destination cluster " << clust(cdest)
-                     << " is null" << std::endl
+         OPTIMOTU_COUT << " - destination cluster " << clust(cdest)
+                     << " is null or a tip" << std::endl
                      << " - removing children from source cluster..." << std::endl;
 #endif // CLUSTER_TREE_DEBUG
     while (src_child) {
@@ -352,7 +352,7 @@ void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
       }
 #endif // CLUSTER_TREE_TEST
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-            Rcpp::Rcout << "  - removing child " << clust(src_child) << std::endl;
+            OPTIMOTU_COUT << "  - removing child " << clust(src_child) << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
       src_child->parent = nullptr;
       src_child->prev_sib = nullptr;
@@ -363,7 +363,7 @@ void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
     csrc->first_child = nullptr;
     csrc->last_child = nullptr;
 #ifdef CLUSTER_TREE_DEBUG
-         Rcpp::Rcout << "  -finished removing children."
+         OPTIMOTU_COUT << "  -finished removing children."
                      << std::endl
                      << "  - source cluster " << clust(csrc)
                      << ": n_child=" << csrc->n_child
@@ -373,7 +373,7 @@ void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
 #endif // CLUSTER_TREE_DEBUG
   } else {
 #ifdef CLUSTER_TREE_DEBUG
-         Rcpp::Rcout << "  - destination cluster " << clust(cdest)
+         OPTIMOTU_COUT << "  - destination cluster " << clust(cdest)
                      << ": n_child=" << cdest->n_child
                      << ", first_child=" << clust(cdest->first_child)
                      << ", last_child=" << clust(cdest->last_child)
@@ -396,7 +396,7 @@ void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
     // reassign parents
     while (src_child) {
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-            Rcpp::Rcout << "  - transferring child " << clust(src_child) << std::endl;
+            OPTIMOTU_COUT << "  - transferring child " << clust(src_child) << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
 #ifdef CLUSTER_TREE_TEST
       touched_clusters.emplace_back(src_child, this->pool0);
@@ -417,7 +417,7 @@ void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
     csrc->first_child = nullptr;
     csrc->last_child = nullptr;
 #ifdef CLUSTER_TREE_DEBUG
-         Rcpp::Rcout << "  -finished transferring children."
+         OPTIMOTU_COUT << "  -finished transferring children."
                      << "  - source cluster " << clust(csrc)
                      << ": n_child=" << csrc->n_child
                      << ", first_child=" << clust(csrc->first_child)
@@ -436,20 +436,20 @@ void ClusterTree::merge_clusters(cluster *cdest, cluster *csrc) {
 
 void ClusterTree::remove_child(cluster *parent, cluster *child) {
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << "-removing child " << clust(child)
+      OPTIMOTU_COUT << "-removing child " << clust(child)
                   << " from cluster " << clust(parent)
                   << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
   if (parent == nullptr) {
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-         Rcpp::Rcout << " -finished removing child " << clust(child)
+         OPTIMOTU_COUT << " -finished removing child " << clust(child)
                      << " from cluster " << clust(parent)
                      << " (no-op)" << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
     return;
   }
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << "  -parent " << clust(parent)
+      OPTIMOTU_COUT << "  -parent " << clust(parent)
                   << ": n_child=" << parent->n_child
                   << ", first_child=" << clust(parent->first_child)
                   << ", last_child=" << clust(parent->last_child)
@@ -483,7 +483,7 @@ void ClusterTree::remove_child(cluster *parent, cluster *child) {
   }
   parent->n_child--;
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << "  -finished removing child" << std::endl
+      OPTIMOTU_COUT << "  -finished removing child" << std::endl
                   << "  -parent " << clust(parent)
                   << ": n_child=" << parent->n_child
                   << ", first_child=" << clust(parent->first_child)
@@ -499,20 +499,20 @@ void ClusterTree::remove_child(cluster *parent, cluster *child) {
 
 void ClusterTree::add_child(cluster * parent, cluster * child) {
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << "-adding child " << clust(child)
+      OPTIMOTU_COUT << "-adding child " << clust(child)
                   << " to cluster " << clust(parent)
                   << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
   if (parent == nullptr) {
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-         Rcpp::Rcout << " -finished adding child " << clust(child)
+         OPTIMOTU_COUT << " -finished adding child " << clust(child)
                      << " to cluster " << clust(parent)
                      << " (no-op)" << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
     return;
   }
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << "  -parent " << clust(parent)
+      OPTIMOTU_COUT << "  -parent " << clust(parent)
                   << ": n_child=" << parent->n_child
                   << ", first_child=" << clust(parent->first_child)
                   << ", last_child=" << clust(parent->last_child)
@@ -534,7 +534,7 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
     parent->first_child = parent->last_child = child;
     parent->n_child++;
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-         Rcpp::Rcout << " -finished adding only child " << clust(child)
+         OPTIMOTU_COUT << " -finished adding only child " << clust(child)
                      << " to cluster " << clust(parent)
                      << std::endl
                      << "  -parent " << clust(parent)
@@ -556,7 +556,7 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
   parent->last_child = child;
   parent->n_child++;
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << " -finished adding child " << clust(child)
+      OPTIMOTU_COUT << " -finished adding child " << clust(child)
                   << " to cluster " << clust(parent)
                   << std::endl
                   << "  -parent " << clust(parent)
@@ -574,14 +574,14 @@ void ClusterTree::add_child(cluster * parent, cluster * child) {
 
 void ClusterTree::shift_to_parent(cluster *& c, cluster *& cp) const {
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << "-shifting from child " << clust(c)
+      OPTIMOTU_COUT << "-shifting from child " << clust(c)
                   << " to parent " << clust(cp)
                   << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
   c = cp;
   if (cp == nullptr) {
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-         Rcpp::Rcout << " -finished shifting to parent " << clust(c)
+         OPTIMOTU_COUT << " -finished shifting to parent " << clust(c)
                      << " (NO_CLUST)"
                      << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
@@ -594,27 +594,27 @@ void ClusterTree::shift_to_parent(cluster *& c, cluster *& cp) const {
   }
 #endif // CLUSTER_TREE_TEST
 #ifdef CLUSTER_TREE_VERBOSE_DEBUG
-      Rcpp::Rcout << " -finished shifting to parent " << clust(c) << std::endl;
+      OPTIMOTU_COUT << " -finished shifting to parent " << clust(c) << std::endl;
 #endif // CLUSTER_TREE_VERBOSE_DEBUG
   return;
 }
 
 #ifdef OPTIMOTU_R
 int ClusterTree::hclust_ordering(cluster * top, int start, Rcpp::IntegerVector &order) const {
-  // Rcpp::Rcout << "ordering cluster " << top << " with start=" << start << std::endl;
+  // OPTIMOTU_COUT << "ordering cluster " << top << " with start=" << start << std::endl;
   int i = start;
   cluster *c = top->first_child;
   if (c == nullptr) {
-    // Rcpp::Rcout << i << ": " << top << std::endl;
+    // OPTIMOTU_COUT << i << ": " << top << std::endl;
     order[i++] = (top - this->pool0) + 1;
   } else {
     do {
-      // Rcpp::Rcout << "getting cluster " << j << std::endl;
+      // OPTIMOTU_COUT << "getting cluster " << j << std::endl;
       if (c < this->tipend) {
-        // Rcpp::Rcout << i << ": " << j << std::endl;
+        // OPTIMOTU_COUT << i << ": " << j << std::endl;
         order[i++] = c - this->pool0 + 1;
         // i++;
-        // Rcpp::Rcout << "i=" << i << std::endl;
+        // OPTIMOTU_COUT << "i=" << i << std::endl;
       } else {
         i = hclust_ordering(c, i, order);
       }
@@ -743,17 +743,17 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   Rcpp::NumericVector height(this->n-1);
   Rcpp::IntegerVector order(this->n);
 
-  // Rcpp::Rcout << "making cluster/distance pairs" << std::endl;
+  // OPTIMOTU_COUT << "making cluster/distance pairs" << std::endl;
   // depths and indices of the valid clusters
   std::vector<std::pair<d_t, cluster*>> cluster_dj;
   for (cluster *c = this->pool0; c < this->poolend; ++c) {
-    // Rcpp::Rcout << "adding cluster " << c << " at depth " << c->min_d << std::endl;
+    // OPTIMOTU_COUT << "adding cluster " << c << " at depth " << c->min_d << std::endl;
     if (c->allocated) cluster_dj.emplace_back(c->min_d, c);
   }
 
-  // Rcpp::Rcout << "sorting cluster/distance pairs" << std::endl;
+  // OPTIMOTU_COUT << "sorting cluster/distance pairs" << std::endl;
   std::sort(cluster_dj.begin(), cluster_dj.end());
-  // Rcpp::Rcout << "finished sorting cluster/distance pairs" << std::endl;
+  // OPTIMOTU_COUT << "finished sorting cluster/distance pairs" << std::endl;
   size_t row = 0; // 1-indexed for R
   auto merge1 = merge.begin(); // first column of merge
   auto merge2 = merge1 + this->n - 1; // second column of merge
@@ -761,7 +761,7 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   std::map<cluster*, int> row_key; // maps cluster to row number
   std::vector<cluster*> parentless; //keep track of clusters with no parent
   for (auto cli : cluster_dj) {
-    // Rcpp::Rcout << "processing cluster " << cli.second << " at depth " << cli.first << std::endl;
+    // OPTIMOTU_COUT << "processing cluster " << cli.second << " at depth " << cli.first << std::endl;
     cluster *c = cli.second;
     cluster *child_c = c->first_child;
     cluster *next_c = child_c->next_sib;
@@ -769,23 +769,23 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
     bool first_pass = TRUE;
     do {
       if (left - this->pool0 < this->n && first_pass) {
-        // Rcpp::Rcout << "left child = " << -left << std::endl;
+        // OPTIMOTU_COUT << "left child = " << -left << std::endl;
         *merge1 = this->pool0 - left - 1;
       } else if (first_pass) {
-        // Rcpp::Rcout << "left child = " << row_key[child_j] << std::endl;
+        // OPTIMOTU_COUT << "left child = " << row_key[child_j] << std::endl;
         *merge1 = row_key[child_c];
       } else {
-        // Rcpp::Rcout << "left child = " << row << std::endl;
+        // OPTIMOTU_COUT << "left child = " << row << std::endl;
         *merge1 = row; //not incremented yet; this is the previous row
       }
       if (next_c - this->pool0 < this->n) {
-        // Rcpp::Rcout << "right child = " << -(int)next_j << std::endl;
+        // OPTIMOTU_COUT << "right child = " << -(int)next_j << std::endl;
         *merge2 = (int)(this->pool0 - next_c - 1);
       } else {
-        // Rcpp::Rcout << "right child = " << row_key[next_j] << std::endl;
+        // OPTIMOTU_COUT << "right child = " << row_key[next_j] << std::endl;
         *merge2 = row_key[next_c];
       }
-      // Rcpp::Rcout << "height = " << dconv.inverse(c->min_d) << std::endl;
+      // OPTIMOTU_COUT << "height = " << dconv.inverse(c->min_d) << std::endl;
       *h = dconv.inverse(c->min_d);
       // go to the next row
       merge2++;
@@ -797,11 +797,11 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
       next_c = child_c->next_sib;
     } while (next_c != nullptr);
     if (c->parent == nullptr) parentless.push_back(cli.second);
-    // Rcpp::Rcout << "finished processing cluster " << cli.second << " at row " << row << std::endl;
+    // OPTIMOTU_COUT << "finished processing cluster " << cli.second << " at row " << row << std::endl;
 
     row_key[cli.second] = row;
   }
-  // Rcpp::Rcout << "finished processing clusters" << std::endl;
+  // OPTIMOTU_COUT << "finished processing clusters" << std::endl;
   // find parentless singletons
   for (cluster * c = this->tip0; c < this->tipend; c++) {
     if (c->parent == nullptr) {
@@ -809,7 +809,7 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
     }
   }
   if (parentless.size() > 1) {
-    // Rcpp::Rcout << "adding dummy parent for parentless clusters" << std::endl;
+    // OPTIMOTU_COUT << "adding dummy parent for parentless clusters" << std::endl;
     int left;
     if (parentless[0] < this->tipend) {
       left = (int)(this->pool0 - parentless[0] - 1);
@@ -823,19 +823,19 @@ Rcpp::List ClusterTree::as_hclust(const Rcpp::CharacterVector &seqnames) const {
       } else {
         right = row_key[parentless[i]];
       }
-      // Rcpp::Rcout << "left child = " << left << std::endl;
+      // OPTIMOTU_COUT << "left child = " << left << std::endl;
       *(merge1++) = left;
-      // Rcpp::Rcout << "right child = " << right << std::endl;
+      // OPTIMOTU_COUT << "right child = " << right << std::endl;
       *(merge2++) = right;
       *(h++) = 1;
       row++;
       left = row;
     }
-    // Rcpp::Rcout << "finished adding parentless clusters" << std::endl;
+    // OPTIMOTU_COUT << "finished adding parentless clusters" << std::endl;
   }
   j_t i = 0;
   for (cluster * c : parentless) {
-    // Rcpp::Rcout << "calculating ordering for parentless cluster " << j << std::endl;
+    // OPTIMOTU_COUT << "calculating ordering for parentless cluster " << j << std::endl;
     i = hclust_ordering(c, i, order);
   }
 

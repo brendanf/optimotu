@@ -1,4 +1,5 @@
 #ifdef OPTIMOTU_R
+#include "optimotu.h"
 #include <Rcpp.h>
 #include <RcppParallel.h>
 
@@ -118,7 +119,7 @@ Rcpp::DataFrame confusion_matrix(
 ) {
   size_t N = c.size(), m = k.nrow();
   if (N != (size_t)k.ncol())
-    Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
+    OPTIMOTU_STOP("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                  " the same number of objects.", k.ncol(), N);
   Rcpp::NumericVector true_positive(m);
   Rcpp::NumericVector false_positive(m);

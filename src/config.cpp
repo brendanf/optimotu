@@ -3,19 +3,19 @@
 #ifdef OPTIMOTU_R
 double element_as_double(Rcpp::List obj, std::string e, std::string name) {
   if (!obj.containsElementNamed(e.c_str())) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
   Rcpp::RObject item = obj[e];
   if (!Rcpp::is<Rcpp::NumericVector>(item)) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: member `" + e + "` is not numeric"
     );
   }
   auto item_dbl = Rcpp::as<Rcpp::NumericVector>(item);
   if (item_dbl.length() != 1) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
@@ -24,13 +24,13 @@ double element_as_double(Rcpp::List obj, std::string e, std::string name) {
 
 std::vector<double> element_as_double_vector(Rcpp::List obj, std::string e, std::string name) {
   if (!obj.containsElementNamed(e.c_str())) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
   Rcpp::RObject item = obj[e];
   if (!Rcpp::is<Rcpp::NumericVector>(item)) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: member `" + e + "` is not numeric"
     );
   }
@@ -39,19 +39,19 @@ std::vector<double> element_as_double_vector(Rcpp::List obj, std::string e, std:
 
 int element_as_int(Rcpp::List obj, std::string e, std::string name) {
   if (!obj.containsElementNamed(e.c_str())) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
   Rcpp::RObject item = obj[e];
   if (!Rcpp::is<Rcpp::IntegerVector>(item)) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: member `" + e + "` is not an integer"
     );
   }
   auto item_int = Rcpp::as<Rcpp::IntegerVector>(item);
   if (item_int.length() != 1) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
@@ -60,19 +60,19 @@ int element_as_int(Rcpp::List obj, std::string e, std::string name) {
 
 std::string element_as_string(Rcpp::List obj, std::string e, std::string name) {
   if (!obj.containsElementNamed(e.c_str())) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
   Rcpp::RObject item = obj[e];
   if (!Rcpp::is<Rcpp::CharacterVector>(item)) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: member `" + e + "` is not of type character"
     );
   }
   auto item_str = Rcpp::as<Rcpp::CharacterVector>(item);
   if (item_str.length() != 1) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
@@ -81,19 +81,19 @@ std::string element_as_string(Rcpp::List obj, std::string e, std::string name) {
 
 bool element_as_bool(Rcpp::List obj, std::string e, std::string name) {
   if (!obj.containsElementNamed(e.c_str())) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
     );
   }
   Rcpp::RObject item = obj[e];
   if (!Rcpp::is<Rcpp::LogicalVector>(item)) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: member `" + e + "` is not logical"
     );
   }
   auto item_bool = Rcpp::as<Rcpp::LogicalVector>(item);
   if (item_bool.length() != 1) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "invalid `" + name + "`: length of member `" + e + "` is not 1"
     );
   }
@@ -102,7 +102,7 @@ bool element_as_bool(Rcpp::List obj, std::string e, std::string name) {
 
 std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config) {
   if (!config.inherits("optimotu_threshold_config")) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "'threshold_config' must be of class 'optimotu_threshold_config'"
     );
   }
@@ -124,7 +124,7 @@ std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config) 
     double precision = element_as_double(config, "precision", "threshold_lookup");
     return std::make_unique<CachedDistanceConverter>(thresholds, precision);
   }
-  Rcpp::stop("invalid `threshold_config`: unknown type: " + type);
+  OPTIMOTU_STOP("invalid `threshold_config`: unknown type: " + type);
 }
 
 std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
@@ -132,7 +132,7 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     DistanceConverter * dconv
 ) {
   if (!config.inherits("optimotu_cluster_config")) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "'cluster_config' must be of class 'optimotu_cluster_config'"
     );
   }
@@ -146,7 +146,7 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
   } else if (method == "tree") {
     return std::make_unique<ClusterTreeFactory>(*dconv);
   } else {
-    Rcpp::stop("unknown cluster method");
+    OPTIMOTU_STOP("unknown cluster method");
   }
 }
 
@@ -172,7 +172,7 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
     std::istream &file
 ) {
   if (!config.inherits("optimotu_parallel_config")) {
-    Rcpp::stop(
+    OPTIMOTU_STOP(
       "'parallel_config' must be of class 'optimotu_parallel_config'"
     );
   }
@@ -186,7 +186,7 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
     int shards = element_as_int(config, "shards", "parallel_config");
     return std::make_unique<HierarchicalClusterWorker>(algo, file, threads, shards);
   } else {
-    Rcpp::stop("unknown parallelization method");
+    OPTIMOTU_STOP("unknown parallelization method");
   }
 }
 #endif // OPTIMOTU_R

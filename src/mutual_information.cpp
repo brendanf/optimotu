@@ -1,4 +1,5 @@
 #ifdef OPTIMOTU_R
+#include "optimotu.h"
 #include <Rcpp.h>
 #include <RcppParallel.h>
 
@@ -98,7 +99,7 @@ struct MutualInformationWorker : public RcppParallel::Worker
       // calculate entropy based on final counts
       for (auto &ki : k_count) {
         if (ki.second.n > 1) ki.second.H = ki.second.n/N;
-        // Rcpp::Rcerr << "k" << ki.first
+        // OPTIMOTU_CERR << "k" << ki.first
         //             << " has " << ki.second.n
         //             << " members and H=" << ki.second.H << std::endl;
       }
@@ -119,11 +120,11 @@ struct MutualInformationWorker : public RcppParallel::Worker
           ++ci;
         }
         for (const auto counti : intersects) {
-          // Rcpp::Rcerr << "intersections between k" << counti.first
+          // OPTIMOTU_CERR << "intersections between k" << counti.first
           //             << " and c" << c_clust
           //             << ": " << counti.second << std::endl;
           Hij = (double)counti.second / N;
-          // Rcpp::Rcerr << "mutual information terms: "
+          // OPTIMOTU_CERR << "mutual information terms: "
           //             << "Hij = " << Hij << std::endl
           //             << "Hi = " << c_count.at(c_clust).H << std::endl
           //             << "Hj = " << k_count.at(counti.first).H << std::endl
@@ -158,7 +159,7 @@ Rcpp::NumericVector mutual_information(
 ) {
   size_t N = c.size(), m = k.nrow();
   if (N != (size_t)k.ncol())
-    Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
+    OPTIMOTU_STOP("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                  " the same number of objects.", k.ncol(), N);
   Rcpp::NumericVector mi(m, 0.0);
   std::vector<std::pair<int, size_t>> c_sort;
@@ -227,25 +228,25 @@ AdjustedMutualInformationWorker1(
 
     for (std::size_t j = begin; j < end; j++) {
       // generate counts for test partition k[j]
-      // Rcpp::Rcerr << "generating cluster sizes for test partition " << j << std::endl;
+      // OPTIMOTU_CERR << "generating cluster sizes for test partition " << j << std::endl;
       auto kj = k.row(j);
       k_counts_used.clear();
       for (size_t i = 0; i < N; ++i) {
         if (++k_counts[kj[i]] == 1) k_counts_used.push_back(kj[i]);
       }
-      // Rcpp::Rcerr << "found " << k_counts_used.size() << " clusters" << std::endl;
+      // OPTIMOTU_CERR << "found " << k_counts_used.size() << " clusters" << std::endl;
 
-      // Rcpp::Rcerr << "generating size counts" << std::endl;
+      // OPTIMOTU_CERR << "generating size counts" << std::endl;
       cluster_sizes.clear();
       cluster_sizes.reserve(k_counts_used.size());
       for (const auto j : k_counts_used) {
-        // if (k_counts[j] == 0) Rcpp::Rcerr << "wtf, cluster of size 0??" << std::endl;
+        // if (k_counts[j] == 0) OPTIMOTU_CERR << "wtf, cluster of size 0??" << std::endl;
         cluster_sizes.push_back(k_counts[j]);
       }
-      // Rcpp::Rcerr << "sorting size counts" << std::endl;
+      // OPTIMOTU_CERR << "sorting size counts" << std::endl;
       std::sort(cluster_sizes.begin(), cluster_sizes.end());
 
-      // Rcpp::Rcerr << "filling my_k_counts" << std::endl;
+      // OPTIMOTU_CERR << "filling my_k_counts" << std::endl;
       // size_t pre_size = my_k_counts.size();
       Hk = 0.0;
       auto cs_i = cluster_sizes.begin();
@@ -257,27 +258,27 @@ AdjustedMutualInformationWorker1(
         my_k_counts.push_back({*cs_start, num, j});
         Hk -= num * double(*cs_start) / N * log(double(*cs_start) / N);
       }
-      // Rcpp::Rcerr << "found k clusters with " << my_k_counts.size() - pre_size
+      // OPTIMOTU_CERR << "found k clusters with " << my_k_counts.size() - pre_size
       //             << " different sizes" << std::endl;
 
-      // Rcpp::Rcerr << "calculating MI" << std::endl;
+      // OPTIMOTU_CERR << "calculating MI" << std::endl;
       auto ci = c_sort.begin();
       auto c_end = c_sort.end();
       while(ci != c_end) {
-        // Rcpp::Rcerr << "c cluster " << ci->first << std::endl;
-        // Rcpp::Rcerr << " - finding intersects" << std::endl;
+        // OPTIMOTU_CERR << "c cluster " << ci->first << std::endl;
+        // OPTIMOTU_CERR << " - finding intersects" << std::endl;
         c_clust = ci->first;
         while(ci != c_end && ci->first == c_clust) {
           if (++intersects[kj[ci->second]] == 1)
             intersects_used.push_back(kj[ci->second]);
           ++ci;
         }
-        // Rcpp::Rcerr << " - sorting intersects" << std::endl;
+        // OPTIMOTU_CERR << " - sorting intersects" << std::endl;
         // std::sort(intersects.begin(), intersects.end());
         while (intersects_used.size() > 0) {
           const auto i_i = intersects_used.front();
-          // Rcpp::Rcerr << "  - calculating MI for intersect with k cluster " << *i_i << std::endl;
-           // Rcpp::Rcerr << "  - k cluster " << *i_i << " has " << (i_i - i_start) << " items in common with c cluster " << ci->first << std::endl;
+          // OPTIMOTU_CERR << "  - calculating MI for intersect with k cluster " << *i_i << std::endl;
+           // OPTIMOTU_CERR << "  - k cluster " << *i_i << " has " << (i_i - i_start) << " items in common with c cluster " << ci->first << std::endl;
           Hij = double(intersects[i_i]) / N;
           mi[j] += Hij * log(Hij / c_count.at(c_clust).H / double(k_counts[i_i]) * N);
           intersects_used.pop_front();
@@ -285,14 +286,14 @@ AdjustedMutualInformationWorker1(
         }
 
       }
-      // Rcpp::Rcerr << "calculating Hmax" << std::endl;
+      // OPTIMOTU_CERR << "calculating Hmax" << std::endl;
       Hmax[j] = Hk > Hc ? Hk : Hc;
-      // Rcpp::Rcerr << "emptying k_counts" << std::endl;
+      // OPTIMOTU_CERR << "emptying k_counts" << std::endl;
       for (const auto i : k_counts_used) {
         k_counts[i] = 0;
       }
     }
-    // Rcpp::Rcerr << "writing my_k_counts to all_k_counts" << std::endl;
+    // OPTIMOTU_CERR << "writing my_k_counts to all_k_counts" << std::endl;
     std::lock_guard<std::mutex> lock(mutex);
     all_k_counts.reserve(all_k_counts.size() + my_k_counts.size());
     all_k_counts.insert(all_k_counts.end(), my_k_counts.begin(), my_k_counts.end());
@@ -344,7 +345,7 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
 
   std::vector<size_t> cum2(const std::vector<ClusterCount> &x,
                            const std::vector<ClusterCount> &y) {
-    // Rcpp::Rcerr << "accumulating cluster count lists of length " << x.size()
+    // OPTIMOTU_CERR << "accumulating cluster count lists of length " << x.size()
     //             << " and " << y.size()
     //             << std::endl;
     std::vector<size_t> cum;
@@ -358,16 +359,16 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
     auto yend = y.end();
     while (xi != xend || yi != yend) {
       if (xi == xend) {
-        // Rcpp::Rcerr << "case 1a: xi == xend, y_size == " << yi->size << std::flush;
+        // OPTIMOTU_CERR << "case 1a: xi == xend, y_size == " << yi->size << std::flush;
         sumyo += yi->size;
         sum += sumb + sumxo;
         size_t ysize = yi->size;
         while (yi != yend && yi->size == ysize) ++yi;
       } else if (yi == yend || xi->size < yi->size) {
         if (yi == yend) {
-          // Rcpp::Rcerr << "case 2a: yi == yend, x_size == " << xi->size << std::flush;
+          // OPTIMOTU_CERR << "case 2a: yi == yend, x_size == " << xi->size << std::flush;
         } else {
-          // Rcpp::Rcerr << "case 2b: x_size == " << xi->size
+          // OPTIMOTU_CERR << "case 2b: x_size == " << xi->size
           //             << " < y_size == " << yi->size
           //             << std::flush;
         }
@@ -376,7 +377,7 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
         size_t xsize = xi->size;
         while (xi != xend && xi->size == xsize) ++xi;
       } else if (yi->size < xi->size) {
-        // Rcpp::Rcerr << "case 1b: y_size == " << yi->size
+        // OPTIMOTU_CERR << "case 1b: y_size == " << yi->size
         //             << " < x_size == " << xi->size
         //             << std::flush;
         sumyo += yi->size;
@@ -384,7 +385,7 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
         size_t ysize = yi->size;
         while (yi != yend && yi->size == ysize) ++yi;
       } else {
-        // Rcpp::Rcerr << "case 3: x_size == " << xi->size
+        // OPTIMOTU_CERR << "case 3: x_size == " << xi->size
         //             << " == y_size == " << yi->size
         //             << std::flush;
         sumb += xi->size;
@@ -394,20 +395,20 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
         size_t ysize = yi->size;
         while (yi != yend && yi->size == ysize) ++yi;
       }
-      // Rcpp::Rcerr << "; sumb=" << sumb
+      // OPTIMOTU_CERR << "; sumb=" << sumb
       //             << " sumxo=" << sumxo
       //             << " sumyo=" << sumyo
       //             << " sum=" << sum
       //             << std::endl;
       cum.push_back(sum);
     }
-    // Rcpp::Rcerr << "cumulative counts list has length " << cum.size()
+    // OPTIMOTU_CERR << "cumulative counts list has length " << cum.size()
     //             << std::endl;
     return cum;
   }
 
   double emi_term(size_t ai, size_t bi, double precalc) {
-    // Rcpp::Rcerr << "emi_term for ai=" << ai
+    // OPTIMOTU_CERR << "emi_term for ai=" << ai
     //             << ", bi=" << bi
     //             << ", precalc=" << precalc
     //             << std::endl;
@@ -418,23 +419,23 @@ class AdjustedMutualInformationWorker2 : public RcppParallel::Worker {
     double logN = log(N);
     double logab = log(ai) + log(bi);
     for (size_t nij = bi + 1; nij-- > nijmin;) {
-      // Rcpp::Rcerr << "nij=" << nij << std::endl;
+      // OPTIMOTU_CERR << "nij=" << nij << std::endl;
       double lognij = log(nij);
-      // Rcpp::Rcerr << "log(nij)=" << lognij << std::endl;
+      // OPTIMOTU_CERR << "log(nij)=" << lognij << std::endl;
       double det = logN - logab + lognij;
-      // Rcpp::Rcerr << "det=" << det << std::endl;
+      // OPTIMOTU_CERR << "det=" << det << std::endl;
       double all_but_log = lognij - logN + precalc
         - lfact[nij] - lfact[ai - nij]
         - lfact[bi - nij] - lfact[N - ai - bi + nij];
-        // Rcpp::Rcerr << "all_but_log=" << all_but_log << std::endl;
+        // OPTIMOTU_CERR << "all_but_log=" << all_but_log << std::endl;
       if (det > 0) {
         E = log_plus(E, all_but_log + log(det));
       } else if (det < 0) {
         E = log_minus(E, all_but_log + log(-det));
       }
-      // Rcpp::Rcerr << "E=" << E << std::endl;
+      // OPTIMOTU_CERR << "E=" << E << std::endl;
     }
-    // Rcpp::Rcerr << ", Eij=" << E << std::flush;
+    // OPTIMOTU_CERR << ", Eij=" << E << std::flush;
     return E;
   }
 
@@ -457,11 +458,11 @@ public:
 
   void operator()(size_t begin, size_t end) {
     // which calculations is this shard supposed to do?
-    // Rcpp::Rcerr << "determining number of calculations" << std::endl;
+    // OPTIMOTU_CERR << "determining number of calculations" << std::endl;
     size_t n_calc = cum_calc.back();
     size_t min_calc = size_t((double)n_calc / (double)n_shard * (double)begin);
     size_t max_calc = size_t((double)n_calc / (double)n_shard * double(end));
-    // Rcpp::Rcerr << "will perform calculations " << min_calc
+    // OPTIMOTU_CERR << "will perform calculations " << min_calc
                 // << " to " << max_calc
                 // << " of " << n_calc
                 // << std::endl;
@@ -477,19 +478,19 @@ public:
       // size of the larger clusters; might be present in c, k, or both
       size_t asize;
       asize = kc_i->size < cc_i->size ? cc_i->size : kc_i->size;
-      // Rcpp::Rcerr << "larger cluster size " << asize
+      // OPTIMOTU_CERR << "larger cluster size " << asize
       //             << " (calculations up to " << *calc_i
       //             << ")" << std::endl;
       // check if we are in the range we need to calculate
       if (*calc_i > min_calc && *calc_i <= max_calc) {
         // just do this once
-        // Rcpp::Rcerr << "beginning calculations for larger cluster size " << asize
+        // OPTIMOTU_CERR << "beginning calculations for larger cluster size " << asize
         //                << " (calculations up to " << *calc_i
         //                << ")" << std::endl;
         // << std::flush;
         double a_part = lfact[asize] + lfact[N - asize] - lfact[N];
         if (cc_i->size == kc_i->size) {
-          // Rcpp::Rcerr << " (case 1: both)" << std::endl;
+          // OPTIMOTU_CERR << " (case 1: both)" << std::endl;
           auto cc_j = cc_i;
           auto kc_j = kc_i;
           do {
@@ -497,61 +498,61 @@ public:
             if (cc_j == cc_end) bsize = kc_j->size;
             else if (kc_j == kc_end) bsize = cc_j->size;
             else bsize = std::min(cc_j->size, kc_j->size);
-            // Rcpp::Rcerr << "smaller cluster size " << bsize << std::flush;
+            // OPTIMOTU_CERR << "smaller cluster size " << bsize << std::flush;
             double Eij = emi_term(asize, bsize, a_part);
-            // Rcpp::Rcerr << ", Eij=" << Eij << std::endl;
+            // OPTIMOTU_CERR << ", Eij=" << Eij << std::endl;
             double cEij;
             // add terms for cc_i vs kc_j
             if (kc_j != kc_end && kc_j->size == bsize) {
-              // Rcpp::Rcerr << "adding terms for cc_i vs kc_j..." << std::endl;
+              // OPTIMOTU_CERR << "adding terms for cc_i vs kc_j..." << std::endl;
               cEij = log(cc_i->n) + Eij;
               while (kc_j != kc_end && kc_j->size == bsize) {
                 log_add_to(log_emi[kc_j->j], cEij + log(kc_j->n));
-                // Rcpp::Rcerr << "log(emi[" << kc_j->j
+                // OPTIMOTU_CERR << "log(emi[" << kc_j->j
                             // << "]) = " << log_emi[kc_j->j] << std::endl;
                 ++kc_j;
               }
-              // Rcpp::Rcerr << "done" << std::endl;
+              // OPTIMOTU_CERR << "done" << std::endl;
             }
             // add terms for kc_i vs cc_j
             if (cc_j != cc_end && cc_j->size == bsize) {
               if (asize != bsize) {
-                // Rcpp::Rcerr << "adding terms for kc_i vs cc_j..." << std::flush;
+                // OPTIMOTU_CERR << "adding terms for kc_i vs cc_j..." << std::flush;
                 auto kc_k = kc_i;
                 cEij = log(cc_j->n) + Eij;
                 while (kc_k != kc_end && kc_k->size == asize) {
                   log_add_to(log_emi[kc_k->j], cEij + log(kc_k->n));
-                  // Rcpp::Rcerr << "log(emi[" << kc_k->j
+                  // OPTIMOTU_CERR << "log(emi[" << kc_k->j
                   //             << "]) = " << log_emi[kc_k->j] << std::endl;
                   ++kc_k;
                 }
-                // Rcpp::Rcerr << "done" << std::endl;
+                // OPTIMOTU_CERR << "done" << std::endl;
               }
               ++cc_j;
             }
           } while (cc_j != cc_end || kc_j != kc_end);
         } else if (cc_i->size == asize) {
-          // Rcpp::Rcerr << " (case 2: c only)" << std::endl;
+          // OPTIMOTU_CERR << " (case 2: c only)" << std::endl;
           auto kc_j = kc_i;
           while (kc_j != kc_end && kc_j->size >= asize) ++kc_j;
           while (kc_j != kc_end) {
             size_t bsize = kc_j->size;
-            // Rcpp::Rcerr << "smaller cluster size " << bsize << std::flush;
+            // OPTIMOTU_CERR << "smaller cluster size " << bsize << std::flush;
             double cEij = log(cc_i->n) + emi_term(asize, bsize, a_part);
-            // Rcpp::Rcerr << ", cEij=" << cEij << std::endl;
+            // OPTIMOTU_CERR << ", cEij=" << cEij << std::endl;
             while(kc_j != kc_end && kc_j->size == bsize) {
               log_add_to(log_emi[kc_j->j], cEij + log(kc_j->n));
               ++kc_j;
             }
           }
         } else {
-          // Rcpp::Rcerr << " (case 3: k only)" << std::endl;
+          // OPTIMOTU_CERR << " (case 3: k only)" << std::endl;
           auto cc_j = cc_i;
           while (cc_j != cc_end && cc_j->size >= asize) ++cc_j;
           while (cc_j != cc_end) { //cannot be equal
-            // Rcpp::Rcerr << "smaller cluster size " << cc_j->size << std::flush;
+            // OPTIMOTU_CERR << "smaller cluster size " << cc_j->size << std::flush;
             double cEij = log(cc_j->n) + emi_term(asize, cc_j->size, a_part);
-            // Rcpp::Rcerr << ", cEij=" << cEij << std::endl;
+            // OPTIMOTU_CERR << ", cEij=" << cEij << std::endl;
             auto kc_k = kc_i;
             while (kc_k != kc_end && kc_k->size == asize) {
               log_add_to(log_emi[kc_k->j], cEij + log(kc_k->n));
@@ -565,7 +566,7 @@ public:
       while (kc_i != kc_end && kc_i->size == asize) ++kc_i;
       ++calc_i;
     }
-    // Rcpp::Rcerr << "remaining calculations: " << *calc_i << std::endl;
+    // OPTIMOTU_CERR << "remaining calculations: " << *calc_i << std::endl;
     std::lock_guard<std::mutex> lock(mutex);
     for (size_t i = 0; i < emi.size(); ++i) {
       log_add_to(emi[i], log_emi[i]);
@@ -584,7 +585,7 @@ public:
  ) {
    size_t N = c.size(), m = k.nrow();
    if (N != (size_t)k.ncol())
-     Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
+     OPTIMOTU_STOP("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                   " the same number of objects.", k.ncol(), N);
    Rcpp::NumericVector mi(m, 0.0), Hmax(m, 0.0), emi(m, R_NegInf);
    std::vector<std::pair<int, size_t>> c_sort;
@@ -592,29 +593,29 @@ public:
    initialize_c_counts(c, c_sort, c_count, N);
 
    std::vector<ClusterCount> k_counts;
-   // Rcpp::Rcerr << "constructing AdjustedMutualInformationWorker1" << std::endl;
+   // OPTIMOTU_CERR << "constructing AdjustedMutualInformationWorker1" << std::endl;
    AdjustedMutualInformationWorker1 worker1(k, c_sort, c_count, mi, Hmax, k_counts);
-   // Rcpp::Rcerr << "running AdjustedMutualInformationWorker1()" << std::endl;
+   // OPTIMOTU_CERR << "running AdjustedMutualInformationWorker1()" << std::endl;
    if (threads == 1) {
      worker1(0, m);
    } else {
      RcppParallel::parallelFor(0, m, worker1, 1, threads);
    }
-   // Rcpp::Rcerr << "finished AdjustedMutualInformationWorker1()" << std::endl;
+   // OPTIMOTU_CERR << "finished AdjustedMutualInformationWorker1()" << std::endl;
 
-   // Rcpp::Rcerr << "sorting k_counts" << std::endl;
+   // OPTIMOTU_CERR << "sorting k_counts" << std::endl;
    std::sort(k_counts.begin(), k_counts.end());
-   // Rcpp::Rcerr << "finished sorting k_counts" << std::endl;
+   // OPTIMOTU_CERR << "finished sorting k_counts" << std::endl;
 
-   // Rcpp::Rcerr << "constructing AdjustedMutualInformationWorker2" << std::endl;
+   // OPTIMOTU_CERR << "constructing AdjustedMutualInformationWorker2" << std::endl;
    AdjustedMutualInformationWorker2 worker2(emi, k_counts, c_count, N, threads);
-   // Rcpp::Rcerr << "running AdjustedMutualInformationWorker2()" << std::endl;
+   // OPTIMOTU_CERR << "running AdjustedMutualInformationWorker2()" << std::endl;
    if (threads == 1) {
      worker2(0, 1);
    } else {
      RcppParallel::parallelFor(0, threads, worker2, 1, threads);
    }
-   // Rcpp::Rcerr << "finished AdjustedMutualInformationWorker2()" << std::endl;
+   // OPTIMOTU_CERR << "finished AdjustedMutualInformationWorker2()" << std::endl;
    emi = exp(emi);
    Rcpp::NumericVector ami = (mi - emi) / (Hmax - emi);
    auto out = Rcpp::DataFrame::create(

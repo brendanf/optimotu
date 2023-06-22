@@ -1,5 +1,6 @@
 #ifdef OPTIMOTU_R
 
+#include "optimotu.h"
 #include <Rcpp.h>
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
@@ -207,7 +208,7 @@ Rcpp::NumericVector fmeasure_matrix(
 ) {
   size_t n = c.size(), m = k.nrow();
   if (n != (size_t)k.ncol())
-    Rcpp::stop("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
+    OPTIMOTU_STOP("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                  " the same number of objects.", k.ncol(), n);
   Rcpp::NumericVector fm(m, 0.0);
   std::vector<std::pair<int, size_t>> c_sort;

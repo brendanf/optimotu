@@ -15,11 +15,11 @@ Rcpp::RObject distmx_cluster_single(
   const std::string output_type = "matrix"
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
-    Rcpp::stop("Unknown 'output_type'");
+    OPTIMOTU_STOP("Unknown 'output_type'");
   }
   std::ifstream infile(file);
   if (!infile.is_open()) {
-    Rcpp::stop("failed to open input file");
+    OPTIMOTU_STOP("failed to open input file");
   }
   auto dconv = create_distance_converter(threshold_config);
   Rcpp::IntegerMatrix im(dconv->m, seqnames.size());
@@ -54,25 +54,25 @@ Rcpp::RObject distmx_cluster_multi(
     const std::string output_type = "matrix"
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
-    Rcpp::stop("Unknown 'output_type'");
+    OPTIMOTU_STOP("Unknown 'output_type'");
   }
   Rcpp::RObject output = R_NilValue;
   std::ifstream infile(file);
   if (!infile.is_open()) {
-    Rcpp::stop("failed to open input file");
+    OPTIMOTU_STOP("failed to open input file");
   }
-  // Rcpp::Rcout << "creating DistanceConverter..." << std::flush;
+  // OPTIMOTU_COUT << "creating DistanceConverter..." << std::flush;
   auto dconv = create_distance_converter(threshold_config);
-  // Rcpp::Rcout << "done" << std::endl
+  // OPTIMOTU_COUT << "done" << std::endl
               // << "creating ClusterAlgorithmFactory..." << std::flush;
   auto factory = create_cluster_algorithm(method_config, dconv.get());
-  // Rcpp::Rcout << "done" << std::endl
+  // OPTIMOTU_COUT << "done" << std::endl
   //             << "creating MultipleClusterAlgorithm..." << std::flush;
   auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seqnames, which);
-  // Rcpp::Rcout << "done" << std::endl
+  // OPTIMOTU_COUT << "done" << std::endl
   //             << "creating ClusterWorker..." << std::flush;
   auto worker = create_cluster_worker(parallel_config, algo.get(), infile);
-  // Rcpp::Rcout << "done" << std::endl
+  // OPTIMOTU_COUT << "done" << std::endl
   //             << "clustering..." << std::flush;
 
   if (worker->n_threads() == 1) {
@@ -80,10 +80,10 @@ Rcpp::RObject distmx_cluster_multi(
   } else {
     RcppParallel::parallelFor(0, worker->n_threads(), *worker, 1, worker->n_threads());
   }
-  // Rcpp::Rcout << "done" << std::endl
+  // OPTIMOTU_COUT << "done" << std::endl
   //             << "finalizing worker..." << std::flush;
   worker->finalize();
-  // Rcpp::Rcout << "done" << std::endl
+  // OPTIMOTU_COUT << "done" << std::endl
   //             << "creating output..." << std::flush;
   if (output_type == "matrix") {
     auto outlist = Rcpp::List(which.size());

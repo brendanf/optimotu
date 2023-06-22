@@ -334,7 +334,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
     // OPTIMOTU_COUT << buffer[ii] << " ";
   }
   // OPTIMOTU_COUT << "buffer filled" << std::endl;
-  // Rcpp::Rcout << "done" << std::endl;
+  // OPTIMOTU_COUT << "done" << std::endl;
   // for each sequence which is clustered with seq1 or seq2 at imin,
   // assign it to newclust in the same range where it is
   tip *t1min = index + seq1, *t1max = index + seq1, *t2min = index + seq2,
