@@ -23,21 +23,22 @@ MergeClusterWorker::MergeClusterWorker(
 
 void MergeClusterWorker::operator()(size_t begin, size_t end) {
   DistanceElement d;
-  std::vector<DistanceElement> buffer;
-  buffer.reserve(100);
+  // std::vector<DistanceElement> buffer;
+  // buffer.reserve(100);
   // OPTIMOTU_COUT << "Starting MergeClusterWorker thread " << begin << std::endl;
-  while (true) {
+  while (file) {
     mutex.lock();
-    for (int i = 0; i < 100 && file; ++i) {
+    if (!file) break;
+    // for (int i = 0; i < 100 && file; ++i) {
       file >> d;
-      buffer.push_back(d);
-    }
+      // buffer.push_back(d);
+    // }
     mutex.unlock();
-    if (buffer.size() == 0) break;
-    for (auto d : buffer) {
+    // if (buffer.size() == 0) break;
+    // for (auto d : buffer) {
       algo_list[begin]->operator()(d, begin);
-    }
-    buffer.clear();
+    // }
+    // buffer.clear();
   }
   // mutex.lock();
   // OPTIMOTU_COUT << "ClusterWorker thread " << begin << " merging..." << std::endl;
@@ -61,23 +62,24 @@ ConcurrentClusterWorker::ConcurrentClusterWorker(
 
 void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   DistanceElement d;
-  std::vector<DistanceElement> buffer;
-  buffer.reserve(100);
+  // std::vector<DistanceElement> buffer;
+  // buffer.reserve(100);
   // OPTIMOTU_COUT << "Starting ConcurrentClusterWorker thread " << begin << std::endl;
-  while (true) {
+  while (file) {
     mutex.lock();
+    if (!file) break;
     // OPTIMOTU_COUT << "buffering..." << std::flush;
-    for (int i = 0; i < 100 && file; ++i) {
+    // for (int i = 0; i < 100 && file; ++i) {
       file >> d;
-      buffer.push_back(d);
-    }
+      // buffer.push_back(d);
+    // }
     // OPTIMOTU_COUT << "done" << std::endl;
     mutex.unlock();
-    if (buffer.size() == 0) break;
-    for (auto d : buffer) {
+    // if (buffer.size() == 0) break;
+    // for (auto d : buffer) {
       algo->operator()(d, begin);
-    }
-    buffer.clear();
+    // }
+    // buffer.clear();
   }
 
   // mutex.lock();
@@ -103,8 +105,8 @@ thread_count(shards), shards(shards) {
 
 void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
   DistanceElement d;
-  std::vector<DistanceElement> buffer;
-  buffer.reserve(100);
+  // std::vector<DistanceElement> buffer;
+  // buffer.reserve(100);
   size_t i = begin % shards;
   // mutex.lock();
   // size_t tc =
@@ -115,18 +117,19 @@ void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
   //           << " previous threads)"
   //           << std::endl;
   // mutex.unlock();
-  while (true) {
+  while (file) {
     mutex.lock();
-    for (int i = 0; i < 100 && file; ++i) {
+    if (!file) break;
+    // for (int i = 0; i < 100 && file; ++i) {
       file >> d;
-      buffer.push_back(d);
-    }
+    //   buffer.push_back(d);
+    // }
     mutex.unlock();
-    if (buffer.size() == 0) break;
-    for (auto d : buffer) {
+    // if (buffer.size() == 0) break;
+    // for (auto d : buffer) {
       algo_list[i]->operator()(d, begin);
-    }
-    buffer.clear();
+    // }
+    // buffer.clear();
   }
   if (--thread_count[i] == 0) {
     // mutex.lock();
