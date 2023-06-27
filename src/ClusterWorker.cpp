@@ -26,17 +26,18 @@ void MergeClusterWorker::operator()(size_t begin, size_t end) {
   // std::vector<DistanceElement> buffer;
   // buffer.reserve(100);
   // OPTIMOTU_COUT << "Starting MergeClusterWorker thread " << begin << std::endl;
-  while (file) {
-    mutex.lock();
-    if (!file) break;
+  while (true) {
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      if (!file) break;
     // for (int i = 0; i < 100 && file; ++i) {
       file >> d;
       // buffer.push_back(d);
     // }
-    mutex.unlock();
+    }
     // if (buffer.size() == 0) break;
     // for (auto d : buffer) {
-      algo_list[begin]->operator()(d, begin);
+    algo_list[begin]->operator()(d, begin);
     // }
     // buffer.clear();
   }
@@ -65,16 +66,16 @@ void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   // std::vector<DistanceElement> buffer;
   // buffer.reserve(100);
   // OPTIMOTU_COUT << "Starting ConcurrentClusterWorker thread " << begin << std::endl;
-  while (file) {
-    mutex.lock();
-    if (!file) break;
-    // OPTIMOTU_COUT << "buffering..." << std::flush;
+  while (true) {
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      if (!file) break;
+    // OPTIMOTU_COUT << "reading..." << std::flush;
     // for (int i = 0; i < 100 && file; ++i) {
       file >> d;
       // buffer.push_back(d);
-    // }
+    }
     // OPTIMOTU_COUT << "done" << std::endl;
-    mutex.unlock();
     // if (buffer.size() == 0) break;
     // for (auto d : buffer) {
       algo->operator()(d, begin);
@@ -117,14 +118,15 @@ void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
   //           << " previous threads)"
   //           << std::endl;
   // mutex.unlock();
-  while (file) {
-    mutex.lock();
-    if (!file) break;
+  while (true) {
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      if (!file) break;
     // for (int i = 0; i < 100 && file; ++i) {
       file >> d;
     //   buffer.push_back(d);
-    // }
-    mutex.unlock();
+    }
+
     // if (buffer.size() == 0) break;
     // for (auto d : buffer) {
       algo_list[i]->operator()(d, begin);
