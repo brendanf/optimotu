@@ -278,6 +278,7 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
 template <class A>
 void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (i >= m) return;
+  if (seq1 == seq2) return;
   {
     std::shared_lock<std::shared_timed_mutex> lock{mutex};
     if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) {

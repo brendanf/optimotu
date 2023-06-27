@@ -73,6 +73,7 @@ MCA::MultipleClusterAlgorithm(MCA * parent) :
 // does not anything directly!
 // relies on locks inside subset algorithms for thread safety.
 void MCA::operator()(j_t seq1, j_t seq2, double dist, int thread) {
+  if (seq1 == seq2) return;
   d_t i = dconv.convert(dist);
   (*this)(seq1, seq2, i, thread);
 }
@@ -96,6 +97,7 @@ void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
   //           << "cached overlaps are for pair " << ws_keys[thread].first
   //           << ", " << ws_keys[thread].second
   //           << std::endl;
+  if (seq1 == seq2) return;
 
   if (ws_keys[thread] != std::pair<j_t, j_t>{seq1, seq2}) {
     // OPTIMOTU_COUT << "calculating..." << std::flush;

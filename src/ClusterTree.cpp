@@ -32,6 +32,7 @@ void ClusterTree::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
                   << std::endl;
     OPTIMOTU_STOP("invalid sequence index");
   }
+  if (seq1 == seq2) return;
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   cluster* c1 = get_cluster(seq1);
   cluster* c1p = c1->parent;

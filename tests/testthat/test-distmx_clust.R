@@ -1,6 +1,6 @@
 set.seed(1)
-k <- 5
-m <- 5
+k <- 5L
+m <- 5L
 n <- k*m
 # generate centroids for 5 clusters in 2d space
 centroids = data.frame(
@@ -27,6 +27,16 @@ dist_table <- data.frame(
   dist = unclass(distmx)
 )
 dist_table <- dist_table[dist_table$dist <= 1,]
+# add tautological 0 distances (USEARCH produces these)
+dist_table <- rbind(
+  data.frame(
+    seq1 = 1L:n - 1L,
+    seq2 = 1L:n - 1L,
+    dist = 0
+  ),
+  dist_table
+)
+
 # write as a temp file
 distmx_file <- tempfile(fileext = ".distmx")
 write.table(dist_table, distmx_file, sep = "\t", row.names = FALSE, col.names = FALSE)
