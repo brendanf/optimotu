@@ -160,7 +160,7 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
       // OPTIMOTU_COUT << "t2max->next->prev: " << t2max->next->prev << std::endl;
       t2max = t2max->next->prev;
     } else {
-      t2max = index + n - 1;
+      t2max = t2max->prev;
     }
   } else if (t1max == &tfwd) {
     // OPTIMOTU_COUT << "t2min != trev" << std::endl;
@@ -170,7 +170,7 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
       // OPTIMOTU_COUT << "t1max->next->prev: " << t1max->next->prev << std::endl;
       t1max = t1max->next->prev;
     } else {
-      t1max = index + n - 1;
+      t1max = t1max->prev;
     }
   }
   if (t1max->next == t2min) {
@@ -182,46 +182,66 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
     return true;
   }
   // OPTIMOTU_COUT << "Before splice:" << std::endl << "t1max=";
-  // if (t1max->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t1max == &tfwd) {
+  // OPTIMOTU_COUT << "tfwd";
+  // } else if (t1max == &trev) {
+    // OPTIMOTU_COUT << "trev";
   // } else {
-  // OPTIMOTU_COUT << t1max->j;
+    // OPTIMOTU_COUT << t1max->j;
   // }
   // OPTIMOTU_COUT << " t1next=";
-  // if (t1max->next == nullptr || t1max->next->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t1max->next == nullptr) {
+    // OPTIMOTU_COUT << "NA";
+  // } else if (t1max->next == &tfwd) {
+    // OPTIMOTU_COUT << "tfwd";
+  // } else if (t1max->next == &trev) {
+    // OPTIMOTU_COUT << "trev";
   // } else {
-  // OPTIMOTU_COUT << t1max->next->j;
+  //   OPTIMOTU_COUT << t1max->next->j;
   // }
   // OPTIMOTU_COUT << " t2min=";
-  // if (t2min->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t2min == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t2min == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
-  // OPTIMOTU_COUT << t2min->j;
+  //   OPTIMOTU_COUT << t2min->j;
   // }
   // OPTIMOTU_COUT << " t2prev=";
-  // if (t2min->prev == nullptr || t2min->prev->j == NO_CLUST) {
+  // if (t2min->prev == nullptr) {
   // OPTIMOTU_COUT << "NA";
+  // } else if (t2min->prev == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t2min->prev == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
   // OPTIMOTU_COUT << t2min->prev->j;
   // }
   // OPTIMOTU_COUT << " t2max=";
-  // if (t2max->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t2max == &tfwd) {
+  // OPTIMOTU_COUT << "tfwd";
+  // } else if (t2max == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
   // OPTIMOTU_COUT << t2max->j;
   // }
   // OPTIMOTU_COUT << " t2next=";
-  // if (t2max->next == nullptr || t2max->next->j == NO_CLUST) {
+  // if (t2max->next == nullptr) {
   // OPTIMOTU_COUT << "NA";
+  // } else if (t2max->next == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t2max->next == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
   // OPTIMOTU_COUT << t2max->next->j;
   // }
   // OPTIMOTU_COUT << std::endl;
+  tfwd.prev   = t2min->prev;
   tfwd.next   = t2max->next;
   tfwd.next_d = t2max->next_d;
   trev.prev   = t2min->prev;
   trev.prev_d = t2min->prev_d;
+  trev.next   = t2max->next;
   t2max->next   = t1max->next;
   t2max->next_d = t1max->next_d;
   if (t1max->next) {
@@ -236,38 +256,56 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
   t2min = &trev;
   heal_splice();
   // OPTIMOTU_COUT << "After splice:" << std::endl << "t1max=";
-  // if (t1max->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t1max == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t1max == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
-  // OPTIMOTU_COUT << t1max->j;
+  //   OPTIMOTU_COUT << t1max->j;
   // }
   // OPTIMOTU_COUT << " t1next=";
-  // if (t1max->next == nullptr || t1max->next->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t1max->next == nullptr) {
+  //   OPTIMOTU_COUT << "NA";
+  // } else if (t1max->next == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t1max->next == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
-  // OPTIMOTU_COUT << t1max->next->j;
+  //   OPTIMOTU_COUT << t1max->next->j;
   // }
   // OPTIMOTU_COUT << " t2min=";
-  // if (t2min->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t2min == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t2min == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
-  // OPTIMOTU_COUT << t2min->j;
+  //   OPTIMOTU_COUT << t2min->j;
   // }
   // OPTIMOTU_COUT << " t2prev=";
-  // if (t2min->prev == nullptr || t2min->prev->j == NO_CLUST) {
-  // OPTIMOTU_COUT << "NA";
+  // if (t2min->prev == nullptr) {
+  //   OPTIMOTU_COUT << "NA";
+  // } else if (t2min->prev == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t2min->prev == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
   //   OPTIMOTU_COUT << t2min->prev->j;
   // }
   // OPTIMOTU_COUT << " t2max=";
-  // if (t2max->j == NO_CLUST) {
-  //   OPTIMOTU_COUT << "NA";
+  // if (t2max == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t2max == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
   //   OPTIMOTU_COUT << t2max->j;
   // }
   // OPTIMOTU_COUT << " t2next=";
-  // if (t2max->next == nullptr || t2max->next->j == NO_CLUST) {
+  // if (t2max->next == nullptr) {
   //   OPTIMOTU_COUT << "NA";
+  // } else if (t2max->next == &tfwd) {
+  //   OPTIMOTU_COUT << "tfwd";
+  // } else if (t2max->next == &trev) {
+  //   OPTIMOTU_COUT << "trev";
   // } else {
   //   OPTIMOTU_COUT << t2max->next->j;
   // }
@@ -364,7 +402,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       std::memcpy(t1min->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) {
         // OPTIMOTU_COUT << "infinite loop" << std::endl;
-        OPTIMOTU_STOP("infinite loop");
+        OPTIMOTU_STOP("infinite loop filling t1 prev");
       }
     }
     // OPTIMOTU_COUT << "finished t1min" << std::endl;
@@ -380,7 +418,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       std::memcpy(t1max->column + i, buffer + i, (imax - i) * sizeof(int));
       if (total++ > n) {
         // OPTIMOTU_COUT << "infinite loop" << std::endl;
-        OPTIMOTU_STOP("infinite loop");
+        OPTIMOTU_STOP("infinite loop filling t1 next");
       }
     }
     // OPTIMOTU_COUT << "finished t1max" << std::endl;
@@ -399,7 +437,7 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << " -> " << t2min->column + i << ":" << t2min->column + imax
       //           << std::endl;
       std::memcpy(t2min->column + i, buffer + i, (imax - i) * sizeof(int));
-      if (total++ > n) OPTIMOTU_STOP("infinite loop");
+      if (total++ > n) OPTIMOTU_STOP("infinite loop filling t2 prev");
     }
     // OPTIMOTU_COUT << "finished t2min" << std::endl;
     total = 0;
@@ -412,13 +450,14 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
       //           << " -> " << t2max->column + i << ":" << t2max->column + imax
       //           << std::endl;
       std::memcpy(t2max->column + i, buffer + i, (imax - i) * sizeof(int));
-      if (total++ > n) OPTIMOTU_STOP("infinite loop");
+      if (total++ > n) OPTIMOTU_STOP("infinite loop filling t2 next");
     }
     // OPTIMOTU_COUT << "finished t2max" << std::endl;
     nexti = t2max->next_d < nexti ? t2max->next_d : nexti;
 
     if (t1min == t2min) {
       // OPTIMOTU_COUT << "no-op, already merged" << std::endl;
+      heal_splice();
       merged = true;
       continue;
     }
@@ -429,7 +468,11 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
     }
     // OPTIMOTU_COUT << "finished merging" << std::endl;
     i = nexti;
+    // OPTIMOTU_COUT << "nexti=" << nexti
+    //               << " imax=" << imax << std::endl;
   }
+  if (t2min == &trev || t2max == &tfwd || t1min == &trev || t1max == &tfwd)
+    heal_splice();
   // OPTIMOTU_COUT << "finished seq1=" << seq1
   //           << " seq2=" << seq2
   //           << " i=" << i << std::endl;

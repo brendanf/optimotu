@@ -37,9 +37,24 @@ dist_table <- rbind(
   dist_table
 )
 
-# write as a temp file
-distmx_file <- tempfile(fileext = ".distmx")
-write.table(dist_table, distmx_file, sep = "\t", row.names = FALSE, col.names = FALSE)
+# create 5 shuffles of the dist matrix
+dist_table <- c(
+  list(dist_table),
+  replicate(5, dist_table[sample(nrow(dist_table)),], simplify = FALSE)
+)
+
+# write as temp files
+distmx_file <- character(length(dist_table))
+for (i in seq_along(dist_table)) {
+  distmx_file[i] <- tempfile(fileext = ".distmx")
+  write.table(
+    x = dist_table[i],
+    file = distmx_file[i],
+    sep = "\t",
+    row.names = FALSE,
+    col.names = FALSE
+  )
+}
 # withr::defer(unlink(distmx_file), teardown_env())
 
 hclust2matrix <- function(distmx, thresholds) {
@@ -74,65 +89,66 @@ algorithms <- list(
 )
 
 parallels <- list(
-  merge = parallel_merge(4),
   serial = parallel_concurrent(1),
   concurrent = parallel_concurrent(4),
+  merge = parallel_merge(4),
   hierarchical = parallel_hierarchical(2, 2)
 )
 
 for (p in names(parallels)) {
   for (t in names(thresholds)) {
     for (a in names(algorithms)) {
-      # cat(sprintf(
-      #   "%s distmx_cluster_single %s method with %s thresholds agrees with hclust\n",
-      #   p, a, t
-      # ))
-      test_that(
-        sprintf(
-          "%s distmx_cluster_single %s method with %s thresholds agrees with hclust",
-          p, a, t
-        ),
-        {
-          expect_equal(
-            distmx_cluster(
-              distmx = distmx_file,
-              names = as.character(1:n),
-              threshold_config = thresholds[[t]],
-              clust_config = algorithms[[a]],
-              parallel_config = parallels[[p]],
-              output_type = "matrix"
-            ),
-            hclust_matrix
-          )
-        }
-      )
-      # cat(
-      #   sprintf(
-      #     "%s distmx_cluster_multi %s method with %s thresholds agrees with hclust\n",
-      #     p, a, t
-      #   )
-      # )
-      test_that(
-        sprintf(
-          "%s distmx_cluster_multi %s method with %s thresholds agrees with hclust",
-          p, a, t
-        ),
-        {
-          expect_equal(
-            distmx_cluster(
-              distmx = distmx_file,
-              names = as.character(1:n),
-              which = lapply(subsets, as.character),
-              threshold_config = thresholds[[t]],
-              clust_config = algorithms[[a]],
-              parallel_config = parallels[[p]],
-              output_type = "matrix"
-            ),
-            subset_hclust_matrix
-          )
-        }
-      )
+      for (i in seq_along(distmx_file)) {
+        # cat(sprintf(
+        #   "%s distmx_cluster_single %s method with %s thresholds agrees with hclust\n",
+        #   p, a, t
+        # ))
+        test_that(
+          sprintf(
+            "%s distmx_cluster_single %s method with %s thresholds agrees with hclust (permutation %i)",
+            p, a, t, i
+          ),
+          {
+            expect_equal(
+              distmx_cluster(
+                distmx = distmx_file[i],
+                names = as.character(1:n),
+                threshold_config = thresholds[[t]],
+                clust_config = algorithms[[a]],
+                parallel_config = parallels[[p]],
+                output_type = "matrix"
+              ),
+              hclust_matrix
+            )
+          }
+        )
+        # cat(
+        #   sprintf(
+        #     "%s distmx_cluster_multi %s method with %s thresholds agrees with hclust\n",
+        #     p, a, t
+        #   )
+        # )
+        test_that(
+          sprintf(
+            "%s distmx_cluster_multi %s method with %s thresholds agrees with hclust (permutation %i)",
+            p, a, t, i
+          ),
+          {
+            expect_equal(
+              distmx_cluster(
+                distmx = distmx_file[i],
+                names = as.character(1:n),
+                which = lapply(subsets, as.character),
+                threshold_config = thresholds[[t]],
+                clust_config = algorithms[[a]],
+                parallel_config = parallels[[p]],
+                output_type = "matrix"
+              ),
+              subset_hclust_matrix
+            )
+          }
+        )
+      }
     }
   }
 }
-
