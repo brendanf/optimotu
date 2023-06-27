@@ -1,8 +1,9 @@
-# optimotu (development version)
+# optimotu 0.6.2
 
 * Fixed missing images in README.
-* Added improved error checking in "tree" algorithm (can be enabled in
-c++ source)
+* Fixed bugs which cause methods "index" and "tree" to fail in rare cases.
+* Removed (internal) buffering for parallel cluster algorithms; this improves
+concurrency when clustering subsets (with argument "which").
 
 # optimotu 0.6.1
 
