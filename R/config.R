@@ -83,6 +83,29 @@ reduplicate_thresholds.list <- function(out, thresholds) {
   lapply(out, function(x) reduplicate_thresholds(x, thresholds = thresholds))
 }
 
+rename_thresholds <- function(out, thresholds) {
+  UseMethod("rename_thresholds", out)
+}
+
+#' @method rename_thresholds matrix
+rename_thresholds.matrix <- function(out, thresholds) {
+  if (!is.null(thresholds$thresh_names)) {
+    `rownames<-`(out, thresholds$thresh_names)
+  } else {
+    out
+  }
+}
+
+#' @method rename_thresholds hclust
+rename_thresholds.hclust <- function(out, thresholds) {
+  out
+}
+
+#' @method rename_thresholds list
+rename_thresholds.list <- function(out, thresholds) {
+  lapply(out, function(x) rename_thresholds(x, thresholds = thresholds))
+}
+
 verify_precision <- function(precision) {
   checkmate::assert_number(
     precision,

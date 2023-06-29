@@ -71,10 +71,15 @@ hclust2matrix <- function(distmx, thresholds) {
 hclust_matrix <- hclust2matrix(distmx, 0:20 / 20)
 subset_hclust_matrix <- lapply(subsetdistmx, hclust2matrix, 0:20 / 20)
 
+tn <- as.character(0:20/20)
+
 thresholds <- list(
   set_thresh = threshold_set(0:20 / 20),
   uniform_thresh = threshold_uniform(0, 1, 0.05),
-  lookup_thresh = threshold_lookup(0:20 / 20, 0.05)
+  lookup_thresh = threshold_lookup(0:20 / 20, 0.05),
+  set_thresh_named = threshold_set(0:20 / 20, tn),
+  uniform_thresh_named = threshold_uniform(0, 1, 0.05, tn),
+  lookup_thresh_named = threshold_lookup(0:20 / 20, 0.05, tn)
 )
 
 algorithms <- list(
@@ -118,7 +123,8 @@ for (p in names(parallels)) {
                 parallel_config = parallels[[p]],
                 output_type = "matrix"
               ),
-              hclust_matrix
+              hclust_matrix,
+              ignore_attr = TRUE
             )
           }
         )
@@ -144,7 +150,8 @@ for (p in names(parallels)) {
                 parallel_config = parallels[[p]],
                 output_type = "matrix"
               ),
-              subset_hclust_matrix
+              subset_hclust_matrix,
+              ignore_attr = TRUE
             )
           }
         )

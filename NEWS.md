@@ -1,3 +1,8 @@
+# optimotu 0.6.3
+
+* Fixed bug which caused an error when using named thresholds with subset
+clustering.
+
 # optimotu 0.6.2
 
 * Fixed missing images in README.
