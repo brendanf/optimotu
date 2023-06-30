@@ -62,10 +62,10 @@ struct ConfusionMatrixWorker : RcppParallel::Worker {
       }
       auto ci = c_sort.begin();
       auto c_end = c_sort.end();
-      while(ci < c_end) {
+      while(ci != c_end) {
         c_clust = ci->first;
         intersects.clear();
-        while(ci->first == c_clust) {
+        while(ci != c_end && ci->first == c_clust) {
           k_clust = kj[ci->second];
           auto counti = intersects.find(k_clust);
           if (counti == intersects.end()) {

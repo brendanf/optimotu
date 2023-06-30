@@ -1,3 +1,9 @@
+# optimotu 0.6.4
+
+* Fixed incorrect bounds checking in `confusion_matrix()` and `fmeasure()` which
+led to occasional index-out-of-bounds errors or segmentation faults (and
+presumably some incorrect results).
+
 # optimotu 0.6.3
 
 * Fixed bug which caused an error when using named thresholds with subset
