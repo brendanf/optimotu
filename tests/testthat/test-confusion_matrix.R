@@ -1,15 +1,26 @@
-x = matrix(
-  c(1L, 2L, 2L, 4L, 4L,
-    1L, 2L, 2L, 1L, 2L),
-  nrow = 2,
-  byrow = TRUE
-)
+x <- NULL
+testthat::test_that("creating matrix x succeeds", {
+  expect_no_error(
+    x <<- matrix(
+      c(1L, 2L, 2L, 4L, 4L,
+        1L, 2L, 2L, 1L, 2L),
+      nrow = 2,
+      byrow = TRUE
+    )
+  )
+})
 
-y = c(1, 1, 1, 4, 1)
+y <- NULL
+testthat::test_that("creating matrix y succeeds", {
+  expect_no_error(
+    y <<- c(1, 1, 1, 4, 1)
+  )
+})
 
+cm <- NULL
 testthat::test_that("confusion_matrix() works", {
   testthat::expect_equal(
-    confusion_matrix(x, y, 1),
+    cm <<-confusion_matrix(x, y, 1),
     data.frame(
       TP = c(1L, 3L),
       FP = c(1L, 1L),
@@ -18,8 +29,6 @@ testthat::test_that("confusion_matrix() works", {
     )
   )
 })
-
-cm <- confusion_matrix(x, y, 1)
 
 testthat::test_that("confusion matrix based metrics work", {
   testthat::expect_equal(matthews_correlation_coefficient(x, y, 1), matthews_correlation_coefficient(cm))
