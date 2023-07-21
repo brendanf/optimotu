@@ -29,9 +29,8 @@ void MergeClusterWorker::operator()(size_t begin, size_t end) {
   while (true) {
     {
       std::lock_guard<std::mutex> lock(mutex);
-      if (!file) break;
     // for (int i = 0; i < 100 && file; ++i) {
-      file >> d;
+    if (!(file >> d)) break;
       // buffer.push_back(d);
     // }
     }
@@ -69,10 +68,9 @@ void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   while (true) {
     {
       std::lock_guard<std::mutex> lock(mutex);
-      if (!file) break;
     // OPTIMOTU_COUT << "reading..." << std::flush;
     // for (int i = 0; i < 100 && file; ++i) {
-      file >> d;
+      if (!(file >> d)) break;
       // buffer.push_back(d);
     }
     // OPTIMOTU_COUT << "done" << std::endl;
@@ -121,9 +119,8 @@ void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
   while (true) {
     {
       std::lock_guard<std::mutex> lock(mutex);
-      if (!file) break;
     // for (int i = 0; i < 100 && file; ++i) {
-      file >> d;
+    if (!(file >> d)) break;
     //   buffer.push_back(d);
     }
 

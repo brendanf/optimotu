@@ -1,3 +1,8 @@
+# optimotu 0.6.5
+
+* Fixed incorrect end-of-file behavior in `distmx_cluster()` which caused
+occasional errors when clustering in parallel.
+
 # optimotu 0.6.4
 
 * Fixed incorrect bounds checking in `confusion_matrix()` and `fmeasure()` which
