@@ -96,8 +96,8 @@ protected:
 
   void assign_ids();
 
-  ClusterTree(SingleClusterAlgorithm * parent)
-    ;
+  ClusterTree(SingleClusterAlgorithm * parent);
+
 public:
    ClusterTree(const DistanceConverter &dconv, const j_t n):
      SingleClusterAlgorithm(dconv, n),
@@ -130,17 +130,17 @@ public:
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 #endif // OPTIMOTU_R
 
-   // send consumer() pairwise distances to ensure it is up-to-date with this
-   // clustering
-   virtual void merge_into(DistanceConsumer &consumer) override;
+  // send consumer() pairwise distances to ensure it is up-to-date with this
+  // clustering
+  virtual void merge_into(DistanceConsumer &consumer) override;
 
-   // send consumer() pairwise distances to ensure it is up-to-date with this
-   // clustering
-   virtual void merge_into(ClusterAlgorithm &consumer) override;
+// send consumer() pairwise distances to ensure it is up-to-date with this
+// clustering
+virtual void merge_into(ClusterAlgorithm &consumer) override;
 
-   // calculate the maximum distance between seq1 and seq2 which would actually
-   // cause an update
-   virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
+// calculate the maximum distance between seq1 and seq2 which would actually
+// cause an update
+virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
 };
 
 #endif //OPTIMOTU_CLUSTERTREE_H_INCLUDED

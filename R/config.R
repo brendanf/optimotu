@@ -123,11 +123,11 @@ verify_precision <- function(precision) {
 #'
 #' The tree method maintains the state of the clustering algorithm using a
 #' tree structure. When there are more than a few thresholds, it uses less
-#' memory than the other methods, and requires fewer operations to update.
+#' memory than the matrix methods, and requires fewer operations to update.
 #' However, because its data structure is less cache friendly and it requires
 #' multiple memory accesses to determine whether an incoming pairwise distance
 #' will lead to a cluster update, it is often slower than the matrix-based
-#' methods.
+#' methods for small datasets.
 #'
 #' # Matrix method
 #'
@@ -147,20 +147,33 @@ verify_precision <- function(precision) {
 #' index, but significantly reduces the number of matrix columns which must be
 #' accessed during each update.
 #'
+#' # SLINK method
+#'
+#' Published by Sibson (1972), the SLINK method is optimally fast and low-memory.
+#' Its only downside is that it can only accept the distances in canonical order;
+#' it is not applicable to methods which may return distances in random order,
+#' such as kmer indexing (e.g., usearch/vsearch) or methods where multiple
+#' asynchronous workers are feeding a single instance of SLINK.
+#'
 #' @param method (`character` string) The clustering algorithm to use. Options
 #' are `"tree"`, `"matrix"`, and `"index"`
 #' @param ... passed on to variants
 #'
 #' @return an object describing the clustering algorithm, to pass to
 #' `distmx_cluster()` or `seq_cluster()`
+#' @references R. Sibson, SLINK: An optimally efficient algorithm for the
+#' single-link cluster method, The Computer Journal, Volume 16, Issue 1, 1973,
+#' Pages 30–34, \doi{10.1093/comjnl/16.1.30}
+
 #' @export
-clust_config <- function(method = c("tree", "matrix", "index"), ...) {
+clust_config <- function(method = c("tree", "matrix", "index", "slink"), ...) {
   method = match.arg(method)
   switch(
     method,
     tree = clust_tree(...),
     matrix = clust_matrix(...),
-    index = clust_index(...)
+    index = clust_index(...),
+    slink = clust_slink(...)
   )
 }
 
@@ -207,6 +220,15 @@ clust_matrix <- function(
 clust_index <- function() {
   structure(
     list(method = "index"),
+    class = "optimotu_cluster_config"
+  )
+}
+
+#' @export
+#' @describeIn clust_config helper function for method `"slink"`
+clust_slink <- function() {
+  structure(
+    list(method = "slink"),
     class = "optimotu_cluster_config"
   )
 }

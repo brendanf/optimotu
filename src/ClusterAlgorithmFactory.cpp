@@ -2,6 +2,7 @@
 #include "ClusterMatrix.h"
 #include "ClusterIndexedMatrix.h"
 #include "ClusterTree.h"
+#include "ClusterSLINK.h"
 
 using CAF = ClusterAlgorithmFactory;
 CAF::ClusterAlgorithmFactory(const DistanceConverter & dconv) :
@@ -92,5 +93,17 @@ std::unique_ptr<SingleClusterAlgorithm> CTF::create(j_t n) const {
 
 std::unique_ptr<SingleClusterAlgorithm> CTF::create(init_matrix_t & im) const {
   return std::make_unique<ClusterTree>(this->dconv, im);
+}
+
+using CSF = ClusterSLINKFactory;
+
+CSF::ClusterSLINKFactory(const DistanceConverter & dconv) : CAF{dconv} {}
+
+std::unique_ptr<SingleClusterAlgorithm> CSF::create(j_t n) const {
+  return std::make_unique<ClusterSLINK>(this->dconv, n);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> CSF::create(init_matrix_t & im) const {
+  return std::make_unique<ClusterSLINK>(this->dconv, im);
 }
 

@@ -47,4 +47,12 @@ public:
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im) const override;
 };
 
+class ClusterSLINKFactory : public ClusterAlgorithmFactory{
+public:
+  ClusterSLINKFactory(const DistanceConverter & dconv);
+
+  std::unique_ptr<SingleClusterAlgorithm> create(j_t n) const override;
+  std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im) const override;
+};
+
 #endif //OPTIMOTU_CLUSTERALGORITHMFACTORY_H_INCLUDED

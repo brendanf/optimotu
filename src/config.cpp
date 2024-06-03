@@ -36,6 +36,8 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
   } else if (method == "tree") {
     return std::make_unique<ClusterTreeFactory>(*dconv);
+  } else if (method == "slink") {
+    return std::make_unique<ClusterSLINKFactory>(*dconv);
   } else {
     OPTIMOTU_STOP("unknown cluster method");
   }
@@ -235,6 +237,8 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
   } else if (method == "tree") {
     return std::make_unique<ClusterTreeFactory>(*dconv);
+  } else if (method == "slink") {
+    return std::make_unique<ClusterSLINKFactory>(*dconv);
   } else {
     OPTIMOTU_STOP("unknown cluster method");
   }
