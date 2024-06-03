@@ -27,6 +27,13 @@ confusion_matrix <- function(k, c, threads = 1L) {
     .Call(`_optimotu_confusion_matrix`, k, c, threads)
 }
 
+#' @export
+#' @describeIn confusion_matrix confusion matrix for different references at
+#'  each threshold
+confusion_matrix2 <- function(k, c, threads = 1L) {
+    .Call(`_optimotu_confusion_matrix2`, k, c, threads)
+}
+
 distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {
     .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, method_config, parallel_config, output_type)
 }

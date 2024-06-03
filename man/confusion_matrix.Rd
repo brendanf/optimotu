@@ -2,6 +2,7 @@
 % Please edit documentation in R/RcppExports.R, R/confusion_matrix.R
 \name{confusion_matrix}
 \alias{confusion_matrix}
+\alias{confusion_matrix2}
 \alias{rand_index}
 \alias{rand_index.matrix}
 \alias{rand_index.data.frame}
@@ -17,6 +18,8 @@
 \title{Confusion matrix for a set of "test" partitions vs. a "true" partition}
 \usage{
 confusion_matrix(k, c, threads = 1L)
+
+confusion_matrix2(k, c, threads = 1L)
 
 rand_index(x, ...)
 
@@ -81,3 +84,9 @@ cluster in either the "test" partition or the "true" partition.
 This formulation allows various measures of binary classification
 performance to be applied to the case of clustering.
 }
+\section{Functions}{
+\itemize{
+\item \code{confusion_matrix2()}: confusion matrix for different references at
+each threshold
+
+}}
