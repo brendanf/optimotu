@@ -11,63 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// seq_cluster_uniform
-Rcpp::IntegerMatrix seq_cluster_uniform(const std::vector<std::string>& seq, const float dmin, const float dmax, const float dstep, const double breakpoint, const std::string method, const std::string parallelism, const int threads, const bool do_binary_search, const int fill_method);
-RcppExport SEXP _optimotu_seq_cluster_uniform(SEXP seqSEXP, SEXP dminSEXP, SEXP dmaxSEXP, SEXP dstepSEXP, SEXP breakpointSEXP, SEXP methodSEXP, SEXP parallelismSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const float >::type dmin(dminSEXP);
-    Rcpp::traits::input_parameter< const float >::type dmax(dmaxSEXP);
-    Rcpp::traits::input_parameter< const float >::type dstep(dstepSEXP);
-    Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type parallelism(parallelismSEXP);
-    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
-    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_cluster_uniform(seq, dmin, dmax, dstep, breakpoint, method, parallelism, threads, do_binary_search, fill_method));
-    return rcpp_result_gen;
-END_RCPP
-}
-// seq_cluster_array
-Rcpp::IntegerMatrix seq_cluster_array(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double breakpoint, const std::string method, const std::string parallelism, const int threads, const bool do_binary_search, const int fill_method);
-RcppExport SEXP _optimotu_seq_cluster_array(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP breakpointSEXP, SEXP methodSEXP, SEXP parallelismSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
-    Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type parallelism(parallelismSEXP);
-    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
-    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_cluster_array(seq, thresholds, breakpoint, method, parallelism, threads, do_binary_search, fill_method));
-    return rcpp_result_gen;
-END_RCPP
-}
-// seq_cluster_cached
-Rcpp::IntegerMatrix seq_cluster_cached(const std::vector<std::string>& seq, const std::vector<double>& thresholds, const double precision, const double breakpoint, const std::string method, const std::string parallelism, const int threads, const bool do_binary_search, const int fill_method);
-RcppExport SEXP _optimotu_seq_cluster_cached(SEXP seqSEXP, SEXP thresholdsSEXP, SEXP precisionSEXP, SEXP breakpointSEXP, SEXP methodSEXP, SEXP parallelismSEXP, SEXP threadsSEXP, SEXP do_binary_searchSEXP, SEXP fill_methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type thresholds(thresholdsSEXP);
-    Rcpp::traits::input_parameter< const double >::type precision(precisionSEXP);
-    Rcpp::traits::input_parameter< const double >::type breakpoint(breakpointSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type parallelism(parallelismSEXP);
-    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_binary_search(do_binary_searchSEXP);
-    Rcpp::traits::input_parameter< const int >::type fill_method(fill_methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_cluster_cached(seq, thresholds, precision, breakpoint, method, parallelism, threads, do_binary_search, fill_method));
-    return rcpp_result_gen;
-END_RCPP
-}
 // confusion_matrix
 Rcpp::DataFrame confusion_matrix(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, const int threads);
 RcppExport SEXP _optimotu_confusion_matrix(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
@@ -342,9 +285,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_optimotu_seq_cluster_uniform", (DL_FUNC) &_optimotu_seq_cluster_uniform, 10},
-    {"_optimotu_seq_cluster_array", (DL_FUNC) &_optimotu_seq_cluster_array, 8},
-    {"_optimotu_seq_cluster_cached", (DL_FUNC) &_optimotu_seq_cluster_cached, 9},
     {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 6},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 7},

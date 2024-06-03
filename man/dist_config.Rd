@@ -5,9 +5,10 @@
 \alias{dist_wfa2}
 \alias{dist_edlib}
 \alias{dist_hybrid}
+\alias{dist_hamming}
 \title{Configuration helper for pairwise distance methods}
 \usage{
-dist_config(method = c("wfa2", "edlib", "hybrid"), ...)
+dist_config(method = c("wfa2", "edlib", "hybrid", "hamming"), ...)
 
 dist_wfa2(
   match = 0L,
@@ -21,6 +22,8 @@ dist_wfa2(
 dist_edlib()
 
 dist_hybrid(cutoff = 0.1)
+
+dist_hamming(min_overlap = 0L, ignore_gaps = TRUE)
 }
 \arguments{
 \item{method}{(\code{character} string) method to use for distance calculations}
@@ -54,5 +57,7 @@ Configuration helper for pairwise distance methods
 \item \code{dist_edlib()}: helper function for method \code{"edlib"}
 
 \item \code{dist_hybrid()}: helper function for method \code{"hybrid"}
+
+\item \code{dist_hamming()}: helper function for method \code{"hybrid"}
 
 }}

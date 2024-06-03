@@ -1,4 +1,7 @@
 #include "HammingClusterWorker.h"
+extern "C" {
+#include "defs.h"
+}
 
 typedef RcppParallel::RMatrix<int> matrix_t;
 
@@ -7,41 +10,56 @@ PackedSequenceSet::PackedSequenceSet(const std::vector<std::string> &seq) {
   if (num_seqs == 0) return;
   packed_seq.reserve(seq.size());
   mask.reserve(seq.size());
+  start.reserve(seq.size());
+  end.reserve(seq.size());
 
-  alen = seq[0].size();
-  ulen = alen / NUCLEOTIDES_IN_WORD;
-  if (alen > ulen * NUCLEOTIDES_IN_WORD)
-    ulen++;
-  mulen = alen / NUCLEOTIDES_IN_WORD / 4;
-  if (alen > mulen * NUCLEOTIDES_IN_WORD / 4)
-    mulen++;
   for (auto s : seq) {
-    if (s.size() != alen)
-      OPTIMOTU_STOP("PackedSequenceSet: All sequences must have the same length.\n");
+    // if (s.size() != alen)
+    //   OPTIMOTU_STOP("PackedSequenceSet: All sequences must have the same length.\n");
+    alen = s.size();
+    ulen = alen / NUCLEOTIDES_IN_WORD;
+    if (alen > ulen * NUCLEOTIDES_IN_WORD)
+      ulen++;
+    mulen = alen / NUCLEOTIDES_IN_WORD / 4;
+    if (alen > mulen * NUCLEOTIDES_IN_WORD / 4)
+      mulen++;
     packed_seq.emplace_back(ulen);
     mask.emplace_back(mulen);
-    nucleotide2binary(s.c_str(), alen, &packed_seq.back()[0], &mask.back()[0]);
+    start.emplace_back(0);
+    end.emplace_back(0);
+    nucleotide2binary(s.c_str(), alen, &packed_seq.back()[0], &mask.back()[0], &start.back(), &end.back());
   }
 }
 
-double PackedSequenceSet::dist(const int i, const int j) const {
-  return pdistB(&packed_seq[i][0], &mask[i][0], &packed_seq[j][0], &mask[j][0], ulen, mulen);
+double PackedSequenceSet::dist(const int i, const int j, const int min_overlap, const bool ignore_gap) const {
+  int s, e;
+  s = start[j] >= start[i] ? start[j] : start[i];
+  e = end[j] <= end[i] ? end[j] : end[i];
+  if (s >= e) return 1.0;
+  return pdistB(&packed_seq[i][0], &mask[i][0],
+                &packed_seq[j][0], &mask[j][0],
+                s, e, min_overlap);
 }
 
 HammingClusterWorker::HammingClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
   const uint8_t threads,
+  const int min_overlap,
+  const bool ignore_gaps,
   bool verbose
-) : pss(seq), clust_algo(clust_algo),
-threads(threads), verbose(verbose) {};
+) : AlignClusterWorker(seq, clust_algo, threads, verbose), pss(seq),
+min_overlap(min_overlap), ignore_gaps(ignore_gaps) {};
 
 HammingSplitClusterWorker::HammingSplitClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
   const uint8_t threads,
+  const int min_overlap,
+  const bool ignore_gaps,
   bool verbose
-) : HammingClusterWorker(seq, clust_algo, threads, false) {};
+) : HammingClusterWorker(seq, clust_algo, threads, min_overlap, ignore_gaps,
+verbose) {};
 
 void HammingSplitClusterWorker::operator()(std::size_t begin, std::size_t end) {
   double n = pss.num_seqs;
@@ -67,10 +85,27 @@ void HammingSplitClusterWorker::operator()(std::size_t begin, std::size_t end) {
   for (size_t i = begin_i; i < end_i; i++) {
     for (size_t j = 0; j < i; j++) {
       double threshold = my_algo->max_relevant(i, j);
+      if (verbose) {
+        mutex.lock();
+        //OPTIMOTU_COUT
+        std::cout << "thread" << begin
+                  << ": seqs " << j
+                      << " and " << i
+                      << " max relevant=" << threshold
+                      << std::endl;
+      }
       ++my_prealigned;
-      double d = pss.dist(i, j);
+      double d = pss.dist(i, j, min_overlap, ignore_gaps);
       if (d < 1.0) ++my_aligned;
-      if (d < threshold) (*my_algo)(j, i, d);
+
+      if (verbose) {
+        //OPTIMOTU_COUT
+        std::cout << (d <= threshold ? "*" : " ")
+                  << " distance=" << d
+                      << std::endl;
+        mutex.unlock();
+      }
+      if (d <= threshold) (*my_algo)(j, i, d);
       RcppThread::checkUserInterrupt();
     }
   }
@@ -82,6 +117,16 @@ void HammingSplitClusterWorker::operator()(std::size_t begin, std::size_t end) {
   my_algo->merge_into_parent();
   if (verbose) std::cout << "thread " << begin << " done" << std::endl;
 }
+
+HammingConcurrentClusterWorker::HammingConcurrentClusterWorker(
+  const std::vector<std::string> &seq,
+  ClusterAlgorithm &clust_algo,
+  const uint8_t threads,
+  const int min_overlap,
+  const bool ignore_gaps,
+  bool verbose
+) : HammingClusterWorker(seq, clust_algo, threads, min_overlap, ignore_gaps,
+verbose) {};
 
 void HammingConcurrentClusterWorker::operator()(std::size_t begin, std::size_t end) {
   double n = pss.num_seqs;
@@ -113,7 +158,7 @@ void HammingConcurrentClusterWorker::operator()(std::size_t begin, std::size_t e
       // mutex.unlock();
       double threshold = clust_algo.max_relevant(i, j);
       ++my_prealigned;
-      double d = pss.dist(i, j);
+      double d = pss.dist(i, j, min_overlap, ignore_gaps);
       if (d < 1.0) ++my_aligned;
       if (d < threshold) clust_algo(j, i, d);
       RcppThread::checkUserInterrupt();

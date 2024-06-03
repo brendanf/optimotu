@@ -405,14 +405,16 @@ parallel_hierarchical <- function(threads, shards) {
 #' @return an object representing the pairwise distance method
 #' @export
 dist_config <- function(
-    method = c("wfa2", "edlib", "hybrid"),
+    method = c("wfa2", "edlib", "hybrid", "hamming"),
     ...
 ) {
   method = match.arg(method)
   switch(
     method,
     wfa2 = dist_wfa2(...),
-    edlib = dist_edlib(...)
+    edlib = dist_edlib(...),
+    hybrid = dist_hybrid(...),
+    hamming = dist_hamming(...)
   )
 }
 
@@ -440,7 +442,7 @@ dist_wfa2 <- function(
   checkmate::check_count(gap_extend2)
   structure(
     list(
-      method = "wfa2", math = match, mismatch = mismatch, gap_open = gap_open,
+      method = "wfa2", match = match, mismatch = mismatch, gap_open = gap_open,
       gap_extend = gap_extend, gap_open2 = gap_open2, gap_extend2 = gap_extend2
     ),
     class = "optimotu_dist_config"
@@ -460,7 +462,22 @@ dist_edlib <- function() {
 #' @describeIn dist_config helper function for method `"hybrid"`
 dist_hybrid <- function(cutoff = 0.1) {
   checkmate::check_number(cutoff, lower = 0)
-  list(method = "hybrid", cutoff = cutoff)
+  structure(
+    list(method = "hybrid", cutoff = cutoff),
+    class = "optimotu_dist_config"
+  )
+}
+
+
+#' @export
+#' @describeIn dist_config helper function for method `"hybrid"`
+dist_hamming <- function(min_overlap = 0L, ignore_gaps = TRUE) {
+  checkmate::check_count(min_overlap)
+  checkmate::check_flag(ignore_gaps)
+  structure(
+    list(method = "hamming", min_overlap = min_overlap, ignore_gaps = ignore_gaps),
+    class = "optimotu_dist_config"
+  )
 }
 
 #' Config helper for prealignment methods

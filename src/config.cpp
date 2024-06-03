@@ -1,4 +1,94 @@
 #include "config.h"
+#include "Wfa2ClusterWorker.h"
+#include "EdlibClusterWorker.h"
+#include "HybridClusterWorker.h"
+#include "HammingClusterWorker.h"
+
+std::unique_ptr<DistanceConverter> create_distance_converter(
+    const std::string &type,
+    const double from,
+    const double to,
+    const double by,
+    std::vector<double> thresholds,
+    double precision
+) {
+  if (type == "uniform") {
+    return std::make_unique<UniformDistanceConverter>(from, to, by);
+  }
+  if (type == "set") {
+    return std::make_unique<ArrayDistanceConverter>(thresholds);
+  }
+  if (type == "lookup") {
+    return std::make_unique<CachedDistanceConverter>(thresholds, precision);
+  }
+  OPTIMOTU_STOP("invalid `threshold_config`: unknown type: " + type);
+}
+
+std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
+    const std::string &method,
+    const bool do_binary_search,
+    const int fill_type,
+    DistanceConverter * dconv
+) {
+  if (method == "matrix") {
+    return std::make_unique<ClusterMatrixFactory>(*dconv, do_binary_search, fill_type);
+  } else if (method == "index") {
+    return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
+  } else if (method == "tree") {
+    return std::make_unique<ClusterTreeFactory>(*dconv);
+  } else {
+    OPTIMOTU_STOP("unknown cluster method");
+  }
+}
+
+std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
+    const int threads,
+    ClusterAlgorithmFactory &factory,
+    const std::vector<std::string> seqnames,
+    const std::vector<std::vector<std::string>> subset_names
+) {
+  auto out = std::make_unique<MultipleClusterAlgorithm>(
+    factory,
+    seqnames,
+    subset_names,
+    threads
+  );
+  return out;
+}
+
+std::unique_ptr<ClusterWorker> create_cluster_worker(
+    const std::string &method,
+    const int threads,
+    const int shards,
+    ClusterAlgorithm * algo,
+    std::istream &file
+) {
+  if (method == "merge") {
+    return std::make_unique<MergeClusterWorker>(algo, file, threads);
+  } else if (method == "concurrent") {
+    return std::make_unique<ConcurrentClusterWorker>(algo, file, threads);
+  } else if (method == "hierarchical") {
+    return std::make_unique<HierarchicalClusterWorker>(algo, file, threads, shards);
+  } else {
+    OPTIMOTU_STOP("unknown parallelization method");
+  }
+}
+
+std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
+    const std::string &type,
+    const std::vector<std::string> &seq,
+    const double breakpoint,
+    SingleClusterAlgorithm &cluster,
+    const uint8_t threads
+) {
+  if (type == "split") {
+    return std::make_unique<HybridSplitClusterWorker>(seq, cluster, threads, breakpoint);
+  } else if (type == "concurrent") {
+    return std::make_unique<HybridConcurrentClusterWorker>(seq, cluster, threads, breakpoint);
+  } else {
+    Rcpp::stop("invalid parallel type");
+  }
+}
 
 #ifdef OPTIMOTU_R
 double element_as_double(Rcpp::List obj, std::string e, std::string name) {
