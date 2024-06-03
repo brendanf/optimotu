@@ -263,6 +263,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// seq_cluster
+Rcpp::IntegerMatrix seq_cluster(const Rcpp::CharacterVector& seq, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const bool verbose);
+RcppExport SEXP _optimotu_seq_cluster(SEXP seqSEXP, SEXP dist_configSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List >::type dist_config(dist_configSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List >::type threshold_config(threshold_configSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List >::type clust_config(clust_configSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List >::type parallel_config(parallel_configSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(seq_cluster(seq, dist_config, threshold_config, clust_config, parallel_config, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 // seq_distmx_snsn
 Rcpp::DataFrame seq_distmx_snsn(const std::vector<std::string>& seq, const double dist_threshold, const int match, const int mismatch, const int gap_open, const int gap_extend, const int gap_open2, const int gap_extend2, const bool constrain, uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_snsn(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
@@ -302,6 +318,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_cigar_edlib", (DL_FUNC) &_optimotu_cigar_edlib, 2},
     {"_optimotu_align", (DL_FUNC) &_optimotu_align, 8},
     {"_optimotu_seq_distmx_wfa2", (DL_FUNC) &_optimotu_seq_distmx_wfa2, 11},
+    {"_optimotu_seq_cluster", (DL_FUNC) &_optimotu_seq_cluster, 6},
     {"_optimotu_seq_distmx_snsn", (DL_FUNC) &_optimotu_seq_distmx_snsn, 10},
     {NULL, NULL, 0}
 };

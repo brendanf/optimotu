@@ -279,4 +279,96 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
     OPTIMOTU_STOP("unknown parallelization method");
   }
 }
+
+std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
+    Rcpp::List dist_config,
+    Rcpp::List parallel_config,
+    const std::vector<std::string> &seq,
+    SingleClusterAlgorithm &cluster,
+    bool verbose
+) {
+  if (!dist_config.inherits("optimotu_dist_config")) {
+    OPTIMOTU_STOP(
+      "'dist_config' must be of class 'optimotu_dist_config'"
+    );
+  }
+  if (!parallel_config.inherits("optimotu_parallel_config")) {
+    OPTIMOTU_STOP(
+      "'parallel_config' must be of class 'optimotu_parallel_config'"
+    );
+  }
+  std::string dist_method = element_as_string(dist_config, "method", "dist_config");
+  std::string par_method = element_as_string(parallel_config, "method", "parallel_config");
+  int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  if (dist_method == "wfa2") {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    if (par_method == "merge") {
+      return std::make_unique<Wfa2SplitClusterWorker>(
+        seq,
+        cluster, threads, match, mismatch,
+        gap_open, gap_extend, gap_open2, gap_extend2, verbose
+      );
+    } else if (par_method == "concurrent") {
+      return std::make_unique<Wfa2ConcurrentClusterWorker>(
+        seq,
+        cluster, threads, match, mismatch,
+        gap_open, gap_extend, gap_open2, gap_extend2, verbose
+      );
+    } else {
+      OPTIMOTU_STOP("unknown parallelization method");
+    }
+  } else if (dist_method == "edlib") {
+    if (par_method == "merge") {
+      return std::make_unique<EdlibSplitClusterWorker>(
+        seq,
+        cluster, threads, verbose
+      );
+    } else if (par_method == "concurrent") {
+      return std::make_unique<EdlibConcurrentClusterWorker>(
+        seq,
+        cluster, threads, verbose
+      );
+    } else {
+      OPTIMOTU_STOP("unknown parallelization method");
+    }
+  } else if (dist_method == "hybrid") {
+    double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
+    if (par_method == "merge") {
+      return std::make_unique<HybridSplitClusterWorker>(
+        seq,
+        cluster, threads, breakpoint, verbose
+      );
+    } else if (par_method == "concurrent") {
+      return std::make_unique<HybridConcurrentClusterWorker>(
+        seq,
+        cluster, threads, breakpoint, verbose
+      );
+    } else {
+      OPTIMOTU_STOP("unknown parallelization method");
+    }
+  } else if (dist_method == "hamming") {
+    int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
+    bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
+    if (par_method == "merge") {
+      return std::make_unique<HammingSplitClusterWorker>(
+        seq,
+        cluster, threads, min_overlap, ignore_gaps, verbose
+      );
+    } else if (par_method == "concurrent") {
+      return std::make_unique<HammingConcurrentClusterWorker>(
+        seq,
+        cluster, threads, min_overlap, ignore_gaps, verbose
+      );
+    } else {
+      OPTIMOTU_STOP("unknown parallelization method");
+    }
+  } else {
+    OPTIMOTU_STOP("unknown sequence-cluster method");
+  }
+}
 #endif // OPTIMOTU_R

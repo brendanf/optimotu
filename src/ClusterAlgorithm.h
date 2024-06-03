@@ -58,6 +58,8 @@ protected:
 public:
   using DistanceConsumer::operator();
 
+  virtual void finalize() {};
+
   // construct a ClusterAlgorithm with the given DistanceConverter
   ClusterAlgorithm(const DistanceConverter &dconv) :
   dconv(dconv),  m(dconv.m) {};
