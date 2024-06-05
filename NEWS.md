@@ -1,3 +1,25 @@
+# optimotu 0.7.0
+
+* Introduce functions to calculate pairwise distances and output a distance
+matrix.  These use edlib and WFA2 for pairwise alignment, and optionally do
+"prealignment" filters to reduce the number of full alignments that must be
+performed, using EdLib, WFA2 in edit-distance mode, SneakySnake, or a Kmer
+filter. The functions are `seq_distmx_edlib()` (EdLib, no filter);
+`seq_distmx_wfa2()` (WFA2 alignment, optional WFA2 edit distance filter);
+`seq_distmx_snsn()` (WFA2 alignment, SneakySnake filter);
+`seq_distmx_kmer()` (WFA2 alignment, Kmer distance filter);
+`seq_distmx_hybrid()` (SneakySnake filter, which routes to EdLib or WFA2
+alignment depending on predicted distance).  In a future version these will
+be combined into a single function with options for different methods
+* Introduce `seq_clust()` function, which calculates pairwise sequence distances
+followed by clustering.  Options for sequence distance calculation include
+published libraries edlib and WFA2, as well as fast Hamming distance calculation
+based on code in ProtaxA. Filters are not yet implemented.
+* Add SLINK as a clustering method for `seq_clust()`, `distmx_clust()`, and
+`distmx_clust_usearch()` with `cluster_slink()`.  This classic method is optimal
+when the distances can be guaranteed to be calculated in order.
+
+
 # optimotu 0.6.5
 
 * Fixed incorrect end-of-file behavior in `distmx_cluster()` which caused

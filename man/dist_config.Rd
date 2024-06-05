@@ -61,3 +61,12 @@ Configuration helper for pairwise distance methods
 \item \code{dist_hamming()}: helper function for method \code{"hybrid"}
 
 }}
+\references{
+Marco-Sola, S., Moure, J.C., Moreto, M., Espinosa, A., 2021. Fast gap-affine
+pairwise alignment using the wavefront algorithm. Bioinformatics 37,
+456–463. https://doi.org/10.1093/bioinformatics/btaa777
+
+Šošić, M., Šikić, M., 2017. Edlib: a C/C ++ library for fast, exact sequence
+alignment using edit distance. Bioinformatics 33, 1394–1395.
+https://doi.org/10.1093/bioinformatics/btw753
+}

@@ -2,10 +2,19 @@
 % Please edit documentation in R/optimotu.R
 \docType{package}
 \name{optimotu}
+\alias{optimotu-package}
 \alias{optimotu}
 \title{optimotu}
 \description{
 Optimize OTU clustering thresholds
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/brendanf/optimotu}
+  \item Report bugs at \url{https://github.com/brendanf/optimotu/issues}
+}
+
 }
 \author{
 Brendan Furneaux \href{mailto:brendan.furneaux@gmail.com}{brendan.furneaux@gmail.com}
