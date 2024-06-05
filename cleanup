@@ -1,2 +1,3 @@
 #!/usr/bin/env sh
 rm src/Makevars
+rm src/**/*.o

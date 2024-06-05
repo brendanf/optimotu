@@ -8,9 +8,9 @@
 ^codecov\.yml$
 ^.*\.profile.*$
 ^benchmark$
-^configure$
 ^configure.ac$
 ^\.git$
 ^.*/\.git$
 ^.*/\.github$
 ^.*/\.travis.yml$
+^temp$
