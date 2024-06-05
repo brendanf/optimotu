@@ -1,26 +1,36 @@
 n <- NULL
+n_points <- NULL
 subsets <- NULL
 distmx <- NULL
 subsetdistmx <- NULL
 dist_table <- NULL
+
 testthat::test_that("dist matrix generation works", {
   testthat::expect_no_error({
     set.seed(1)
     k <- 5L
     m <- 5L
     n <<- k*m
-    # generate centroids for 5 clusters in 2d space
+    # generate centroids for k clusters in 2d space
     centroids = data.frame(
       x = runif(k),
       y = runif(k)
     )
-    # for each cluster, generate 5 random points around it
+    # for each cluster, generate n random points around it
     points <- lapply(centroids, rep, each = m) |>
       lapply(rnorm, n = n, sd = 0.1) |>
       as.data.frame()
 
+    # duplicate some of the points
+    # points <- rbind(
+    #   points,
+    #   points[sample.int(nrow(points), replace = TRUE),]
+    # )
+    n_points <<- nrow(points)
+
     # take some subsets for testing subset clustering
-    subsets <<- lapply(5:20, sample.int, n = n)
+    subsets <<- lapply(k*(1:(m-1)), sample.int, n = n_points)
+    subsets <<- lapply(subsets, sort)
 
     # euclidian distance matrix around the points, rounded to precision of 0.05
     distmx <<- round(dist(points) / 0.05) * 0.05
@@ -29,20 +39,21 @@ testthat::test_that("dist matrix generation works", {
 
     # convert distance matrix to "sparse" format
     dist_table <<- data.frame(
-      seq1 = rep(0:(n-2), (n-1):1),
-      seq2 = unlist(lapply(1:(n-1), seq, to = (n-1))),
+      seq1 = rep(0:(n_points-2), (n_points-1):1),
+      seq2 = unlist(lapply(1:(n_points-1), seq, to = (n_points-1))),
       dist = unclass(distmx)
     )
     dist_table <<- dist_table[dist_table$dist <= 1,]
     # add tautological 0 distances (USEARCH produces these)
     dist_table <<- rbind(
       data.frame(
-        seq1 = 1L:n - 1L,
-        seq2 = 1L:n - 1L,
+        seq1 = 1L:n_points - 1L,
+        seq2 = 1L:n_points - 1L,
         dist = 0
       ),
       dist_table
     )
+    dist_table <<- dist_table[order(dist_table$seq2, dist_table$seq1),]
 
     # create 5 shuffles of the dist matrix
     dist_table <<- c(
@@ -121,7 +132,8 @@ testthat::test_that("algorithm definitions work", {
       matrix_linear_binary = clust_matrix(binary_search = FALSE, fill_method = "binary"),
       matrix_linear_linear = clust_matrix(binary_search = FALSE, fill_method = "linear"),
       matrix_linear_topdown = clust_matrix(binary_search = FALSE, fill_method = "topdown"),
-      index = clust_index()
+      index = clust_index(),
+      slink = clust_slink()
     )
   })
 })
@@ -137,31 +149,46 @@ testthat::test_that("parallelism definitions work", {
     )
   })
 })
-
+conf_mat <- NULL
 for (p in names(parallels)) {
   for (t in names(thresholds)) {
     for (a in names(algorithms)) {
       for (i in seq_along(distmx_file)) {
+        if (a == "slink") {
+          if (p %in% c("concurrent", "hierarchical")) next
+          if (i > 1) next
+        }
         # cat(sprintf(
         #   "%s distmx_cluster_single %s method with %s thresholds agrees with hclust\n",
         #   p, a, t
         # ))
-        test_that(
+        testthat::test_that(
           sprintf(
             "%s distmx_cluster_single %s method with %s thresholds agrees with hclust (permutation %i)",
             p, a, t, i
           ),
           {
-            expect_equal(
-              distmx_cluster(
-                distmx = distmx_file[i],
-                names = as.character(1:n),
-                threshold_config = thresholds[[t]],
-                clust_config = algorithms[[a]],
-                parallel_config = parallels[[p]],
-                output_type = "matrix"
-              ),
-              hclust_matrix,
+            testthat::expect_no_error(
+              conf_mat <<- confusion_matrix2(
+                distmx_cluster(
+                  distmx = distmx_file[i],
+                  names = as.character(1:n_points),
+                  threshold_config = thresholds[[t]],
+                  clust_config = algorithms[[a]],
+                  parallel_config = parallels[[p]],
+                  output_type = "matrix"
+                ),
+                hclust_matrix
+              )
+            )
+            testthat::expect_equal(
+              conf_mat$FP,
+              rep(0L, nrow(conf_mat)),
+              ignore_attr = TRUE
+            )
+            testthat::expect_equal(
+              conf_mat$FN,
+              rep(0L, nrow(conf_mat)),
               ignore_attr = TRUE
             )
           }
@@ -172,25 +199,39 @@ for (p in names(parallels)) {
         #     p, a, t
         #   )
         # )
-        test_that(
+        testthat::test_that(
           sprintf(
             "%s distmx_cluster_multi %s method with %s thresholds agrees with hclust (permutation %i)",
             p, a, t, i
           ),
           {
-            expect_equal(
-              distmx_cluster(
-                distmx = distmx_file[i],
-                names = as.character(1:n),
-                which = lapply(subsets, as.character),
-                threshold_config = thresholds[[t]],
-                clust_config = algorithms[[a]],
-                parallel_config = parallels[[p]],
-                output_type = "matrix"
-              ),
-              subset_hclust_matrix,
-              ignore_attr = TRUE
+            testthat::expect_no_error(
+              conf_mat <<- purrr::map2(
+                distmx_cluster(
+                  distmx = distmx_file[i],
+                  names = as.character(1:n_points),
+                  which = lapply(subsets, as.character),
+                  threshold_config = thresholds[[t]],
+                  clust_config = algorithms[[a]],
+                  parallel_config = parallels[[p]],
+                  output_type = "matrix"
+                ),
+                subset_hclust_matrix,
+                confusion_matrix2
+              )
             )
+            for (cm in conf_mat){
+              testthat::expect_equal(
+                cm$FP,
+                rep(0L, nrow(cm)),
+                ignore_attr = TRUE
+              )
+              testthat::expect_equal(
+                cm$FN,
+                rep(0L, nrow(cm)),
+                ignore_attr = TRUE
+              )
+            }
           }
         )
       }
