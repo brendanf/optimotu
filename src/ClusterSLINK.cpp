@@ -91,13 +91,15 @@ ClusterSLINK * ClusterSLINK::make_child() {
 void ClusterSLINK::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
   if (seq1 <= seq2) {
     OPTIMOTU_CERR << "ClusterSLINK requires seq2 < seq1.  seq2=" << seq2
-                  << ", seq1=" << seq1 << std::endl;
+                  << ", seq1=" << seq1
+                  << ", thread " << thread << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
   if (seq1 < slink_seq1) {
     OPTIMOTU_CERR << "ClusterSLINK requires sequences in order."
                   << " Current seq1=" << seq1
-                  << ", slink_seq1=" << slink_seq1 << std::endl;
+                  << ", slink_seq1=" << slink_seq1
+                  << ", thread " << thread << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
   while (seq1 > slink_seq1) {
@@ -109,7 +111,8 @@ void ClusterSLINK::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
   if (seq2 < slink_seq2) {
     OPTIMOTU_CERR << "ClusterSLINK requires sequences in order."
                   << " Current seq2=" << seq2
-                  << ", slink_seq2=" << slink_seq2 << std::endl;
+                  << ", slink_seq2=" << slink_seq2
+                  << ", thread " << thread << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
   while (slink_seq2 <= seq2) {
