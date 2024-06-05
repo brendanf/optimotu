@@ -39,6 +39,8 @@ public:
 
   void operator()(j_t seq1, j_t seq2, int i, int thread) override;
 
+  virtual void finalize() override;
+
   double max_relevant(j_t seq1, j_t seq2, int thread) const override;
 
   // send consumer() pairwise distances to ensure it is up-to-date with this

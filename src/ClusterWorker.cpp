@@ -40,6 +40,7 @@ void MergeClusterWorker::operator()(size_t begin, size_t end) {
     // }
     // buffer.clear();
   }
+  algo_list[begin]->finalize();
   // mutex.lock();
   // OPTIMOTU_COUT << "ClusterWorker thread " << begin << " merging..." << std::endl;
   // mutex.unlock();
@@ -136,6 +137,7 @@ void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
     //           << " merging shard " << i
     //           << "..." << std::endl;
     // mutex.unlock();
+    algo_list[i]->finalize();
     algo_list[i]->merge_into_parent();
   }
 

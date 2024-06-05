@@ -142,6 +142,10 @@ void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
   }
 }
 
+void MCA::finalize() {
+  for (auto s : subsets) s->finalize();
+}
+
 // does not lock anything directly!
 // relies on locks inside subset algorithms for thread safety.
 double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
