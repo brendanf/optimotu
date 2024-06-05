@@ -203,6 +203,7 @@ MultipleClusterAlgorithm * MCA::make_child() {
     return child_ptr;
   }
   this->own_child = true;
+  for (auto & ss : subsets) ss->make_child();
   return this;
 }
 
