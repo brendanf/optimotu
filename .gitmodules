@@ -1,9 +1,9 @@
 [submodule "src/WFA2-lib"]
 	path = src/WFA2-lib
-	url = git@github.com:smarco/WFA2-lib.git
+	url = git@github.com:brendanf/WFA2-lib.git
 [submodule "src/SneakySnake"]
 	path = src/SneakySnake
-	url = git@github.com:CMU-SAFARI/SneakySnake.git
+	url = git@github.com:brendanf/SneakySnake.git
 [submodule "src/edlib"]
 	path = src/edlib
-	url = git@github.com:Martinsos/edlib.git
+	url = git@github.com:brendanf/edlib.git
