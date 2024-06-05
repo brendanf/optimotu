@@ -3,7 +3,6 @@
 
 #include "AlignClusterWorker.h"
 
-
 // Analogous to SequenceSetB in C code
 struct PackedSequenceSet {
   int num_seqs, alen, ulen, mulen;
@@ -25,7 +24,7 @@ public :
   HammingClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const uint8_t threads,
+    const std::uint8_t threads,
     const int min_overlap = 0,
     const bool ignore_gaps = TRUE,
     bool verbose = false
@@ -38,7 +37,7 @@ public :
   HammingSplitClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const uint8_t threads,
+    const std::uint8_t threads,
     const int min_overlap = 0,
     const bool ignore_gaps = TRUE,
     bool verbose = false
@@ -51,7 +50,7 @@ public :
   HammingConcurrentClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const uint8_t threads,
+    const std::uint8_t threads,
     const int min_overlap = 0,
     const bool ignore_gaps = TRUE,
     bool verbose = false

@@ -4,6 +4,7 @@
 #include "single_linkage.h"
 #include "ClusterAlgorithm.h"
 #include <deque>
+#include <cstdint>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -21,7 +22,7 @@ protected:
   struct cluster {
     d_t min_d = NO_DIST;
     j_t id = NO_CLUST;
-    uint32_t n_child = 0;
+    std::uint32_t n_child = 0;
     cluster *parent = nullptr, *first_child = nullptr, *last_child = nullptr,
       *prev_sib = nullptr, *next_sib = nullptr;
     bool allocated = false;
@@ -32,8 +33,8 @@ protected:
   struct cluster_int {
     const d_t min_d;
     const j_t id;
-    const uint32_t n_child;
-    const int32_t self, parent, first_child, last_child, prev_sib, next_sib;
+    const std::uint32_t n_child;
+    const std::int32_t self, parent, first_child, last_child, prev_sib, next_sib;
     const bool allocated;
 
     cluster_int(const cluster * const c, const cluster * const pool0);

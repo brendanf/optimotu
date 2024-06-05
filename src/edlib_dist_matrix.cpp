@@ -5,11 +5,13 @@
 #include "pairwise_alignment.h"
 #include "SparseDistanceMatrix.h"
 
+#include <cstdint>
+
 struct EdlibAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
   const bool is_constrained;
-  const uint8_t threads;
+  const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
 
@@ -17,7 +19,7 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
     const std::vector<std::string> &seq,
     const double dist_threshold,
     const bool constrain,
-    const uint8_t threads,
+    const std::uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
     size_t &aligned
@@ -136,7 +138,7 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
 //' @rdname seq_distmx
 // [[Rcpp::export]]
 Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold,
-                                 bool constrain = true, uint8_t threads = 1) {
+                                 bool constrain = true, std::uint8_t threads = 1) {
   size_t prealigned = 0, aligned = 0;
 
   std::vector<size_t> seq1, seq2;

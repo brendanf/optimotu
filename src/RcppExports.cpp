@@ -71,7 +71,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_distmx_edlib
-Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold, bool constrain, uint8_t threads);
+Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold, bool constrain, std::uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_edlib(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -79,13 +79,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<std::string> >::type seq(seqSEXP);
     Rcpp::traits::input_parameter< double >::type dist_threshold(dist_thresholdSEXP);
     Rcpp::traits::input_parameter< bool >::type constrain(constrainSEXP);
-    Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
     rcpp_result_gen = Rcpp::wrap(seq_distmx_edlib(seq, dist_threshold, constrain, threads));
     return rcpp_result_gen;
 END_RCPP
 }
 // seq_distmx_hybrid
-Rcpp::DataFrame seq_distmx_hybrid(std::vector<std::string> seq, double dist_threshold, double breakpoint, uint8_t threads);
+Rcpp::DataFrame seq_distmx_hybrid(std::vector<std::string> seq, double dist_threshold, double breakpoint, std::uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_hybrid(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -93,7 +93,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<std::string> >::type seq(seqSEXP);
     Rcpp::traits::input_parameter< double >::type dist_threshold(dist_thresholdSEXP);
     Rcpp::traits::input_parameter< double >::type breakpoint(breakpointSEXP);
-    Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
     rcpp_result_gen = Rcpp::wrap(seq_distmx_hybrid(seq, dist_threshold, breakpoint, threads));
     return rcpp_result_gen;
 END_RCPP
@@ -162,7 +162,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_distmx_kmer
-Rcpp::DataFrame seq_distmx_kmer(std::vector<std::string> seq, double dist_threshold, double udist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, uint8_t threads);
+Rcpp::DataFrame seq_distmx_kmer(std::vector<std::string> seq, double dist_threshold, double udist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, std::uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_kmer(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP udist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -176,7 +176,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
     Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
     Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
-    Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
     rcpp_result_gen = Rcpp::wrap(seq_distmx_kmer(seq, dist_threshold, udist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads));
     return rcpp_result_gen;
 END_RCPP
@@ -256,7 +256,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_distmx_wfa2
-Rcpp::DataFrame seq_distmx_wfa2(std::vector<std::string> seq, double dist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, bool prealign, bool constrain, uint8_t threads);
+Rcpp::DataFrame seq_distmx_wfa2(std::vector<std::string> seq, double dist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, bool prealign, bool constrain, std::uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_wfa2(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP prealignSEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -271,7 +271,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
     Rcpp::traits::input_parameter< bool >::type prealign(prealignSEXP);
     Rcpp::traits::input_parameter< bool >::type constrain(constrainSEXP);
-    Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
     rcpp_result_gen = Rcpp::wrap(seq_distmx_wfa2(seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads));
     return rcpp_result_gen;
 END_RCPP
@@ -293,7 +293,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_distmx_snsn
-Rcpp::DataFrame seq_distmx_snsn(const std::vector<std::string>& seq, const double dist_threshold, const int match, const int mismatch, const int gap_open, const int gap_extend, const int gap_open2, const int gap_extend2, const bool constrain, uint8_t threads);
+Rcpp::DataFrame seq_distmx_snsn(const std::vector<std::string>& seq, const double dist_threshold, const int match, const int mismatch, const int gap_open, const int gap_extend, const int gap_open2, const int gap_extend2, const bool constrain, std::uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_snsn(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -307,7 +307,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type gap_open2(gap_open2SEXP);
     Rcpp::traits::input_parameter< const int >::type gap_extend2(gap_extend2SEXP);
     Rcpp::traits::input_parameter< const bool >::type constrain(constrainSEXP);
-    Rcpp::traits::input_parameter< uint8_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
     rcpp_result_gen = Rcpp::wrap(seq_distmx_snsn(seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, constrain, threads));
     return rcpp_result_gen;
 END_RCPP

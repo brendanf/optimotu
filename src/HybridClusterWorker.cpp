@@ -11,7 +11,7 @@ typedef RcppParallel::RMatrix<int> matrix_t;
 HybridClusterWorker::HybridClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
-  const uint8_t threads,
+  const std::uint8_t threads,
   const double breakpoint,
   bool verbose
 ) : AlignClusterWorker(seq, clust_algo, threads, verbose), breakpoint(breakpoint) {};

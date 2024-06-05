@@ -1,4 +1,5 @@
 #include "ClusterSLINK.h"
+#include <cstdint>
 
 ClusterSLINK::ClusterSLINK(SingleClusterAlgorithm * parent) :
   SingleClusterAlgorithm(parent), Pi(n), Lambda(n, m), M(n, m), delegate(dconv, n) {}

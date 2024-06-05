@@ -5,13 +5,14 @@
 #include "pairwise_alignment.h"
 #include "SparseDistanceMatrix.h"
 #include "ClusterIndexedMatrix.h"
+#include <cstdint>
 
 struct PrealignAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
   const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
   const bool do_prealign, is_constrained, is_score_constrained;
-  const uint8_t threads;
+  const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
 
@@ -26,7 +27,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
     const double dist_threshold,
     const bool do_prealign,
     const bool constrain,
-    const uint8_t threads,
+    const std::uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
     size_t &aligned
@@ -166,7 +167,7 @@ Rcpp::DataFrame seq_distmx_wfa2(
     int gap_open2 = 0, int gap_extend2 = 0,
     bool prealign = true,
     bool constrain = true,
-    uint8_t threads = 1) {
+    std::uint8_t threads = 1) {
   size_t prealigned = 0, aligned = 0;
 
   std::vector<size_t> seq1, seq2;

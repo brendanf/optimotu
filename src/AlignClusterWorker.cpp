@@ -8,6 +8,6 @@ size_t AlignClusterWorker::aligned() {
   return _aligned;
 }
 
-uint8_t AlignClusterWorker::nthreads() {
+std::uint8_t AlignClusterWorker::nthreads() {
   return threads;
 }

@@ -13,13 +13,13 @@
 // and at what location is the first occurrence (x)?
 struct  KmerCount{
   size_t i;
-  uint16_t n;
-  uint16_t x;
+  std::uint16_t n;
+  std::uint16_t x;
   KmerCount& operator++() {
     this->n++;
     return *this;
   };
-  KmerCount(size_t i, uint16_t n, uint16_t x) : i(i), n(n), x(x) {};
+  KmerCount(size_t i, std::uint16_t n, std::uint16_t x) : i(i), n(n), x(x) {};
 };
 
 // for a given sequence (implicit)
@@ -27,10 +27,10 @@ struct  KmerCount{
 // how many times (n)
 // at what location in the sequence is the first occurrence (x)
 struct KmerHit{
-  uint16_t kmer;
-  uint16_t n;
-  uint16_t x;
-  KmerHit(uint16_t kmer, uint16_t n, uint16_t x) : kmer(kmer), n(n), x(x) {};
+  std::uint16_t kmer;
+  std::uint16_t n;
+  std::uint16_t x;
+  KmerHit(uint16_t kmer, std::uint16_t n, std::uint16_t x) : kmer(kmer), n(n), x(x) {};
   KmerHit& operator++() {
     ++(this->n);
     return *this;
@@ -40,8 +40,8 @@ struct KmerHit{
   }
 };
 
-static const uint32_t debrujin32 = 0x077CB531;
-static constexpr const uint8_t index32[] = {
+static const std::uint32_t debrujin32 = 0x077CB531;
+static constexpr const std::uint8_t index32[] = {
   0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
   31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
 };
@@ -54,11 +54,11 @@ private :
   size_t n = 0;
 public :
   void clear() {
-    uint16_t bitsi = 0;
+    std::uint16_t bitsi = 0;
     for (uint8_t i = 0; i < 32; ++i) {
-      uint32_t &j = dirty[i];
+      std::uint32_t &j = dirty[i];
       while (j) {
-        uint32_t l = (j & -j);
+        std::uint32_t l = (j & -j);
         // Rcpp::Rcout << "clearing field "
         //             << std::setfill('0') << std::setw(4) << bitsi + index32[((l * debrujin32) >> 27)]
         //             << " (j=" << std::hex << std::setw(8) << j
@@ -74,8 +74,8 @@ public :
 
   void insert(uint16_t k) {
     // Rcpp::Rcout << "setting " << std::hex << std::setw(4) << std::setfill('0') << k;
-    uint16_t i = k >> 6;
-    uint64_t j = (uint64_t)1 << (k & 0x3F);
+    std::uint16_t i = k >> 6;
+    std::uint64_t j = (uint64_t)1 << (k & 0x3F);
     // Rcpp::Rcout << " as bit " << std::dec << (k & 0x3F) << " of field " << i;
     if ((bits[i] & j) == 0)  {
       // Rcpp::Rcout << " (not previously set)" << std::endl;
@@ -84,7 +84,7 @@ public :
     // Rcpp::Rcout << " (already set)" << std::endl;
     // }
     bits[i] |= j;
-    uint32_t l = (uint32_t)1 << (i & 0x1F);
+    std::uint32_t l = (uint32_t)1 << (i & 0x1F);
     dirty[i >> 5] |= l;
   };
 
@@ -110,7 +110,7 @@ struct KmerAlignWorker : public RcppParallel::Worker {
   const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold;
   const double udist_threshold;
-  const uint8_t threads;
+  const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &aligned;
   size_t &considered;
@@ -128,7 +128,7 @@ struct KmerAlignWorker : public RcppParallel::Worker {
     const int extend2,
     const double dist_threshold,
     const double udist_threshold,
-    const uint8_t threads,
+    const std::uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &aligned,
     size_t &considered
@@ -172,7 +172,7 @@ struct KmerAlignWorker : public RcppParallel::Worker {
     for (size_t i = begin_i; i < end_i; i++) {
       const std::vector<KmerHit> &index = seq_kmer_index[i];
       if (index.size() == 0) continue;
-      std::unordered_map<size_t, uint16_t> match_index;
+      std::unordered_map<size_t, std::uint16_t> match_index;
       for (auto &kmer : index) {
         for (auto &match : kmer_seq_index[kmer.kmer]) {
           if (match.i >= i) break;
@@ -257,7 +257,7 @@ Rcpp::DataFrame seq_distmx_kmer(std::vector<std::string> seq, double dist_thresh
                                 double udist_threshold,
                                 int match = 1, int mismatch = 2, int gap_open = 10,
                                 int gap_extend = 1, int gap_open2 = 0, int gap_extend2 = 0,
-                                uint8_t threads = 1) {
+                                std::uint8_t threads = 1) {
 
   Rcpp::Rcout << "Indexing k-mers...";
   // index: for each kmer, which sequences is it found in, and how many times?
@@ -268,7 +268,7 @@ Rcpp::DataFrame seq_distmx_kmer(std::vector<std::string> seq, double dist_thresh
 
   size_t i = 0;
   std::vector<std::vector<KmerHit>> seq_kmer_index, seq_x_index;
-  std::unordered_map<uint16_t, uint16_t> kmer_location;
+  std::unordered_map<uint16_t, std::uint16_t> kmer_location;
   // index: for each sequence, which kmers are found in it, and how many times?
   for (auto & s : seq) {
     if (s.size() > 7) {
@@ -281,11 +281,11 @@ Rcpp::DataFrame seq_distmx_kmer(std::vector<std::string> seq, double dist_thresh
       seq_x_index.emplace_back();
       continue;
     }
-    uint16_t kmer = 0;
+    std::uint16_t kmer = 0;
     size_t j = 0, x = 0;
     // go character by character, updating the index
     for (auto c : s) {
-      uint8_t newval = lookup(c);
+      std::uint8_t newval = lookup(c);
       if (newval <= 3) {
         kmer = (kmer << 2) + newval;
       } else {

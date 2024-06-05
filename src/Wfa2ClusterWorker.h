@@ -9,7 +9,7 @@ public :
   Wfa2ClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const uint8_t threads,
+    const std::uint8_t threads,
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
     const int gap_open2 = 0, const int gap_extend2 = 1,

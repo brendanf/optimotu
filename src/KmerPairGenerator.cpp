@@ -67,7 +67,7 @@ i(begin == 0 ? 1 : begin) {
     std::size_t jj = 0;
     // go character by character, updating the index
     for (auto c : s) {
-      uint8_t newval = lookup(c);
+      std::uint8_t newval = lookup(c);
       if (newval <= 3) {
         kmer = (kmer << 2) + newval;
       } else {

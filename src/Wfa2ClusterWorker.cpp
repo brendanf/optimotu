@@ -5,7 +5,7 @@
 Wfa2ClusterWorker::Wfa2ClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
-  const uint8_t threads,
+  const std::uint8_t threads,
   const int match, const int mismatch,
   const int gap_open, const int gap_extend,
   const int gap_open2, const int gap_extend2,

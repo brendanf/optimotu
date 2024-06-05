@@ -1,10 +1,11 @@
 #include "pairwise_alignment.h"
+#include <cstdint>
 
 double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
   auto status = aligner.alignEnd2End(a, b);
   if (status != wfa::WFAligner::StatusSuccessful) return 1.0;
   auto cigar = aligner.getAlignmentCigar();
-  uint16_t match = 0, length = 0;
+  std::uint16_t match = 0, length = 0;
   for (char c : cigar) {
     if (c == 'M') {
       match++;
@@ -105,7 +106,7 @@ std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::
   // }
   if (status != wfa::WFAligner::StatusSuccessful) return {std::max(a.size(), b.size()), 1.0};
   auto cigar = aligner.getAlignmentCigar();
-  uint16_t match = 0, length = 0;
+  std::uint16_t match = 0, length = 0;
   for (char c : cigar) {
     if (c == 'M') {
       match++;

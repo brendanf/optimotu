@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <Rcpp.h>
 #include <RcppParallel.h>
 #include <RcppThread.h>
@@ -15,7 +16,7 @@ struct HybridAlignWorker : public RcppParallel::Worker {
   const std::shared_ptr<char[]> pseq;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
   const double breakpoint;
-  const uint8_t threads;
+  const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
   size_t seq_width = 0;
@@ -24,7 +25,7 @@ struct HybridAlignWorker : public RcppParallel::Worker {
     const std::vector<std::string> &seq,
     const double dist_threshold,
     const double breakpoint,
-    const uint8_t threads,
+    const std::uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
     size_t &aligned
@@ -169,7 +170,7 @@ struct HybridAlignWorker : public RcppParallel::Worker {
 //' @rdname seq_distmx
 // [[Rcpp::export]]
 Rcpp::DataFrame seq_distmx_hybrid(std::vector<std::string> seq, double dist_threshold,
-                                  double breakpoint = 0.1, uint8_t threads = 1) {
+                                  double breakpoint = 0.1, std::uint8_t threads = 1) {
   size_t prealigned = 0, aligned = 0;
 
   std::vector<size_t> seq1, seq2;

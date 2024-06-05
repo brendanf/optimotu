@@ -44,7 +44,7 @@ double PackedSequenceSet::dist(const int i, const int j, const int min_overlap, 
 HammingClusterWorker::HammingClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
-  const uint8_t threads,
+  const std::uint8_t threads,
   const int min_overlap,
   const bool ignore_gaps,
   bool verbose
@@ -54,7 +54,7 @@ min_overlap(min_overlap), ignore_gaps(ignore_gaps) {};
 HammingSplitClusterWorker::HammingSplitClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
-  const uint8_t threads,
+  const std::uint8_t threads,
   const int min_overlap,
   const bool ignore_gaps,
   bool verbose
@@ -121,7 +121,7 @@ void HammingSplitClusterWorker::operator()(std::size_t begin, std::size_t end) {
 HammingConcurrentClusterWorker::HammingConcurrentClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
-  const uint8_t threads,
+  const std::uint8_t threads,
   const int min_overlap,
   const bool ignore_gaps,
   bool verbose

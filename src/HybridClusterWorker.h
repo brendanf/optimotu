@@ -7,7 +7,7 @@ public :
   HybridClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const uint8_t threads,
+    const std::uint8_t threads,
     const double breakpoint = 0.1,
     bool verbose = false
   );

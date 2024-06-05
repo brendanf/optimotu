@@ -81,7 +81,7 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     const std::vector<std::string> &seq,
     const double breakpoint,
     SingleClusterAlgorithm &cluster,
-    const uint8_t threads
+    const std::uint8_t threads
 ) {
   if (type == "split") {
     return std::make_unique<HybridSplitClusterWorker>(seq, cluster, threads, breakpoint);
