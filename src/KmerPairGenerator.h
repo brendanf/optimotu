@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <memory>
 #include <cstdint>
+#include <string>
 
 #include "PairGenerator.h"
 
