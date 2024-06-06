@@ -4,6 +4,7 @@
 #include "optimotu.h"
 #include <cstdint>
 #include <limits>
+#include <cstdint>
 
 // type of "j", which is the index of a cluster
 typedef std::uint32_t j_t;
