@@ -12,12 +12,12 @@ std::shared_ptr<char[]> pad_strings(
     if (s.size() > seq_width) seq_width = s.size();
   }
   size_t lenout = seq_width * seq.size();
-  char* out = new char[seq_width * lenout];
-  std::fill_n(out, lenout, 'X');
+  auto out = std::make_shared<char[]>(seq_width * lenout);
+  std::fill_n(out.get(), lenout, 'X');
   auto s = seq.begin();
-  for (char* chari = out; chari < out + lenout; chari += seq_width) {
+  for (char* chari = out.get(); chari < out.get() + lenout; chari += seq_width) {
     memcpy(chari, s->c_str(), s->size());
     ++s;
   }
-  return std::shared_ptr<char[]>(out);
+  return out;
 }
