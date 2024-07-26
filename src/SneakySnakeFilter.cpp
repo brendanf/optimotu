@@ -15,8 +15,8 @@ bool SneakySnakeFilter::operator()(
 ) {
   return (bool) SneakySnake(
     seq[j].size(),
-    pseq.get() + j*seq_width,
-    pseq.get() + i*seq_width,
+    (char*)pseq.get() + j*seq_width,
+    (char*)pseq.get() + i*seq_width,
     max_ed,
     2*max_k + 1,
     0,
