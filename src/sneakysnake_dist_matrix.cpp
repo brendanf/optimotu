@@ -107,8 +107,8 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
 
         int d1 = SneakySnake(
           l2,
-          pseq.get() + s2*seq_width,
-          pseq.get() + s1*seq_width,
+          (char*)pseq.get() + s2*seq_width,
+          (char*)pseq.get() + s1*seq_width,
           ceil(maxd1),
           kmer_width,
           0,

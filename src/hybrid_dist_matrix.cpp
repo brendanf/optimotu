@@ -86,8 +86,8 @@ struct HybridAlignWorker : public RcppParallel::Worker {
           // edit distance, not pairwise dissimilarity
           is_close = SneakySnake(
             l2,
-            pseq.get() + s2*seq_width,
-            pseq.get() + s1*seq_width,
+            (char*)pseq.get() + s2*seq_width,
+            (char*)pseq.get() + s1*seq_width,
             (int) breakpoint,
             (int) breakpoint * 2 + 1,
             0,
@@ -100,8 +100,8 @@ struct HybridAlignWorker : public RcppParallel::Worker {
                             (2-breakpoint));
           is_close = SneakySnake(
             l2,
-            pseq.get() + s2*seq_width,
-            pseq.get() + s1*seq_width,
+            (char*)pseq.get() + s2*seq_width,
+            (char*)pseq.get() + s1*seq_width,
             (int) (breakpoint * (l1 + l2) / (2 - breakpoint)),
             kmer_width,
             0,
