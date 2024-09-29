@@ -63,18 +63,19 @@ ConcurrentClusterWorker::ConcurrentClusterWorker(
 
 void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   DistanceElement d;
+  size_t i=0;
   // std::vector<DistanceElement> buffer;
   // buffer.reserve(100);
   // OPTIMOTU_COUT << "Starting ConcurrentClusterWorker thread " << begin << std::endl;
   while (true) {
     {
       std::lock_guard<std::mutex> lock(mutex);
-    // OPTIMOTU_COUT << "reading..." << std::flush;
+    OPTIMOTU_COUT << "reading line " << ++i << "..." << std::flush;
     // for (int i = 0; i < 100 && file; ++i) {
       if (!(file >> d)) break;
       // buffer.push_back(d);
     }
-    // OPTIMOTU_COUT << "done" << std::endl;
+    OPTIMOTU_COUT << "done" << std::endl;
     // if (buffer.size() == 0) break;
     // for (auto d : buffer) {
       algo->operator()(d, begin);

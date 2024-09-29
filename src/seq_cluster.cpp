@@ -2,7 +2,6 @@
 
 #include "config.h"
 
-//' @export
 // [[Rcpp::export]]
 Rcpp::RObject seq_cluster_single(
     const Rcpp::CharacterVector &seq,

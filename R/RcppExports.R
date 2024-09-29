@@ -196,7 +196,6 @@ seq_distmx_wfa2 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_
     .Call(`_optimotu_seq_distmx_wfa2`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
 }
 
-#' @export
 seq_cluster_single <- function(seq, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = FALSE) {
     .Call(`_optimotu_seq_cluster_single`, seq, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
 }
