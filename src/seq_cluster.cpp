@@ -48,7 +48,7 @@ Rcpp::RObject seq_cluster_single(
 }
 
 // [[Rcpp::export]]
-Rcpp::RObject seq_cluster_multi(
+Rcpp::List seq_cluster_multi(
     const Rcpp::CharacterVector &seq,
     const Rcpp::ListOf<Rcpp::CharacterVector> which,
     const Rcpp::List dist_config,
@@ -61,7 +61,7 @@ Rcpp::RObject seq_cluster_multi(
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
   }
-  Rcpp::RObject output = R_NilValue;
+  Rcpp::List output;
 
   const std::vector<std::string> cppseq = Rcpp::as<std::vector<std::string>>(seq);
 
@@ -103,6 +103,7 @@ Rcpp::RObject seq_cluster_multi(
   } else if (output_type == "hclust") {
     output = algo->as_hclust();
   }
+  output.names() = which.names();
   return output;
 }
 #endif // OPTIMOTU_R

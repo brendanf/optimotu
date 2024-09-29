@@ -55,7 +55,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx_cluster_multi
-Rcpp::RObject distmx_cluster_multi(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type, const bool verbose);
+Rcpp::List distmx_cluster_multi(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type, const bool verbose);
 RcppExport SEXP _optimotu_distmx_cluster_multi(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP whichSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -296,7 +296,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_cluster_multi
-Rcpp::RObject seq_cluster_multi(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const std::string output_type, const bool verbose);
+Rcpp::List seq_cluster_multi(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const std::string output_type, const bool verbose);
 RcppExport SEXP _optimotu_seq_cluster_multi(SEXP seqSEXP, SEXP whichSEXP, SEXP dist_configSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

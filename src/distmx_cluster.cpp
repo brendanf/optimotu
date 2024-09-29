@@ -48,7 +48,7 @@ Rcpp::RObject distmx_cluster_single(
 }
 
 // [[Rcpp::export]]
-Rcpp::RObject distmx_cluster_multi(
+Rcpp::List distmx_cluster_multi(
     const std::string file,
     const Rcpp::CharacterVector seqnames,
     const Rcpp::ListOf<Rcpp::CharacterVector> which,
@@ -61,7 +61,7 @@ Rcpp::RObject distmx_cluster_multi(
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
   }
-  Rcpp::RObject output = R_NilValue;
+  Rcpp::List output;
   std::ifstream infile(file);
   if (!infile.is_open()) {
     OPTIMOTU_STOP("failed to open input file");
@@ -104,6 +104,7 @@ Rcpp::RObject distmx_cluster_multi(
   } else if (output_type == "hclust") {
     output = algo->as_hclust();
   }
+  output.names() = which.names();
   return output;
 }
 #endif // OPTIMOTU_R
