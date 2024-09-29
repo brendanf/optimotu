@@ -465,12 +465,12 @@ dist_wfa2 <- function(
     gap_open = 0L, gap_extend = 1L,
     gap_open2 = 0L, gap_extend2 = 1L
 ) {
-  checkmate::check_count(match)
-  checkmate::check_count(mismatch)
-  checkmate::check_count(gap_open)
-  checkmate::check_count(gap_extend)
-  checkmate::check_count(gap_open2)
-  checkmate::check_count(gap_extend2)
+  checkmate::assert_count(match)
+  checkmate::assert_count(mismatch)
+  checkmate::assert_count(gap_open)
+  checkmate::assert_count(gap_extend)
+  checkmate::assert_count(gap_open2)
+  checkmate::assert_count(gap_extend2)
   structure(
     list(
       method = "wfa2", match = match, mismatch = mismatch, gap_open = gap_open,
@@ -495,7 +495,7 @@ dist_edlib <- function() {
 #' WFA2 in edit-distance mode is used, otherwise EdLib.
 #' @describeIn dist_config helper function for method `"hybrid"`
 dist_hybrid <- function(cutoff = 0.1) {
-  checkmate::check_number(cutoff, lower = 0)
+  checkmate::assert_number(cutoff, lower = 0)
   structure(
     list(method = "hybrid", cutoff = cutoff),
     class = "optimotu_dist_config"
@@ -513,8 +513,8 @@ dist_hybrid <- function(cutoff = 0.1) {
 #' @export
 #' @describeIn dist_config helper function for method `"hamming"`
 dist_hamming <- function(min_overlap = 0L, ignore_gaps = TRUE) {
-  checkmate::check_count(min_overlap)
-  checkmate::check_flag(ignore_gaps)
+  checkmate::assert_count(min_overlap)
+  checkmate::assert_flag(ignore_gaps)
   structure(
     list(method = "hamming", min_overlap = min_overlap, ignore_gaps = ignore_gaps),
     class = "optimotu_dist_config"
@@ -559,7 +559,7 @@ prealign_config <- function(
 #' @export
 #' @describeIn prealign_config helper function for method `"kmer"`
 prealign_kmer <- function(udist_threshold = 1) {
-  checkmate::check_number(udist_threshold, lower = 0)
+  checkmate::assert_number(udist_threshold, lower = 0)
   structure(
     list(
       method = "kmer",
