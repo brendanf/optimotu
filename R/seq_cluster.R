@@ -86,7 +86,8 @@ seq_cluster.character <- function(
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   checkmate::assert_character(seq_id)
-  out <- if (isTRUE(which)) {
+  out <- if (!is.list(which)) {
+    seq <- seq[which]
     seq_cluster_single(
       seq,
       dist_config,
@@ -97,7 +98,6 @@ seq_cluster.character <- function(
       verbose
     )
   } else {
-    if (!is.list(which)) which <- list(which)
     checkmate::assert(
       checkmate::check_list(which, types = "logical", any.missing = FALSE, min.len = 1),
       checkmate::check_list(which, types = "integerish", any.missing = FALSE, min.len = 1),
