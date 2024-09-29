@@ -1,3 +1,5 @@
+# optimotu (development version)
+
 # optimotu 0.7.0
 
 * Introduce functions to calculate pairwise distances and output a distance
