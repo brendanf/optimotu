@@ -17,6 +17,7 @@
 #' calculating the distance matrix.  The number of threads for clustering is
 #' specified in the "parallel_config" argument.
 #' @param usearch (`character` scalar) path to usearch executable
+#' @param ... passed to methods (currently inactive)
 #'
 #' @return An [`integer matrix`][methods::structure-class] if
 #' `output_type=="matrix"`, an [`hclust`][stats::hclust] object if
@@ -32,7 +33,8 @@ seq_cluster_usearch <- function(
     output_type = c("matrix", "hclust"),
     which = TRUE,
     usearch_ncpu = NULL,
-    usearch = Sys.which("usearch")
+    usearch = Sys.which("usearch"),
+    ...
 ) {
   UseMethod("seq_cluster_usearch", seq)
 }
@@ -48,7 +50,8 @@ seq_cluster_usearch.data.frame <- function(
     output_type = c("matrix", "hclust"),
     which = TRUE,
     usearch_ncpu = NULL,
-    usearch = Sys.which("usearch")
+    usearch = Sys.which("usearch"),
+    ...
 ) {
   mycall <- match.call()
   mycall[[1]] <- seq_cluster_usearch.DNAStringSet
@@ -73,7 +76,8 @@ seq_cluster_usearch.character <- function(
     output_type = c("matrix", "hclust"),
     which = TRUE,
     usearch_ncpu = NULL,
-    usearch = Sys.which("usearch")
+    usearch = Sys.which("usearch"),
+    ...
 ) {
   output_type = match.arg(output_type)
   if (length(seq) == 1 && file.exists(seq)) {
@@ -131,7 +135,8 @@ seq_cluster_usearch.DNAStringSet <- function(
     output_type = c("matrix", "hclust"),
     which = TRUE,
     usearch_ncpu = NULL,
-    usearch = Sys.which("usearch")
+    usearch = Sys.which("usearch"),
+    ...
 ) {
   output_type = match.arg(output_type)
   # rename the sequences if necessary

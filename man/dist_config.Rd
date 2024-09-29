@@ -6,9 +6,10 @@
 \alias{dist_edlib}
 \alias{dist_hybrid}
 \alias{dist_hamming}
+\alias{dist_usearch}
 \title{Configuration helper for pairwise distance methods}
 \usage{
-dist_config(method = c("wfa2", "edlib", "hybrid", "hamming"), ...)
+dist_config(method = c("wfa2", "edlib", "hybrid", "hamming", "usearch"), ...)
 
 dist_wfa2(
   match = 0L,
@@ -24,6 +25,8 @@ dist_edlib()
 dist_hybrid(cutoff = 0.1)
 
 dist_hamming(min_overlap = 0L, ignore_gaps = TRUE)
+
+dist_usearch(usearch = Sys.which("usearch"), usearch_ncpu = NULL)
 }
 \arguments{
 \item{method}{(\code{character} string) method to use for distance calculations}
@@ -57,6 +60,11 @@ gap in one sequence are ignored, i.e. not counted as a mismatch and also not
 counted towards the total aligned length. If \code{FALSE}, such columns are
 counted as mismatches.  End gaps in either sequence, and internal gaps shared
 by both sequences, are always ignored.}
+
+\item{usearch}{(\code{character} path) path to the USEARCH executable}
+
+\item{usearch_ncpu}{(\code{integer} scalar or \code{NULL}) number of threads for
+USEARCH. If \code{NULL}, USEARCH will autodetect.}
 }
 \value{
 an object representing the pairwise distance method
@@ -74,8 +82,14 @@ Configuration helper for pairwise distance methods
 
 \item \code{dist_hamming()}: helper function for method \code{"hamming"}
 
+\item \code{dist_usearch()}: helper function for method \code{"usearch"}
+
 }}
 \references{
+Edgar, R.C., 2010. Search and clustering orders of magnitude faster than
+BLAST. Bioinformatics 26, 2460–2461.
+https://doi.org/10.1093/bioinformatics/btq461
+
 Marco-Sola, S., Moure, J.C., Moreto, M., Espinosa, A., 2021. Fast gap-affine
 pairwise alignment using the wavefront algorithm. Bioinformatics 37,
 456–463. https://doi.org/10.1093/bioinformatics/btaa777

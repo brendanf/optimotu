@@ -427,6 +427,10 @@ parallel_hierarchical <- function(threads, shards) {
 #' @return an object representing the pairwise distance method
 #' @export
 #' @references
+#' Edgar, R.C., 2010. Search and clustering orders of magnitude faster than
+#'   BLAST. Bioinformatics 26, 2460–2461.
+#'   https://doi.org/10.1093/bioinformatics/btq461
+#'
 #' Marco-Sola, S., Moure, J.C., Moreto, M., Espinosa, A., 2021. Fast gap-affine
 #'  pairwise alignment using the wavefront algorithm. Bioinformatics 37,
 #'   456–463. https://doi.org/10.1093/bioinformatics/btaa777
@@ -436,7 +440,7 @@ parallel_hierarchical <- function(threads, shards) {
 #'   https://doi.org/10.1093/bioinformatics/btw753
 
 dist_config <- function(
-    method = c("wfa2", "edlib", "hybrid", "hamming"),
+    method = c("wfa2", "edlib", "hybrid", "hamming", "usearch"),
     ...
 ) {
   method = match.arg(method)
@@ -445,7 +449,8 @@ dist_config <- function(
     wfa2 = dist_wfa2(...),
     edlib = dist_edlib(...),
     hybrid = dist_hybrid(...),
-    hamming = dist_hamming(...)
+    hamming = dist_hamming(...),
+    usearch = dist_usearch(...)
   )
 }
 
@@ -517,6 +522,21 @@ dist_hamming <- function(min_overlap = 0L, ignore_gaps = TRUE) {
   checkmate::assert_flag(ignore_gaps)
   structure(
     list(method = "hamming", min_overlap = min_overlap, ignore_gaps = ignore_gaps),
+    class = "optimotu_dist_config"
+  )
+}
+
+
+#' @param usearch_ncpu (`integer` scalar or `NULL`) number of threads for
+#' USEARCH. If `NULL`, USEARCH will autodetect.
+#' @param usearch (`character` path) path to the USEARCH executable
+#' @export
+#' @describeIn dist_config helper function for method `"usearch"`
+dist_usearch <- function(usearch = Sys.which("usearch"), usearch_ncpu = NULL) {
+  checkmate::assert_file_exists(usearch, access = "x")
+  checkmate::assert_count(usearch_ncpu, null.ok = TRUE)
+  structure(
+    list(method = "usearch", usearch = usearch, usearch_ncpu = usearch_ncpu),
     class = "optimotu_dist_config"
   )
 }

@@ -3,7 +3,8 @@
 #' @inheritParams seq_cluster_usearch
 #' @param dist_config (`optimotu_dist_config` object returned by
 #' [dist_config()] or one of its helpers) Configuration of the method to
-#' calculate distances.
+#' calculate distances. If `dist_usearch()`, then this function dispatches to
+#' `seq_cluster_usearch()`.
 #' @param verbose (`logical` flag)
 #' @export
 seq_cluster <- function(
@@ -33,15 +34,24 @@ seq_cluster.data.frame <- function(
     which = TRUE,
     verbose = FALSE
 ) {
-  mycall <- match.call()
-  mycall[[1]] <- seq_cluster.character
+  mycall <- match.call
   if (missing(seq_id)) {
     newseq_id <- quote(seq$seq_id)
     newseq_id[[2]] <- mycall$seq
     mycall$seq_id <- newseq_id
   }
-  newseq <- quote(seq$seq)
-  newseq[[2]] <- mycall$seq
+  if (identical(dist_config$method, "usearch")) {
+    mycall[[1]] <- seq_cluster_usearch.DNAStringSet
+    newseq <- quote(Biostrings::DNAStringSet(seq$seq))
+    newseq[[2]][[2]] <- mycall$seq
+    mycall$usearch <- dist_config$usearch
+    mycall$usearch_ncpu <- dist_config$usearch_ncpu
+    mycall$dist_config <- NULL
+  } else {
+    mycall[[1]] <- seq_cluster.character
+    newseq <- quote(seq$seq)
+    newseq[[2]] <- mycall$seq
+  }
   mycall$seq <- newseq
   eval(mycall, envir = parent.frame())
 }
@@ -58,6 +68,14 @@ seq_cluster.character <- function(
     which = TRUE,
     verbose = FALSE
 ) {
+  if (identical(dist_config$method, "usearch")) {
+    mycall <- match.call
+    mycall$dist_config <- NULL
+    mycall$usearch <- dist_config$usearch
+    mycall$usearch_ncpu <- dist_config$usearch_ncpu
+    mycall[[1]] <- seq_cluster_usearch.character
+    return(eval(mycall, envir = parent.frame()))
+  }
   output_type = match.arg(output_type)
   if (length(seq) == 1 && file.exists(seq)) {
     seq <- as.character(Biostrings::readBStringSet(seq))
@@ -114,7 +132,14 @@ seq_cluster.DNAStringSet <- function(
     which = TRUE,
     verbose = FALSE
 ) {
-  mycall <- match.call()
+  mycall <- match.call
+  if (identical(dist_config$method, "usearch")) {
+    mycall$dist_config <- NULL
+    mycall$usearch <- dist_config$usearch
+    mycall$usearch_ncpu <- dist_config$usearch_ncpu
+    mycall[[1]] <- seq_cluster_usearch.DNAStringSet
+    return(eval(mycall, envir = parent.frame()))
+  }
   mycall[[1]] <- seq_cluster.character
   newseq <- quote(as.character(seq))
   newseq[[2]] <- mycall$seq

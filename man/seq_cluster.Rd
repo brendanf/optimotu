@@ -27,7 +27,8 @@ filename.}
 
 \item{dist_config}{(\code{optimotu_dist_config} object returned by
 \code{\link[=dist_config]{dist_config()}} or one of its helpers) Configuration of the method to
-calculate distances.}
+calculate distances. If \code{dist_usearch()}, then this function dispatches to
+\code{seq_cluster_usearch()}.}
 
 \item{threshold_config}{(\code{optimotu_threshold_config} object returned by
 \code{\link[=threshold_config]{threshold_config()}} or one of its helper functions) Definition of the

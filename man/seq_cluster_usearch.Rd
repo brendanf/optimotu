@@ -14,7 +14,8 @@ seq_cluster_usearch(
   output_type = c("matrix", "hclust"),
   which = TRUE,
   usearch_ncpu = NULL,
-  usearch = Sys.which("usearch")
+  usearch = Sys.which("usearch"),
+  ...
 )
 }
 \arguments{
@@ -60,6 +61,8 @@ calculating the distance matrix.  The number of threads for clustering is
 specified in the "parallel_config" argument.}
 
 \item{usearch}{(\code{character} scalar) path to usearch executable}
+
+\item{...}{passed to methods (currently inactive)}
 }
 \value{
 An \code{\link[methods:StructureClasses]{integer matrix}} if
