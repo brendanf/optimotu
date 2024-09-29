@@ -10,9 +10,10 @@ Rcpp::RObject distmx_cluster_single(
   const std::string file,
   const Rcpp::CharacterVector seqnames,
   const Rcpp::List threshold_config,
-  const Rcpp::List method_config,
+  const Rcpp::List clust_config,
   const Rcpp::List parallel_config,
-  const std::string output_type = "matrix"
+  const std::string output_type = "matrix",
+  const bool verbose = false
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
@@ -23,19 +24,22 @@ Rcpp::RObject distmx_cluster_single(
   }
   auto dconv = create_distance_converter(threshold_config);
   Rcpp::IntegerMatrix im(dconv->m, seqnames.size());
-  auto algo = create_cluster_algorithm(method_config, dconv.get())->create(im);
+  auto algo = create_cluster_algorithm(clust_config, dconv.get())->create(im);
   auto worker = create_cluster_worker(parallel_config, algo.get(), infile);
-
-  if (worker->n_threads() == 1) {
+  int threads = worker->n_threads();
+  if (threads == 1) {
     (*worker)(0, 1);
   } else {
-    RcppParallel::parallelFor(0, worker->n_threads(), *worker, 1, worker->n_threads());
+    RcppParallel::parallelFor(0, threads, *worker, 1, threads);
   }
   worker->finalize();
   Rcpp::RObject output = R_NilValue;
   if (output_type == "matrix") {
-    RcppParallel::RMatrix<int> im2(im);
-    algo->write_to_matrix(im2);
+    auto method = (Rcpp::as<Rcpp::CharacterVector>(clust_config["method"]))[0];
+    if (method == "tree" || method == "slink") {
+      internal_matrix_t m(im);
+      algo->write_to_matrix(m);
+    }
     output = im;
   } else if (output_type == "hclust") {
     output = algo->as_hclust(seqnames);
@@ -51,7 +55,8 @@ Rcpp::RObject distmx_cluster_multi(
     const Rcpp::List threshold_config,
     const Rcpp::List method_config,
     const Rcpp::List parallel_config,
-    const std::string output_type = "matrix"
+    const std::string output_type = "matrix",
+    const bool verbose = false
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");

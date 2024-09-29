@@ -34,12 +34,12 @@ confusion_matrix2 <- function(k, c, threads = 1L) {
     .Call(`_optimotu_confusion_matrix2`, k, c, threads)
 }
 
-distmx_cluster_single <- function(file, seqnames, threshold_config, method_config, parallel_config, output_type = "matrix") {
-    .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, method_config, parallel_config, output_type)
+distmx_cluster_single <- function(file, seqnames, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = FALSE) {
+    .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, clust_config, parallel_config, output_type, verbose)
 }
 
-distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method_config, parallel_config, output_type = "matrix") {
-    .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type)
+distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method_config, parallel_config, output_type = "matrix", verbose = FALSE) {
+    .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type, verbose)
 }
 
 #' Sparse distance matrix between DNA sequences
@@ -197,8 +197,12 @@ seq_distmx_wfa2 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_
 }
 
 #' @export
-seq_cluster <- function(seq, dist_config, threshold_config, clust_config, parallel_config, verbose = FALSE) {
-    .Call(`_optimotu_seq_cluster`, seq, dist_config, threshold_config, clust_config, parallel_config, verbose)
+seq_cluster_single <- function(seq, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = FALSE) {
+    .Call(`_optimotu_seq_cluster_single`, seq, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
+}
+
+seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = FALSE) {
+    .Call(`_optimotu_seq_cluster_multi`, seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
 }
 
 #' @param match (non-negative `integer`) alignment score for matching nucleotides

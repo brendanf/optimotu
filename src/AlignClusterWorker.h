@@ -28,7 +28,7 @@ public :
 
   size_t aligned();
 
-  std::uint8_t nthreads();
+  std::uint8_t n_threads();
 };
 
 #endif //OPTIMOTU_ALIGNCLUSTERWORKER_H_INCLUDED

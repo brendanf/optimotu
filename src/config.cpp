@@ -80,7 +80,7 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     const std::string &type,
     const std::vector<std::string> &seq,
     const double breakpoint,
-    SingleClusterAlgorithm &cluster,
+    ClusterAlgorithm &cluster,
     const std::uint8_t threads
 ) {
   if (type == "split") {
@@ -288,7 +288,7 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     Rcpp::List dist_config,
     Rcpp::List parallel_config,
     const std::vector<std::string> &seq,
-    SingleClusterAlgorithm &cluster,
+    ClusterAlgorithm &cluster,
     bool verbose
 ) {
   if (!dist_config.inherits("optimotu_dist_config")) {
