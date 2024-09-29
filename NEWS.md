@@ -1,5 +1,9 @@
 # optimotu (development version)
 
+* Unify the interface of `seq_clust()` and `seq_clust_usearch()`; `seq_clust()`
+now accepts the `which` argument, and delegates to `seq_clust_usearch()` via the
+new `dist_usearch()` helper.
+
 # optimotu 0.7.0
 
 * Introduce functions to calculate pairwise distances and output a distance
