@@ -1,4 +1,4 @@
-# optimotu (development version)
+# optimotu 0.8.0
 
 * Unify the interface of `seq_clust()` and `seq_clust_usearch()`; `seq_clust()`
 now accepts the `which` argument, and delegates to `seq_clust_usearch()` via the
