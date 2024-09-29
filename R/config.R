@@ -490,6 +490,9 @@ dist_edlib <- function() {
 }
 
 #' @export
+#' @param cutoff (`numeric` scalar) A pairwise distance to decide when sequences
+#' are considered "close"; when the sequences are expected to be "close", then
+#' WFA2 in edit-distance mode is used, otherwise EdLib.
 #' @describeIn dist_config helper function for method `"hybrid"`
 dist_hybrid <- function(cutoff = 0.1) {
   checkmate::check_number(cutoff, lower = 0)
@@ -499,9 +502,16 @@ dist_hybrid <- function(cutoff = 0.1) {
   )
 }
 
-
+#' @param min_overlap (`integer` scalar) minimum length of overlap between two
+#' sequences (i.e., length after subtracting end gaps in either sequence). If
+#' the required overlap is not met, the distance is returned as 1.
+#' @param ignore_gaps (`logical` flag) if `TRUE`, columns containing an internal
+#' gap in one sequence are ignored, i.e. not counted as a mismatch and also not
+#' counted towards the total aligned length. If `FALSE`, such columns are
+#' counted as mismatches.  End gaps in either sequence, and internal gaps shared
+#' by both sequences, are always ignored.
 #' @export
-#' @describeIn dist_config helper function for method `"hybrid"`
+#' @describeIn dist_config helper function for method `"hamming"`
 dist_hamming <- function(min_overlap = 0L, ignore_gaps = TRUE) {
   checkmate::check_count(min_overlap)
   checkmate::check_flag(ignore_gaps)

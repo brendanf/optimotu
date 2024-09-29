@@ -43,6 +43,20 @@ opening}
 
 \item{gap_extend2}{(non-negative \code{integer} scalar) alternate penalty for gap
 extension}
+
+\item{cutoff}{(\code{numeric} scalar) A pairwise distance to decide when sequences
+are considered "close"; when the sequences are expected to be "close", then
+WFA2 in edit-distance mode is used, otherwise EdLib.}
+
+\item{min_overlap}{(\code{integer} scalar) minimum length of overlap between two
+sequences (i.e., length after subtracting end gaps in either sequence). If
+the required overlap is not met, the distance is returned as 1.}
+
+\item{ignore_gaps}{(\code{logical} flag) if \code{TRUE}, columns containing an internal
+gap in one sequence are ignored, i.e. not counted as a mismatch and also not
+counted towards the total aligned length. If \code{FALSE}, such columns are
+counted as mismatches.  End gaps in either sequence, and internal gaps shared
+by both sequences, are always ignored.}
 }
 \value{
 an object representing the pairwise distance method
@@ -58,7 +72,7 @@ Configuration helper for pairwise distance methods
 
 \item \code{dist_hybrid()}: helper function for method \code{"hybrid"}
 
-\item \code{dist_hamming()}: helper function for method \code{"hybrid"}
+\item \code{dist_hamming()}: helper function for method \code{"hamming"}
 
 }}
 \references{
