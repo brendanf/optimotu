@@ -86,7 +86,7 @@ seq_cluster.character <- function(
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   checkmate::assert_character(seq_id)
-  if (isTRUE(which)) {
+  out <- if (isTRUE(which)) {
     seq_cluster_single(
       seq,
       dist_config,
@@ -118,6 +118,9 @@ seq_cluster.character <- function(
       verbose = verbose
     )
   }
+  out <- reduplicate_thresholds(out, threshold_config)
+  out <- rename_thresholds(out, threshold_config)
+  out
 }
 
 #' @export
