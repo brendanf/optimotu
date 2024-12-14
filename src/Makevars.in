@@ -1,7 +1,7 @@
 CXX_STD = CXX17
 PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./SneakySnake -I./edlib
 PKG_CFLAGS =  -DGMP -DSKIP_MAIN
-PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")
+PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") -lz
 
 # Include all C++ files in src/ and its subdirectories: src/A and src/B
 SOURCES=@CXXSOURCES@ WFA2-lib/bindings/cpp/WFAligner.cpp edlib/edlib.cpp
