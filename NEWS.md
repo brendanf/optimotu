@@ -1,3 +1,11 @@
+# optimotu (development version)
+
+* Fix compilation in Windows?
+
+# optimotu 0.8.1
+
+* Fix compilation in Linux/Mac
+
 # optimotu 0.8.0
 
 * Unify the interface of `seq_clust()` and `seq_clust_usearch()`; `seq_clust()`

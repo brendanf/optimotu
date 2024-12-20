@@ -1,7 +1,7 @@
 Package: optimotu
 Type: Package
 Title: Optimize OTU clustering thresholds
-Version: 0.8.1
+Version: 0.8.1.9000
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -16,7 +16,7 @@ Description: OptimOTU calculates single-linkage clusters at multiple thresholds
     Routines for quickly counting the measure of the intersection of sorted
     sets, and for calculating the multiclass F-measure, are also included.
 License: MIT
-SystemRequirements: GNU make, C++14
+SystemRequirements: GNU make, C++17
 Imports:
    checkmate,
    Biostrings,
