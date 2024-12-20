@@ -98,14 +98,14 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
         std::pair<int, double> d1 = {0, 0};
         if (do_prealign) {
           // std::cout << "Setting max score to " << min_k << ", " << max_k << std::endl;
-          prealigner.setMaxAlignmentScore((int) maxd1 + 1);
+          prealigner.setMaxAlignmentSteps((int) maxd1 + 1);
           // std::cout << "Setting band heuristics to " << min_k << ", " << max_k << std::endl;
           prealigner.setHeuristicBandedStatic(min_k, max_k);
           // std::cout << "Prealigning..." << std::endl;
           auto status = prealigner.alignEnd2End(seq[s1], seq[s2]);
           // std::cout << "Prealignment finished." << std::endl;
           ++my_prealigned;
-          if (status != wfa::WFAligner::AlignmentStatus::StatusSuccessful) continue;
+          if (status != wfa::WFAligner::AlignmentStatus::StatusAlgCompleted) continue;
           // std::cout << "Prealignment successful." << std::endl;
           int sc1 = prealigner.getAlignmentScore();
           if (sc1 > maxd1) continue;
@@ -116,7 +116,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
           aligner.setHeuristicBandedStatic(min_k, max_k);
           if (is_score_constrained) {
             // std::cout << "Setting max score to " << (int)maxd1 + 1 << std::endl;
-            aligner.setMaxAlignmentScore((int)maxd1 + 1);
+            aligner.setMaxAlignmentSteps((int)maxd1 + 1);
           }
         }
         // std::cout << "Aligning..." << std::endl;

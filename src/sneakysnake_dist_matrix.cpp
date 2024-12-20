@@ -127,7 +127,7 @@ struct SneakySnakeAlignWorker : public RcppParallel::Worker {
           int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
           aligner.setHeuristicBandedStatic(min_k, max_k);
           if (is_score_constrained) {
-            aligner.setMaxAlignmentScore((int) maxd1 + 1);
+            aligner.setMaxAlignmentSteps((int) maxd1 + 1);
           }
         }
         auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);

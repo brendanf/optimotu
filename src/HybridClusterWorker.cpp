@@ -72,7 +72,7 @@ void HybridSplitClusterWorker::operator()(std::size_t begin, std::size_t end) {
         int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
         int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
         wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-        wfa_aligner.setMaxAlignmentScore((int)maxd1 + 1);
+        wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
         d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
       } else {
         ed_aligner.k = (int)maxd1 + 1;
@@ -159,7 +159,7 @@ void HybridConcurrentClusterWorker::operator()(std::size_t begin, std::size_t en
         int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
         int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
         wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-        wfa_aligner.setMaxAlignmentScore((int)maxd1 + 1);
+        wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
         // std::cout << "wfa_aligner min_k=" << min_k
         //           << " max_k=" << max_k
         //           << " max score=" << (int)maxd1 + 1

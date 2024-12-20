@@ -3,8 +3,8 @@
 
 double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
   auto status = aligner.alignEnd2End(a, b);
-  if (status != wfa::WFAligner::StatusSuccessful) return 1.0;
-  auto cigar = aligner.getAlignmentCigar();
+  if (status != wfa::WFAligner::StatusAlgCompleted) return 1.0;
+  auto cigar = aligner.getCIGAR(true);
   std::uint16_t match = 0, length = 0;
   for (char c : cigar) {
     if (c == 'M') {
@@ -17,8 +17,8 @@ double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner 
 
 double distance_wfa2(const std::string&a, const std::string&b, wfa::WFAlignerEdit &aligner) {
   auto status = aligner.alignEnd2End(a, b);
-  if (status != wfa::WFAligner::StatusSuccessful) return 1.0;
-  auto cigar = aligner.getAlignmentCigar();
+  if (status != wfa::WFAligner::StatusAlgCompleted) return 1.0;
+  auto cigar = aligner.getCIGAR(true);
   return double(aligner.getAlignmentScore()) / double(cigar.size());
 }
 
@@ -52,8 +52,8 @@ std::string cigar_wfa2(const std::string &a, const std::string &b,
     exit(1);
 #endif
     break;
-  case wfa::WFAligner::StatusUnfeasible:
-  case wfa::WFAligner::StatusMaxScoreReached:
+  case wfa::WFAligner::StatusAlgPartial:
+  case wfa::WFAligner::StatusMaxStepsReached:
 #ifdef OPTIMOTU_R
     Rcpp::stop("Alignment not feasible with given constraints.");
 #else
@@ -61,10 +61,10 @@ std::string cigar_wfa2(const std::string &a, const std::string &b,
     exit(1);
 #endif
     break;
-  case wfa::WFAligner::StatusSuccessful:
+  case wfa::WFAligner::StatusAlgCompleted:
     break;
   }
-  return aligner.getAlignmentCigar();
+  return aligner.getCIGAR(true);
 }
 
 std::string cigar_edlib(const std::string &a, const std::string &b) {
@@ -104,8 +104,8 @@ std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::
   // } else {
   //   status = aligner.alignEnd2End(b, a);
   // }
-  if (status != wfa::WFAligner::StatusSuccessful) return {std::max(a.size(), b.size()), 1.0};
-  auto cigar = aligner.getAlignmentCigar();
+  if (status != wfa::WFAligner::StatusAlgCompleted) return {std::max(a.size(), b.size()), 1.0};
+  auto cigar = aligner.getCIGAR(true);
   std::uint16_t match = 0, length = 0;
   for (char c : cigar) {
     if (c == 'M') {
@@ -123,8 +123,8 @@ std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::
   // } else {
   //   status = aligner.alignEnd2End(b, a);
   // }
-  if (status != wfa::WFAligner::StatusSuccessful) return {std::max(a.size(), b.size()), 1.0};
-  auto cigar = aligner.getAlignmentCigar();
+  if (status != wfa::WFAligner::StatusAlgCompleted) return {std::max(a.size(), b.size()), 1.0};
+  auto cigar = aligner.getCIGAR(true);
   return {aligner.getAlignmentScore(),
           double(aligner.getAlignmentScore()) / double(cigar.size())};
 }

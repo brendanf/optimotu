@@ -116,7 +116,7 @@ struct HybridAlignWorker : public RcppParallel::Worker {
           int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
           int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
           wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-          wfa_aligner.setMaxAlignmentScore((int)maxd1 + 1);
+          wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
           auto sd2 = score_and_distance_wfa2(seq[s1], seq[s2], wfa_aligner);
           sc2 = sd2.first;
           d2 = sd2.second;

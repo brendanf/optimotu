@@ -9,11 +9,11 @@ bool WavefrontFilter::operator()(
     const int min_k,
     const int max_k
 ) {
-  aligner.setMaxAlignmentScore(max_ed);
+  aligner.setMaxAlignmentSteps(max_ed);
   aligner.setHeuristicBandedStatic(min_k, max_k);
   aligner.alignEnd2End(seq[i], seq[j]);
   auto status = aligner.getAlignmentStatus();
-  return status == wfa::WFAligner::AlignmentStatus::StatusSuccessful;
+  return status == wfa::WFAligner::AlignmentStatus::StatusAlgCompleted;
 }
 std::unique_ptr<PrealignFilter> WavefrontFilter::copy() const {
   return std::make_unique<WavefrontFilter>(seq);
