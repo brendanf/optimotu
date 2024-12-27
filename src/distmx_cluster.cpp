@@ -8,10 +8,10 @@
 // [[Rcpp::export]]
 Rcpp::RObject distmx_cluster_single(
   const std::string file,
-  const Rcpp::CharacterVector seqnames,
-  const Rcpp::List threshold_config,
-  const Rcpp::List clust_config,
-  const Rcpp::List parallel_config,
+  Rcpp::CharacterVector seqnames,
+  Rcpp::List threshold_config,
+  Rcpp::List clust_config,
+  Rcpp::List parallel_config,
   const std::string output_type = "matrix",
   const bool verbose = false
 ) {
@@ -30,6 +30,9 @@ Rcpp::RObject distmx_cluster_single(
   if (!clust_config.containsElementNamed("method")) {
     OPTIMOTU_STOP("clust_config does not contain 'method' element");
   }
+  if (!Rcpp::is<Rcpp::CharacterVector>(clust_config["method"])) {
+    OPTIMOTU_STOP("clust_config$method is not a character vector");
+  }
   std::ifstream infile(file);
   if (!infile.is_open()) {
     OPTIMOTU_STOP("failed to open input file");
@@ -47,7 +50,7 @@ Rcpp::RObject distmx_cluster_single(
   worker->finalize();
   Rcpp::RObject output = R_NilValue;
   if (output_type == "matrix") {
-    auto method = (Rcpp::as<Rcpp::CharacterVector>(clust_config["method"]))[0];
+    auto method = element_as_string(clust_config, "method", "clust_config");
     if (method == "tree" || method == "slink") {
       internal_matrix_t m(im);
       algo->write_to_matrix(m);

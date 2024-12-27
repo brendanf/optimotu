@@ -38,16 +38,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx_cluster_single
-Rcpp::RObject distmx_cluster_single(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const std::string output_type, const bool verbose);
+Rcpp::RObject distmx_cluster_single(const std::string file, Rcpp::CharacterVector seqnames, Rcpp::List threshold_config, Rcpp::List clust_config, Rcpp::List parallel_config, const std::string output_type, const bool verbose);
 RcppExport SEXP _optimotu_distmx_cluster_single(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::string >::type file(fileSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::CharacterVector >::type seqnames(seqnamesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List >::type threshold_config(threshold_configSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List >::type clust_config(clust_configSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List >::type parallel_config(parallel_configSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type seqnames(seqnamesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type threshold_config(threshold_configSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type clust_config(clust_configSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parallel_config(parallel_configSEXP);
     Rcpp::traits::input_parameter< const std::string >::type output_type(output_typeSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
     rcpp_result_gen = Rcpp::wrap(distmx_cluster_single(file, seqnames, threshold_config, clust_config, parallel_config, output_type, verbose));

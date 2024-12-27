@@ -49,6 +49,13 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
 );
 
 #ifdef OPTIMOTU_R
+
+double element_as_double(Rcpp::List list, const std::string &e, const std::string &name);
+int element_as_int(Rcpp::List list, const std::string &e, const std::string &name);
+std::string element_as_string(Rcpp::List list, const std::string &e, const std::string &name);
+std::vector<double> element_as_double_vector(Rcpp::List list, const std::string &e, const std::string &name);
+bool element_as_bool(Rcpp::List list, const std::string &e, const std::string &name);
+
 std::unique_ptr<DistanceConverter> create_distance_converter(Rcpp::List config);
 std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     Rcpp::List config,

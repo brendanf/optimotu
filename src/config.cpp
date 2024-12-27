@@ -93,7 +93,11 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
 }
 
 #ifdef OPTIMOTU_R
-double element_as_double(Rcpp::List obj, std::string e, std::string name) {
+double element_as_double(
+    Rcpp::List obj,
+    const std::string & e,
+    const std::string & name
+) {
   if (!obj.containsElementNamed(e.c_str())) {
     OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
@@ -114,7 +118,11 @@ double element_as_double(Rcpp::List obj, std::string e, std::string name) {
   return item_dbl[0];
 }
 
-std::vector<double> element_as_double_vector(Rcpp::List obj, std::string e, std::string name) {
+std::vector<double> element_as_double_vector(
+    Rcpp::List obj,
+    const std::string & e,
+    const std::string & name
+) {
   if (!obj.containsElementNamed(e.c_str())) {
     OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
@@ -129,7 +137,11 @@ std::vector<double> element_as_double_vector(Rcpp::List obj, std::string e, std:
   return Rcpp::as<std::vector<double>>(item);
 }
 
-int element_as_int(Rcpp::List obj, std::string e, std::string name) {
+int element_as_int(
+    Rcpp::List obj,
+    const std::string & e,
+    const std::string & name
+) {
   if (!obj.containsElementNamed(e.c_str())) {
     OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
@@ -150,7 +162,11 @@ int element_as_int(Rcpp::List obj, std::string e, std::string name) {
   return item_int[0];
 }
 
-std::string element_as_string(Rcpp::List obj, std::string e, std::string name) {
+std::string element_as_string(
+    Rcpp::List obj,
+    const std::string & e,
+    const std::string & name
+) {
   if (!obj.containsElementNamed(e.c_str())) {
     OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
@@ -171,7 +187,11 @@ std::string element_as_string(Rcpp::List obj, std::string e, std::string name) {
   return Rcpp::as<std::string>(item_str[0]);
 }
 
-bool element_as_bool(Rcpp::List obj, std::string e, std::string name) {
+bool element_as_bool(
+    Rcpp::List obj,
+    const std::string & e,
+    const std::string & name
+) {
   if (!obj.containsElementNamed(e.c_str())) {
     OPTIMOTU_STOP(
       "invalid `" + name + "`: missing member `" + e + "`"
