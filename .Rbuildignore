@@ -8,7 +8,6 @@
 ^codecov\.yml$
 ^.*\.profile.*$
 ^benchmark$
-^configure.ac$
 ^\.git$
 ^.*/\.git$
 ^.*/\.github$
