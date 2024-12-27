@@ -163,8 +163,8 @@ void ClusterSLINK::write_to_matrix(internal_matrix_t &out) {
 
 #ifdef OPTIMOTU_R
 
-struct OrderElement {
-  OrderElement * prev;
+struct RevOrderElement {
+  RevOrderElement * prev;
   int i;
 };
 
@@ -179,9 +179,9 @@ Rcpp::List ClusterSLINK::as_hclust(const Rcpp::CharacterVector &seqnames) const 
   // keep track of which cluster the active tips are in at each stage of clustering
   std::vector<int> clust_id;
   // ordering of earlier tips in the same cluster
-  std::vector<OrderElement> ordering;
+  std::vector<RevOrderElement> ordering;
   // first element of each cluster (reverse_list does not know this)
-  std::vector<OrderElement*> first;
+  std::vector<RevOrderElement*> first;
   clust_id.reserve(this->n);
   ordering.reserve(this->n);
   first.reserve(this->n);
@@ -220,7 +220,7 @@ Rcpp::List ClusterSLINK::as_hclust(const Rcpp::CharacterVector &seqnames) const 
       height[last_clust] = 1.0;
       clust_id[this->n - 1] = ++last_clust;
 
-      OrderElement * e = &ordering[i];
+      RevOrderElement * e = &ordering[i];
       while (e != NULL) {
         order[j] = e->i;
         ++j;

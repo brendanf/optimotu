@@ -281,8 +281,8 @@ void ClusterMatrix<BM, F, A>::write_to_matrix(internal_matrix_t &out) {
 
 #ifdef OPTIMOTU_R
 
-struct OrderElement {
-  OrderElement * next;
+struct FwdOrderElement {
+  FwdOrderElement * next;
   int i;
 };
 
@@ -298,9 +298,9 @@ Rcpp::List ClusterMatrix<BM, F, A>::as_hclust(
   // keep track of which cluster the active tips are in at each stage of clustering
   std::vector<int> clust_id;
   // ordering of later tips in the same cluster
-  std::vector<OrderElement> ordering;
+  std::vector<FwdOrderElement> ordering;
   // last element of each cluster (forward_list does not know this)
-  std::vector<OrderElement*> last;
+  std::vector<FwdOrderElement*> last;
   clust_id.reserve(this->n);
   ordering.reserve(this->n);
   last.reserve(this->n);
@@ -348,7 +348,7 @@ Rcpp::List ClusterMatrix<BM, F, A>::as_hclust(
       height[last_clust] = 1.0;
       clust_id[0] = ++last_clust;
     }
-    OrderElement * e = &ordering[i];
+    FwdOrderElement * e = &ordering[i];
     while (e != NULL) {
       order[j] = e->i;
       ++j;
