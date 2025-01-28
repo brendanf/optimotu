@@ -18,16 +18,19 @@
 ### Initialize autoconf
 
 # Require the latest version of autoconf
-AC_PREREQ([2.69])
+AC_PREREQ([2.71])
 
 # Provide information about package and version numbering
-AC_INIT(SubdirSrc, m4_esyscmd_s([awk -e '/^Version:/ {print $2}' DESCRIPTION]))
+AC_INIT([SubdirSrc],[m4_esyscmd_s(awk -e '/^Version:/ {print $2}' DESCRIPTION)])
 
 # Supply copyright information
 AC_COPYRIGHT(Copyright (C) 2018 James J Balamuta)
 
 # Verify the correct src directory exists from where the file is being run.
 AC_CONFIG_SRCDIR([src])
+
+### Make sure we have our submodules
+AC_CHECK_FILE([src/WFA2-lib/Makefile.am], [], [git submodule update --init --recursive])])
 
 ### Determine subdirectory source files
 
@@ -42,4 +45,5 @@ AC_SUBST(CSOURCES)
 ### Output result
 
 # Write to the file
-AC_OUTPUT(src/Makevars)
+AC_CONFIG_FILES([src/Makevars])
+AC_OUTPUT
