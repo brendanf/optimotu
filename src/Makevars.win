@@ -3,8 +3,8 @@ PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./SneakySnake -I./edlib
 PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
 PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()") -lz
 
-SOURCES=@CXXSOURCES@
-CSOURCES=@CSOURCES@
+SOURCES=$(shell find . -name "*.cpp")
+CSOURCES=$(shell find . -name "*.c")
 
 # Obtain the object files
 OBJECTS=$(SOURCES:.cpp=.o) $(CSOURCES:.c=.o)

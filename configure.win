@@ -23,11 +23,3 @@ then
   git checkout 782823644ad1ef11d6c2a66ead9ca3fec8601f1d &&
   cd ../..
 fi
-
-# enumerate source files
-CXXSOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
-CSOURCES="$(cd src/ && ls *.c WFA2-lib/**/*.c SneakySnake/*.c | tr '\n' ' ')"
-
-sed -e 's|@CXXSOURCES@|'"$CXXSOURCES"'|'\
-    -e 's|@CSOURCES@|'"$CSOURCES"'|'\
-    src/Makevars.win.in > src/Makevars.win
