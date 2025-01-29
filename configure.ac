@@ -20,8 +20,11 @@
 # Require the latest version of autoconf
 AC_PREREQ([2.71])
 
+m4_define([PACKAGE_VERSION],
+          m4_esyscmd([awk -e '/^Version:/ {print $2}' DESCRIPTION]))
+
 # Provide information about package and version numbering
-AC_INIT([SubdirSrc],[m4_esyscmd_s(awk -e '/^Version:/ {print $2}' DESCRIPTION)])
+AC_INIT([SubdirSrc],m4_defn([PACKAGE_VERSION]))
 
 # Supply copyright information
 AC_COPYRIGHT(Copyright (C) 2018 James J Balamuta)
@@ -30,7 +33,24 @@ AC_COPYRIGHT(Copyright (C) 2018 James J Balamuta)
 AC_CONFIG_SRCDIR([src])
 
 ### Make sure we have our submodules
-AC_CHECK_FILE([src/WFA2-lib/Makefile.am], [], [git submodule update --init --recursive])])
+m4_define([SNEAKY_SNAKE_VERSION],
+          m4_esyscmd([git submodule | awk '$2=="src/SneakySnake"{print $1}']))
+m4_define([WFA2_LIB_VERSION],
+          m4_esyscmd([git submodule | awk '$2=="src/WFA2-lib"{print $1}']))
+m4_define([EDLIB_VERSION],
+          m4_esyscmd([git submodule | awk '$2=="src/edlib"{print $1}']))
+AC_CHECK_FILE([src/SneakySnake/SneakySnake.c], [],
+              [[git clone https://github.com/brendanf/SneakySnake src/SneakySnake &&
+               cd src/SneakySnake &&
+               git checkout] SNEAKY_SNAKE_VERSION])
+AC_CHECK_FILE([src/WFA2-lib/Makefile], [],
+              [[git clone https://github.com/brendanf/WFA2-lib src/WFA2-lib &&
+               cd src/WFA2-lib &&
+               git checkout] WFA2_LIB_VERSION])
+AC_CHECK_FILE([src/edlib/edlib.h], [],
+              [[git clone https://github.com/brendanf/edlib src/edlib &&
+               cd src/edlib &&
+               git checkout] EDLIB_VERSION])
 
 ### Determine subdirectory source files
 
