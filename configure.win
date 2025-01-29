@@ -1,0 +1,33 @@
+# check for missing submodules
+
+if [ ! -e "src/edlib/edlib.h" ]
+then
+  git clone http://github.com/brendanf/edlib src/edlib &&
+  cd src/edlib &&
+  git checkout 5e1cdcc1851ccf8fcadc8b418c3a3886c5a4501b &&
+  cd ../..
+fi
+
+if [ ! -e "src/SneakySnake/SneakySnake.h" ]
+then
+  git clone http://github.com/brendanf/SneakySnake src/SneakySnake &&
+  cd src/SneakySnake &&
+  git checkout c3ef6ba85edd9734ec0c9416947e36d339c90d0f &&
+  cd ../..
+fi
+
+if [ ! -e "src/WFA2-lib/bindings/cpp/WFAligner.hpp" ]
+then
+  git clone http://github.com/brendanf/WFA2-lib src/WFA2-lib &&
+  cd src/WFA2-lib &&
+  git checkout 782823644ad1ef11d6c2a66ead9ca3fec8601f1d &&
+  cd ../..
+fi
+
+# enumerate source files
+CXXSOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
+CSOURCES="$(cd src/ && ls *.c WFA2-lib/**/*.c SneakySnake/*.c | tr '\n' ' ')"
+
+sed -e 's|@CXXSOURCES@|'"$CXXSOURCES"'|'\
+    -e 's|@CSOURCES@|'"$CSOURCES"'|'\
+    src/Makevars.win.in > src/Makevars.win

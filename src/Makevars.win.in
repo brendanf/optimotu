@@ -1,0 +1,17 @@
+CXX_STD = CXX17
+PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./SneakySnake -I./edlib
+PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
+PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()") -lz
+
+SOURCES=@CXXSOURCES@
+CSOURCES=@CSOURCES@
+
+# Obtain the object files
+OBJECTS=$(SOURCES:.cpp=.o) $(CSOURCES:.c=.o)
+
+# Make the shared object
+all: $(SHLIB)
+
+# Provide recipe to remove all objects
+clean:
+	@rm -f $(OBJECTS)
