@@ -34,23 +34,26 @@ AC_CONFIG_SRCDIR([src])
 
 ### Make sure we have our submodules
 m4_define([SNEAKY_SNAKE_VERSION],
-          m4_esyscmd([git submodule | awk '$2=="src/SneakySnake"{print $1}']))
+          m4_esyscmd([git submodule | awk '$2=="src/SneakySnake"{printf $1}']))
 m4_define([WFA2_LIB_VERSION],
-          m4_esyscmd([git submodule | awk '$2=="src/WFA2-lib"{print $1}']))
+          m4_esyscmd([git submodule | awk '$2=="src/WFA2-lib"{printf $1}']))
 m4_define([EDLIB_VERSION],
-          m4_esyscmd([git submodule | awk '$2=="src/edlib"{print $1}']))
+          m4_esyscmd([git submodule | awk '$2=="src/edlib"{printf $1}']))
 AC_CHECK_FILE([src/SneakySnake/SneakySnake.c], [],
               [[git clone https://github.com/brendanf/SneakySnake src/SneakySnake &&
                cd src/SneakySnake &&
-               git checkout] SNEAKY_SNAKE_VERSION [&& cd ../..]])
+               git checkout] SNEAKY_SNAKE_VERSION [&&
+               cd ../..]])
 AC_CHECK_FILE([src/WFA2-lib/Makefile], [],
               [[git clone https://github.com/brendanf/WFA2-lib src/WFA2-lib &&
                cd src/WFA2-lib &&
-               git checkout] WFA2_LIB_VERSION [&& cd ../..]])
+               git checkout] WFA2_LIB_VERSION [&&
+               cd ../..]])
 AC_CHECK_FILE([src/edlib/edlib.h], [],
               [[git clone https://github.com/brendanf/edlib src/edlib &&
                cd src/edlib &&
-               git checkout] EDLIB_VERSION [&& cd ../..]])
+               git checkout] EDLIB_VERSION [&&
+               cd ../..]])
 
 ### Determine subdirectory source files
 

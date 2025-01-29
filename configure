@@ -1757,8 +1757,8 @@ then :
 else $as_nop
   git clone https://github.com/brendanf/SneakySnake src/SneakySnake &&
                cd src/SneakySnake &&
-               git checkout c3ef6ba85edd9734ec0c9416947e36d339c90d0f
- && cd ../..
+               git checkout c3ef6ba85edd9734ec0c9416947e36d339c90d0f &&
+               cd ../..
 fi
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for src/WFA2-lib/Makefile" >&5
@@ -1783,8 +1783,8 @@ then :
 else $as_nop
   git clone https://github.com/brendanf/WFA2-lib src/WFA2-lib &&
                cd src/WFA2-lib &&
-               git checkout 782823644ad1ef11d6c2a66ead9ca3fec8601f1d
- && cd ../..
+               git checkout 782823644ad1ef11d6c2a66ead9ca3fec8601f1d &&
+               cd ../..
 fi
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for src/edlib/edlib.h" >&5
@@ -1809,8 +1809,8 @@ then :
 else $as_nop
   git clone https://github.com/brendanf/edlib src/edlib &&
                cd src/edlib &&
-               git checkout 5e1cdcc1851ccf8fcadc8b418c3a3886c5a4501b
- && cd ../..
+               git checkout 5e1cdcc1851ccf8fcadc8b418c3a3886c5a4501b &&
+               cd ../..
 fi
 
 
