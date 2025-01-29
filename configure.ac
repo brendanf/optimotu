@@ -42,15 +42,15 @@ m4_define([EDLIB_VERSION],
 AC_CHECK_FILE([src/SneakySnake/SneakySnake.c], [],
               [[git clone https://github.com/brendanf/SneakySnake src/SneakySnake &&
                cd src/SneakySnake &&
-               git checkout] SNEAKY_SNAKE_VERSION])
+               git checkout] SNEAKY_SNAKE_VERSION [&& cd ../..]])
 AC_CHECK_FILE([src/WFA2-lib/Makefile], [],
               [[git clone https://github.com/brendanf/WFA2-lib src/WFA2-lib &&
                cd src/WFA2-lib &&
-               git checkout] WFA2_LIB_VERSION])
+               git checkout] WFA2_LIB_VERSION [&& cd ../..]])
 AC_CHECK_FILE([src/edlib/edlib.h], [],
               [[git clone https://github.com/brendanf/edlib src/edlib &&
                cd src/edlib &&
-               git checkout] EDLIB_VERSION])
+               git checkout] EDLIB_VERSION [&& cd ../..]])
 
 ### Determine subdirectory source files
 
