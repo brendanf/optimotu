@@ -14,15 +14,13 @@ protected:
   const std::uint8_t threads;
   std::mutex mutex;
   size_t _prealigned = 0, _aligned = 0;
-  const bool verbose;
 public :
   AlignClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const std::uint8_t threads,
-    bool verbose = false
+    const std::uint8_t threads
   ) : seq(seq), clust_algo(clust_algo),
-  threads(threads), verbose(verbose) {};
+  threads(threads) {};
 
   size_t prealigned();
 

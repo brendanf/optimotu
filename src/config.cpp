@@ -81,12 +81,29 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     const std::vector<std::string> &seq,
     const double breakpoint,
     ClusterAlgorithm &cluster,
-    const std::uint8_t threads
+    const std::uint8_t threads,
+    int verbose
 ) {
   if (type == "split") {
-    return std::make_unique<HybridSplitClusterWorker>(seq, cluster, threads, breakpoint);
+    if (verbose == 0) {
+      return std::make_unique<HybridSplitClusterWorker<0>>(seq, cluster, threads, breakpoint);
+    } else if (verbose == 1) {
+      return std::make_unique<HybridSplitClusterWorker<1>>(seq, cluster, threads, breakpoint);
+    } else if (verbose >= 2) {
+      return std::make_unique<HybridSplitClusterWorker<2>>(seq, cluster, threads, breakpoint);
+    } else {
+      OPTIMOTU_STOP("invalid verbose level");
+    }
   } else if (type == "concurrent") {
-    return std::make_unique<HybridConcurrentClusterWorker>(seq, cluster, threads, breakpoint);
+    if (verbose == 0) {
+      return std::make_unique<HybridConcurrentClusterWorker<0>>(seq, cluster, threads, breakpoint);
+    } else if (verbose == 1) {
+      return std::make_unique<HybridConcurrentClusterWorker<1>>(seq, cluster, threads, breakpoint);
+    } else if (verbose >= 2) {
+      return std::make_unique<HybridConcurrentClusterWorker<2>>(seq, cluster, threads, breakpoint);
+    } else {
+      OPTIMOTU_STOP("invalid verbose level");
+    }
   } else {
     Rcpp::stop("invalid parallel type");
   }
@@ -309,7 +326,7 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     Rcpp::List parallel_config,
     const std::vector<std::string> &seq,
     ClusterAlgorithm &cluster,
-    bool verbose
+    int verbose
 ) {
   if (!dist_config.inherits("optimotu_dist_config")) {
     OPTIMOTU_STOP(
@@ -332,46 +349,134 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
     if (par_method == "merge") {
-      return std::make_unique<Wfa2SplitClusterWorker>(
-        seq,
-        cluster, threads, match, mismatch,
-        gap_open, gap_extend, gap_open2, gap_extend2, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<Wfa2SplitClusterWorker<0>>(
+          seq,
+          cluster, threads, match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<Wfa2SplitClusterWorker<1>>(
+          seq,
+          cluster, threads, match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<Wfa2SplitClusterWorker<2>>(
+          seq,
+          cluster, threads, match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else if (par_method == "concurrent") {
-      return std::make_unique<Wfa2ConcurrentClusterWorker>(
-        seq,
-        cluster, threads, match, mismatch,
-        gap_open, gap_extend, gap_open2, gap_extend2, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<Wfa2ConcurrentClusterWorker<0>>(
+          seq,
+          cluster, threads, match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<Wfa2ConcurrentClusterWorker<1>>(
+          seq,
+          cluster, threads, match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<Wfa2ConcurrentClusterWorker<2>>(
+          seq,
+          cluster, threads, match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
   } else if (dist_method == "edlib") {
     if (par_method == "merge") {
-      return std::make_unique<EdlibSplitClusterWorker>(
-        seq,
-        cluster, threads, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<EdlibSplitClusterWorker<0>>(
+          seq,
+          cluster, threads
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<EdlibSplitClusterWorker<1>>(
+          seq,
+          cluster, threads
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<EdlibSplitClusterWorker<2>>(
+          seq,
+          cluster, threads
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else if (par_method == "concurrent") {
-      return std::make_unique<EdlibConcurrentClusterWorker>(
-        seq,
-        cluster, threads, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<EdlibConcurrentClusterWorker<0>>(
+          seq,
+          cluster, threads
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<EdlibConcurrentClusterWorker<1>>(
+          seq,
+          cluster, threads
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<EdlibConcurrentClusterWorker<2>>(
+          seq,
+          cluster, threads
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
   } else if (dist_method == "hybrid") {
     double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
     if (par_method == "merge") {
-      return std::make_unique<HybridSplitClusterWorker>(
-        seq,
-        cluster, threads, breakpoint, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<HybridSplitClusterWorker<0>>(
+          seq,
+          cluster, threads, breakpoint
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<HybridSplitClusterWorker<1>>(
+          seq,
+          cluster, threads, breakpoint
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<HybridSplitClusterWorker<2>>(
+          seq,
+          cluster, threads, breakpoint
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else if (par_method == "concurrent") {
-      return std::make_unique<HybridConcurrentClusterWorker>(
-        seq,
-        cluster, threads, breakpoint, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<HybridConcurrentClusterWorker<0>>(
+          seq,
+          cluster, threads, breakpoint
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<HybridConcurrentClusterWorker<1>>(
+          seq,
+          cluster, threads, breakpoint
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<HybridConcurrentClusterWorker<2>>(
+          seq,
+          cluster, threads, breakpoint
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
@@ -379,15 +484,43 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
     if (par_method == "merge") {
-      return std::make_unique<HammingSplitClusterWorker>(
-        seq,
-        cluster, threads, min_overlap, ignore_gaps, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<HammingSplitClusterWorker<0>>(
+          seq,
+          cluster, threads, min_overlap, ignore_gaps
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<HammingSplitClusterWorker<1>>(
+          seq,
+          cluster, threads, min_overlap, ignore_gaps
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<HammingSplitClusterWorker<2>>(
+          seq,
+          cluster, threads, min_overlap, ignore_gaps
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else if (par_method == "concurrent") {
-      return std::make_unique<HammingConcurrentClusterWorker>(
-        seq,
-        cluster, threads, min_overlap, ignore_gaps, verbose
-      );
+      if (verbose == 0) {
+        return std::make_unique<HammingConcurrentClusterWorker<0>>(
+          seq,
+          cluster, threads, min_overlap, ignore_gaps
+        );
+      } else if (verbose == 1) {
+        return std::make_unique<HammingConcurrentClusterWorker<1>>(
+          seq,
+          cluster, threads, min_overlap, ignore_gaps
+        );
+      } else if (verbose >= 2) {
+        return std::make_unique<HammingConcurrentClusterWorker<2>>(
+          seq,
+          cluster, threads, min_overlap, ignore_gaps
+        );
+      } else {
+        OPTIMOTU_STOP("invalid verbose level");
+      }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }

@@ -59,7 +59,8 @@ sequences defined by the elements of \code{which}. Subsets do not need to be
 disjoint (and indeed, if they are it is probably faster to calculate the
 distance matrices separately.)}
 
-\item{verbose}{(\code{logical} flag)}
+\item{verbose}{(\code{logical(1)} or \code{integer(1)}) whether to print progress;
+values greater than 1 (or TRUE) print more}
 }
 \description{
 Single-linkage clustering of nucleotide sequences

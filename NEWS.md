@@ -8,6 +8,8 @@ Actions tests)
   naming of the arguments for gap penalties has changed. Also note that linear
   gap penalties are now specified using `gap_extend` (the new version of
   `extend`) instead of `gap_open` (the new version of `gap`).
+* `seq_cluster()` now allows integer values for `verbose`, and produces very
+  verbose output with `verbose=2`.
 
 # optimotu 0.8.1
 

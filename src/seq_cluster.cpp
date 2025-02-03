@@ -10,7 +10,7 @@ Rcpp::RObject seq_cluster_single(
     const Rcpp::List clust_config,
     const Rcpp::List parallel_config,
     const std::string output_type = "matrix",
-    const bool verbose = false
+    const int verbose = 0
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
@@ -41,6 +41,14 @@ Rcpp::RObject seq_cluster_single(
       algo->write_to_matrix(m);
     }
     output = im;
+    Rcpp::NumericVector thresh(dconv->m);
+    for (int i = 0; i < dconv->m; ++i) {
+      thresh[i] = dconv->inverse(i);
+    }
+    output.attr("dimnames") = Rcpp::List::create(
+      thresh,
+      seq.names()
+    );
   } else if (output_type == "hclust") {
     output = algo->as_hclust(seq.names());
   }
@@ -56,7 +64,7 @@ Rcpp::List seq_cluster_multi(
     const Rcpp::List clust_config,
     const Rcpp::List parallel_config,
     const std::string output_type = "matrix",
-    const bool verbose = false
+    const int verbose = 0
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
@@ -90,11 +98,19 @@ Rcpp::List seq_cluster_multi(
   // OPTIMOTU_COUT << "done" << std::endl
   //             << "creating output..." << std::flush;
   if (output_type == "matrix") {
+    Rcpp::NumericVector thresh(dconv->m);
+    for (int i = 0; i < dconv->m; ++i) {
+      thresh[i] = dconv->inverse(i);
+    }
     auto outlist = Rcpp::List(which.size());
     auto internal_out = std::vector<RcppParallel::RMatrix<int>>();
     internal_out.reserve(which.size());
     for (int i = 0; i < which.size(); ++i) {
       auto outi = Rcpp::IntegerMatrix(dconv->m, which[i].size());
+      outi.attr("dimnames") = Rcpp::List::create(
+          thresh,
+          which[i]
+      );
       outlist[i] = outi;
       internal_out.emplace_back(outi);
     }

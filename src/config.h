@@ -45,7 +45,8 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     const std::vector<std::string> &seq,
     const double breakpoint,
     ClusterAlgorithm &cluster,
-    const std::uint8_t threads
+    const std::uint8_t threads,
+    int verbose = 0
 );
 
 #ifdef OPTIMOTU_R
@@ -77,7 +78,7 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     Rcpp::List parallel_config,
     const std::vector<std::string> &seq,
     ClusterAlgorithm &cluster,
-    bool verbose = false
+    int verbose = 0
 );
 
 #endif //OPTIMOTU_R

@@ -5,7 +5,8 @@
 #' [dist_config()] or one of its helpers) Configuration of the method to
 #' calculate distances. If `dist_usearch()`, then this function dispatches to
 #' `seq_cluster_usearch()`.
-#' @param verbose (`logical` flag)
+#' @param verbose (`logical(1)` or `integer(1)`) whether to print progress;
+#' values greater than 1 (or TRUE) print more
 #' @export
 seq_cluster <- function(
     seq,
@@ -95,7 +96,7 @@ seq_cluster.character <- function(
       clust_config,
       parallel_config,
       output_type,
-      verbose
+      as.integer(verbose)
     )
   } else {
     checkmate::assert(
@@ -115,7 +116,7 @@ seq_cluster.character <- function(
       clust_config = clust_config,
       parallel_config = parallel_config,
       output_type = output_type,
-      verbose = verbose
+      verbose = as.integer(verbose)
     )
   }
   out <- reduplicate_thresholds(out, threshold_config)
