@@ -211,3 +211,23 @@ seq_distmx_snsn <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_
     .Call(`_optimotu_seq_distmx_snsn`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, constrain, threads)
 }
 
+#' Summarize taxonomic ranks by superordinate rank
+#' @param data ('data.frame') the taxonomy to summarize; should contain a
+#' column named `seq_id` and columns for each value of `ranks`
+#' @param ranks ('character') the ranks to summarize
+#' @return a data frame with columns:
+#'
+#'  - `supertaxon` (`character`) the superordinate taxon
+#'  - `superrank` (`character`) the rank of the superordinate taxon
+#'  - `rank` (`character`) the rank being summarized
+#'  - `n_taxa` (`integer`) the number of unique taxa at the rank
+#'  - `n_seq` (`integer`) the number of sequences
+#'  - `seq_id` (`list` of `character`) a list of sequence IDs
+#'  - `true_parition` (`list` of `integer`) integer mapping to taxa for each
+#'     element in `seq_id`
+#' @keywords internal
+#' @export
+summarize_by_rank <- function(data, ranks) {
+    .Call(`_optimotu_summarize_by_rank`, data, ranks)
+}
+

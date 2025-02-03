@@ -10,6 +10,11 @@ Actions tests)
   `extend`) instead of `gap_open` (the new version of `gap`).
 * `seq_cluster()` now allows integer values for `verbose`, and produces very
   verbose output with `verbose=2`.
+* Added top-level user function `optimize_thresholds()` to optimize thresholds
+  across ranks for a set of taxonomically identified reference sequences.
+* Added `clean_taxonomy()`, backed by `is_placeholder()` to remove common 
+  placeholder names (such as "_sp", "incertae_sedis", "uncultured", etc.) from
+  a taxonomy table.  This is recommended before using `optimize_thresholds()`.
 
 # optimotu 0.8.1
 

@@ -345,6 +345,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// summarize_by_rank
+Rcpp::RObject summarize_by_rank(Rcpp::DataFrame data, Rcpp::CharacterVector ranks);
+RcppExport SEXP _optimotu_summarize_by_rank(SEXP dataSEXP, SEXP ranksSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type ranks(ranksSEXP);
+    rcpp_result_gen = Rcpp::wrap(summarize_by_rank(data, ranks));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
@@ -369,6 +381,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},
     {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 8},
     {"_optimotu_seq_distmx_snsn", (DL_FUNC) &_optimotu_seq_distmx_snsn, 10},
+    {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 2},
     {NULL, NULL, 0}
 };
 
