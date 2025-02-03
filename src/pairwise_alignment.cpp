@@ -1,25 +1,23 @@
 #include "pairwise_alignment.h"
 #include <cstdint>
+#include <sstream>
+#include <string>
 
 double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
   auto status = aligner.alignEnd2End(a, b);
   if (status != wfa::WFAligner::StatusAlgCompleted) return 1.0;
-  auto cigar = aligner.getCIGAR(true);
+  std::string cigar(aligner.getCIGAR(true));
   std::uint16_t match = 0, length = 0;
-  for (char c : cigar) {
-    if (c == 'M') {
-      match++;
+  std::uint16_t l;
+  char c;
+  std::istringstream ss(cigar);
+  while (ss >> l >> c) {
+    if (c == '=') {
+      match += l;
     }
-    length++;
+    length += l;
   }
   return 1.0 - double(match) / double(length);
-}
-
-double distance_wfa2(const std::string&a, const std::string&b, wfa::WFAlignerEdit &aligner) {
-  auto status = aligner.alignEnd2End(a, b);
-  if (status != wfa::WFAligner::StatusAlgCompleted) return 1.0;
-  auto cigar = aligner.getCIGAR(true);
-  return double(aligner.getAlignmentScore()) / double(cigar.size());
 }
 
 double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner) {
@@ -133,29 +131,7 @@ double align(const std::string a, const std::string b,
              int match, int mismatch,
              int gap, int extend,
              int gap2, int extend2) {
-  if (gap2 != 0 || extend2 != 0) {
-    wfa::WFAlignerGapAffine2Pieces aligner(
-        match, mismatch,
-        gap, extend,
-        gap2, extend2,
-        wfa::WFAligner::Alignment);
-    return distance_wfa2(a, b, aligner);
-  } else if (extend != 0) {
-    wfa::WFAlignerGapAffine aligner(
-        match, mismatch,
-        gap, extend,
-        wfa::WFAligner::Alignment);
-    return distance_wfa2(a, b, aligner);
-  } else if (match == 0 && gap == mismatch) {
-    wfa::WFAlignerEdit aligner(wfa::WFAligner::Alignment);
-    return distance_wfa2(a, b, aligner);
-  } else if (mismatch == 0 && match == 0) {
-    wfa::WFAlignerIndel aligner(wfa::WFAligner::Alignment);
-    return distance_wfa2(a, b, aligner);
-  } else {
-    wfa::WFAlignerGapLinear aligner(
-        match, mismatch, gap,
-        wfa::WFAligner::Alignment);
-    return distance_wfa2(a, b, aligner);
-  }
+  wfa::WFAlignerChoose aligner{match, mismatch, gap, extend, gap2, extend2,
+                               wfa::WFAligner::AlignmentScope::Alignment};
+  return distance_wfa2(a, b, aligner);
 }

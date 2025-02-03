@@ -1,6 +1,8 @@
 # optimotu (development version)
 
-* Fix compilation in Windows?
+* Compilation in Windows is now working in at least some circumstances (GitHub
+Actions tests)
+* Update to WFA2-lib v2.3
 
 # optimotu 0.8.1
 

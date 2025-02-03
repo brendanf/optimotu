@@ -13,8 +13,6 @@
 
 double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner);
 
-double distance_wfa2(const std::string&a, const std::string&b, wfa::WFAlignerEdit &aligner);
-
 double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner);
 
 // [[Rcpp::export]]
@@ -68,6 +66,6 @@ std::pair<int, double> score_and_distance_wfa2(
 // [[Rcpp::export]]
 double align(const std::string a, const std::string b,
              int match = 0, int mismatch = 1,
-             int gap = 1, int extend = 0,
+             int gap = 0, int extend = 1,
              int gap2 = 0, int extend2 = 0);
 #endif //OPTIMOTU_PAIRWISE_ALIGNMENT_H_INCLUDED
