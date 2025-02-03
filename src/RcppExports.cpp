@@ -210,8 +210,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // cigar_wfa2
-std::string cigar_wfa2(const std::string& a, const std::string& b, int match, int mismatch, int open1, int extend1, int open2, int extend2);
-RcppExport SEXP _optimotu_cigar_wfa2(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP open1SEXP, SEXP extend1SEXP, SEXP open2SEXP, SEXP extend2SEXP) {
+std::string cigar_wfa2(const std::string& a, const std::string& b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
+RcppExport SEXP _optimotu_cigar_wfa2(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -219,11 +219,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::string& >::type b(bSEXP);
     Rcpp::traits::input_parameter< int >::type match(matchSEXP);
     Rcpp::traits::input_parameter< int >::type mismatch(mismatchSEXP);
-    Rcpp::traits::input_parameter< int >::type open1(open1SEXP);
-    Rcpp::traits::input_parameter< int >::type extend1(extend1SEXP);
-    Rcpp::traits::input_parameter< int >::type open2(open2SEXP);
-    Rcpp::traits::input_parameter< int >::type extend2(extend2SEXP);
-    rcpp_result_gen = Rcpp::wrap(cigar_wfa2(a, b, match, mismatch, open1, extend1, open2, extend2));
+    Rcpp::traits::input_parameter< int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    rcpp_result_gen = Rcpp::wrap(cigar_wfa2(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -239,9 +239,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// align
-double align(const std::string a, const std::string b, int match, int mismatch, int gap, int extend, int gap2, int extend2);
-RcppExport SEXP _optimotu_align(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gapSEXP, SEXP extendSEXP, SEXP gap2SEXP, SEXP extend2SEXP) {
+// align_wfa2
+double align_wfa2(const std::string a, const std::string b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
+RcppExport SEXP _optimotu_align_wfa2(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -249,11 +249,23 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::string >::type b(bSEXP);
     Rcpp::traits::input_parameter< int >::type match(matchSEXP);
     Rcpp::traits::input_parameter< int >::type mismatch(mismatchSEXP);
-    Rcpp::traits::input_parameter< int >::type gap(gapSEXP);
-    Rcpp::traits::input_parameter< int >::type extend(extendSEXP);
-    Rcpp::traits::input_parameter< int >::type gap2(gap2SEXP);
-    Rcpp::traits::input_parameter< int >::type extend2(extend2SEXP);
-    rcpp_result_gen = Rcpp::wrap(align(a, b, match, mismatch, gap, extend, gap2, extend2));
+    Rcpp::traits::input_parameter< int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    rcpp_result_gen = Rcpp::wrap(align_wfa2(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// align_edlib
+double align_edlib(const std::string a, const std::string b);
+RcppExport SEXP _optimotu_align_edlib(SEXP aSEXP, SEXP bSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type b(bSEXP);
+    rcpp_result_gen = Rcpp::wrap(align_edlib(a, b));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -351,7 +363,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 3},
     {"_optimotu_cigar_wfa2", (DL_FUNC) &_optimotu_cigar_wfa2, 8},
     {"_optimotu_cigar_edlib", (DL_FUNC) &_optimotu_cigar_edlib, 2},
-    {"_optimotu_align", (DL_FUNC) &_optimotu_align, 8},
+    {"_optimotu_align_wfa2", (DL_FUNC) &_optimotu_align_wfa2, 8},
+    {"_optimotu_align_edlib", (DL_FUNC) &_optimotu_align_edlib, 2},
     {"_optimotu_seq_distmx_wfa2", (DL_FUNC) &_optimotu_seq_distmx_wfa2, 11},
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},
     {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 8},

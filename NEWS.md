@@ -3,6 +3,11 @@
 * Compilation in Windows is now working in at least some circumstances (GitHub
 Actions tests)
 * Update to WFA2-lib v2.3
+* New interface to `align()`, which now takes a `method` argument to choose
+  WFA2-lib or Edlib for alignment. This may break old code, because the
+  naming of the arguments for gap penalties has changed. Also note that linear
+  gap penalties are now specified using `gap_extend` (the new version of
+  `extend`) instead of `gap_open` (the new version of `gap`).
 
 # optimotu 0.8.1
 

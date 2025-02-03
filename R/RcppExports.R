@@ -144,43 +144,33 @@ adjusted_mutual_information <- function(k, c, threads = 1L) {
     .Call(`_optimotu_adjusted_mutual_information`, k, c, threads)
 }
 
-cigar_wfa2 <- function(a, b, match = 0L, mismatch = 1L, open1 = 0L, extend1 = 1L, open2 = 0L, extend2 = 1L) {
-    .Call(`_optimotu_cigar_wfa2`, a, b, match, mismatch, open1, extend1, open2, extend2)
+#' @return (`character(1)`) CIGAR string
+#' @export
+#' @keywords internal
+#' @describeIn pairwise_alignment Generate alignment CIGAR with WFA2
+cigar_wfa2 <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 1L) {
+    .Call(`_optimotu_cigar_wfa2`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
 }
 
+#' @describeIn pairwise_alignment Generate alignment CIGAR with Edlib
+#' @export
+#' @keywords internal
 cigar_edlib <- function(a, b) {
     .Call(`_optimotu_cigar_edlib`, a, b)
 }
 
-#' Align two sequences using WFA2 and return the pairwise distance
-#'
-#' @description WFA2 allows several alignment strategies, and this function
-#' selects the least parameterized version possible given the inputs:
-#'
-#'  - Edit : `gap` == `mismatch` != 0; `match` == `extend` == `gap2` == `extend2` == 0.
-#'  - Indel : `gap` != 0; `mismatch` == `match` == `extend` == `gap2` == `extend2` == 0.
-#'  - GapLinear : `extend` == `gap2` == `extend2` == 0; other parameters do not meet requirements for "Edit" or "Indel".
-#'  - GapAffine : `gap2` == `extend2` == 0; other parameters do not meet requirements for "Edit", "Indel", or "GapLinear".
-#'  - GapAffine2Pieces : parameters do not meet requirements for `Edit`, `Indel`, `GapLinear`, or `GapAffine`.
-#'
-#' @param a (`character` string) first string to align
-#' @param b (`character` string) second string to align
-#' @param match (`integer` scalar) match score; positive is a bonus.
-#' @param mismatch (`integer` scalar) mismatch score; positive is a penalty.
-#' @param gap (`integer` scalar) gap opening score; positive is a penalty.
-#' Alternatively, if `extend`, `gap2`, and `extend2` are all 0, then this is
-#' the penalty for all gaps.
-#' @param extend (`integer` scalar) gap extension score; positive is a penalty
-#' @param gap2 (`integer` scalar) alternate gap opening score for two-piece
-#' affine gap penalty; positive is penalty.  Ignored if both `gap2` and
-#' `extend2` are 0.
-#' @param extend2 (`integer` scalar) alternate gap extension score for
-#' two-piece affine gap penalty; positive is penalty. Ignored if both `gap2`
-#' and `extend2` are 0.
+#' @describeIn pairwise_alignment Compute pairwise alignment distance with WFA2
 #' @export
-#'
-align <- function(a, b, match = 0L, mismatch = 1L, gap = 1L, extend = 0L, gap2 = 0L, extend2 = 0L) {
-    .Call(`_optimotu_align`, a, b, match, mismatch, gap, extend, gap2, extend2)
+#' @keywords internal
+align_wfa2 <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
+    .Call(`_optimotu_align_wfa2`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+}
+
+#' @describeIn pairwise_alignment Compute pairwise alignment distance with Edlib
+#' @export
+#' @keywords internal
+align_edlib <- function(a, b) {
+    .Call(`_optimotu_align_edlib`, a, b)
 }
 
 #' @param prealign (`logical` flag) if `TRUE`, do a prealignment using

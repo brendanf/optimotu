@@ -1,3 +1,4 @@
+#include "optimotu.h"
 #include "pairwise_alignment.h"
 #include <cstdint>
 #include <sstream>
@@ -31,9 +32,10 @@ double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConf
 
 std::string cigar_wfa2(const std::string &a, const std::string &b,
                        int match, int mismatch,
-                       int open1, int extend1,
-                       int open2, int extend2) {
-  wfa::WFAlignerChoose aligner{match, mismatch, open1, extend1, open2, extend2,
+                       int gap_open, int gap_extend,
+                       int gap_open2, int gap_extend2) {
+  wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
+                               gap_open2, gap_extend2,
                                wfa::WFAligner::AlignmentScope::Alignment};
   wfa::WFAligner::AlignmentStatus status;
   // if (a.size() >= b.size()) {
@@ -43,21 +45,11 @@ std::string cigar_wfa2(const std::string &a, const std::string &b,
   // }
   switch (status) {
   case wfa::WFAligner::StatusOOM:
-#ifdef OPTIMOTU_R
-    Rcpp::stop("Aligner out of memory.");
-#else
-    std::cout << "Aligner out of memory." << std::endl;
-    exit(1);
-#endif
+    OPTIMOTU_STOP("Aligner out of memory.");
     break;
   case wfa::WFAligner::StatusAlgPartial:
   case wfa::WFAligner::StatusMaxStepsReached:
-#ifdef OPTIMOTU_R
-    Rcpp::stop("Alignment not feasible with given constraints.");
-#else
-    std::cout << "Alignment not feasible with given constraints." << std::endl;
-    exit(1);
-#endif
+    OPTIMOTU_STOP("Alignment not feasible with given constraints.");
     break;
   case wfa::WFAligner::StatusAlgCompleted:
     break;
@@ -127,11 +119,17 @@ std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::
           double(aligner.getAlignmentScore()) / double(cigar.size())};
 }
 
-double align(const std::string a, const std::string b,
+double align_wfa2(const std::string a, const std::string b,
              int match, int mismatch,
-             int gap, int extend,
-             int gap2, int extend2) {
-  wfa::WFAlignerChoose aligner{match, mismatch, gap, extend, gap2, extend2,
+             int gap_open, int gap_extend,
+             int gap_open2, int gap_extend2) {
+  wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
+                               gap_open2, gap_extend2,
                                wfa::WFAligner::AlignmentScope::Alignment};
   return distance_wfa2(a, b, aligner);
+}
+
+double align_edlib(const std::string a, const std::string b) {
+  auto config = edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0);
+  return distance_edlib(a, b, config);
 }
