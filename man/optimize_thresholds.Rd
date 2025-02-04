@@ -15,6 +15,7 @@ optimize_thresholds(
   min_taxa = 5L,
   min_refseq = 2L * min_taxa,
   id_col = "seq_id",
+  measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
   verbose = FALSE
 )
 }
@@ -27,7 +28,7 @@ sequence identifiers, defined by \code{id_col}. Any additional columns are ignor
 
 \item{ranks}{(\code{character} vector) the taxonomic ranks in \code{taxonomy}}
 
-\item{dist_config}{(\code{optimotu_dist_config}) specification of the pairwise
+\item{dist_config}{(\verb{op timotu_dist_config}) specification of the pairwise
 distance algorithm to use, as created by \code{dist_config()} or its helpers}
 
 \item{threshold_config}{(\code{optimotu_threshold_config}) specification of the
@@ -60,9 +61,9 @@ messages; values greater than 1 (or TRUE) print more}
 \item \code{rank} (\code{character}) the rank being optimized
 \item \code{superrank} (\code{character}) the containing rank for optimization
 \item \code{supertaxon} (\code{character}) the containing taxon
-\item \code{metric} (\code{character}) the clustering quality metric
-\item \code{threshold} (\code{numeric}) the threshold which maximizes the metric
-\item \code{value} (\code{numeric}) the value of the metric at the threshold
+\item \code{measure} (\code{character}) the clustering quality measure
+\item \code{threshold} (\code{numeric}) the threshold which maximizes the measure
+\item \code{value} (\code{numeric}) the value of the measure at the threshold
 }
 }
 \description{

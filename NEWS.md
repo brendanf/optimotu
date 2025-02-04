@@ -12,8 +12,11 @@ Actions tests)
   verbose output with `verbose=2`.
 * Added top-level user function `optimize_thresholds()` to optimize thresholds
   across ranks for a set of taxonomically identified reference sequences.
+  `calculate_cluster_measures()` calculates multiple clustering quality measures
+  for pre-calculated clusters and returns them in a tidy `data.frame`, suitable
+  for plotting with `ggplot2::ggplot`.
 * Added `clean_taxonomy()`, backed by `is_placeholder()` to remove common 
-  placeholder names (such as "_sp", "incertae_sedis", "uncultured", etc.) from
+  placeholder names (such as "*_sp", "*_incertae_sedis", "uncultured *", etc.) from
   a taxonomy table.  This is recommended before using `optimize_thresholds()`.
 
 # optimotu 0.8.1
