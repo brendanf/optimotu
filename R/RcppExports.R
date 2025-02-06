@@ -68,6 +68,13 @@ seq_distmx_edlib <- function(seq, dist_threshold, constrain = TRUE, threads = 1L
     .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, constrain, threads)
 }
 
+#' Get the names of reads in a FASTQ file
+#' @param x (`character`) FASTQ file path, optionally gzipped.
+#' @return (`character`) Read names.
+fastq_names <- function(x) {
+    .Call(`_optimotu_fastq_names`, x)
+}
+
 #' @param breakpoint (`numeric` scalar) threshold for deciding whether to use
 #' WFA2 or edlib for edit-distance alignment.  This parameter is interpreted as
 #' an edit distance if greater than or equal to `1`, or as a pairwise

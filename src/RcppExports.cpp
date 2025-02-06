@@ -86,6 +86,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// fastq_names
+Rcpp::CharacterVector fastq_names(std::string x);
+RcppExport SEXP _optimotu_fastq_names(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_names(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 // seq_distmx_hybrid
 Rcpp::DataFrame seq_distmx_hybrid(std::vector<std::string> seq, double dist_threshold, double breakpoint, std::uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_hybrid(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP breakpointSEXP, SEXP threadsSEXP) {
@@ -364,6 +375,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 7},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 8},
     {"_optimotu_seq_distmx_edlib", (DL_FUNC) &_optimotu_seq_distmx_edlib, 4},
+    {"_optimotu_fastq_names", (DL_FUNC) &_optimotu_fastq_names, 1},
     {"_optimotu_seq_distmx_hybrid", (DL_FUNC) &_optimotu_seq_distmx_hybrid, 4},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},

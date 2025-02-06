@@ -23,6 +23,7 @@ Imports:
    Rcpp,
    RcppParallel
 LinkingTo:
+   BH,
    Rcpp,
    RcppParallel,
    RcppThread
