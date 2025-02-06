@@ -63,7 +63,6 @@ ConcurrentClusterWorker::ConcurrentClusterWorker(
 
 void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   DistanceElement d;
-  size_t i=0;
   // std::vector<DistanceElement> buffer;
   // buffer.reserve(100);
   // OPTIMOTU_COUT << "Starting ConcurrentClusterWorker thread " << begin << std::endl;
