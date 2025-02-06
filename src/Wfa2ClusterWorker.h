@@ -1,3 +1,6 @@
+#ifndef OPTIMOTU_WFA2CLUSTERWORKER_H
+#define OPTIMOTU_WFA2CLUSTERWORKER_H
+
 #include "AlignClusterWorker.h"
 
 class Wfa2ClusterWorker : public AlignClusterWorker {
@@ -56,3 +59,4 @@ public:
   void operator()(std::size_t begin, std::size_t end);
 };
 
+#endif

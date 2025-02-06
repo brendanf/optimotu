@@ -1,3 +1,6 @@
+#ifndef OPTIMOTU_HYBRIDCLUSTERWORKER_H
+#define OPTIMOTU_HYBRIDCLUSTERWORKER_H
+
 #include "AlignClusterWorker.h"
 
 class HybridClusterWorker : public AlignClusterWorker {
@@ -38,3 +41,4 @@ public :
   void operator()(std::size_t begin, std::size_t end);
 };
 
+#endif

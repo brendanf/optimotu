@@ -1,3 +1,6 @@
+#ifndef OPTIMOTU_EDLIBCLUSTERWORKER_H
+#define OPTIMOTU_EDLIBCLUSTERWORKER_H
+
 #include "AlignClusterWorker.h"
 
 class EdlibClusterWorker : public AlignClusterWorker {
@@ -30,3 +33,5 @@ public:
   using EdlibClusterWorker::EdlibClusterWorker;
   void operator()(std::size_t begin, std::size_t end);
 };
+
+#endif
