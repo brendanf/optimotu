@@ -35,21 +35,21 @@ seq_cluster.data.frame <- function(
     which = TRUE,
     verbose = FALSE
 ) {
-  mycall <- match.call
+  mycall <- match.call()
   if (missing(seq_id)) {
     newseq_id <- quote(seq$seq_id)
     newseq_id[[2]] <- mycall$seq
     mycall$seq_id <- newseq_id
   }
   if (identical(dist_config$method, "usearch")) {
-    mycall[[1]] <- seq_cluster_usearch.DNAStringSet
+    mycall[[1]] <- quote(seq_cluster_usearch.DNAStringSet)
     newseq <- quote(Biostrings::DNAStringSet(seq$seq))
     newseq[[2]][[2]] <- mycall$seq
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
     mycall$dist_config <- NULL
   } else {
-    mycall[[1]] <- seq_cluster.character
+    mycall[[1]] <- quote(seq_cluster.character)
     newseq <- quote(seq$seq)
     newseq[[2]] <- mycall$seq
   }
@@ -74,14 +74,14 @@ seq_cluster.character <- function(
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
-    mycall[[1]] <- seq_cluster_usearch.character
+    mycall[[1]] <- quote(seq_cluster_usearch.character)
     return(eval(mycall, envir = parent.frame()))
   }
   output_type = match.arg(output_type)
   if (length(seq) == 1 && file.exists(seq)) {
     seq <- as.character(Biostrings::readBStringSet(seq))
-    if (!missing(seq_id)) names(seq) <- seq_id
   }
+  if (!missing(seq_id)) names(seq) <- seq_id
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
@@ -141,10 +141,10 @@ seq_cluster.DNAStringSet <- function(
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
-    mycall[[1]] <- seq_cluster_usearch.DNAStringSet
+    mycall[[1]] <- quote(seq_cluster_usearch.DNAStringSet)
     return(eval(mycall, envir = parent.frame()))
   }
-  mycall[[1]] <- seq_cluster.character
+  mycall[[1]] <- quote(seq_cluster.character)
   newseq <- quote(as.character(seq))
   newseq[[2]] <- mycall$seq
   mycall$seq <- newseq
