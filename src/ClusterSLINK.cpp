@@ -90,6 +90,14 @@ ClusterSLINK * ClusterSLINK::make_child() {
 }
 
 void ClusterSLINK::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
+  if (seq2 < 0 || seq2 >= n) {
+    OPTIMOTU_CERR << "Sequence index" << seq2 << " out of range." << std::endl;
+    OPTIMOTU_STOP("ClusterSLINK input error.");
+  }
+  if (seq1 < 0 || seq1 >= n) {
+    OPTIMOTU_CERR << "Sequence index" << seq1 << " out of range." << std::endl;
+    OPTIMOTU_STOP("ClusterSLINK input error.");
+  }
   if (seq1 <= seq2) {
     OPTIMOTU_CERR << "ClusterSLINK requires seq2 < seq1.  seq2=" << seq2
                   << ", seq1=" << seq1

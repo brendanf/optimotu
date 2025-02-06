@@ -315,6 +315,14 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
 
 template <class A>
 void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
+  if (seq2 < 0 || seq2 >= n) {
+    OPTIMOTU_CERR << "Sequence index" << seq2 << " out of range." << std::endl;
+    OPTIMOTU_STOP("ClusterSLINK input error.");
+  }
+  if (seq1 < 0 || seq1 >= n) {
+    OPTIMOTU_CERR << "Sequence index" << seq1 << " out of range." << std::endl;
+    OPTIMOTU_STOP("ClusterSLINK input error.");
+  }
   if (i >= m) return;
   if (seq1 == seq2) return;
   {

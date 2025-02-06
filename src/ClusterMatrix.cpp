@@ -42,6 +42,16 @@ template<bool BM, int F, typename A>
 void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (i >= m) return;
   if (seq1 == seq2) return;
+
+  if (seq2 < 0 || seq2 >= n) {
+    OPTIMOTU_CERR << "Sequence index" << seq2 << " out of range." << std::endl;
+    OPTIMOTU_STOP("ClusterMatrix input error.");
+  }
+  if (seq1 < 0 || seq1 >= n) {
+    OPTIMOTU_CERR << "Sequence index" << seq1 << " out of range." << std::endl;
+    OPTIMOTU_STOP("ClusterMatrix input error.");
+  }
+
   {
     std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
     if (clust_array[i + seq1*m] == clust_array[i + seq2*m]) return;
