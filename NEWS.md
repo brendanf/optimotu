@@ -28,6 +28,9 @@ Actions tests)
 * add `seq_search()`, which supports all the same distance calculation options
   as `seq_distmx()` and `seq_cluster()`, but returns only the best match(es) for
   each query sequence.
+* Added `optimotu()`, a top-level function to run the OptimOTU clustering
+  phase, starting from taxonomically identified sequences and the thresholds
+  produced by `optimize_thresholds()`.
 
 # optimotu 0.8.1
 
