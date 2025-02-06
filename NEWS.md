@@ -18,6 +18,9 @@ Actions tests)
 * Added `clean_taxonomy()`, backed by `is_placeholder()` to remove common 
   placeholder names (such as "*_sp", "*_incertae_sedis", "uncultured *", etc.) from
   a taxonomy table.  This is recommended before using `optimize_thresholds()`.
+* Fixed a bug when using `seq_cluster()` or `distmx_cluster()` with a
+  `which` argument that is a list (i.e. simultaneous clustering of subsets).
+
 
 # optimotu 0.8.1
 

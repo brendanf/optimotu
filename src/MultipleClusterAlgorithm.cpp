@@ -132,13 +132,13 @@ void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
     //             << " overlaps:";
     //   for (auto pc : whichsets[thread]) OPTIMOTU_COUT << " " << pc;
     //   OPTIMOTU_COUT << std::endl;
-    //   OPTIMOTU_COUT << "sending seq1=" << fwd_map[j][seq1]
-    //             << " seq2=" << fwd_map[j][seq2]
-    //             << " i=" << i
-    //             << " to subset " << j
-    //             << std::endl;
     // }
-    (*subsets[j])(fwd_map[j][seq1], fwd_map[j][seq2], i, thread);
+    // OPTIMOTU_COUT << "sending seq1=" << fwd_map[j][seq1]
+    //               << " seq2=" << fwd_map[j][seq2]
+    //               << " i=" << i
+    //               << " to subset " << j
+    //               << std::endl;
+    (*subsets[j])(fwd_map[j].at(seq1), fwd_map[j].at(seq2), i, thread);
   }
 }
 
@@ -160,7 +160,7 @@ double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
   );
   ws_keys[thread] = {seq1, seq2};
   for (j_t j : whichsets[thread]) {
-    double maxj = subsets[j]->max_relevant(seq1, seq2);
+    double maxj = subsets[j]->max_relevant(fwd_map[j].at(seq1), fwd_map[j].at(seq2));
     max = std::max(max, maxj);
   }
   return max;
