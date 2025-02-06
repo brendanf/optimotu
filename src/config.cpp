@@ -28,6 +28,8 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     const std::string &method,
     const bool do_binary_search,
     const int fill_type,
+    const int verbose,
+    const int test,
     DistanceConverter * dconv
 ) {
   if (method == "matrix") {
@@ -35,7 +37,7 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
   } else if (method == "index") {
     return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
   } else if (method == "tree") {
-    return std::make_unique<ClusterTreeFactory>(*dconv);
+    return std::make_unique<ClusterTreeFactory>(*dconv, verbose, test);
   } else if (method == "slink") {
     return std::make_unique<ClusterSLINKFactory>(*dconv);
   } else {
@@ -273,7 +275,9 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
   } else if (method == "index") {
     return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
   } else if (method == "tree") {
-    return std::make_unique<ClusterTreeFactory>(*dconv);
+    int verbose = element_as_int(config, "verbose", "cluster_tree");
+    int test = element_as_int(config, "test", "cluster_tree");
+    return std::make_unique<ClusterTreeFactory>(*dconv, verbose, test);
   } else if (method == "slink") {
     return std::make_unique<ClusterSLINKFactory>(*dconv);
   } else {

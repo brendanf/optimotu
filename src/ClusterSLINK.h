@@ -16,7 +16,7 @@ protected:
   std::vector<d_t> M;
   j_t slink_seq1 = 0;
   j_t slink_seq2 = 0;
-  ClusterTree delegate;
+  ClusterTreeImpl<0,0> delegate;
 
   void init_iter();
   void update();

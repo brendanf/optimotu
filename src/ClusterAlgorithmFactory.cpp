@@ -85,14 +85,71 @@ std::unique_ptr<SingleClusterAlgorithm> CIMF::create(init_matrix_t & im) const {
 
 using CTF = ClusterTreeFactory;
 
-CTF::ClusterTreeFactory(const DistanceConverter & dconv) : CAF{dconv} {}
+CTF::ClusterTreeFactory(const DistanceConverter & dconv, int verbose, int test) :
+  CAF{dconv}, verbose(verbose), test(test) {}
 
 std::unique_ptr<SingleClusterAlgorithm> CTF::create(j_t n) const {
-  return std::make_unique<ClusterTree>(this->dconv, n);
+  switch (verbose) {
+  case 0:
+    switch (test) {
+    case 0:
+      return std::make_unique<ClusterTreeImpl<0, 0>>(this->dconv, n);
+    case 1:
+      return std::make_unique<ClusterTreeImpl<0, 1>>(this->dconv, n);
+    default:
+      return std::make_unique<ClusterTreeImpl<0, 2>>(this->dconv, n);
+    }
+  case 1:
+    switch (test) {
+    case 0:
+      return std::make_unique<ClusterTreeImpl<1, 0>>(this->dconv, n);
+    case 1:
+      return std::make_unique<ClusterTreeImpl<1, 1>>(this->dconv, n);
+    default:
+      return std::make_unique<ClusterTreeImpl<1, 2>>(this->dconv, n);
+    }
+  default:
+    switch (test) {
+    case 0:
+      return std::make_unique<ClusterTreeImpl<2, 0>>(this->dconv, n);
+    case 1:
+      return std::make_unique<ClusterTreeImpl<2, 1>>(this->dconv, n);
+    default:
+      return std::make_unique<ClusterTreeImpl<2, 2>>(this->dconv, n);
+    }
+  }
 }
 
 std::unique_ptr<SingleClusterAlgorithm> CTF::create(init_matrix_t & im) const {
-  return std::make_unique<ClusterTree>(this->dconv, im);
+  switch (verbose) {
+  case 0:
+    switch (test) {
+    case 0:
+      return std::make_unique<ClusterTreeImpl<0, 0>>(this->dconv, im);
+    case 1:
+      return std::make_unique<ClusterTreeImpl<0, 1>>(this->dconv, im);
+    default:
+      return std::make_unique<ClusterTreeImpl<0, 2>>(this->dconv, im);
+    }
+  case 1:
+    switch (test) {
+    case 0:
+      return std::make_unique<ClusterTreeImpl<1, 0>>(this->dconv, im);
+    case 1:
+      return std::make_unique<ClusterTreeImpl<1, 1>>(this->dconv, im);
+    default:
+      return std::make_unique<ClusterTreeImpl<1, 2>>(this->dconv, im);
+    }
+  default:
+    switch (test) {
+    case 0:
+      return std::make_unique<ClusterTreeImpl<2, 0>>(this->dconv, im);
+    case 1:
+      return std::make_unique<ClusterTreeImpl<2, 1>>(this->dconv, im);
+    default:
+      return std::make_unique<ClusterTreeImpl<2, 2>>(this->dconv, im);
+    }
+  }
 }
 
 using CSF = ClusterSLINKFactory;

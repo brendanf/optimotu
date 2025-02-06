@@ -40,8 +40,10 @@ public:
 };
 
 class ClusterTreeFactory : public ClusterAlgorithmFactory{
+  const int verbose;
+  const int test;
 public:
-  ClusterTreeFactory(const DistanceConverter & dconv);
+  ClusterTreeFactory(const DistanceConverter & dconv, int verbose, int test);
 
   std::unique_ptr<SingleClusterAlgorithm> create(j_t n) const override;
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im) const override;

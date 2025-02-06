@@ -10,7 +10,7 @@
 \usage{
 clust_config(method = c("tree", "matrix", "index", "slink"), ...)
 
-clust_tree()
+clust_tree(verbose = FALSE, test = FALSE)
 
 clust_matrix(
   binary_search = TRUE,
@@ -26,6 +26,10 @@ clust_slink()
 are \code{"tree"}, \code{"matrix"}, and \code{"index"}}
 
 \item{...}{passed on to variants}
+
+\item{verbose}{(\code{logical} flag or \code{integer}) print progress messages}
+
+\item{test}{(\code{logical} flag) if \code{TRUE}, run in test mode}
 
 \item{binary_search}{(\code{logical} flag) if \code{TRUE}, use binary search instead
 of linear search when determining the currently known minimum distance

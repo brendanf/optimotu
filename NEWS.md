@@ -20,7 +20,9 @@ Actions tests)
   a taxonomy table.  This is recommended before using `optimize_thresholds()`.
 * Fixed a bug when using `seq_cluster()` or `distmx_cluster()` with a
   `which` argument that is a list (i.e. simultaneous clustering of subsets).
-
+* `clust_tree()` now has arguments `verbose` and `test` to control verbosity
+  and whether to run verification tests during clustering. Tests slow down
+  clustering, especially at `test = 2`.
 
 # optimotu 0.8.1
 

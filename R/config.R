@@ -177,12 +177,21 @@ clust_config <- function(method = c("tree", "matrix", "index", "slink"), ...) {
   )
 }
 
-
+#' @param verbose (`logical` flag or `integer`) print progress messages
+#' @param test (`logical` flag) if `TRUE`, run in test mode
 #' @export
 #' @describeIn clust_config helper function for method `"tree"`
-clust_tree <- function() {
+clust_tree <- function(verbose = FALSE, test = FALSE) {
+  checkmate::assert(
+    checkmate::check_flag(verbose),
+    checkmate::check_integerish(verbose, lower = 1L)
+  )
+  checkmate::assert(
+    checkmate::check_flag(test),
+    checkmate::check_integerish(test, lower = 1L)
+  )
   structure(
-    list(method = "tree"),
+    list(method = "tree", verbose = as.integer(verbose), test = as.integer(test)),
     class = "optimotu_cluster_config"
   )
 }
