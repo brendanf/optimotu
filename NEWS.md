@@ -25,6 +25,9 @@ Actions tests)
   clustering, especially at `test = 2`.
 * changed the gap open penalties in `seq_cluster_usearch()` to open=0 (was 1)
   for consistency with edlib and the defaults for WFA2.
+* add `seq_search()`, which supports all the same distance calculation options
+  as `seq_distmx()` and `seq_cluster()`, but returns only the best match(es) for
+  each query sequence.
 
 # optimotu 0.8.1
 

@@ -3,6 +3,10 @@
 #include "EdlibClusterWorker.h"
 #include "HybridClusterWorker.h"
 #include "HammingClusterWorker.h"
+#include "Wfa2SearchWorker.h"
+#include "EdlibSearchWorker.h"
+#include "HybridSearchWorker.h"
+#include "HammingSearchWorker.h"
 
 std::unique_ptr<DistanceConverter> create_distance_converter(
     const std::string &type,
@@ -530,6 +534,98 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     }
   } else {
     OPTIMOTU_STOP("unknown sequence-cluster method");
+  }
+}
+
+std::unique_ptr<SearchWorker> create_search_worker(
+    Rcpp::List dist_config,
+    Rcpp::List parallel_config,
+    const std::vector<std::string> & query,
+    const std::vector<std::string> & ref,
+    double threshold,
+    int verbose
+) {
+  if (!dist_config.inherits("optimotu_dist_config")) {
+    OPTIMOTU_STOP(
+      "'dist_config' must be of class 'optimotu_dist_config'"
+    );
+  }
+  if (!parallel_config.inherits("optimotu_parallel_config")) {
+    OPTIMOTU_STOP(
+      "'parallel_config' must be of class 'optimotu_parallel_config'"
+    );
+  }
+  std::string dist_method = element_as_string(dist_config, "method", "dist_config");
+  int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  if (dist_method == "wfa2") {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    switch (verbose) {
+    case 0:
+      return std::make_unique<Wfa2SearchWorkerImpl<0>>(
+        query, ref, threshold, threads, match, mismatch,
+        gap_open, gap_extend, gap_open2, gap_extend2
+      );
+    case 1:
+      return std::make_unique<Wfa2SearchWorkerImpl<1>>(
+        query, ref, threshold, threads, match, mismatch,
+        gap_open, gap_extend, gap_open2, gap_extend2
+      );
+    default:
+      return std::make_unique<Wfa2SearchWorkerImpl<2>>(
+        query, ref, threshold, threads, match, mismatch,
+        gap_open, gap_extend, gap_open2, gap_extend2
+      );
+    }
+  } else if (dist_method == "edlib") {
+    switch (verbose) {
+    case 0:
+      return std::make_unique<EdlibSearchWorkerImpl<0>>(query, ref, threshold,
+                                                        threads);
+    case 1:
+      return std::make_unique<EdlibSearchWorkerImpl<1>>(query, ref, threshold,
+                                                        threads);
+    default:
+      return std::make_unique<EdlibSearchWorkerImpl<2>>(query, ref, threshold,
+                                                        threads);
+    }
+  } else if (dist_method == "hybrid") {
+    double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
+    switch (verbose) {
+    case 0:
+      return std::make_unique<HybridSearchWorkerImpl<0>>(query, ref, threshold,
+                                                         threads, breakpoint);
+    case 1:
+      return std::make_unique<HybridSearchWorkerImpl<1>>(query, ref, threshold,
+                                                         threads, breakpoint);
+    default:
+      return std::make_unique<HybridSearchWorkerImpl<2>>(query, ref, threshold,
+                                                         threads, breakpoint);
+    }
+  } else if (dist_method == "hamming") {
+    int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
+    bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
+    switch (verbose) {
+    case 0:
+      return std::make_unique<HammingSearchWorkerImpl<0>>(query, ref, threshold,
+                                                          threads, min_overlap,
+                                                          ignore_gaps);
+    case 1:
+      return std::make_unique<HammingSearchWorkerImpl<1>>(query, ref, threshold,
+                                                          threads, min_overlap,
+                                                          ignore_gaps);
+    default:
+      return std::make_unique<HammingSearchWorkerImpl<2>>(query, ref, threshold,
+                                                          threads, min_overlap,
+                                                          ignore_gaps);
+    }
+  } else {
+    OPTIMOTU_STOP("search is not implemented for distance method '%s'",
+                  dist_method.c_str());
   }
 }
 #endif // OPTIMOTU_R

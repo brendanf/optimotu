@@ -201,6 +201,25 @@ seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_c
     .Call(`_optimotu_seq_cluster_multi`, seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
 }
 
+#' Search for best match(es) of query sequences in reference sequences
+#' @param query (named `character`) query sequences
+#' @param ref (named `character`) reference sequences
+#' @param dist_config (`optimotu_dist_config`) distance configuration
+#' @param parallel_config (`optimotu_parallel_config`) parallelization
+#' configuration. Search methods do not treat the different methods differently;
+#' only the number of threads is used.
+#' @param threshold (`numeric`) distance threshold for the search; larger
+#' distances are not considered
+#' @param verbose (`integer`) verbosity level
+#' @return `data.frame` with columns `seq_id` (query sequence ID),
+#' `ref_id` (reference sequence ID), and `dist` (distance between the query
+#' and reference sequences)
+#' @export
+#' @keywords internal
+seq_search_internal <- function(query, ref, dist_config, parallel_config, threshold, verbose = 0L) {
+    .Call(`_optimotu_seq_search_internal`, query, ref, dist_config, parallel_config, threshold, verbose)
+}
+
 #' @param match (non-negative `integer`) alignment score for matching nucleotides
 #' @param mismatch (non-negative `integer`) alignment penalty for mismatched
 #' nucleotides.

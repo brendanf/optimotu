@@ -4,6 +4,7 @@
 #include "ClusterAlgorithmFactory.h"
 #include "MultipleClusterAlgorithm.h"
 #include "ClusterWorker.h"
+#include "SearchWorker.h"
 
 #include "DistanceConverter.h"
 
@@ -78,6 +79,15 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     Rcpp::List parallel_config,
     const std::vector<std::string> &seq,
     ClusterAlgorithm &cluster,
+    int verbose = 0
+);
+
+std::unique_ptr<SearchWorker> create_search_worker(
+    Rcpp::List dist_config,
+    Rcpp::List parallel_config,
+    const std::vector<std::string> & query,
+    const std::vector<std::string> & ref,
+    double threshold,
     int verbose = 0
 );
 
