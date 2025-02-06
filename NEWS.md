@@ -23,6 +23,8 @@ Actions tests)
 * `clust_tree()` now has arguments `verbose` and `test` to control verbosity
   and whether to run verification tests during clustering. Tests slow down
   clustering, especially at `test = 2`.
+* changed the gap open penalties in `seq_cluster_usearch()` to open=0 (was 1)
+  for consistency with edlib and the defaults for WFA2.
 
 # optimotu 0.8.1
 

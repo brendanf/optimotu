@@ -211,7 +211,7 @@ do_usearch_singlelink <- function(
     "-tabbedout", fifoname, # output fifo
     "-maxdist", usearch_thresh_max, # similarity threshold
     "-termdist", min(1, 2*usearch_thresh_max), # threshold for udist
-    "-lopen", "1", # gap opening
+    "-lopen", "0", # gap opening
     "-lext", "1" # gap extend
   )
   if (!is.null(usearch_ncpu)) {
