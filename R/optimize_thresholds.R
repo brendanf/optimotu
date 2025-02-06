@@ -19,7 +19,10 @@ is_placeholder <- function(taxon) {
 #' @param ranks (`character` vector) the ranks to clean
 #' @return a cleaned taxonomy
 #' @export
-clean_taxonomy <- function(taxonomy, ranks) {
+clean_taxonomy <- function(
+    taxonomy,
+    ranks = c("kingdom", "phylum", "class", "order", "family", "genus", "species")
+) {
   checkmate::assert_data_frame(taxonomy)
   checkmate::assert_character(ranks)
   checkmate::assert_names(names(taxonomy), must.include = c("seq_id", ranks))
@@ -244,7 +247,9 @@ find_best_threshold <- function(
 #' @param taxonomy (`data.frame`) taxonomic identifications of the reference
 #' sequences.  Must include a column for each rank in `ranks` and a column for
 #' sequence identifiers, defined by `id_col`. Any additional columns are ignored.
-#' @param refseq (named `character`) the reference sequences
+#' @param refseq (named `character`, file name,
+#' [`DNAStringSet`][Biostrings::XStringSet-class], or `data.frame`) the
+#' reference sequences
 #' @param ranks (`character` vector) the taxonomic ranks in `taxonomy`
 #' @param dist_config (`op timotu_dist_config`) specification of the pairwise
 #' distance algorithm to use, as created by `dist_config()` or its helpers
@@ -294,8 +299,8 @@ optimize_thresholds <- function(
   checkmate::assert_string(id_col)
   checkmate::assert_data_frame(taxonomy)
   checkmate::assert_names(names(taxonomy), must.include = c(id_col, ranks))
-  checkmate::assert_character(refseq)
-  checkmate::assert_set_equal(taxonomy[[id_col]], names(refseq))
+  refseq_names <- seq_names(refseq)
+  checkmate::assert_set_equal(taxonomy[[id_col]], refseq_names)
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
@@ -310,8 +315,8 @@ optimize_thresholds <- function(
 
   # SLINK will fail if the order of sequences is different in the testset and
   # the reference sequences
-  if (!isTRUE(all.equal(names(refseq), taxonomy[[id_col]]))) {
-    taxonomy <- taxonomy[match(names(refseq), taxonomy[[id_col]]), ]
+  if (!isTRUE(all.equal(refseq_names, taxonomy[[id_col]]))) {
+    taxonomy <- taxonomy[match(refseq_names, taxonomy[[id_col]]), ]
   }
 
   # Calculate which subsets to optimize

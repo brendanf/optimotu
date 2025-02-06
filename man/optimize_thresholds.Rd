@@ -24,7 +24,9 @@ optimize_thresholds(
 sequences.  Must include a column for each rank in \code{ranks} and a column for
 sequence identifiers, defined by \code{id_col}. Any additional columns are ignored.}
 
-\item{refseq}{(named \code{character}) the reference sequences}
+\item{refseq}{(named \code{character}, file name,
+\code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, or \code{data.frame}) the
+reference sequences}
 
 \item{ranks}{(\code{character} vector) the taxonomic ranks in \code{taxonomy}}
 

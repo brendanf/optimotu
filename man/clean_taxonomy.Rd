@@ -4,7 +4,10 @@
 \alias{clean_taxonomy}
 \title{Replace "placeholder" ranks in a taxonomy with NA}
 \usage{
-clean_taxonomy(taxonomy, ranks)
+clean_taxonomy(
+  taxonomy,
+  ranks = c("kingdom", "phylum", "class", "order", "family", "genus", "species")
+)
 }
 \arguments{
 \item{taxonomy}{(\code{data.frame}) the taxonomy to clean}
