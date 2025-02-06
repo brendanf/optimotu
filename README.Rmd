@@ -6,6 +6,7 @@ output: github_document
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
+  eval = FALSE,
   collapse = TRUE,
   comment = "#>",
   fig.path = "man/figures/README-",
@@ -17,7 +18,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/brendanf/optimotu/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/brendanf/optimotu/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/brendanf/optimotu/branch/master/graph/badge.svg)](https://app.codecov.io/gh/brendanf/optimotu?branch=master)
+[![Codecov test coverage](https://codecov.io/gh/brendanf/optimotu/graph/badge.svg)](https://app.codecov.io/gh/brendanf/optimotu)
 <!-- badges: end -->
 
 `optimotu` is a package for cluster optimization, in particular optimization of
@@ -54,6 +55,8 @@ which are identified to species level, generated at the Westerdijk Institute^1^.
 In real use cases, assembling and annotating the reference sequences might be
 the biggest part of the work!
 
+(Demos are temporarily disabled to to heavy usage of the NCBI API; demos 
+for new features will be added soon)
 
 ```{r seqs}
 morti_search <- rentrez::entrez_search(

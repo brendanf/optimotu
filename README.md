@@ -7,7 +7,7 @@
 
 [![R-CMD-check](https://github.com/brendanf/optimotu/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/brendanf/optimotu/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/brendanf/optimotu/branch/master/graph/badge.svg)](https://app.codecov.io/gh/brendanf/optimotu?branch=master)
+coverage](https://codecov.io/gh/brendanf/optimotu/graph/badge.svg)](https://app.codecov.io/gh/brendanf/optimotu)
 <!-- badges: end -->
 
 `optimotu` is a package for cluster optimization, in particular
@@ -45,6 +45,9 @@ level, generated at the Westerdijk Institute<sup>1</sup>. In real use
 cases, assembling and annotating the reference sequences might be the
 biggest part of the work!
 
+(Demos are temporarily disabled to to heavy usage of the NCBI API; demos
+for new features will be added soon)
+
 ``` r
 morti_search <- rentrez::entrez_search(
   "nuccore",
@@ -73,7 +76,6 @@ the sequence when that clustering threshold is used.
 
 ``` r
 dim(clustering)
-#> [1] 201  55
 ```
 
 As a convention, `optimotu` always uses the 0-based index of the first
@@ -98,9 +100,6 @@ species <- vapply(
 )
 
 head(species)
-#> [1] "Mortierella antarctica"        "Mortierella microzygospora"   
-#> [3] "Mortierella alpina"            "Mortierella elongatula"       
-#> [5] "Mortierella macrocystopsis"    "Mortierella histoplasmatoides"
 ```
 
 Now we can calculate scores for how well clustering at different
@@ -169,8 +168,6 @@ ggplot(cluster_metrics, aes(x = threshold, y = value, color = metric)) +
   facet_wrap(~metric, scales = "free") +
   scale_color_discrete(guide = NULL)
 ```
-
-<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
 
 Notice that the mutual information (MI) and Rand index (RI) give
 comparatively higher scores for thresholds close to 0 (i.e., many small
