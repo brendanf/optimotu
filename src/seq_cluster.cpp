@@ -47,7 +47,7 @@ Rcpp::RObject seq_cluster_single(
   algo->finalize();
   Rcpp::RObject output = R_NilValue;
   if (output_type == "matrix") {
-    auto method = (Rcpp::as<Rcpp::CharacterVector>(clust_config["method"]))[0];
+    auto method = element_as_string(clust_config, "method", "clust_config");
     if (method == "tree" || method == "slink") {
       internal_matrix_t m(im);
       algo->write_to_matrix(m);
@@ -57,6 +57,7 @@ Rcpp::RObject seq_cluster_single(
     for (int i = 0; i < dconv->m; ++i) {
       thresh[i] = dconv->inverse(i);
     }
+
     output.attr("dimnames") = Rcpp::List::create(
       thresh,
       seq.names()
@@ -120,14 +121,15 @@ Rcpp::List seq_cluster_multi(
     for (int i = 0; i < dconv->m; ++i) {
       thresh[i] = dconv->inverse(i);
     }
+
     auto outlist = Rcpp::List(which.size());
     auto internal_out = std::vector<RcppParallel::RMatrix<int>>();
     internal_out.reserve(which.size());
     for (int i = 0; i < which.size(); ++i) {
       auto outi = Rcpp::IntegerMatrix(dconv->m, which[i].size());
       outi.attr("dimnames") = Rcpp::List::create(
-          thresh,
-          which[i]
+        thresh,
+        which[i]
       );
       outlist[i] = outi;
       internal_out.emplace_back(outi);
