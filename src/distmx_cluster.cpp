@@ -13,7 +13,8 @@ Rcpp::RObject distmx_cluster_single(
   Rcpp::List clust_config,
   Rcpp::List parallel_config,
   const std::string output_type = "matrix",
-  const bool verbose = false
+  const bool verbose = false,
+  const bool by_name = false
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
@@ -40,7 +41,7 @@ Rcpp::RObject distmx_cluster_single(
   auto dconv = create_distance_converter(threshold_config);
   Rcpp::IntegerMatrix im(dconv->m, seqnames.size());
   auto algo = create_cluster_algorithm(clust_config, dconv.get())->create(im);
-  auto worker = create_cluster_worker(parallel_config, algo.get(), infile);
+  auto worker = create_cluster_worker(parallel_config, algo.get(), infile, by_name, seqnames);
   int threads = worker->n_threads();
   if (threads == 1) {
     (*worker)(0, 1);
@@ -71,6 +72,7 @@ Rcpp::List distmx_cluster_multi(
     const Rcpp::List method_config,
     const Rcpp::List parallel_config,
     const std::string output_type = "matrix",
+    const bool by_name = false,
     const bool verbose = false
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
@@ -91,7 +93,7 @@ Rcpp::List distmx_cluster_multi(
   auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seqnames, which);
   // OPTIMOTU_COUT << "done" << std::endl
   //             << "creating ClusterWorker..." << std::flush;
-  auto worker = create_cluster_worker(parallel_config, algo.get(), infile);
+  auto worker = create_cluster_worker(parallel_config, algo.get(), infile, by_name, seqnames);
   // OPTIMOTU_COUT << "done" << std::endl
   //             << "clustering..." << std::flush;
 

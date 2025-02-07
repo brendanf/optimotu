@@ -34,12 +34,12 @@ confusion_matrix2 <- function(k, c, threads = 1L) {
     .Call(`_optimotu_confusion_matrix2`, k, c, threads)
 }
 
-distmx_cluster_single <- function(file, seqnames, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = FALSE) {
-    .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, clust_config, parallel_config, output_type, verbose)
+distmx_cluster_single <- function(file, seqnames, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = FALSE, by_name = FALSE) {
+    .Call(`_optimotu_distmx_cluster_single`, file, seqnames, threshold_config, clust_config, parallel_config, output_type, verbose, by_name)
 }
 
-distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method_config, parallel_config, output_type = "matrix", verbose = FALSE) {
-    .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type, verbose)
+distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method_config, parallel_config, output_type = "matrix", by_name = FALSE, verbose = FALSE) {
+    .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type, by_name, verbose)
 }
 
 #' Sparse distance matrix between DNA sequences

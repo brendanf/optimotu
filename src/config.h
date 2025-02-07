@@ -39,7 +39,9 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
     const int threads,
     const int shards,
     ClusterAlgorithm * algo,
-    std::istream &file
+    std::istream &file,
+    const bool by_name,
+    const std::vector<std::string> & seqnames
 );
 std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     const std::string &type,
@@ -72,7 +74,9 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
 std::unique_ptr<ClusterWorker> create_cluster_worker(
   Rcpp::List config,
   ClusterAlgorithm * algo,
-  std::istream &file
+  std::istream &file,
+  bool by_name,
+  const Rcpp::CharacterVector seqnames
 );
 std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     Rcpp::List dist_config,

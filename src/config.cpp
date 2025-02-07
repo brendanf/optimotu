@@ -69,14 +69,34 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
     const int threads,
     const int shards,
     ClusterAlgorithm * algo,
-    std::istream &file
+    std::istream &file,
+    const bool by_name,
+    const std::vector<std::string> & seqnames
 ) {
   if (method == "merge") {
-    return std::make_unique<MergeClusterWorker>(algo, file, threads);
+    if (by_name) {
+      return std::make_unique<MergeClusterWorker<std::string>>(
+        algo, file, seqnames, threads
+      );
+    } else {
+      return std::make_unique<MergeClusterWorker<int>>(algo, file, threads);
+    }
   } else if (method == "concurrent") {
-    return std::make_unique<ConcurrentClusterWorker>(algo, file, threads);
+    if (by_name) {
+      return std::make_unique<ConcurrentClusterWorker<std::string>>(
+        algo, file, seqnames, threads
+      );
+    } else {
+      return std::make_unique<ConcurrentClusterWorker<int>>(algo, file, threads);
+    }
   } else if (method == "hierarchical") {
-    return std::make_unique<HierarchicalClusterWorker>(algo, file, threads, shards);
+    if (by_name) {
+      return std::make_unique<HierarchicalClusterWorker<std::string>>(
+        algo, file, seqnames, threads, shards
+      );
+    } else {
+      return std::make_unique<HierarchicalClusterWorker<int>>(algo, file, threads, shards);
+    }
   } else {
     OPTIMOTU_STOP("unknown parallelization method");
   }
@@ -308,7 +328,9 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     Rcpp::List config,
     ClusterAlgorithm * algo,
-    std::istream &file
+    std::istream &file,
+    bool by_name,
+    const Rcpp::CharacterVector seqnames
 ) {
   if (!config.inherits("optimotu_parallel_config")) {
     OPTIMOTU_STOP(
@@ -318,12 +340,32 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
   std::string method = element_as_string(config, "method", "parallel_config");
   int threads = element_as_int(config, "threads", "parallel_config");
   if (method == "merge") {
-    return std::make_unique<MergeClusterWorker>(algo, file, threads);
+    if (by_name) {
+      return std::make_unique<MergeClusterWorker<std::string>>(
+        algo, file, Rcpp::as<std::vector<std::string>>(seqnames), threads
+      );
+    } else {
+      return std::make_unique<MergeClusterWorker<int>>(algo, file, threads);
+    }
   } else if (method == "concurrent") {
-    return std::make_unique<ConcurrentClusterWorker>(algo, file, threads);
+    if (by_name) {
+      return std::make_unique<ConcurrentClusterWorker<std::string>>(
+        algo, file, Rcpp::as<std::vector<std::string>>(seqnames), threads
+      );
+    } else {
+      return std::make_unique<ConcurrentClusterWorker<int>>(algo, file, threads);
+    }
   } else if (method == "hierarchical") {
     int shards = element_as_int(config, "shards", "parallel_config");
-    return std::make_unique<HierarchicalClusterWorker>(algo, file, threads, shards);
+    if (by_name) {
+      return std::make_unique<HierarchicalClusterWorker<std::string>>(
+        algo, file, Rcpp::as<std::vector<std::string>>(seqnames), threads, shards
+      );
+    } else {
+      return std::make_unique<HierarchicalClusterWorker<int>>(
+        algo, file, threads, shards
+      );
+    }
   } else {
     OPTIMOTU_STOP("unknown parallelization method");
   }

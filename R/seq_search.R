@@ -52,13 +52,46 @@ seq_search <- function(
     if (!is.null(ref_id)) {
       names(ref) <- ref_id
     }
-    seq_search_internal(
-      query = query,
-      ref = ref,
-      dist_config = dist_config,
-      parallel_config = parallel_config,
-      threshold = threshold,
-      verbose = verbose
-    )
+
+    if (identical(dist_config$method, "file")) {
+      checkmate::assert_file(dist_config$filename)
+      if (dist_config$by_name == TRUE) {
+        out <- read.table(
+          file = dist_config$filename,
+          header = FALSE,
+          col.names = c("seq_id", "ref_id", "dist"),
+          colClasses = c("character", "character", "numeric")
+        )
+        # An external distance matrix may not have queries and references
+        # distinguished, so search for pairs in both directions
+        fwd_matches <- out$seq_id %in% names(query) & out$ref_id %in% names(ref)
+        swap_matches <- out$seq_id %in% names(ref) & out$ref_id %in% names(query)
+        data.frame(
+          seq_id = c(out$seq_id[fwd_matches], out$ref_id[swap_matches]),
+          ref_id = c(out$ref_id[fwd_matches], out$seq_id[swap_matches]),
+          dist = c(out$dist[fwd_matches], out$dist[swap_matches]),
+          stringsAsFactors = FALSE
+        )
+      } else {
+        read.table(
+          file = dist_config$filename,
+          header = FALSE,
+          col.names = c("seq_id", "ref_id", "dist"),
+          colClasses = c("integer", "integer", "numeric")
+        )
+        out$seq_id <- names(query)[out$seq_id + 1]
+        out$query_id <- names(ref)[out$ref_id + 1]
+        out
+      }
+    } else {
+      seq_search_internal(
+        query = query,
+        ref = ref,
+        dist_config = dist_config,
+        parallel_config = parallel_config,
+        threshold = threshold,
+        verbose = verbose
+      )
+    }
   }
 }

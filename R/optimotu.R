@@ -155,6 +155,14 @@ optimotu <- function(
   }
 
   checkmate::assert_class(dist_config, "optimotu_dist_config")
+  if (identical(dist_config$method, "file")) {
+    if (isFALSE(dist_config$by_name)) {
+      stop("File-based distance matrices indexed by integer are not supported ",
+           "in optimotu(). If your file has sequence names, use ",
+           "dist_file({your_file}, by_name = TRUE) instead.")
+    }
+  }
+
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
 
   checkmate::assert(

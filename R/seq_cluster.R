@@ -69,6 +69,7 @@ seq_cluster.character <- function(
     which = TRUE,
     verbose = FALSE
 ) {
+  checkmate::assert_class(dist_config, "optimotu_dist_config")
   if (identical(dist_config$method, "usearch")) {
     mycall <- match.call
     mycall$dist_config <- NULL
@@ -77,12 +78,21 @@ seq_cluster.character <- function(
     mycall[[1]] <- quote(seq_cluster_usearch.character)
     return(eval(mycall, envir = parent.frame()))
   }
+  if (identical(dist_config$method, "file")) {
+    mycall <- match.call
+    mycall$dist_config <- NULL
+    mycall$seq <- NULL
+    mycall$names <- mycall$seq_id
+    mycall$seq_id <- NULL
+    mycall$by_names <- dist_config$by_names
+    mycall[[1]] <- quote(distmx_cluster)
+    return(eval(mycall, envir = parent.frame()))
+  }
   output_type = match.arg(output_type)
   if (length(seq) == 1 && file.exists(seq)) {
     seq <- as.character(Biostrings::readBStringSet(seq))
   }
   if (!missing(seq_id)) names(seq) <- seq_id
-  checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
