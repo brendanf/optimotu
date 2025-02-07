@@ -72,8 +72,8 @@ Rcpp::List distmx_cluster_multi(
     const Rcpp::List method_config,
     const Rcpp::List parallel_config,
     const std::string output_type = "matrix",
-    const bool by_name = false,
-    const bool verbose = false
+    const bool verbose = false,
+    const bool by_name = false
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
