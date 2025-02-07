@@ -1,0 +1,361 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% definitions for citeproc citations
+\NewDocumentCommand\citeproctext{}{}
+\NewDocumentCommand\citeproc{mm}{%
+  \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
+\makeatletter
+ % allow citations to break across lines
+ \let\@cite@ofmt\@firstofone
+ % avoid brackets around text for \cite:
+ \def\@biblabel#1{}
+ \def\@cite#1#2{{#1\if@tempswa , #2\fi}}
+\makeatother
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newenvironment{CSLReferences}[2] % #1 hanging-indent, #2 entry-spacing
+ {\begin{list}{}{%
+  \setlength{\itemindent}{0pt}
+  \setlength{\leftmargin}{0pt}
+  \setlength{\parsep}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1
+   \setlength{\leftmargin}{\cslhangindent}
+   \setlength{\itemindent}{-1\cslhangindent}
+  \fi
+  % set entry spacing
+  \setlength{\itemsep}{#2\baselineskip}}}
+ {\end{list}}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={OptimOTU: taxonomically aware OTU clustering with optimized thresholds},
+  pdfauthor={Brendan Furneaux},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{OptimOTU: taxonomically aware OTU clustering with optimized thresholds}
+\author{Brendan Furneaux}
+\date{2025-02-06}
+
+\begin{document}
+\maketitle
+
+\section{Abstract}\label{abstract}
+
+OptimOTU is a taxonomically aware approach to OTU clustering.
+It uses a set of taxonomically identified reference sequences to chose optimal genetic distance thresholds for grouping each ancestor taxon into clusters which most closely match its descendent taxa.
+Then, query sequences are clustered according to preliminary taxonomic identifications and the optimized thresholds for their ancestor taxon.
+The process follows the taxonomic hierarchy, resulting in a full taxonomic classification of all the query sequences into named taxonomic groups as well as placeholder ``pseudotaxa'' which accomodate the sequences that could not be classified to a named taxon at the corresponding rank.
+OptimOTU is implemented as an R package, with computationally intensive steps implemented in C++ for speed, and incorporating open-source libraries for pairwise sequence alignment.
+Distances may also be calculated externally, and may be read from a UNIX pipe, allowing clustering of large datasets where the full distance matrix would be inconveniently large to store in memory.
+We also present the OptimOTU pipeline, a bioinformatics workflow for paired-end Illumina sequencing data that incorporates quality filtering, denoising, artifact removal, taxonomic classification, and OTU clustering with OptimOTU.
+The OptimOTU pipeline is developed for use on high performance computing clusters, and scales to datasets with millions of reads per sample, and tens of thousands of samples.
+
+\section{Introduction}\label{introduction}
+
+Clustering of environmentally derived marker gene sequences into operational taxonomic units (OTUs) prior to downstream analysis is a common step in molecular ecology workflows.
+The aim is to group sequences that are derived from the same species or strain, but differ due to errors during amplification or sequencing, or due to true genetic variation between gene copies in the same genome or between individuals.
+
+Traditional agglomerative and greedy clustering algorithms treat these sources of variation in the same way, clustering sequences into OTUs based on a single global threshold (Dondoshansky and Wolf 2000; Li and Godzik 2006; Edgar 2010; Mahé et al. 2015; Ratnasingham and Hebert 2013).
+In this case the threshold should be chosen to be larger than typical error rates for the chosen sequencing workflow, and also larger than the intraspecies genetic variation present within the species of interest, while also being smaller than the level of genetic variation between species.
+
+Alternatively, denoising algorithms such as Deblur (Amir et al. 2017), DADA2 (Callahan et al. 2016), and UNOISE2 (Edgar 2016b) incorporate sequence abundance information to attempt to separate true biological variation from sequencing errors, yielding clusters known variably as amplicon sequence variants (ASVs), exact sequence variants (ESVs), or zero-diameter OTUS (zOTUs).
+Denoising may successfully recover true biological variation even below the sequencing error rate, but as a result also frequently separate sequences that are derived from the same species or strain, and so ASVs may be subjected to a second clustering step to group sequences using a biologically motivated threshold.
+In either case, it is common to choose a single threshold, often 97\% similarity, for all sequences,
+even in studies that target large and diverse taxonomic groups such as all fungi, all eukaryotes, or all prokaryotes.
+However, levels of genetic variation within species are known to vary between taxonomic groups as well as between marker genes, so these thresholds may result in over- or under-clustering, and most often both within the same dataset.
+
+Here we present OptimOTU, a taxonomically aware approach to OTU clustering, in which optimized thresholds are used for different taxonomic groups.
+
+\section{Methods}\label{methods}
+
+Use of OptimOTU has three phases: threshold optimization, preliminary taxonomic identification, and clustering.
+Threshold optimization is usually the most computationally intensive step, but it does not need to be repeated for every study in a set of optimized thresholds for the taxonomic groups of interest has already been determined.
+
+Threshold optimization is performed by the function \texttt{optimize\_thresholds()}, which takes as input a set of reference sequences and their taxonomic identifications.
+These can be obtained from a curated global database such as BOLD (Ratnasingham and Hebert 2013), UNITE (Abarenkov et al. 2010), or PR2 (\textbf{guillou2013?}), or from a local database of sequences that have been taxonomically identified by experts.
+It is also possible to use a subset of the sequences from the study in question that have been identified with high confidence by algorithms such as the RDP naive Bayesian classifier (Wang et al. 2007), SINTAX (Edgar 2016a), PROTAX (Somervuo et al. 2016; Abarenkov et al. 2018; Roslin et al. 2022), or similar methods.
+This was the approach used in Ovaskainen et al. (2024).
+These sequences are then clustered by single-linkage hierarchical agglomerative clustering, resulting in a tree structure which can be cut at any level to produce a partition of the reference sequences into clusters.
+Such partitions are calculated for a range of test thresholds, for example 0.0 to 0.4 in steps of 0.001, and the resulting clusters are compared to the taxonomic identifications to determine the threshold that produces clusters that most closely match the taxonomy at each rank.
+This process is conceptually repeated for each taxon in the reference set, and which has enough representative sequences (default: 10) and enough descendant taxa (default: 5) to be informative.
+In practice, clustering is performed concurrently for all relevant taxa, with only a single pass through the sequences.
+
+Once the optimized thresholds have been determined, they can be used to cluster query sequences.
+OptimOTU inverts the typical workflow in which sequences are clustered first and then taxonomically identified, and instead uses preliminary taxonomic identification first, followed by clustering informed by the identifications.
+The taxonomic identification can be performed by any method with a stopping condition, meaning that taxonomic identification is truncated to higher ranks if the confidence is low.
+This includes any of the wide range of algorithms which produces confidence scores for classifications at each rank, such as the popular k-mer profile naive Bayesian classifier first implemented by the RDP classifier (Wang et al. 2007) but also available in software such as Mothur (Schloss et al. 2009), QIIME 2 (Bokulich et al. 2018) and DADA2 (Callahan et al. 2016), as well as SINTAX (Edgar 2016a), PROTAX (Somervuo et al. 2016; Abarenkov et al. 2018; Roslin et al. 2022), IDTAXA (Murali, Bhargava, and Wright 2018), Gappa (Czech, Barbera, and Stamatakis 2020), BayesANT (Zito, Rigon, and Dunson 2023), and MycoAI (Romeijn, Bernatavicius, and Vu 2024).
+Additionally, algorithms based on last common ancestor (LCA) consensus such as implemented in CREST (Lanzén et al. 2012), USEARCH, (Edgar 2010), VSEARCH (Rognes et al. 2016), and QIIME 2 (Bokulich et al. 2018) may be suitable.
+
+The clustering process is then performed using the \texttt{optimotu()} function, which proceeds in a hierarchical manner through the taxonomic ranks, starting with the rank below the root.
+Within each rank, the sequences are grouped by their cluster identity at the rank above and processed separately.
+At each rank, the clustering proceeds in three stages.
+First, cluster cores are formed by grouping sequences which have the same taxonomic identifications at the current rank.
+Second, sequences which were not identified at the current rank are assigned to cluster cores by closed-reference clustering, using the optimized threshold for the closest enclosing taxon for which a threshold was determined.
+The closed-reference clustering is performed by pairwise comparisons between the unassigned sequences and all sequences in the cluster cores, and if the distance is less than the threshold, the sequence is added to the cluster.
+If the sequence is closer than the threshold to sequences from multiple cluster cores, then it is assigned to the one with the closest match.
+If there is a tie between multiple sequences in different cluster cores, then the new sequence is assigned to the cluster core of one of the tied sequences at random.
+The closed reference clustering phase is performed iteratively, with the sequences newly assigned to cluster cores in the previous iteration being used as the target sequences in the next iteration, until no new matches are found.
+In this way, the resulting partition approximates single-linkage clustering, although clusters which would be joined in full single-linkage may be separated if they contain sequences with different taxonomic identifications.
+In the third and final step, sequences which are still unassigned at the chosen rank are \emph{de novo} single-linkage clustered with the optimized threshold.
+The clusters from the \emph{de novo} clustering are given placeholder taxonomic names of the form ``pseudo\{rank\}\_\{number\}``, where \{rank\} is the rank of the cluster and \{number\} is a unique integer identifier.
+
+When the clustering is complete, the result is a full taxonomic classification for each sequence, including named taxa and pseudotaxa.
+Clusters at the lowest rank, typically species, are then used as OTUs for further analysis.
+
+\subsection{Pairwise distance calculation algorithms}\label{pairwise-distance-calculation-algorithms}
+
+OptimOTU can be used with various methods for calculating pairwise distances between sequences.
+Three methods are implemented internally in the R package and can be selected using the option \texttt{dist\_config} to \texttt{optimize\_thresholds()} or \texttt{optimotu()}.
+
+The first method is a simple Hamming distance, which counts the number of differences between two sequences.
+Although this is by far the fastest method, it is only suitable if both the query and reference sequences are already globally aligned.
+This is the recommended method for use with protein-coding sequences such as COI, and may also be applied to the ribosomal small subunit (SSU/12S/16S/18S) 5.8S, and large subunit (16S/23S/25S/26S/28S) RNA, but should not be used for sequences containing introns, spacers such as ITS, or other regions where multiple alignment across broad taxonomic ranges is not reliable.
+The implementation is adapted from ProtaxA (Roslin et al. 2022) which uses a 4-bit one-hot encoding of DNA sequences and the bit-count instruction of modern processors to accelerate the calculation.
+It is activated using \texttt{dist\_config\ =\ dist\_hamming(min\_overlap,\ ignore\_gaps)}.
+The two options control handling of gap characters.
+The \texttt{min\_overlap} defines a minimum number of sites which contain a nucleotide in both sequences being compared.
+Although low pairwise alignment overlap is expected to be rare in a global multiple sequence alignment of genuine metabarcoding reads of ``alignable'' markers such as 16S or COI, which should consist of full-length reads of the homologous region between two primers, it may occur in the case of artefactual sequences, and may also be more common in reference databases, where sequences may come from different primer sets or have been trimmed to different lengths.
+The \texttt{ignore\_gaps} option allows the user to specify whether sites where a gap in one sequence is aligned to a nucleotide in the other sequence should be ignored in the distance calculation or counted as a mismatch.
+End gaps and gap-gap sites are always ignored.
+
+The second method uses the open-source C++ library Edlib (Šošić and Šikić 2017) to calculate edit (Levenshtein) distance between two sequences using Needleman-Wunsch dynamic programming.
+Edlib also allows the use of banding to limit the search space, and early stopping when the alignment score exceeds a predefined threshold.
+This is the fastest internal method for calculating distances between unaligned sequences when the distances are large.
+However, the pairwise alignments may not be as biologically relevant as those using more complex gap-affine scoring schemes.
+The Edlib method is activated using \texttt{dist\_config\ =\ dist\_edlib()}.
+
+The third method uses wavefront alignment (WFA) with the open-source C++ library WFA2 (Marco-Sola et al. 2021).
+WFA is especially efficient for very similar sequences, and in addition to the edit distance, can also calculate gap-linear, gap-affine, and two-penalty gap-affine alignments.
+Both of the latter cases support banding to limit the search space, and early stopping when the alignment score exceeds a given threshold.
+
+Alternatively, distances can be supplied as a distance matrix in three-column (query, reference, distance) format, which can be read from a
+file or UNIX pipe, allowing the use of arbitrary external tools.
+The R package has a function which runs USEARCH (Edgar 2010) to calculate sparse distance matrices via the \texttt{calc\_distmx} function for the optimization and \emph{de novo} clustering stages, and \texttt{usearch\_global} for the closed-reference clustering stage.
+
+\subsection{Clustering algorithms}\label{clustering-algorithms}
+
+OptimOTU implements several single-linkage clustering algorithms, of which SLINK and a novel tree-based algorithm are recommended for use.
+
+The SLINK algorithm (Sibson 1973), which operates at the theoretically optimal complexities of \(O(n^2)\) time and \(O(n)\) space, where \(n\) is the number of sequences.
+Unfortunately, SLINK is an inherently serial algorithm, and must process the distances in a predefined order, so it is not possible to trivially parallelize (but see Nolet et al. 2023).
+The OptimOTU implementation of SLINK does allow clustering of an incomplete distance matrix, provided the elements which are present are in the correct order, by proceeding as if the missing elements were at infinite distance.
+It also allows calculation, before each new pairwise distance is processed, of the maximum distance which would need to be obtained in order to cause an update.
+This is used to adaptively set the band width and maximum alignment score for Edlib and WFA2, in order to reduce the number of unnecessary calculations.
+The SLINK algorithm can be activated using the option \texttt{clust\_config\ =\ clust\_slink()} to \texttt{optimize\_thresholds()} or \texttt{optimotu()}.
+
+The tree-based algorithm maintains a full hierarchical clustering tree at all stages of clustering, which is updated as each new pairwise distance is processed.
+Although this algorithm has a higher time complexity than SLINK, it can process the distances in any order.
+Like SLINK, the tree-based algorithm can calculate the maximum relevant distance for a given sequence pair, and use this to set the band width and maximum alignment score for Edlib or WFA2.
+Because it is compatible with out-of-order distance matrices, the tree-based algorithm is the default clustering algorithm in OptimOTU, but it can be activated or configured using the option \texttt{clust\_config\ =\ clust\_tree()} to \texttt{optimize\_thresholds()} or \texttt{optimotu()}.
+
+The two clustering algorithms should always produce identical partitions when run on the same distances.
+The test suite for OptimOTU tests the clustering algorithms with all applicable parallelization options for consistency with each other and the base R \texttt{hclust()} command.
+Additionally, internal consistency checks can be activated by setting the optional argument \texttt{test\ =\ 1} or \texttt{test\ =\ 2} in \texttt{clust\_tree()}.
+These checks are computationally expensive, and so are not recommended for routine use, but can be useful if you believe you have found a bug in the tree-based algorithm.
+
+\begin{figure}
+\centering
+\includegraphics{optimotu_files/figure-latex/clustering-1.pdf}
+\caption{\label{fig:clustering}Clustering methods}
+\end{figure}
+
+\subsection{Parallelization}\label{parallelization}
+
+There are three available parallelization options, which are configured by setting the \texttt{parallel\_config} argument in \texttt{optimize\_thresholds()} or \texttt{optimotu()}.
+
+The first method relies on the ability of the tree-based algorithm to process pairwise distances in any order, and to calculate the maximum relevant distance for a given pair before processing it.
+Because the majority of pairwise distances do not in practice trigger updates, multiple parallel threads can cluster (and calculate distances) using two-stage locking, in which the tree is non-exclusively locked for reading to calculate the maximum relevant distance for a given pair, and then only exclusively locked for writing when a relevant distance is found.
+This is referred to as the ``concurrent'' option, selected using \texttt{parallel\_config\ =\ parallel\_concurrent(threads)}, where \texttt{threads} is the number of parallel threads to use for updating the tree.
+
+It is also possible to merge two trees using only \(O(n)\) updates, which allows an alternate parallelization technique, where multiple tree structures are processed in parallel and then merged at the end.
+This technique can also be used to cluster different subsets of the distance matrix in parallel using SLINK, and then merge the results using the tree-based algorithm.
+This method is referred to as the ``merge'' option, accessed by setting the option \texttt{parallel\_config\ =\ parallel\_merge(threads)}, where \texttt{threads} is the number of tree structures, each updated by its own thread.
+This is the only parallelization algorithm which can be used with SLINK if \texttt{threads} \(> 1\).
+
+Finally, the two parallelization techniques can be combined, with multiple tree structures each updated by multiple parallel threads, and then merged at the end.
+This is referred to as the ``hierarchical'' option, accessed by setting the option \texttt{parallel\_config\ =\ parallel\_hierarchical(threads,\ shards)}, where \texttt{threads} is the total number of threads and \texttt{shards} is the number of tree structures.
+
+, which is also used to generate barcode identification numbers (BINs) in the BOLD database (Ratnasingham and Hebert 2013) and species hypotheses in the UNITE database (Abarenkov et al. 2010).
+
+\section{Discussion}\label{discussion}
+
+OptimOTU uses a modified version of single-linkage (also known as minimum-distance or nearest-neighbor) clustering at all ranks.
+In single linkage clustering, all pairs of sequences which are separated by a genetic distance less than the chosen threshold are grouped together.
+Thus, the threshold may be considered as the minimum genetic distance between distinct OTUs.
+This is in contrast to complete-linkage clustering, in which the threshold defines the maximum distance between any two sequences within the same OTU, and
+various intermediate-linkage methods, such as average-linkage, as well as centroid-based clustering methods, in which the threshold defines the maximum distance between a sequence and the centroid of its OTU (Fig\,\ref{fig:clustering}).
+Researchers have worried about the so-called ``chaining'' effect of single linkage clustering, in which a single sequence may link two otherwise distinct OTUs, and refer to single-linkage clusters as being ``amoeboid'' rather than ``circular''.
+This effect can be clearly seen in Fig\,\ref{fig:clustering} and similar examples of clustering in two dimensions, it is important to note that genetic distances between sequences exist in an extremely high-dimensional space, but also one in which the available distance to travel on a each ``dimension'' (i.e., the nucleotide at a single position) is very small.
+Furthermore, while independent random sequencing errors may be supposed to densely populate the space around a true biological sequence, implying clusters which are ``circular'' in the sense that the included sequences are all within a given range of the centroid, genetic variants within and between species are
+derived through a branching process through time from a common ancestor, which cannot be assumed to be present in the data or even extant.
+
+A major advantage of single linkage clustering is that the clustering criterion uniquely defines the result, and so the process is deterministic
+and not dependent on the order of the input sequences.
+This is in contrast to complete- and average-linkage clustering, as well as centroid-based methods, where multiple possible clusterings fitting the criteria may exist.
+
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
+
+\phantomsection\label{refs}
+\begin{CSLReferences}{1}{0}
+\bibitem[\citeproctext]{ref-abarenkov2010}
+Abarenkov, Kessy, R. Henrik Nilsson, Karl-Henrik Larsson, Ian J. Alexander, Ursula Eberhardt, Susanne Erland, Klaus Høiland, et al. 2010. {``The {UNITE} Database for Molecular Identification of Fungi -- Recent Updates and Future Perspectives.''} \emph{New Phytologist} 186 (2): 281--85. \url{https://doi.org/10.1111/j.1469-8137.2009.03160.x}.
+
+\bibitem[\citeproctext]{ref-abarenkov2018a}
+Abarenkov, Kessy, Panu Somervuo, R. Henrik Nilsson, Paul M. Kirk, Tea Huotari, Nerea Abrego, and Otso Ovaskainen. 2018. {``Protax-Fungi: A Web-Based Tool for Probabilistic Taxonomic Placement of Fungal Internal Transcribed Spacer Sequences.''} \emph{New Phytologist} 220 (2): 517--25. \url{https://doi.org/10.1111/nph.15301}.
+
+\bibitem[\citeproctext]{ref-amir2017}
+Amir, Amnon, Daniel McDonald, Jose A. Navas-Molina, Evguenia Kopylova, James T. Morton, Zhenjiang Zech Xu, Eric P. Kightley, et al. 2017. {``Deblur {Rapidly Resolves Single-Nucleotide Community Sequence Patterns}.''} \emph{mSystems} 2 (2): e00191--16. \url{https://doi.org/10.1128/mSystems.00191-16}.
+
+\bibitem[\citeproctext]{ref-bokulich2018}
+Bokulich, Nicholas A., Benjamin D. Kaehler, Jai Ram Rideout, Matthew Dillon, Evan Bolyen, Rob Knight, Gavin A. Huttley, and J. Gregory Caporaso. 2018. {``Optimizing Taxonomic Classification of Marker-Gene Amplicon Sequences with {QIIME} 2's Q2-Feature-Classifier Plugin.''} \emph{Microbiome} 6 (1): 90. \url{https://doi.org/10.1186/s40168-018-0470-z}.
+
+\bibitem[\citeproctext]{ref-callahan2016}
+Callahan, Benjamin J., Paul J. McMurdie, Michael J. Rosen, Andrew W. Han, Amy Jo A. Johnson, and Susan P. Holmes. 2016. {``{DADA2}: {High-resolution} Sample Inference from {Illumina} Amplicon Data.''} \emph{Nature Methods} 13 (7): 581--83. \url{https://doi.org/10.1038/nmeth.3869}.
+
+\bibitem[\citeproctext]{ref-czech2020}
+Czech, Lucas, Pierre Barbera, and Alexandros Stamatakis. 2020. {``Genesis and {Gappa}: Processing, Analyzing and Visualizing Phylogenetic (Placement) Data.''} \emph{Bioinformatics} 36 (10): 3263--65. \url{https://doi.org/10.1093/bioinformatics/btaa070}.
+
+\bibitem[\citeproctext]{ref-dondoshansky2000blastclust}
+Dondoshansky, I, and Y Wolf. 2000. {``{BLASTCLUST} - {BLAST} Score-Based Single Linkage Clustering.''} National Center for Biotechnology Information. \url{ftp://ftp.ncbi.nih.gov/blast/documents/blastclust.html}.
+
+\bibitem[\citeproctext]{ref-edgar2010}
+Edgar, Robert C. 2010. {``Search and Clustering Orders of Magnitude Faster Than {BLAST}.''} \emph{Bioinformatics} 26 (19): 2460--61. \url{https://doi.org/10.1093/bioinformatics/btq461}.
+
+\bibitem[\citeproctext]{ref-edgar2016a}
+---------. 2016a. {``{SINTAX}: A Simple Non-{Bayesian} Taxonomy Classifier for {16S} and {ITS} Sequences.''} \emph{bioRxiv}, September, 074161. \url{https://doi.org/10.1101/074161}.
+
+\bibitem[\citeproctext]{ref-edgar2016}
+---------. 2016b. {``{UNOISE2}: Improved Error-Correction for {Illumina 16S} and {ITS} Amplicon Sequencing.''} \emph{bioRxiv}, October, 081257. \url{https://doi.org/10.1101/081257}.
+
+\bibitem[\citeproctext]{ref-lanzen2012}
+Lanzén, Anders, Steffen L. Jørgensen, Daniel H. Huson, Markus Gorfer, Svenn Helge Grindhaug, Inge Jonassen, Lise Øvreås, and Tim Urich. 2012. {``{CREST} -- {Classification Resources} for {Environmental Sequence Tags}.''} \emph{PLOS ONE} 7 (11): e49334. \url{https://doi.org/10.1371/journal.pone.0049334}.
+
+\bibitem[\citeproctext]{ref-li2006}
+Li, Weizhong, and Adam Godzik. 2006. {``Cd-Hit: A Fast Program for Clustering and Comparing Large Sets of Protein or Nucleotide Sequences.''} \emph{Bioinformatics (Oxford, England)} 22 (13): 1658--59. \url{https://doi.org/10.1093/bioinformatics/btl158}.
+
+\bibitem[\citeproctext]{ref-mahe2015}
+Mahé, Frédéric, Torbjørn Rognes, Christopher Quince, Colomban de Vargas, and Micah Dunthorn. 2015. {``Swarm V2: Highly-Scalable and High-Resolution Amplicon Clustering.''} \emph{PeerJ} 3: e1420. \url{https://doi.org/10.7717/peerj.1420}.
+
+\bibitem[\citeproctext]{ref-marco-sola2021}
+Marco-Sola, Santiago, Juan Carlos Moure, Miquel Moreto, and Antonio Espinosa. 2021. {``Fast Gap-Affine Pairwise Alignment Using the Wavefront Algorithm.''} \emph{Bioinformatics} 37 (4): 456--63. \url{https://doi.org/10.1093/bioinformatics/btaa777}.
+
+\bibitem[\citeproctext]{ref-murali2018}
+Murali, Adithya, Aniruddha Bhargava, and Erik S. Wright. 2018. {``{IDTAXA}: A Novel Approach for Accurate Taxonomic Classification of Microbiome Sequences.''} \emph{Microbiome} 6 (1): 140. \url{https://doi.org/10.1186/s40168-018-0521-5}.
+
+\bibitem[\citeproctext]{ref-nolet2023}
+Nolet, Corey J., Divye Gala, Alex Fender, Mahesh Doijade, Joe Eaton, Edward Raff, John Zedlewski, Brad Rees, and Tim Oates. 2023. {``{cuSLINK}: {Single-Linkage Agglomerative Clustering} on~the~{GPU}.''} In \emph{Machine {Learning} and {Knowledge Discovery} in {Databases}: {Research Track}}, edited by Danai Koutra, Claudia Plant, Manuel Gomez Rodriguez, Elena Baralis, and Francesco Bonchi, 711--26. Lecture {Notes} in {Computer Science}. Cham: Springer Nature Switzerland. \url{https://doi.org/10.1007/978-3-031-43412-9_42}.
+
+\bibitem[\citeproctext]{ref-ovaskainen2024}
+Ovaskainen, Otso, Nerea Abrego, Brendan Furneaux, Bess Hardwick, Panu Somervuo, Isabella Palorinne, Nigel R. Andrew, et al. 2024. {``Global {Spore Sampling Project}: {A} Global, Standardized Dataset of Airborne Fungal {DNA}.''} \emph{Scientific Data} 11 (1): 561. \url{https://doi.org/10.1038/s41597-024-03410-0}.
+
+\bibitem[\citeproctext]{ref-ratnasingham2013}
+Ratnasingham, Sujeevan, and Paul D. N. Hebert. 2013. {``A {DNA-Based Registry} for {All Animal Species}: {The Barcode Index Number} ({BIN}) {System}.''} \emph{PLOS ONE} 8 (7): e66213. \url{https://doi.org/10.1371/journal.pone.0066213}.
+
+\bibitem[\citeproctext]{ref-rognes2016}
+Rognes, Torbjørn, Tomáš Flouri, Ben Nichols, Christopher Quince, and Frédéric Mahé. 2016. {``{VSEARCH}: A Versatile Open Source Tool for Metagenomics.''} \emph{PeerJ} 4 (October): e2584. \url{https://doi.org/10.7717/peerj.2584}.
+
+\bibitem[\citeproctext]{ref-romeijn2024}
+Romeijn, Luuk, Andrius Bernatavicius, and Duong Vu. 2024. {``{MycoAI}: {Fast} and Accurate Taxonomic Classification for Fungal {ITS} Sequences.''} \emph{Molecular Ecology Resources} n/a (n/a): e14006. \url{https://doi.org/10.1111/1755-0998.14006}.
+
+\bibitem[\citeproctext]{ref-roslin2022}
+Roslin, Tomas, Panu Somervuo, Mikko Pentinsaari, Paul D. N. Hebert, Jireh Agda, Petri Ahlroth, Perttu Anttonen, et al. 2022. {``A Molecular-Based Identification Resource for the Arthropods of {Finland}.''} \emph{Molecular Ecology Resources} 22 (2): 803--22. \url{https://doi.org/10.1111/1755-0998.13510}.
+
+\bibitem[\citeproctext]{ref-schloss2009a}
+Schloss, Patrick D., Sarah L. Westcott, Thomas Ryabin, Justine R. Hall, Martin Hartmann, Emily B. Hollister, Ryan A. Lesniewski, et al. 2009. {``Introducing Mothur: {Open-Source}, {Platform-Independent}, {Community-Supported Software} for {Describing} and {Comparing Microbial Communities}.''} \emph{Applied and Environmental Microbiology} 75 (23): 7537--41. \url{https://doi.org/10.1128/AEM.01541-09}.
+
+\bibitem[\citeproctext]{ref-sibson1973}
+Sibson, R. 1973. {``{SLINK}: {An} Optimally Efficient Algorithm for the Single-Link Cluster Method.''} \emph{The Computer Journal} 16 (1): 30--34. \url{https://doi.org/10.1093/comjnl/16.1.30}.
+
+\bibitem[\citeproctext]{ref-somervuo2016}
+Somervuo, Panu, Sonja Koskela, Juho Pennanen, R. Henrik Nilsson, and Otso Ovaskainen. 2016. {``Unbiased Probabilistic Taxonomic Classification for {DNA} Barcoding.''} \emph{Bioinformatics} 32 (19): 2920--27. \url{https://doi.org/10.1093/bioinformatics/btw346}.
+
+\bibitem[\citeproctext]{ref-sosic2017}
+Šošić, Martin, and Mile Šikić. 2017. {``Edlib: A {C}/{C} ++ Library for Fast, Exact Sequence Alignment Using Edit Distance.''} \emph{Bioinformatics} 33 (9): 1394--95. \url{https://doi.org/10.1093/bioinformatics/btw753}.
+
+\bibitem[\citeproctext]{ref-wang2007}
+Wang, Qiong, George M. Garrity, James M. Tiedje, and James R. Cole. 2007. {``Naïve {Bayesian Classifier} for {Rapid Assignment} of {rRNA Sequences} into the {New Bacterial Taxonomy}.''} \emph{Appl. Environ. Microbiol.} 73 (16): 5261--67. \url{https://doi.org/10.1128/AEM.00062-07}.
+
+\bibitem[\citeproctext]{ref-zito2023}
+Zito, Alessandro, Tommaso Rigon, and David B. Dunson. 2023. {``Inferring Taxonomic Placement from {DNA} Barcoding Aiding in Discovery of New Taxa.''} \emph{Methods in Ecology and Evolution} 14 (2): 529--42. \url{https://doi.org/10.1111/2041-210X.14009}.
+
+\end{CSLReferences}
+
+\end{document}
