@@ -1,0 +1,185 @@
+---
+title: 'OptimOTU: taxonomically aware OTU clustering with optimized thresholds'
+author: "Brendan Furneaux"
+date: "2025-02-06"
+output:
+  bookdown::pdf_document2:
+    toc: no
+    number_sections: no
+    keep_tex: yes
+    latex_engine: xelatex
+bibliography: all.bib
+biblio-style: apalike
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results = "asis")
+```
+
+# Abstract
+
+OptimOTU is a taxonomically aware approach to OTU clustering.
+It uses a set of taxonomically identified reference sequences to chose optimal genetic distance thresholds for grouping each ancestor taxon into clusters which most closely match its descendent taxa.
+Then, query sequences are clustered according to preliminary taxonomic identifications and the optimized thresholds for their ancestor taxon.
+The process follows the taxonomic hierarchy, resulting in a full taxonomic classification of all the query sequences into named taxonomic groups as well as placeholder "pseudotaxa" which accomodate the sequences that could not be classified to a named taxon at the corresponding rank.
+OptimOTU is implemented as an R package, with computationally intensive steps implemented in C++ for speed, and incorporating open-source libraries for pairwise sequence alignment.
+Distances may also be calculated externally, and may be read from a UNIX pipe, allowing clustering of large datasets where the full distance matrix would be inconveniently large to store in memory.
+We also present the OptimOTU pipeline, a bioinformatics workflow for paired-end Illumina sequencing data that incorporates quality filtering, denoising, artifact removal, taxonomic classification, and OTU clustering with OptimOTU.
+The OptimOTU pipeline is developed for use on high performance computing clusters, and scales to datasets with millions of reads per sample, and tens of thousands of samples.
+
+# Introduction
+
+Clustering of environmentally derived marker gene sequences into operational taxonomic units (OTUs) prior to downstream analysis is a common step in molecular ecology workflows.
+The aim is to group sequences that are derived from the same species or strain, but differ due to errors during amplification or sequencing, or due to true genetic variation between gene copies in the same genome or between individuals.
+
+Traditional agglomerative and greedy clustering algorithms treat these sources of variation in the same way, clustering sequences into OTUs based on a single global threshold [@dondoshansky2000blastclust; @li2006; @edgar2010; @mahe2015; @ratnasingham2013].
+In this case the threshold should be chosen to be larger than typical error rates for the chosen sequencing workflow, and also larger than the intraspecies genetic variation present within the species of interest, while also being smaller than the level of genetic variation between species.
+
+Alternatively, denoising algorithms such as Deblur [@amir2017], DADA2 [@callahan2016], and UNOISE2 [@edgar2016] incorporate sequence abundance information to attempt to separate true biological variation from sequencing errors, yielding clusters known variably as amplicon sequence variants (ASVs), exact sequence variants (ESVs), or zero-diameter OTUS (zOTUs).
+Denoising may successfully recover true biological variation even below the sequencing error rate, but as a result also frequently separate sequences that are derived from the same species or strain, and so ASVs may be subjected to a second clustering step to group sequences using a biologically motivated threshold.
+In either case, it is common to choose a single threshold, often 97% similarity, for all sequences,
+even in studies that target large and diverse taxonomic groups such as all fungi, all eukaryotes, or all prokaryotes.
+However, levels of genetic variation within species are known to vary between taxonomic groups as well as between marker genes, so these thresholds may result in over- or under-clustering, and most often both within the same dataset.
+
+Here we present OptimOTU, a taxonomically aware approach to OTU clustering, in which optimized thresholds are used for different taxonomic groups.
+
+# Methods
+
+The OptimOTU algorithm has three phases: threshold optimization, preliminary taxonomic identification, and clustering.
+Threshold optimization is usually the most computationally intensive step, but it does not need to be repeated for every study in a set of optimized thresholds for the taxonomic groups of interest has already been determined.
+
+Threshold optimization is performed by the function `optimize_thresholds()`, which takes as input a set of reference sequences and their taxonomic identifications.
+These can be obtained from a curated global database such as BOLD [@ratnasingham2013], UNITE [@abarenkov2010], or PR2 [@guillou2013], or from a local database of sequences that have been taxonomically identified by experts.
+It is also possible to use a subset of the sequences from the study in question that have been identified with high confidence by algorithms such as the RDP naive Bayesian classifier [@wang2007], SINTAX [@edgar2016a], PROTAX [@somervuo2016; @abarenkov2018a; @roslin2022], or similar methods.
+This was the approach used by @ovaskainen2024.
+These sequences are then clustered by single-linkage hierarchical agglomerative clustering, resulting in a tree structure which can be cut at any level to produce a partition of the reference sequences into clusters.
+Such partitions are calculated for a range of test thresholds, for example 0.0 to 0.4 in steps of 0.001, and the resulting clusters are compared to the taxonomic identifications to determine the threshold that produces clusters that most closely match the taxonomy at each rank.
+This process is conceptually repeated for each taxon in the reference set, and  which has enough representative sequences (default: 10) and enough descendant taxa (default: 5) to be informative.
+In practice, clustering is performed concurrently for all relevant taxa, with only a single pass through the sequences.
+
+Once the optimized thresholds have been determined, they can be used to cluster query sequences.
+OptimOTU inverts the typical workflow in which sequences are clustered first and then taxonomically identified, and instead uses preliminary taxonomic identification first, followed by clustering informed by the identifications.
+The taxonomic identification can be performed by any method with a stopping condition, meaning that taxonomic identification is truncated to higher ranks if the confidence is low.
+This includes any of the wide range of algorithms which produces confidence scores for classifications at each rank, such as the popular k-mer profile naive Bayesian classifier first implemented by the RDP classifier [@wang2007] but also available in software such as Mothur [@schloss2009a], QIIME 2 [@bokulich2018] and DADA2 [@callahan2016], as well as SINTAX [@edgar2016a], PROTAX [@somervuo2016; @abarenkov2018a; @roslin2022], IDTAXA [@murali2018], Gappa [@czech2020], BayesANT [@zito2023], and MycoAI [@romeijn2024].
+Additionally, algorithms based on last common ancestor (LCA) consensus such as implemented in CREST [@lanzen2012], USEARCH, [@edgar2010], VSEARCH [@rognes2016], and QIIME 2 [@bokulich2018] may be suitable.
+
+The clustering process is then performed using the `optimotu()` function, which proceeds in a hierarchical manner through the taxonomic ranks, starting with the rank below the root.
+Within each rank, the sequences are grouped by their cluster identity at the rank above and processed separately.
+At each rank, the clustering proceeds in three stages.
+First, cluster cores are formed by grouping sequences which have the same taxonomic identifications at the current rank.
+Second, sequences which were not identified at the current rank are assigned to cluster cores by closed-reference clustering, using the optimized threshold for the closest enclosing taxon for which a threshold was determined.
+The closed-reference clustering is performed by pairwise comparisons between the unassigned sequences and all sequences in the cluster cores, and if the distance is less than the threshold, the sequence is added to the cluster.
+If the sequence is closer than the threshold to sequences from multiple cluster cores, then it is assigned to the one with the closest match.
+If there is a tie between multiple sequences in different cluster cores, then the new sequence is assigned to the cluster core of one of the tied sequences at random.
+The closed reference clustering phase is performed iteratively, with the sequences newly assigned to cluster cores in the previous iteration being used as the target sequences in the next iteration, until no new matches are found.
+In this way, the resulting partition approximates single-linkage clustering, although clusters which would be joined in full single-linkage may be separated if they contain sequences with different taxonomic identifications.
+In the third and final step, sequences which are still unassigned at the chosen rank are *de novo* single-linkage clustered with the optimized threshold.
+The clusters from the *de novo* clustering are given placeholder taxonomic names of the form "pseudo{rank}_{number}", where {rank} is the rank of the cluster and {number} is a unique integer identifier.
+
+When the clustering is complete, the result is a full taxonomic classification for each sequence, including named taxa and pseudotaxa.
+Clusters at the lowest rank, typically species, are then used as OTUs for further analysis.
+
+## Pairwise distance calculation algorithms
+
+OptimOTU can be used with various methods for calculating pairwise distances between sequences.
+Three methods are implemented internally in the R package and can be selected using the option `dist_config` to `optimize_thresholds()` or `optimotu()`.
+
+The first method is a simple Hamming distance, which counts the number of differences between two sequences.
+Although this is by far the fastest method, it is only suitable if both the query and reference sequences are already globally aligned.
+This is the recommended method for use with protein-coding sequences such as COI, and may also be applied to the ribosomal small subunit (SSU/12S/16S/18S) 5.8S, and large subunit (16S/23S/25S/26S/28S) RNA, but should not be used for sequences containing introns, spacers such as ITS, or other regions where multiple alignment across broad taxonomic ranges is not reliable.
+The implementation is adapted from ProtaxA [@roslin2022] which uses a 4-bit one-hot encoding of DNA sequences and the bit-count instruction of modern processors to accelerate the calculation.
+It is activated using `dist_config = dist_hamming(min_overlap, ignore_gaps)`.
+The two options control handling of gap characters.
+The `min_overlap` defines a minimum number of sites which contain a nucleotide in both sequences being compared.
+Although low pairwise alignment overlap is expected to be rare in a global multiple sequence alignment of genuine metabarcoding reads of "alignable" markers such as 16S or COI, which should consist of full-length reads of the homologous region between two primers, it may occur in the case of artefactual sequences, and may also be more common in reference databases, where sequences  may come from different primer sets or have been trimmed to different lengths.
+The `ignore_gaps` option allows the user to specify whether sites where a gap in one sequence is aligned to a nucleotide in the other sequence should be ignored in the distance calculation or counted as a mismatch.
+End gaps and gap-gap sites are always ignored.
+
+The second method uses the open-source C++ library Edlib [@sosic2017] to calculate edit (Levenshtein) distance between two sequences using Needleman-Wunsch dynamic programming.
+Edlib also allows the use of banding to limit the search space, and early stopping when the alignment score exceeds a predefined threshold.
+This is the fastest internal method for calculating distances between unaligned sequences when the distances are large.
+However, the pairwise alignments may not be as biologically relevant as those using more complex gap-affine scoring schemes.
+The Edlib method is activated using `dist_config = dist_edlib()`.
+
+The third method uses wavefront alignment (WFA) with the open-source C++ library WFA2 [@marco-sola2021].
+WFA is especially efficient for very similar sequences, and in addition to the edit distance, can also calculate gap-linear, gap-affine, and dual-cost gap-affine alignments.
+Note, however, that although the alignment may be calculated with various scoring functions, the distance used by OptimOTU is always the edit distance (not including end gaps) divided by the alignment length, as used by, e.g., USEARCH [@edgar2010].
+Like Edlib, WFA2 support banding and early stopping.
+It is activated by setting `dist_config = dist_wfa2(match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)`, where the arguments are the scores for the dual-cost gap-affine scoring function.
+When the supplied scores are equivalent to a simpler scoring function (as in the default case, which is edit distance) the alignment is calculated using that simpler function.
+WFA2 in edit-distance mode is the default for OptimOTU.
+
+Finally, in the fourth method, distances are calculated externally and
+supplied as a distance matrix in three-column (query, reference, distance) format, which can be read from a file or UNIX pipe, allowing the use of arbitrary external tools.
+
+
+Alternatively, distances can be supplied as a distance matrix in three-column (query, reference, distance) format, which can be read from a
+file or UNIX pipe, allowing the use of arbitrary external tools.
+The R package has a function which runs USEARCH [@edgar2010] to calculate sparse distance matrices via the `calc_distmx` function for the optimization and *de novo* clustering stages, and `usearch_global` for the closed-reference clustering stage.
+
+## Clustering algorithms
+
+OptimOTU implements several single-linkage clustering algorithms, of which SLINK and a novel tree-based algorithm are recommended for use.
+
+The SLINK algorithm [@sibson1973], which operates at the theoretically optimal complexities of $O(n^2)$ time and $O(n)$ space, where $n$ is the number of sequences.
+Unfortunately, SLINK is an inherently serial algorithm, and must process the distances in a predefined order, so it is not possible to trivially parallelize [but see @nolet2023].
+The OptimOTU implementation of SLINK allows clustering of an incomplete distance matrix, provided the elements which are present are in the correct order, by proceeding as if the missing elements were at infinite distance.
+It also allows calculation, before each new pairwise distance is processed, of the maximum distance which would need to be obtained in order to cause an update.
+This is used to adaptively set the band width and maximum alignment score for Edlib and WFA2, in order to reduce the number of unnecessary calculations.
+The SLINK algorithm can be activated using the option `clust_config = clust_slink()` to `optimize_thresholds()` or `optimotu()`.
+
+The tree-based algorithm maintains a full hierarchical clustering tree at all stages of clustering, which is updated as each new pairwise distance is processed.
+Although this algorithm has a higher time complexity than SLINK, it can process the distances in any order.
+Like SLINK, the tree-based algorithm can calculate the maximum relevant distance for a given sequence pair, and use this to set the band width and maximum alignment score for Edlib or WFA2.
+Because it is compatible with out-of-order distance matrices, the tree-based algorithm is the default clustering algorithm in OptimOTU, but it can be activated or configured using the option `clust_config = clust_tree()` to `optimize_thresholds()` or `optimotu()`.
+
+The two clustering algorithms should always produce identical partitions when run on the same distances.
+The test suite for OptimOTU tests the clustering algorithms with all applicable parallelization options for consistency with each other and the base R `hclust()` command.
+Additionally, internal consistency checks can be activated by setting the optional argument `test = 1` or `test = 2` in `clust_tree()`.
+These checks are computationally expensive, and so are not recommended for routine use, but can be useful if you believe you have found a bug in the tree-based algorithm.
+
+```{r clustering, fig.cap="Clustering methods"}
+plot.new()
+text(x = 0.5, y = 0.5, labels = "This will be a figure showing\nthe difference between single-linkage,\ncomplete-linkage, average-linkage, and\ncentroid clustering.")
+
+```
+
+## Parallelization
+
+There are three available parallelization options, which are configured by setting the `parallel_config` argument in `optimize_thresholds()` or `optimotu()`.
+
+The first method relies on the ability of the tree-based algorithm to process pairwise distances in any order, and to calculate the maximum relevant distance for a given pair before processing it.
+Because the majority of pairwise distances do not in practice trigger updates, multiple parallel threads can cluster (and calculate distances) using two-stage locking, in which the tree is non-exclusively locked for reading to calculate the maximum relevant distance for a given pair, and then only exclusively locked for writing when a relevant distance is found.
+This is referred to as the "concurrent" option, selected using `parallel_config = parallel_concurrent(threads)`, where `threads` is the number of parallel threads to use for updating the tree.
+
+It is also possible to merge two trees using only $O(n)$ updates, which allows an alternate parallelization technique, where multiple tree structures are processed in parallel and then merged at the end.
+This technique can also be used to cluster different subsets of the distance matrix in parallel using SLINK, and then merge the results using the tree-based algorithm.
+This method is referred to as the "merge" option, accessed by setting the option `parallel_config = parallel_merge(threads)`, where `threads` is the number of tree structures, each updated by its own thread.
+This is the only parallelization algorithm which can be used with SLINK if `threads` $> 1$.
+
+Finally, the two parallelization techniques can be combined, with multiple tree structures each updated by multiple parallel threads, and then merged at the end.
+This is referred to as the "hierarchical" option, accessed by setting the option `parallel_config = parallel_hierarchical(threads, shards)`, where `threads` is the total number of threads and `shards` is the number of tree structures.
+
+## The OptimOTU pipeline
+
+
+
+, which is also used to generate barcode identification numbers (BINs) in the BOLD database [@ratnasingham2013] and species hypotheses in the UNITE database [@abarenkov2010].
+
+# Discussion
+
+OptimOTU uses a modified version of single-linkage (also known as minimum-distance or nearest-neighbor) clustering at all ranks.
+In single linkage clustering, all pairs of sequences which are separated by a genetic distance less than the chosen threshold are grouped together.
+Thus, the threshold may be considered as the minimum genetic distance between distinct OTUs.
+This is in contrast to complete-linkage clustering, in which the threshold defines the maximum distance between any two sequences within the same OTU, and
+various intermediate-linkage methods, such as average-linkage, as well as centroid-based clustering methods, in which the threshold defines the maximum distance between a sequence and the centroid of its OTU (Fig \@ref(fig:clustering)).
+Researchers have worried about the so-called "chaining" effect of single linkage clustering, in which a single sequence may link two otherwise distinct OTUs, and refer to single-linkage clusters as being "amoeboid" rather than "circular".
+This effect can be clearly seen in Fig \@ref(fig:clustering) and similar examples of clustering in two dimensions, it is important to note that genetic distances between sequences exist in an extremely high-dimensional space, but also one in which the available distance to travel on a each "dimension" (i.e., the nucleotide at a single position) is very small.
+Furthermore, while independent random sequencing errors may be supposed to densely populate the space around a true biological sequence, implying clusters which are "circular" in the sense that the included sequences are all within a given range of the centroid, genetic variants within and between species are
+derived through a branching process through time from a common ancestor, which cannot be assumed to be present in the data or even extant.
+
+A major advantage of single linkage clustering is that the clustering criterion uniquely defines the result, and so the process is deterministic
+and not dependent on the order of the input sequences.
+This is in contrast to complete- and average-linkage clustering, as well as centroid-based methods, where multiple possible clusterings fitting the criteria may exist.
+
+# References
