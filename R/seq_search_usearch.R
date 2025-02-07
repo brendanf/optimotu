@@ -86,7 +86,7 @@ seq_search_usearch <- function(
     stderr = if (verbose) "" else NULL
   )
   stopifnot(status == 0)
-  out <- read.table(
+  out <- utils::read.table(
     tout,
     header = FALSE,
     col.names = c("seq_id", "ref_id", "dist"),

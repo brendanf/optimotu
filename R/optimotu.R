@@ -108,9 +108,9 @@ optimotu <- function(
   if (is.character(seqs)) {
     if (length(seqs) == 1 && file.exists(seqs)) {
       if (grepl(fasta_regex, seqs)) {
-        seqs <- readDNAStringSet(seqs)
+        seqs <- Biostrings::readDNAStringSet(seqs)
       } else if (grepl(fastq_regex, seqs)) {
-        seqs <- readDNAStringSet(seqs, format = "fastq")
+        seqs <- Biostrings::readDNAStringSet(seqs, format = "fastq")
       } else {
         stop("Input file must be in FASTA or FASTQ format")
       }
