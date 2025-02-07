@@ -13,3 +13,5 @@
 ^.*/\.github$
 ^.*/\.travis.yml$
 ^temp$
+^\.vscode$
+^.*/\.vscode$
