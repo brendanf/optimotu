@@ -42,20 +42,20 @@ align <- function(a, b, match = 1, mismatch = 1, gap_open = 0, gap_extend = 1,
   checkmate::assert_string(b)
   checkmate::assert_integerish(match)
   checkmate::assert_integerish(mismatch)
-  checkmate::assert_integerish(open)
-  checkmate::assert_integerish(extend)
-  checkmate::assert_integerish(open2)
-  checkmate::assert_integerish(extend2)
+  checkmate::assert_integerish(gap_open)
+  checkmate::assert_integerish(gap_extend)
+  checkmate::assert_integerish(gap_open2)
+  checkmate::assert_integerish(gap_extend2)
 
   checkmate::assert_string(method)
   method <- match.arg(method)
   if (method == "edlib") {
-    if (match != 1 || mismatch != 1 || open != 0 || extend != 1 ||
-        open2 != 0 || extend2 != 0) {
+    if (match != 1 || mismatch != 1 || gap_open != 0 || gap_extend != 1 ||
+        gap_open2 != 0 || gap_extend2 != 0) {
       warning("Edlib only supports match = 1, mismatch = 1, open = 0, extend = 1, open2 = 0, extend2 = 0")
     }
     align_edlib(a, b)
   } else {
-    align_wfa2(a, b, match, mismatch, open, extend, open2, extend2)
+    align_wfa2(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
   }
 }
