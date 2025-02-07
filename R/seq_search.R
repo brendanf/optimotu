@@ -56,7 +56,7 @@ seq_search <- function(
     if (identical(dist_config$method, "file")) {
       checkmate::assert_file(dist_config$filename)
       if (dist_config$by_name == TRUE) {
-        out <- read.table(
+        out <- utils::read.table(
           file = dist_config$filename,
           header = FALSE,
           col.names = c("seq_id", "ref_id", "dist"),
@@ -73,7 +73,7 @@ seq_search <- function(
           stringsAsFactors = FALSE
         )
       } else {
-        read.table(
+        utils::read.table(
           file = dist_config$filename,
           header = FALSE,
           col.names = c("seq_id", "ref_id", "dist"),
