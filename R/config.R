@@ -449,7 +449,7 @@ parallel_hierarchical <- function(threads, shards) {
 #'   https://doi.org/10.1093/bioinformatics/btw753
 
 dist_config <- function(
-    method = c("wfa2", "edlib", "hybrid", "hamming", "usearch"),
+    method = c("wfa2", "edlib", "hybrid", "hamming", "file", "usearch"),
     ...
 ) {
   method = match.arg(method)
@@ -457,6 +457,7 @@ dist_config <- function(
     method,
     wfa2 = dist_wfa2(...),
     edlib = dist_edlib(...),
+    file = dist_file(...),
     hybrid = dist_hybrid(...),
     hamming = dist_hamming(...),
     usearch = dist_usearch(...)
@@ -546,6 +547,23 @@ dist_usearch <- function(usearch = Sys.which("usearch"), usearch_ncpu = NULL) {
   checkmate::assert_count(usearch_ncpu, null.ok = TRUE)
   structure(
     list(method = "usearch", usearch = usearch, usearch_ncpu = usearch_ncpu),
+    class = "optimotu_dist_config"
+  )
+}
+
+#' @param filename (`character` string) path to the distance matrix file
+#' @param by_name (`logical` flag) if `TRUE`, the sequences are identified in
+#' the file by name; if `FALSE`, they are identified by number, starting with 0.
+#' Identification by number may be slightly faster and reduces the necessary
+#' file size, but is not supported by `optimotu()`, only by
+#' `optimize_thresholds()`.
+#' @export
+#' @describeIn dist_config helper function for method `"file"`
+dist_file <- function(filename, by_name = TRUE) {
+  checkmate::assert_file_exists(filename, access = "r")
+  checkmate::assert_flag(by_name)
+  structure(
+    list(method = "file", filename = filename),
     class = "optimotu_dist_config"
   )
 }

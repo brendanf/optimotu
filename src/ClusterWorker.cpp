@@ -10,7 +10,8 @@ int ClusterWorker::n_threads() {
   return this->threads;
 }
 
-MergeClusterWorker::MergeClusterWorker(
+template<>
+MergeClusterWorker<int>::MergeClusterWorker(
   ClusterAlgorithm *algo,
   std::istream &file,
   const int threads
@@ -24,7 +25,28 @@ MergeClusterWorker::MergeClusterWorker(
   // OPTIMOTU_COUT << "done" << std::endl;
 }
 
-void MergeClusterWorker::operator()(size_t begin, size_t end) {
+template<>
+MergeClusterWorker<std::string>::MergeClusterWorker(
+  ClusterAlgorithm *algo,
+  std::istream &file,
+  const std::vector<std::string> & id_list,
+  const int threads
+) :
+  ClusterWorker(file, threads),
+  algo_list(threads) {
+  // OPTIMOTU_COUT << "MergeClusterWorker constructor start...";
+  id_map = std::make_shared<id_map_type>();
+  for (int i = 0; i < id_list.size(); ++i) {
+    id_map->insert({id_list[i], i});
+  }
+  for (int i = 0; i < threads; ++i) {
+    algo_list[i] = algo->make_child();
+  }
+  // OPTIMOTU_COUT << "done" << std::endl;
+}
+
+template<typename id_type>
+void MergeClusterWorker<id_type>::operator()(size_t begin, size_t end) {
   DistanceElement d;
   // std::vector<DistanceElement> buffer;
   // buffer.reserve(100);
@@ -33,7 +55,22 @@ void MergeClusterWorker::operator()(size_t begin, size_t end) {
     {
       std::lock_guard<std::mutex> lock(mutex);
     // for (int i = 0; i < 100 && file; ++i) {
-    if (!(file >> d)) break;
+    if constexpr (std::is_same<id_list_type, void>::value) {
+      if (!(file >> d)) break;
+    } else {
+      id_type id1, id2;
+      double dist;
+      if (!(file >> id1 >> id2 >> d)) break;
+      auto it1 = id_map->find(id1);
+      auto it2 = id_map->find(id2);
+      if (it1 == id_map->end() || it2 == id_map->end()) {
+        // silently skip the line if either id is not found!
+        continue;
+      }
+      d.seq1 = it1->second;
+      d.seq2 = it2->second;
+      d.dist = dist;
+    }
       // buffer.push_back(d);
     // }
     }
@@ -54,9 +91,11 @@ void MergeClusterWorker::operator()(size_t begin, size_t end) {
   // mutex.unlock();
 }
 
-void MergeClusterWorker::finalize() {}
+template<typename id_type>
+void MergeClusterWorker<id_type>::finalize() {}
 
-ConcurrentClusterWorker::ConcurrentClusterWorker(
+template<>
+ConcurrentClusterWorker<int>::ConcurrentClusterWorker(
   ClusterAlgorithm *algo,
   std::istream &file,
   const int threads
@@ -64,7 +103,23 @@ ConcurrentClusterWorker::ConcurrentClusterWorker(
   ClusterWorker(file, threads),
   algo(algo) {}
 
-void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
+template<>
+ConcurrentClusterWorker<std::string>::ConcurrentClusterWorker(
+  ClusterAlgorithm *algo,
+  std::istream &file,
+  const id_list_type & id_list,
+  const int threads
+) :
+  ClusterWorker(file, threads),
+  algo(algo) {
+  id_map = std::make_shared<id_map_type>();
+  for (int i = 0; i < id_list.size(); ++i) {
+    id_map->insert({id_list[i], i});
+  }
+}
+
+template<typename id_type>
+void ConcurrentClusterWorker<id_type>::operator()(size_t begin, size_t end) {
   DistanceElement d;
   // std::vector<DistanceElement> buffer;
   // buffer.reserve(100);
@@ -73,8 +128,23 @@ void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
     {
       std::lock_guard<std::mutex> lock(mutex);
     // OPTIMOTU_COUT << "reading line " << ++i << "..." << std::flush;
-    // for (int i = 0; i < 100 && file; ++i) {
+    // for (int i = 0; i < 100 && file; ++i
+    if constexpr (std::is_same<id_list_type, void>::value) {
       if (!(file >> d)) break;
+    } else {
+      id_type id1, id2;
+      double dist;
+      if (!(file >> id1 >> id2 >> d)) break;
+      auto it1 = id_map->find(id1);
+      auto it2 = id_map->find(id2);
+      if (it1 == id_map->end() || it2 == id_map->end()) {
+        // silently skip the line if either id is not found!
+        continue;
+      }
+      d.seq1 = it1->second;
+      d.seq2 = it2->second;
+      d.dist = dist;
+    }
       // buffer.push_back(d);
     }
     // OPTIMOTU_COUT << "done" << std::endl;
@@ -90,9 +160,11 @@ void ConcurrentClusterWorker::operator()(size_t begin, size_t end) {
   // mutex.unlock();
 }
 
-void ConcurrentClusterWorker::finalize() {}
+template<typename id_type>
+void ConcurrentClusterWorker<id_type>::finalize() {}
 
-HierarchicalClusterWorker::HierarchicalClusterWorker(
+template<>
+HierarchicalClusterWorker<int>::HierarchicalClusterWorker(
   ClusterAlgorithm *algo,
   std::istream &file,
   const int threads,
@@ -106,7 +178,28 @@ thread_count(shards), shards(shards) {
   // OPTIMOTU_COUT << "done" << std::endl;
 }
 
-void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
+template<>
+HierarchicalClusterWorker<std::string>::HierarchicalClusterWorker(
+  ClusterAlgorithm *algo,
+  std::istream &file,
+  const id_list_type & id_list,
+  const int threads,
+  const int shards
+) : ClusterWorker(file, threads), algo_list(shards),
+thread_count(shards), shards(shards) {
+  // OPTIMOTU_COUT << "HieararchicalClusterWorker constructor start...";
+  id_map = std::make_shared<id_map_type>();
+  for (int i = 0; i < id_list.size(); ++i) {
+    id_map->insert({id_list[i], i});
+  }
+  for (int i = 0; i < shards; ++i) {
+    algo_list[i] = algo->make_child();
+  }
+  // OPTIMOTU_COUT << "done" << std::endl;
+}
+
+template<typename id_type>
+void HierarchicalClusterWorker<id_type>::operator()(size_t begin, size_t end) {
   DistanceElement d;
   // std::vector<DistanceElement> buffer;
   // buffer.reserve(100);
@@ -124,7 +217,22 @@ void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
     {
       std::lock_guard<std::mutex> lock(mutex);
     // for (int i = 0; i < 100 && file; ++i) {
-    if (!(file >> d)) break;
+    if constexpr (std::is_same<id_list_type, void>::value) {
+      if (!(file >> d)) break;
+    } else {
+      id_type id1, id2;
+      double dist;
+      if (!(file >> id1 >> id2 >> d)) break;
+      auto it1 = id_map->find(id1);
+      auto it2 = id_map->find(id2);
+      if (it1 == id_map->end() || it2 == id_map->end()) {
+        // silently skip the line if either id is not found!
+        continue;
+      }
+      d.seq1 = it1->second;
+      d.seq2 = it2->second;
+      d.dist = dist;
+    }
     //   buffer.push_back(d);
     }
 
@@ -148,8 +256,7 @@ void HierarchicalClusterWorker::operator()(size_t begin, size_t end) {
     // OPTIMOTU_COUT << "HieararchicalClusterWorker thread " << begin
     //           << " exiting" << std::endl;
     // mutex.unlock();
-  }
-
-  void HierarchicalClusterWorker::finalize() {
-
 }
+
+template<typename id_type>
+void HierarchicalClusterWorker<id_type>::finalize() {}

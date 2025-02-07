@@ -7,9 +7,13 @@
 \alias{dist_hybrid}
 \alias{dist_hamming}
 \alias{dist_usearch}
+\alias{dist_file}
 \title{Configuration helper for pairwise distance methods}
 \usage{
-dist_config(method = c("wfa2", "edlib", "hybrid", "hamming", "usearch"), ...)
+dist_config(
+  method = c("wfa2", "edlib", "hybrid", "hamming", "file", "usearch"),
+  ...
+)
 
 dist_wfa2(
   match = 0L,
@@ -27,6 +31,8 @@ dist_hybrid(cutoff = 0.1)
 dist_hamming(min_overlap = 0L, ignore_gaps = TRUE)
 
 dist_usearch(usearch = Sys.which("usearch"), usearch_ncpu = NULL)
+
+dist_file(filename, by_name = TRUE)
 }
 \arguments{
 \item{method}{(\code{character} string) method to use for distance calculations}
@@ -65,6 +71,14 @@ by both sequences, are always ignored.}
 
 \item{usearch_ncpu}{(\code{integer} scalar or \code{NULL}) number of threads for
 USEARCH. If \code{NULL}, USEARCH will autodetect.}
+
+\item{filename}{(\code{character} string) path to the distance matrix file}
+
+\item{by_name}{(\code{logical} flag) if \code{TRUE}, the sequences are identified in
+the file by name; if \code{FALSE}, they are identified by number, starting with 0.
+Identification by number may be slightly faster and reduces the necessary
+file size, but is not supported by \code{optimotu()}, only by
+\code{optimize_thresholds()}.}
 }
 \value{
 an object representing the pairwise distance method
@@ -83,6 +97,8 @@ Configuration helper for pairwise distance methods
 \item \code{dist_hamming()}: helper function for method \code{"hamming"}
 
 \item \code{dist_usearch()}: helper function for method \code{"usearch"}
+
+\item \code{dist_file()}: helper function for method \code{"file"}
 
 }}
 \references{

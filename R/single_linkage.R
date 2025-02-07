@@ -31,9 +31,9 @@ is_list_of_character <- function(x) {
 #' @param distmx (`character` filename) The name of the file (or, e.g., a named
 #' pipe) from which to read the sparse distance matrix. The matrix should be
 #' a white-space delimited text file, with three values per line: id1 id2 dist,
-#' where id1 and id2 are integer indices of the objects to be clustered,
-#' starting with 0, and dist is the distance, typically a real number between 0
-#' and 1 (but the algorithm works for any non-negative distance.)
+#' where id1 and id2 are indices of the objects to be clustered, and dist is the
+#' distance, typically a real number between 0 and 1 (but the algorithm works
+#' for any non-negative distance.)
 #' @param names (`character` vector) Names of the sequences, used for
 #' labeling the columns of the output matrix. Typically, in order to generate
 #' the sparse distance matrix with integer indices, an alternate version of the
@@ -63,6 +63,12 @@ is_list_of_character <- function(x) {
 #' sequences defined by the elements of `which`. Subsets do not need to be
 #' disjoint (and indeed, if they are it is probably faster to calculate the
 #' distance matrices separately.)
+#' @param verbose (`logical(1)` or `integer(1)`) Whether to print progress;
+#' values greater than 1 (or TRUE) print more.
+#' @param by_name (`logical(1)`) If `TRUE`, columns "id1" and "id2" in the
+#' distance matrix are string identifiers which should match sequence names
+#' in the `names` argument. If `FALSE`, they are integer indices starting with
+#' 0 for the first sequence in `names`.
 #'
 #' @return An [`integer matrix`][methods::structure-class] if
 #' `output_type=="matrix"`, an [`hclust`][stats::hclust] object if
@@ -75,7 +81,9 @@ distmx_cluster = function(
    clust_config = clust_index(),
    parallel_config = parallel_concurrent(1),
    output_type = c("matrix", "hclust"),
-   which = NULL
+   which = NULL,
+   verbose = FALSE,
+   by_name = FALSE
 ) {
   output_type = match.arg(output_type)
   out <- if (!is.null(which) && !isTRUE(which)) {
@@ -87,7 +95,9 @@ distmx_cluster = function(
       threshold_config,
       clust_config,
       parallel_config,
-      output_type
+      output_type,
+      verbose,
+      by_name
     )
   } else {
     distmx_cluster_single(
@@ -96,7 +106,9 @@ distmx_cluster = function(
       threshold_config,
       clust_config,
       parallel_config,
-      output_type
+      output_type,
+      verbose,
+      by_name
     )
   }
   out <- reduplicate_thresholds(out, threshold_config)
