@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
+// SPDX-License-Identifier: MIT
+
 #ifdef OPTIMOTU_R
 #include "optimotu.h"
 #include <Rcpp.h>
