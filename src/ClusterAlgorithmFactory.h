@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
+// SPDX-License-Identifier: MIT
+
 #ifndef OPTIMOTU_CLUSTERALGORITHMFACTORY_H_INCLUDED
 #define OPTIMOTU_CLUSTERALGORITHMFACTORY_H_INCLUDED
 

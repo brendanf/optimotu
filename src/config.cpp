@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
+// SPDX-License-Identifier: MIT
+
 #include "config.h"
 #include "Wfa2ClusterWorker.h"
 #include "EdlibClusterWorker.h"

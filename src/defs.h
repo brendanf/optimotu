@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
+// SPDX-FileContributor: Panu Somervuo
+// SPDX-License-Identifier: MIT
+
 #ifndef _DEFS_
 #define _DEFS_
 
