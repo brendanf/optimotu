@@ -1,0 +1,71 @@
+---
+title_full: "OptimOTU: taxonomically aware OTU clustering with optimized thresholds"
+title_short: OptimOTU
+
+# One of the following below. See https://academic.oup.com/bioinformatics/pages/instructions_for_authors#Types%20of%20Manuscript
+# one of `Original Paper`, `Discovery Note`, `Applications Note`, `Review`, `Letter to the Editor`, `Conference Paper`    
+manuscript_type: Application Note
+
+# change accordingly
+copyrightyear: '`r format(Sys.Date(), "%Y")`'
+pubyear: '`r format(Sys.Date(), "%Y")`'
+
+# One of the following below. See https://academic.oup.com/bioinformatics/pages/instructions_for_authors#Detailed%20Scope%20Guidelines
+# Genome analysis
+# Sequence analysis
+# Phylogenetics
+# Structural bioinformatics
+# Gene expression
+# Genetic and population analysis
+# Systems biology
+# Data and text mining
+# Databases and ontologies
+# Bioimage informatics
+subject_section:  Sequence analysis
+
+access_date:
+  - day: DD
+    month: MM
+    year: YY
+      
+author:
+  - name: Brendan Furneaux
+    affiliation: "1"
+  - name: Sten Anslan
+    affiliation: "1"
+  - name: Otso Ovaskainen
+    affiliation: "1"
+      
+address:
+  - code: 1
+    address: University of Jyväskyla, Department of Biological and Environmental Science, Survontie 9C, 40014 Jyväskylä, Finland
+ 
+# Full email address to be given, preferably an institution email address.  
+corresponding_author_text: "Brendan Furneaux E-mail: brendan.r.furneaux\\@jyu.fi"
+corresponding_author_email: "brendan.r.furneaux\\@jyu.fi"
+  
+motivation: |
+  This section should specifically state the scientific question within the context of the field of study.
+  
+results: |
+  This section should summarize the scientific advance or novel results of the study, and its impact on computational biology.
+
+availability: |
+  This section should state software availability if the paper focuses mainly on software development or on the implementation of an algorithm. Examples are: 'Freely available on the web at XXX.' Website implemented in Perl, MySQL and Apache, with all major browsers supported'; or 'Source code and binaries freely available for download at URL, implemented in C++ and supported on linux and MS Windows'. The complete address (URL) should be given. If the manuscript describes new software tools or the implementation of novel algorithms the software must be freely available to non-commercial users. Authors must also ensure that the software is available for a full TWO YEARS following publication. The editors of Bioinformatics encourage authors to make their source code available and, if possible, to provide access through an open source license.
+
+supplementary_info: |
+  Supplementary data are available...
+
+output:
+  rticles::bioinformatics_article:
+    citation_package: natbib
+    extra_dependencies: ["url"]
+    
+bibliography: "allbibtex.bib"
+
+---
+
+```{r child="optimotu.Rmd"}
+
+```
+

@@ -1,7 +1,12 @@
 ---
-title: 'OptimOTU: taxonomically aware OTU clustering with optimized thresholds'
-author: "Brendan Furneaux"
-date: "2025-02-06"
+title: |
+  OptimOTU: Taxonomically aware OTU clustering  
+  with optimized thresholds
+author:
+  - Brendan Furneaux^1^
+  - Sten Anslan^1^
+  - Otso Ovaskainen^1^
+date: ^1^Department of Biological and Environmental Science, University of Jyväskylä, Jyväskylä, Finland
 output:
   bookdown::pdf_document2:
     toc: no
@@ -9,7 +14,6 @@ output:
     keep_tex: yes
     latex_engine: xelatex
 bibliography: all.bib
-biblio-style: apalike
 ---
 
 ```{r setup, include=FALSE}
@@ -43,7 +47,7 @@ However, levels of genetic variation within species are known to vary between ta
 
 Here we present OptimOTU, a taxonomically aware approach to OTU clustering, in which optimized thresholds are used for different taxonomic groups.
 
-# Methods
+# Implementation
 
 The OptimOTU algorithm has three phases: threshold optimization, preliminary taxonomic identification, and clustering.
 Threshold optimization is usually the most computationally intensive step, but it does not need to be repeated for every study in a set of optimized thresholds for the taxonomic groups of interest has already been determined.
@@ -160,11 +164,132 @@ This is the only parallelization algorithm which can be used with SLINK if `thre
 Finally, the two parallelization techniques can be combined, with multiple tree structures each updated by multiple parallel threads, and then merged at the end.
 This is referred to as the "hierarchical" option, accessed by setting the option `parallel_config = parallel_hierarchical(threads, shards)`, where `threads` is the total number of threads and `shards` is the number of tree structures.
 
+### Measures of clustering quality
+
+OptimOTU calculates several measures to compare the quality of a clustering partition relative to a reference taxonomy.
+The first group of these are based on pair counting, whereby deciding whether each pair of sequences belong to the same cluster is treated as a binary classification problem.
+Thus, a $2\times2$ confusion matrix can be constructed, whereby if the sequence pair is grouped together in both the reference taxonomy and in the clustering partition, it is a true positive (TP), if they are in different clusters in both, it is a true negative (TN), if they are in the same cluster in the reference but different clusters in the partition, it is a false negative (FN), and if they are in different clusters in the reference but the same cluster in the partition, it is a false positive (FP).
+Various measures can be calculated from the confusion matrix, of which the Rand index [RI; @rand1971], adjusted Rand index [ARI; @hubert1985], Fowlkes-Mallows index [FMI; @fowlkes1983], and Matthews correlation coefficient [MCC; @matthews1975] are implemented in OptimOTU.
+Of these, the RI is not corrected for chance, so it tends to give higher scores to small clustering thresholds, i.e., clusterings with many small clusters, so it is not recommended.
+Because the calculation of the confusion matrix is the most computationally expensive part of calculating these measures, it is more efficient to calculate the confusion matrix once and then calculate multiple measures from it if multiple measures are desired, and this is supported in OptimOTU by the function `confusion_matrix()`,
+which is parallelized, and a function for each index which takes the confusion matrix as input.
+
+
+The second group of measures are based in information theory, and include the mutual information [MI; @strehl2002] and adjusted mutual information [AMI; @vinh2010].
+These measures consider the cross-entropy between clusters in the test partition and the reference taxonomy.
+Because the MI is not corrected for chance and has no consistent upper bound, it is recommended to always use AMI if an information theoretic measure is desired.
+
+The third group is set-matching measures, where a single measure, the weighted multiclass F-measure (FM; @steinbach2000), is implemented.
+Unlike the previous measures, the FM considers only the best-matching cluster for each taxon in the reference taxonomy, so it is not sensitive to the number or makeup of any "extra" clusters in the test partition.
+
+
+
 ## The OptimOTU pipeline
 
+The OptimOTU pipeline is a full bioinformatics pipeline built around the OptimOTU clustering algorithm.
+It is used to process demultipexed paired-end reads into a species x sample occurrence matrix and taxonomy for each OTU.
+The pipeline is implemented using the `targets` workflow management package [@landau2021], and is designed to be run on high-performance computing clusters for very large metabarcoding projects.
+However, it can also be run on a laptop or desktop computer for smaller projects.
+The use of `targets` allows the pipeline to skip already completed steps when re-run, which is useful both for debugging, and for "on-line" processing of new samples as they are sequenced.
+An alternate implementation of the same processing steps in the PipeCraft 2 graphical interface [@anslan2017, https://pipecraft2-manual.rtfd.io] is in progress.
+
+In brief, the workflow consists of primer removal, read quality filtering, denoising, removal of tag-switches, *de novo* and reference-based chimera removal, probabilistic taxonomic assignment, and finally taxonomically-guided hierarchical clustering.
+There are also a number of optional steps which may only be relevant for certain marker genes, taxonomic groups, or laboratory workflows.
+These include detection of artificial "spike-in" sequences, detecting and removing outgroup sequences, alignment to a profile hidden Markov model (HMM) or covariance model (CM), detection of nuclear mitochondrial pseudogenes (NuMts), or assignment of sequences to ecological guilds or functional groups.
+Configuration of these optional steps, as well as settings for the standard steps, is performed using a human-readable YAML configuration file.
+
+The pipeline is organized broadly into three phases, which are distinguished by the unit of parallelization.
+In the first phase, most operations are performed on individual samples, although some steps share information between all samples within a sequencing run, and all steps are performed in batches of no more than 96 samples.
+This phase ends with the production of a master list of candidate ASVs and a table of read counts for each candidate ASV in each sample.
+In the second stage, operations are performed on the master list of condidate ASVs, which is split into batches for parallel processing.
+Operations at this stage primarily consist of various methods to filter the ASVs to remove artifacts, producing a final ASV list, as well as preliminary taxonomic identification.
+In the third phase, the final ASV list is clustered into OTUs using the OptimOTU algorithm.
+After the main processing steps are complete, optional post-processing steps may be performed, and the results are written to disk as a set of tables in TSV and RDS formats and sequences in gzipped FASTA format, as well as a zip archive containing the output files, and named according to the date of the run.
+
+Although many of the steps in the pipeline are performed in R using various freely available packages, several external command-line software tools are also used.
+The R version, R packages, and external tools are enumerated along with recommended version numbers in an included Conda environment file [@conda_contributors_conda_A_system-level] which can be used to install the dependencies automatically, or can be read by the user to install the required software manually.
+
+### Input files
+
+The primary input to the pipeline is a set of paired-end FASTQ files, one for each sample.
+Gzipped files are supported.
+In the simplest cases, the sample names and read pairings are encoded in the file names, and can be automatically inferred by the pipeline.
+In these cases, the reads should be placed in a directory structure within `sequences/01_raw/` in the project directory, with each sequencing run in a separate subdirectory.
+Additional levels of directory structure or non-FASTQ files are ignored.
+
+Alternatively, the sample names, sequencing run identifiers, and file paths, as well as additional sample-specific information, can be specified in a TSV file, which is typically placed in a `metadata/` directory in the project directory, and is specified in the configuration file with the option `custom_sample_table`.
+This option may be useful if the project is set up to use raw reads from a public repository such as the Sequence Read Archive (SRA) or European Nucleotide Archive (ENA).
+
+### Orientation, primer detection and quality filtering
+
+The OptimOTU pipeline can process reads with a variety of orientations, depending on the indexing scheme used in the sequencing run and specified in the configuration file with the option `orient`.
+Possible values are "fwd", "rev", "mixed", and "custom".
+In the "fwd" orientation, the forward primer is expected at the 5' end of R1 and the reverse primer at the 5' end of R2.
+In the "rev" orientation, the reverse primer is expected at the 5' end of R1 and the forward primer at the 5' end of R2, and the ASV sequence is reverse-complemented after denoising and merging of each pair.
+In the "mixed" orientation, both orientations are expected and searched for in every sample. Reads detected in the "fwd" and "rev" orientation are processed separately through phase 1 of the pipeline until pair merging, at which point the reverse-oriented reads are reverse-complemented.
+In the "custom" orientation, the user must supply a custom sample table (see above) which includes a column "orient" with values "fwd", "rev", or "mixed" for each sample.
+This is primarily used for certain indexing schemes where different samples are sequences in different orientations to increase the sequence diversity of the reads, which may improve basecalling accuracy [reference here].
+
+Primers are specified in the configuration file with the options `forward_primer` and `reverse_primer`.
+The expected primer at the 5' end of each read is searched for using Cutadapt [@martin2011].
+Read pairs where the expected primer is not found are discarded.
+The reverse-complemented sequence of the other primer is also searched for at the 3' end of each read, which may occur in marker sequences with highly variable length such as ITS, and removed if found, but its presence is not required.
+Settings for Cutadapt are specified in the configuration with sub-options to `trimming`.
+In particular, the action to take on the primer sequence is specified with the option `action`; although Cutadapt has several options for this, the OptimOTU pipeline supports two, "trim" and "retain".
+Option "trim" removes the primer sequence from the read immediately, while "retain" leaves it in place, but trims any bases before the primer sequence.
+If option "retain" is used, the trimming still occurs, but not until the assembly of the master ASV list at the end of phase 1.
+This means that the primer sequence is present during the denoising stage.
+The conserved endpoints may aid in pairwise alignment of highly variable sequences during denoising.
+However, this option is not recommended in most situations, and in particular is not suitable when primers with degenerate bases are used.
+
+At the same time as primer searching, reads are trimmed and quality filtered.
+Options are user configurable, but a typical set of options would trim low quality based from the 5' and 3' ends of each read, remove reads with any ambiguous bases after trimming, and discard reads which are less than a specified length.
+Options controlling primer matching, trimming, and filtering can optionally be included in the custom sample table, which is useful when different sequencing runs have been sequenced with different settings or instruments.
+
+### Denoising
+
+The denoising steps are performed using the DADA2 package [@callahan2016].
+Trimmed read pairs are first subjected to an additional round of quality filtering using DADA2's `fastqPairedFilter()`, based on the expected number of errors in the read.
+Error profiles are then learned separately for each sequencing run, read, and orientation using the `learnErrors()` function.
+Sequences with binned quality scores, as produced by newer Illumina sequencers, are automatically detected, and the error model is adjusted accordingly.
+Denoising is then performed using the `dada()` function, and read pairs are merged using the `mergePairs()` function.
+The denoised R1 and R2 reads from any reverse-oriented read pairs are swapped at this stage, so that the merged, denoised ASVs are all in the same orientation.
+
+### ASV table construction
+
+Due to the very large number of samples and high diversity of ASVs, the standard DADA2 function to combine denoised sequences from multiple samples to form a matrix had prohibitively high memory requirements. We instead formed a list of all unique ASVs by first finding unique ASVs in each sample, then in each sequencing run, and then finally across the entire data set. These sequences were then stored in a single compressed fasta file, which we indexed with FastqIndEx version 0.9.0b (https://github.com/DKFZ-ODCF/FastqIndEx/releases/tag/0.9.0b) for fast extraction of contiguous subsets. The matrix of ASV read counts in each sample was then constructed and stored in coordinate list (COO) sparse matrix format, as a three column R data frame where the columns represent a sample identifier, index of the sequence in the master ASV file, and number of reads. Potential cases of tag-switching were detected and removed using an R implementation of the UNCROSS2 algorithm56, using a threshold uncross score of f=0.01. Because different sequencing runs were processed and sequenced independently, UNCROSS2 was applied only within sequencing runs.
+A number of operations were then performed on the ASVs, including de novo and reference-based chimera detection, scoring and aligning to a hidden markov model, removal of potential nuclear-mitochondrial pseudogenes, flagging potential non-animal sequences, and taxonomic assignment. These steps, most of which flag some ASVs for removal, could in principle be performed in stages, thereby reducing the computational load of later stages – because only sequences which passed all previous stages would then need to be considered. We instead performed them in parallel, so that it is possible to compare the results of different stages. As such comparisons are not relevant to CORAL, we do not present them here.
+
+### Reference sequences and taxonomy
+
+Reference sequences and taxonomy were retrieved from BOLD52. The taxonomic hierarchy on BOLD is a consolidation of numerous online databases and taxonomic publications. The hierarchy is constantly updated through both user submissions of new taxon names and the incorporation of new taxon-specific checklists. Some of the key data sources are listed on the Taxonomic Resources page on BOLD (https://boldsystems.org/index.php/resources/taxresource). The version of the hierarchy used in this study was retrieved from BOLD on April 21, 2022. Two BOLD data packages were utilized in this study. A 7M reference barcode set, used for training the Protax taxonomic classifier (see below), consisted of all COI data publicly available on BOLD as of June 1, 2022. Any sequences flagged due to data quality issues, such as reading frame shifts, or suspected cross-contamination or misidentification, as well as non-animal sequences, were excluded from this reference dataset. An additional 8.7M barcode data set, in which non-animal sequences were retained for use in chimera detection and flagging non-animal sequences (see below), was downloaded Feb 9, 2024 (https://www.boldsystems.org/index.php/datapackage?id=BOLD_Public.09-Feb-2024). The majority of sequences in both datasets originate from research programs led by the International Barcode of Life (iBOL) Consortium and the Centre for Biodiversity Genomics, University of Guelph, such as the Global Malaise Trap Program (https://biodiversitygenomics.net/projects/gmp/) and BIOSCAN (https://biodiversitygenomics.net/research/bioscan/). 
+
+### Chimera detection
+
+ De novo chimera detection was performed using a partial re-implementation of the consensus method of DADA2 in order to operate on the sparse matrix representation. The internal DADA2 function C_table_bimera2 was used to flag potential bimeras in small subsets of sequences, and the results were combined into a master list. Each ASV which was flagged as a potential bimera in at least 90% - 1 of the samples it occurred in was removed.
+Reference-based chimera detection was performed using the UCHIME algorithm50 as implemented in VSEARCH (--uchime_ref), using as reference the 8.7M barcode dataset described above.
+
+### HMM alignment and NuMt detection
+
+Both the ASV sequences and the 7M and 8.7M barcode reference sets were aligned to the nucleotide hidden Markov model (HMM) of the COI barcode region from57 using the hmmalign command of HMMER version 3.3.258. Extra nucleotides at the beginning and end of the aligned region were removed (--trim). Insertions, represented by HMMER as lower-case characters in the aligned sequences, were removed from the reference data sets, but retained at this stage in the ASV sequences. ASV sequences with frame shift mutations (insertions or deletions with length not divisible by 3) or in-frame TAG/TAA stop codons were discarded as potential nuclear mitochondrial pseudogenes (NuMts)38. Additionally, the ASV sequences were scored against the same HMM with the nhmmer command, also from HMMER 3.3.2. ASVs which did not match the model from at least position 245 to 652, corresponding to the BF3-BR2 amplicon with a few bases truncated at each end, or for which the calculated match score was less than 200, were regarded as likely sequencing artifacts and discarded.
+
+### Taxonomic placement
+
+Taxonomic placement of animal sequences was conducted with the Protax classifier59 using parameterization similar to the one used in60 and trained on the 7M barcode reference set. During classification, the nucleotides were represented as 64-bit integers in order to gain speedup when computing pairwise distances. Each nucleotide was converted into a 4-bit vector (A: '1000', C: '0100', G: '0010', T: '0001', N: '0000') so that 16 consecutive nucleotides could be represented in one 64-bit integer. The number of matching nucleotides along the alignment could then be calculated efficiently by using a fast built-in function 'popcountl' in C. The number of taxa after adding unknown branches (one outside-of-known-taxonomy node under each parent node) was 37, 157, 882, 7963, 18676, 25832, 102736, and 572097 in phylum, class, order, family, subfamily, tribe, genus, and species level, respectively. There were 7279191 reference sequences whose annotations reached 99% family level, 69% subfamily level, 64% genus level, and 42% species level. The number of taxonomy nodes with at least one reference sequence was 29 at the phylum level, 103 at the class level, 605 at the order level, 4909 at the family level, 7580 at the subfamily level, 9161 at the tribe level, 50659 at the genus level, and 199841 at the species level.
+The same pairwise distance algorithm was also used to find the single closest match for each ASV in the 8.7M barcode reference set. Sequences whose closest match was to a non-animal sequence were flagged but retained until after the clustering step.
+
+### Taxonomically guided clustering
+
+Due to frequent intra-species variation in the COI gene59, ASVs are not a reliable proxy for unique species. We therefore performed a multi-stage hierarchical clustering of the ASV sequences, taking into account the results of taxonomic classifications from Protax. Clustering was performed first at the phylum level, then proceeded through the taxonomic ranks until the final round resulted in approximately species-level OTUs, which were used as the main unit of analysis for CORAL. At each rank, clustering proceeded in three stages: core formation, closed-reference clustering, and de-novo clustering. In the core formation stage, ASVs which were identified at the current taxonomic rank with at least 90% confidence by Protax were grouped according to their taxonomic identifications. In the closed-reference clustering stage, ASVs which could not be identified with 90% confidence were joined to cluster cores if the pairwise sequence dissimilarity, calculated by the Protax algorithm, between the ASV and a member of the cluster core was less than a rank-specific threshold of 0.12 for phylum, 0.10 for class, 0.07 for order, 0.05 for family, 0.04 for subfamily, 0.035 for tribe, 0.03 for genus, and 0.02 for species. If an ASV matched more than one cluster core at below the given threshold, it was joined only to the one which it matched most closely, so that cluster cores were never merged. This stage was repeated, checking for matches between unclustered ASVs and newly clustered sequences, until no new matches were found. Finally, in the de novo clustering stage, remaining unclustered OTUs were single-linkage clustered, with the same rank-specific dissimilarity thresholds. Placeholder “pseudotaxon” names at each rank were given to the de novo clusters, such that the final OTUs were placed in a full taxonomic hierarchy consisting of both known taxa and potentially novel taxa. Finally, all ASVs in pseudophyla (i.e., de novo clusters at phylum rank) which contained a large number of ASVs which were flagged as non-animal (see above) were removed.
+
+### Implementation and execution
+
+The OptimOTU pipeline is implemented using the targets 1.5.1 workflow management package60, here executed using the crew 0.9.061 and crew.cluster 0.3.062 backends in R 4.2.363 on the Puhti cluster at CSC – IT Center For Science, Finland.
 
 
 , which is also used to generate barcode identification numbers (BINs) in the BOLD database [@ratnasingham2013] and species hypotheses in the UNITE database [@abarenkov2010].
+
+# Results
 
 # Discussion
 
@@ -182,4 +307,12 @@ A major advantage of single linkage clustering is that the clustering criterion 
 and not dependent on the order of the input sequences.
 This is in contrast to complete- and average-linkage clustering, as well as centroid-based methods, where multiple possible clusterings fitting the criteria may exist.
 
-# References
+# Conclusions
+
+# Funding {.unnumbered}
+
+This work was supported by the Academy of Finland [grant number Otso's Academy professor]; and the European Research council [grant number BGE].
+
+# Acknowledgements {.unnumbered}
+
+The authors would like to thank various people. Computational resources were provided by CSC – IT Center For Science, Finland.
