@@ -5,6 +5,10 @@ title: |
 author:
   - Brendan Furneaux^1^
   - Sten Anslan^1^
+  - Panu Somervuo^2^
+  - Jenni Hultman^2^
+  - Nerea Abrego^1^
+  - Tomas Roslin^3^?
   - Otso Ovaskainen^1^
 date: ^1^Department of Biological and Environmental Science, University of Jyväskylä, Jyväskylä, Finland
 output:
@@ -15,6 +19,12 @@ output:
     latex_engine: xelatex
 bibliography: all.bib
 ---
+
+<!--   - Skylar^1^? -->
+<!--   - Domenica^1^? -->
+<!--   - Ilze^1^? -->
+<!--   - Bess^2^ -->
+<!--   - Dee^3^ -->
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results = "asis")
@@ -60,6 +70,11 @@ These sequences are then clustered by single-linkage hierarchical agglomerative 
 Such partitions are calculated for a range of test thresholds, for example 0.0 to 0.4 in steps of 0.001, and the resulting clusters are compared to the taxonomic identifications to determine the threshold that produces clusters that most closely match the taxonomy at each rank.
 This process is conceptually repeated for each taxon in the reference set, and  which has enough representative sequences (default: 10) and enough descendant taxa (default: 5) to be informative.
 In practice, clustering is performed concurrently for all relevant taxa, with only a single pass through the sequences.
+
+```{r threshold_optimization, child="cluster_optimization_figure.Rmd"}
+
+```
+
 
 Once the optimized thresholds have been determined, they can be used to cluster query sequences.
 OptimOTU inverts the typical workflow in which sequences are clustered first and then taxonomically identified, and instead uses preliminary taxonomic identification first, followed by clustering informed by the identifications.
