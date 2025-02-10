@@ -13,7 +13,7 @@ library(ggtree)
 
 ## clustering
 
-```{r}
+```{r cluster-optimization}
 true_taxonomy <- tibble::tribble(
   ~seq_id, ~family, ~genus, ~species,
   "seq1", "A", "B", "C",
