@@ -147,8 +147,8 @@ mutual_information <- function(k, c, threads = 1L) {
 
 #' @rdname mutual_information
 #' @export
-adjusted_mutual_information <- function(k, c, threads = 1L) {
-    .Call(`_optimotu_adjusted_mutual_information`, k, c, threads)
+adjusted_mutual_information <- function(k, c, threads = 1L, verbose = FALSE) {
+    .Call(`_optimotu_adjusted_mutual_information`, k, c, threads, verbose)
 }
 
 #' @return (`character(1)`) CIGAR string

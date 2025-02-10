@@ -210,15 +210,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // adjusted_mutual_information
-Rcpp::DataFrame adjusted_mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads);
-RcppExport SEXP _optimotu_adjusted_mutual_information(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP) {
+Rcpp::DataFrame adjusted_mutual_information(const Rcpp::IntegerMatrix k, const Rcpp::IntegerVector c, int threads, bool verbose);
+RcppExport SEXP _optimotu_adjusted_mutual_information(SEXP kSEXP, SEXP cSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerMatrix >::type k(kSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type c(cSEXP);
     Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(adjusted_mutual_information(k, c, threads));
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(adjusted_mutual_information(k, c, threads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -402,7 +403,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_fmeasure_matrix", (DL_FUNC) &_optimotu_fmeasure_matrix, 3},
     {"_optimotu_seq_distmx_kmer", (DL_FUNC) &_optimotu_seq_distmx_kmer, 10},
     {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 3},
-    {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 3},
+    {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 4},
     {"_optimotu_cigar_wfa2", (DL_FUNC) &_optimotu_cigar_wfa2, 8},
     {"_optimotu_cigar_edlib", (DL_FUNC) &_optimotu_cigar_edlib, 2},
     {"_optimotu_align_wfa2", (DL_FUNC) &_optimotu_align_wfa2, 8},

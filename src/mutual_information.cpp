@@ -161,12 +161,39 @@ Rcpp::NumericVector mutual_information(
   if (N != (size_t)k.ncol())
     OPTIMOTU_STOP("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                  " the same number of objects.", k.ncol(), N);
+
+  // inputs from R are often 1-indexed or may include values outside
+  // the range of cluster IDs which would be produced by seq_cluster or
+  // distmx_cluster, for instance if they are a subset of a bigger partition.
+  // We need to scale these down to 0-indexed values.
+  const Rcpp::IntegerMatrix * scaled_k = &k;
+  Rcpp::IntegerMatrix new_k;
+  if (max(k) == N && min(k) > 0) {
+    new_k = k - 1;
+    scaled_k = &new_k;
+  } else if (max(k) >= N) {
+    Rcpp::IntegerVector k_members = Rcpp::sort_unique(k);
+    Rcpp::IntegerVector k_renorm = Rcpp::match(k, k_members) - 1;
+    new_k = Rcpp::IntegerMatrix(k.nrow(), k.ncol(), k_renorm.begin());
+    scaled_k = &new_k;
+  }
+  const Rcpp::IntegerVector * scaled_c = &c;
+  Rcpp::IntegerVector new_c;
+  if (max(c) == N && min(c) > 0) {
+    new_c = c - 1;
+    scaled_c = &new_c;
+  } else if (max(c) >= N) {
+    Rcpp::IntegerVector c_members = Rcpp::sort_unique(c);
+    new_c = Rcpp::match(c, c_members) - 1;
+    scaled_c = &new_c;
+  }
+
   Rcpp::NumericVector mi(m, 0.0);
   std::vector<std::pair<int, size_t>> c_sort;
   std::unordered_map<int, SizeAndEntropy> c_count;
-  initialize_c_counts(c, c_sort, c_count, N);
+  initialize_c_counts(*scaled_c, c_sort, c_count, N);
 
-  MutualInformationWorker worker(k, c_sort, c_count, mi);
+  MutualInformationWorker worker(*scaled_k, c_sort, c_count, mi);
   if (threads == 1L) {
     worker(0, m);
   } else {
@@ -581,41 +608,82 @@ public:
  Rcpp::DataFrame adjusted_mutual_information(
      const Rcpp::IntegerMatrix k,
      const Rcpp::IntegerVector c,
-     int threads = 1L
+     int threads = 1L,
+     bool verbose = false
  ) {
    size_t N = c.size(), m = k.nrow();
    if (N != (size_t)k.ncol())
      OPTIMOTU_STOP("test clusters 'k' (%d) and true clusters 'c' (%d) must have"
                   " the same number of objects.", k.ncol(), N);
+
+   // inputs from R are often 1-indexed or may include values outside
+   // the range of cluster IDs which would be produced by seq_cluster or
+   // distmx_cluster, for instance if they are a subset of a bigger partition.
+   // We need to scale these down to 0-indexed values.
+   const Rcpp::IntegerMatrix * scaled_k = &k;
+   Rcpp::IntegerMatrix new_k;
+   if (max(k) == N && min(k) > 0) {
+     new_k = k - 1;
+     scaled_k = &new_k;
+   } else if (max(k) >= N) {
+     Rcpp::IntegerVector k_members = Rcpp::sort_unique(k);
+     Rcpp::IntegerVector k_renorm = Rcpp::match(k, k_members) - 1;
+     new_k = Rcpp::IntegerMatrix(k.nrow(), k.ncol(), k_renorm.begin());
+     scaled_k = &new_k;
+   }
+   const Rcpp::IntegerVector * scaled_c = &c;
+   Rcpp::IntegerVector new_c;
+   if (max(c) == N && min(c) > 0) {
+     new_c = c - 1;
+     scaled_c = &new_c;
+   } else if (max(c) >= N) {
+     Rcpp::IntegerVector c_members = Rcpp::sort_unique(c);
+     new_c = Rcpp::match(c, c_members) - 1;
+     scaled_c = &new_c;
+   }
+
    Rcpp::NumericVector mi(m, 0.0), Hmax(m, 0.0), emi(m, R_NegInf);
    std::vector<std::pair<int, size_t>> c_sort;
    std::unordered_map<int, SizeAndEntropy> c_count;
-   initialize_c_counts(c, c_sort, c_count, N);
+   initialize_c_counts(*scaled_c, c_sort, c_count, N);
 
    std::vector<ClusterCount> k_counts;
-   // OPTIMOTU_CERR << "constructing AdjustedMutualInformationWorker1" << std::endl;
-   AdjustedMutualInformationWorker1 worker1(k, c_sort, c_count, mi, Hmax, k_counts);
-   // OPTIMOTU_CERR << "running AdjustedMutualInformationWorker1()" << std::endl;
+   if (verbose)
+     OPTIMOTU_CERR << "constructing AdjustedMutualInformationWorker1"
+                   << std::endl;
+   AdjustedMutualInformationWorker1 worker1(*scaled_k, c_sort, c_count, mi, Hmax, k_counts);
+   if (verbose)
+     OPTIMOTU_CERR << "running AdjustedMutualInformationWorker1()"
+                   << std::endl;
    if (threads == 1) {
      worker1(0, m);
    } else {
      RcppParallel::parallelFor(0, m, worker1, 1, threads);
    }
-   // OPTIMOTU_CERR << "finished AdjustedMutualInformationWorker1()" << std::endl;
+   if (verbose)
+     OPTIMOTU_CERR << "finished AdjustedMutualInformationWorker1()"
+                   << std::endl;
 
-   // OPTIMOTU_CERR << "sorting k_counts" << std::endl;
+
+     if (verbose)
+       OPTIMOTU_CERR << "sorting k_counts" << std::endl;
    std::sort(k_counts.begin(), k_counts.end());
-   // OPTIMOTU_CERR << "finished sorting k_counts" << std::endl;
 
-   // OPTIMOTU_CERR << "constructing AdjustedMutualInformationWorker2" << std::endl;
+   if (verbose)
+     OPTIMOTU_CERR << "finished sorting k_counts" << std::endl
+                   << "constructing AdjustedMutualInformationWorker2" << std::endl;
    AdjustedMutualInformationWorker2 worker2(emi, k_counts, c_count, N, threads);
-   // OPTIMOTU_CERR << "running AdjustedMutualInformationWorker2()" << std::endl;
+
+   if (verbose)
+     OPTIMOTU_CERR << "running AdjustedMutualInformationWorker2()" << std::endl;
    if (threads == 1) {
      worker2(0, 1);
    } else {
      RcppParallel::parallelFor(0, threads, worker2, 1, threads);
    }
-   // OPTIMOTU_CERR << "finished AdjustedMutualInformationWorker2()" << std::endl;
+
+   if (verbose)
+     OPTIMOTU_CERR << "finished AdjustedMutualInformationWorker2()" << std::endl;
    emi = exp(emi);
    Rcpp::NumericVector ami = (mi - emi) / (Hmax - emi);
    auto out = Rcpp::DataFrame::create(
