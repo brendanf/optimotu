@@ -179,12 +179,6 @@ The test suite for OptimOTU tests the clustering algorithms with all applicable 
 Additionally, internal consistency checks can be activated by setting the optional argument `test = 1` or `test = 2` in `clust_tree()`.
 These checks are computationally expensive, and so are not recommended for routine use, but can be useful if you believe you have found a bug in the tree-based algorithm.
 
-```{r clustering, fig.cap="Clustering methods"}
-plot.new()
-text(x = 0.5, y = 0.5, labels = "This will be a figure showing\nthe difference between single-linkage,\ncomplete-linkage, average-linkage, and\ncentroid clustering.")
-
-```
-
 ## Parallelization
 
 There are three available parallelization options, which are configured by setting the `parallel_config` argument in `optimize_thresholds()` or `optimotu()`.
