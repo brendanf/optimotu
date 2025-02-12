@@ -11,9 +11,17 @@ library(ggplot2)
 library(ggtree)
 ```
 
-## clustering
+(ref:cluster-optimization) OptimOTU threshold optimization procedure.
+Here we show a constructed example for optimization of clustering thresholds at the ranks of family, genus, and species, within a single taxonomic order.
+The taxonomic identity for the ten reference sequences are shown as colored bars on the right.
+The full hierarchical clustering tree is shown in the left, with clustering partitions using different thresholds shown as gray bars.
+The adjusted mutual information (AMI) score calculated for the clustering at each threshold in comparison to the reference taxonomy at the three ranks is shown at top.
+Dashed vertical lines indicate thresholds which optimize AMI for each rank, with ties resolved by selecting the median threshold and rounding down.
 
-```{r cluster-optimization}
+```{r cluster-optimization, fig.cap="(ref:cluster-optimization)", fig.width = 8, fig.height = 5}
+library(ggplot2)
+library(ggtree)
+
 true_taxonomy <- tibble::tribble(
   ~seq_id, ~family, ~genus, ~species,
   "seq1", "A", "B", "C",
