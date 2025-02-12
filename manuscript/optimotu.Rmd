@@ -8,15 +8,20 @@ author:
   - Panu Somervuo^2^
   - Jenni Hultman^2^
   - Nerea Abrego^1^
-  - Tomas Roslin^3^?
+  - Tomas Roslin^3^
   - Otso Ovaskainen^1^
-date: ^1^Department of Biological and Environmental Science, University of Jyväskylä, Jyväskylä, Finland
+date: |
+  ^1^Department of Biological and Environmental Science, University of Jyväskylä, Jyväskylä, Finland  
+  ^2^Department of Panu and Jenni's affiliation, University of Helsinki, Helsinki, Finland  
+  ^3^Department of Ecology, Swedish University of Agricultural Sciences, Uppsala, Sweden
 output:
   bookdown::pdf_document2:
     toc: no
     number_sections: no
     keep_tex: yes
     latex_engine: xelatex
+  bookdown::word_document2:
+    toc: no
 bibliography: all.bib
 ---
 
