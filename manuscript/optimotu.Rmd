@@ -75,7 +75,6 @@ In practice, clustering is performed concurrently for all relevant taxa, with on
 
 ```
 
-
 Once the optimized thresholds have been determined, they can be used to cluster query sequences.
 OptimOTU inverts the typical workflow in which sequences are clustered first and then taxonomically identified, and instead uses preliminary taxonomic identification first, followed by clustering informed by the identifications.
 The taxonomic identification can be performed by any method with a stopping condition, meaning that taxonomic identification is truncated to higher ranks if the confidence is low.
@@ -83,7 +82,7 @@ This includes any of the wide range of algorithms which produces confidence scor
 Additionally, algorithms based on last common ancestor (LCA) consensus such as implemented in CREST [@lanzen2012], USEARCH, [@edgar2010], VSEARCH [@rognes2016], and QIIME 2 [@bokulich2018] may be suitable.
 
 The clustering process is then performed using the `optimotu()` function, which proceeds in a hierarchical manner through the taxonomic ranks, starting with the rank below the root.
-Within each rank, the sequences are grouped by their cluster identity at the rank above and processed separately.
+Within each rank, the sequences are grouped by their cluster identity at the rank above and processed separately (Fig \@ref(fig:clustering)).
 At each rank, the clustering proceeds in three stages.
 First, cluster cores are formed by grouping sequences which have the same taxonomic identifications at the current rank.
 Second, sequences which were not identified at the current rank are assigned to cluster cores by closed-reference clustering, using the optimized threshold for the closest enclosing taxon for which a threshold was determined.
@@ -94,6 +93,24 @@ The closed reference clustering phase is performed iteratively, with the sequenc
 In this way, the resulting partition approximates single-linkage clustering, although clusters which would be joined in full single-linkage may be separated if they contain sequences with different taxonomic identifications.
 In the third and final step, sequences which are still unassigned at the chosen rank are *de novo* single-linkage clustered with the optimized threshold.
 The clusters from the *de novo* clustering are given placeholder taxonomic names of the form "pseudo{rank}_{number}", where {rank} is the rank of the cluster and {number} is a unique integer identifier.
+
+(ref:clustering) OptimOTU clustering procedure.
+The same procedure is used at all ranks, but here is illustrated at the species level.
+In this constructed example, ASVs belonging to family F have already been clustered into two named genera G1 and G2 and one pseudogenus pG3 during previous iterations.
+Clustering thresholds are depicted as circular boundaries around ASVs, such that when the circles overlap, the ASVs are more similar than the threshold.
+In this example, an optimized species-level clustering threshold has been determined for G1 based on reference data, but not for G2.
+Thus, ASVs in G2 are clustered using a species-level threshold inherited from F.
+Because it is not possible to optimize clustering within a pseudotaxon, ASVs in pG3 are also clustered using the threshold inherited from F.
+In the first stage, cluster cores are formed from ASVs which have been identified to species (colored dots), regardless of genetic distance.
+Thus the ASVs belonging to species s2 and s3 are not linked, despite being within the species-level threshold, while all three ASVs belonging to species s5 are linked, despite one of them being outside the species-level threshold from either of the others.
+Next, closed-reference clustering links unidentified ASVs (gray dots) to the nearest cluster core if they are within the species-level threshold.
+Note that this does not allow the merger species s1 with s2 or s3, despite the presence of an ASV which is within the threshold of all three cluster cores; it is only allowed to merge with the closest cluster core.
+The closed-reference clustering step is iterated as long as new matches are found, allowing an additional ASV to be linked to species s5.
+Finally, ASVs which have not been linked to any cluster core are *de novo* clustered, forming pseudospecies ps4, ps6, ps7, and ps8.
+
+```{tikz clustering, fig.cap="(ref:clustering)", code=readLines("clustering_figure.tex")}
+```
+
 
 When the clustering is complete, the result is a full taxonomic classification for each sequence, including named taxa and pseudotaxa.
 Clusters at the lowest rank, typically species, are then used as OTUs for further analysis.
@@ -213,13 +230,33 @@ There are also a number of optional steps which may only be relevant for certain
 These include detection of artificial "spike-in" sequences, detecting and removing outgroup sequences, alignment to a profile hidden Markov model (HMM) or covariance model (CM), detection of nuclear mitochondrial pseudogenes (NuMts), or assignment of sequences to ecological guilds or functional groups.
 Configuration of these optional steps, as well as settings for the standard steps, is performed using a human-readable YAML configuration file.
 
-The pipeline is organized broadly into three phases, which are distinguished by the unit of parallelization.
+The pipeline is organized broadly into three phases, which are distinguished by the unit of parallelization (Fig \@ref(fig:pipeline-overview)).
 In the first phase, most operations are performed on individual samples, although some steps share information between all samples within a sequencing run, and all steps are performed in batches of no more than 96 samples.
 This phase ends with the production of a master list of candidate ASVs and a table of read counts for each candidate ASV in each sample.
 In the second stage, operations are performed on the master list of condidate ASVs, which is split into batches for parallel processing.
 Operations at this stage primarily consist of various methods to filter the ASVs to remove artifacts, producing a final ASV list, as well as preliminary taxonomic identification.
 In the third phase, the final ASV list is clustered into OTUs using the OptimOTU algorithm.
 After the main processing steps are complete, optional post-processing steps may be performed, and the results are written to disk as a set of tables in TSV and RDS formats and sequences in gzipped FASTA format, as well as a zip archive containing the output files, and named according to the date of the run.
+
+```{tikz pipeline-overview, fig.cap="Overview of the OptimOTU pipeline. (placeholder)"}
+\usetikzlibrary{positioning, shapes}
+\begin{tikzpicture}
+  \node[draw, ellipse, minimum width=3cm, minimum height=1cm] (input) {Input reads};
+  \node[draw, rectangle, minimum width=3cm, minimum height=1cm, below=of input, align=center] (phase1) {Phase 1:\\quality filtering,\\denoising};
+  \node[draw, ellipse, minimum width=3cm, minimum height=1cm, below=of phase1] (asvs1) {Candidate ASVs};
+  
+  \node[draw, rectangle, minimum width=3cm, minimum height=1cm, below=of asvs1, align=center] (phase2) {Phase 2:\\artifact removal,\\taxonomic assignment};
+  \node[draw, ellipse, minimum width=3cm, minimum height=1cm, below=of phase2] (asvs2) {Final ASVs};
+  \node[draw, rectangle, minimum width=3cm, minimum height=1cm, below=of asvs2, align=center] (phase3) {Phase 3:\\OptimOTU clustering};
+  \node[draw, ellipse,minimum width=3cm, minimum height=1cm, below=of phase3] (output) {Output OTUs};
+  \draw[->] (input) -- (phase1);
+  \draw[->] (phase1) -- (asvs1);
+  \draw[->] (asvs1) -- (phase2);
+  \draw[->] (phase2) -- (asvs2);
+  \draw[->] (asvs2) -- (phase3);
+  \draw[->] (phase3) -- (output);
+\end{tikzpicture}
+```
 
 Although many of the steps in the pipeline are performed in R using various freely available packages, several external command-line software tools are also used.
 The R version, R packages, and external tools are enumerated along with recommended version numbers in an included Conda environment file [@conda_contributors_conda_A_system-level] which can be used to install the dependencies automatically, or can be read by the user to install the required software manually.
