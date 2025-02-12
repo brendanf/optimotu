@@ -195,22 +195,22 @@ This is the only parallelization algorithm which can be used with SLINK if `thre
 Finally, the two parallelization techniques can be combined, with multiple tree structures each updated by multiple parallel threads, and then merged at the end.
 This is referred to as the "hierarchical" option, accessed by setting the option `parallel_config = parallel_hierarchical(threads, shards)`, where `threads` is the total number of threads and `shards` is the number of tree structures.
 
-### Measures of clustering quality
+## Measures of clustering quality
 
 OptimOTU calculates several measures to compare the quality of a clustering partition relative to a reference taxonomy.
 The first group of these are based on pair counting, whereby deciding whether each pair of sequences belong to the same cluster is treated as a binary classification problem.
 Thus, a $2\times2$ confusion matrix can be constructed, whereby if the sequence pair is grouped together in both the reference taxonomy and in the clustering partition, it is a true positive (TP), if they are in different clusters in both, it is a true negative (TN), if they are in the same cluster in the reference but different clusters in the partition, it is a false negative (FN), and if they are in different clusters in the reference but the same cluster in the partition, it is a false positive (FP).
-Various measures can be calculated from the confusion matrix, of which the Rand index [RI; @rand1971], adjusted Rand index [ARI; @hubert1985], Fowlkes-Mallows index [FMI; @fowlkes1983], and Matthews correlation coefficient [MCC; @matthews1975] are implemented in OptimOTU.
+Various measures can be calculated from the confusion matrix, of which the Rand index [RI\; @rand1971], adjusted Rand index [ARI\; @hubert1985], Fowlkes-Mallows index [FMI\; @fowlkes1983], and Matthews correlation coefficient [MCC\; @matthews1975] are implemented in OptimOTU.
 Of these, the RI is not corrected for chance, so it tends to give higher scores to small clustering thresholds, i.e., clusterings with many small clusters, so it is not recommended.
 Because the calculation of the confusion matrix is the most computationally expensive part of calculating these measures, it is more efficient to calculate the confusion matrix once and then calculate multiple measures from it if multiple measures are desired, and this is supported in OptimOTU by the function `confusion_matrix()`,
 which is parallelized, and a function for each index which takes the confusion matrix as input.
 
 
-The second group of measures are based in information theory, and include the mutual information [MI; @strehl2002] and adjusted mutual information [AMI; @vinh2010].
+The second group of measures are based in information theory, and include the mutual information [MI\; @strehl2002] and adjusted mutual information [AMI\; @vinh2010].
 These measures consider the cross-entropy between clusters in the test partition and the reference taxonomy.
 Because the MI is not corrected for chance and has no consistent upper bound, it is recommended to always use AMI if an information theoretic measure is desired.
 
-The third group is set-matching measures, where a single measure, the weighted multiclass F-measure (FM; @steinbach2000), is implemented.
+The third group is set-matching measures, where a single measure, the weighted multiclass F-measure [FM\; @steinbach2000], is implemented.
 Unlike the previous measures, the FM considers only the best-matching cluster for each taxon in the reference taxonomy, so it is not sensitive to the number or makeup of any "extra" clusters in the test partition.
 
 
