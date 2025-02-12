@@ -55,25 +55,24 @@ Traditional agglomerative and greedy clustering algorithms treat these sources o
 In this case the threshold should be chosen to be larger than typical error rates for the chosen sequencing workflow, and also larger than the intraspecies genetic variation present within the species of interest, while also being smaller than the level of genetic variation between species.
 
 Alternatively, denoising algorithms such as Deblur [@amir2017], DADA2 [@callahan2016], and UNOISE2 [@edgar2016] incorporate sequence abundance information to attempt to separate true biological variation from sequencing errors, yielding clusters known variably as amplicon sequence variants (ASVs), exact sequence variants (ESVs), or zero-diameter OTUS (zOTUs).
-Denoising may successfully recover true biological variation even below the sequencing error rate, but as a result also frequently separate sequences that are derived from the same species or strain, and so ASVs may be subjected to a second clustering step to group sequences using a biologically motivated threshold.
-In either case, it is common to choose a single threshold, often 97% similarity, for all sequences,
-even in studies that target large and diverse taxonomic groups such as all fungi, all eukaryotes, or all prokaryotes.
-However, levels of genetic variation within species are known to vary between taxonomic groups as well as between marker genes, so these thresholds may result in over- or under-clustering, and most often both within the same dataset.
+Denoising may successfully recover true biological variation even below the sequencing error rate, but as a result also frequently separates sequences that are derived from the same species or strain, and so ASVs may be subjected to a second clustering step to group sequences using a biologically motivated threshold.
+In both direct clustering and post-denoising clustering, it is common to choose a single threshold, often 97% similarity, for all sequences, even in studies that target large and diverse groups such as insects (e.g., ref), fungi [e.g., @tedersoo2021a], microbial eukaryotes [e.g., @jamy2020], or prokaryotes (e.g., ref).
+However, levels of genetic variation within species are known to vary between taxonomic groups as well as between marker genes [@nilsson2008; @pentinsaari2016], so these thresholds may result in over- or under-clustering, and most often both within the same dataset.
 
 Here we present OptimOTU, a taxonomically aware approach to OTU clustering, in which optimized thresholds are used for different taxonomic groups.
 
 # Implementation
 
 The OptimOTU algorithm has three phases: threshold optimization, preliminary taxonomic identification, and clustering.
-Threshold optimization is usually the most computationally intensive step, but it does not need to be repeated for every study in a set of optimized thresholds for the taxonomic groups of interest has already been determined.
+Threshold optimization is usually the most computationally intensive step, but it does not need to be repeated for every study if a set of optimized thresholds for the taxonomic groups of interest has already been determined.
 
 Threshold optimization is performed by the function `optimize_thresholds()`, which takes as input a set of reference sequences and their taxonomic identifications.
 These can be obtained from a curated global database such as BOLD [@ratnasingham2013], UNITE [@abarenkov2010], or PR2 [@guillou2013], or from a local database of sequences that have been taxonomically identified by experts.
 It is also possible to use a subset of the sequences from the study in question that have been identified with high confidence by algorithms such as the RDP naive Bayesian classifier [@wang2007], SINTAX [@edgar2016a], PROTAX [@somervuo2016; @abarenkov2018a; @roslin2022], or similar methods.
 This was the approach used by @ovaskainen2024.
 These sequences are then clustered by single-linkage hierarchical agglomerative clustering, resulting in a tree structure which can be cut at any level to produce a partition of the reference sequences into clusters.
-Such partitions are calculated for a range of test thresholds, for example 0.0 to 0.4 in steps of 0.001, and the resulting clusters are compared to the taxonomic identifications to determine the threshold that produces clusters that most closely match the taxonomy at each rank.
-This process is conceptually repeated for each taxon in the reference set, and  which has enough representative sequences (default: 10) and enough descendant taxa (default: 5) to be informative.
+Such partitions are calculated for a range of test thresholds, for example 0.0 to 0.4 in steps of 0.001, and the resulting clusters are compared to the taxonomic identifications to determine the threshold that produces clusters that most closely match the taxonomy at each rank (Fig \@ref(fig:cluster-optimization)).
+This process is conceptually repeated for each taxon in the reference set which has enough representative sequences (default: 10) and enough descendant taxa (default: 5) to be informative.
 In practice, clustering is performed concurrently for all relevant taxa, with only a single pass through the sequences.
 
 ```{r threshold_optimization, child="cluster_optimization_figure.Rmd"}
