@@ -57,7 +57,8 @@ supplementary_info: |
   Supplementary data are available...
 
 output:
-  rticles::bioinformatics_article:
+  bookdown::pdf_book:
+    base_format: rticles::bioinformatics_article
     citation_package: natbib
     extra_dependencies: ["url"]
     
