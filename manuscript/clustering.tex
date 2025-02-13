@@ -1,4 +1,4 @@
-\usetikzlibrary{patterns, intersections, math}
+\usetikzlibrary{patterns, intersections, math, positioning}
 
 % use the 7-class colorbrewer "setdark2" palette (skipping color 6 because it's too light)
 \definecolor{g1}{HTML}{1b9e77}
@@ -73,6 +73,12 @@
 % the fill color will be defined separately each time it is used, and the
 % outline will always be a darker version of the same color
 \tikzstyle{asv}=[circle, draw=black!50, fill=black!50, inner sep=0pt]
+
+% different linkages
+\tikzstyle{core}=[line width=0.5mm]
+\tikzstyle{reffirst}=[line width=0.5mm, densely dashed]
+\tikzstyle{refsecond}=[line width=0.5mm, loosely dashed]
+\tikzstyle{denovo}=[line width=0.5mm, dotted]
 
 % define the genus of each asv in a list
 \def\asvgenus{
@@ -172,26 +178,26 @@
         \ifnum\pgfmathresult=1
           \ifx\species\speciesb
             \ifx\type\denovo
-              \draw[\species, line width=0.5mm, dotted] (\x, \y) -- (\xb, \yb);
+              \draw[\species, denovo] (\x, \y) -- (\xb, \yb);
             \else
               \ifx\type\known
                 \ifx\typeb\known
-                  \draw[\species, line width=0.5mm] (\x, \y) -- (\xb, \yb);
+                  \draw[\species, core] (\x, \y) -- (\xb, \yb);
                 \else
-                  \draw[\species, line width=0.5mm, dashed] (\x, \y) -- (\xb, \yb);
+                  \draw[\species, reffirst] (\x, \y) -- (\xb, \yb);
                 \fi
               \else
                 \ifx\typeb\known
-                  \draw[\species, line width=0.5mm, dashed] (\x, \y) -- (\xb, \yb);
+                  \draw[\species, reffirst] (\x, \y) -- (\xb, \yb);
                 \else
                   \ifx\type\refsecond
                     \ifx\typeb\reffirst
-                      \draw[\species, line width=0.5mm, loosely dash dot] (\x, \y) -- (\xb, \yb);
+                      \draw[\species, refsecond] (\x, \y) -- (\xb, \yb);
                     \fi
                   \else
                     \ifx\type\reffirst
                       \ifx\typeb\refsecond
-                        \draw[\species, line width=0.5mm, loosely dash dot] (\x, \y) -- (\xb, \yb);
+                        \draw[\species, refsecond] (\x, \y) -- (\xb, \yb);
                       \fi
                     \fi
                   \fi
@@ -201,19 +207,22 @@
           \else
             \ifx\type\known
               \ifx\typeb\known
-                \draw[red, line width=0.5mm] (\x, \y) -- (\xb, \yb);
+                \draw[red, core] (\x, \y) -- (\xb, \yb)
+                node[pos=0.5,sloped] {\sffamily\bfseries{X}};
               \else
-                \draw[red, line width=0.5mm, dashed] (\x, \y) -- (\xb, \yb);
+                \draw[red, reffirst] (\x, \y) -- (\xb, \yb)
+                node[pos=0.5,sloped] {\sffamily\bfseries{X}};
               \fi
             \else
-              \draw[red, line width=0.5mm, dashed] (\x, \y) -- (\xb, \yb);
+              \draw[red, reffirst] (\x, \y) -- (\xb, \yb)
+              node[pos=0.5,sloped] {\sffamily\bfseries{X}};
             \fi
           \fi
         \else
           \ifx\species\speciesb
             \ifx\type\known
               \ifx\typeb\known
-                \draw[\species, line width=0.5mm] (\x, \y) -- (\xb, \yb);
+                \draw[\species, core] (\x, \y) -- (\xb, \yb);
               \fi
             \fi
           \fi
@@ -255,7 +264,7 @@
   \ifx\type\known
     \draw[\species!50!black, fill=\species] (\x, \y) circle (\asvrad);
   \else
-    \draw[unknown!50!black, fill=unknown] (\x, \y) circle (\asvrad);
+    \draw[unknown, fill=white] (\x, \y) circle (\asvrad);
   \fi
 }
 
@@ -263,34 +272,44 @@
 \node[align=center,node font=\Large\bfseries] at (65, 245) {F};
 
 % draw genus cluster labels with medium text
-\node[align=center,node font=\large\bfseries,color=g1] at (43, 263) {G1};
-\node[align=center,node font=\large\bfseries,color=g2] at (87, 221) {G2};
-\node[align=center,node font=\large\bfseries,color=unknown] at (125, 287) {pG3};
+\node[align=center,node font=\large\bfseries,color=g1!70] at (43, 263) {G1};
+\node[align=center,node font=\large\bfseries,color=g2!70] at (87, 221) {G2};
+\node[align=center,node font=\large\bfseries,color=unknown!70] at (125, 287) {PG3};
 
 % draw species cluster labels with small text
-\node[align=center,node font=\bfseries,color=g1s1] at (28, 236) {s1};
-\node[align=center,node font=\bfseries,color=g1s2] at (10, 271) {s2};
-\node[align=center,node font=\bfseries,color=g1s3] at (30, 272) {s3};
-\node[align=center,node font=\bfseries,color=g1s4] at (48, 292) {ps4};
-\node[align=center,node font=\bfseries,color=g2s1] at (113, 228) {s5};
-\node[align=center,node font=\bfseries,color=g2s2] at (96, 214) {ps6};
-\node[align=center,node font=\bfseries,color=g3s1] at (150, 293) {ps7};
-\node[align=center,node font=\bfseries,color=g3s2] at (119, 308) {ps8};
+\node[align=center,node font=\bfseries,color=g1s1] at (28, 236) {S1};
+\node[align=center,node font=\bfseries,color=g1s2] at (10, 271) {S2};
+\node[align=center,node font=\bfseries,color=g1s3] at (30, 272) {S3};
+\node[align=center,node font=\bfseries,color=g1s4] at (48, 292) {PS4};
+\node[align=center,node font=\bfseries,color=g2s1] at (113, 228) {S5};
+\node[align=center,node font=\bfseries,color=g2s2] at (96, 214) {PS6};
+\node[align=center,node font=\bfseries,color=g3s1] at (150, 293) {PS7};
+\node[align=center,node font=\bfseries,color=g3s2] at (119, 308) {PS8};
 
 % draw legend
-\draw [line width=0.5mm] (158,240) -- (173,240) node[right] {Cluster core};
-\draw [line width=0.5mm, dashed] (158,230) -- (173,230) node[right] {Closed ref. (1st iter.)};
-\draw [line width=0.5mm, loosely dash dot] (158,220) -- (173,220) node[right] {Closed ref. (2nd iter.)};
-\draw [line width=0.5mm, dotted] (158,210) -- (173,210) node[right] {\emph{De novo}};
-\draw [line width=0.5mm, red] (158,201) -- (173,201);
-\draw [line width=0.5mm, red, dashed] (158,199) -- (173,199) node[right, color = black] {Illegal linkage};
+\draw [core] (158,240) -- (173,240) node[right] {Cluster core};
+\draw [reffirst] (158,230) -- (173,230) node[right] {Closed ref. (1st iter.)};
+\draw [refsecond] (158,220) -- (173,220) node[right] {Closed ref. (2nd iter.)};
+\draw [denovo] (158,210) -- (173,210) node[right] {\emph{De novo}};
+\draw [core, red] (158,202) -- (173,202) node[pos=0.5,sloped] {\sffamily\bfseries{X}};
+\draw [reffirst, red] (158,198) -- (173,198) node[pos=0.5,sloped] {\sffamily\bfseries{X}} node[color = black, anchor=west] at ++(0, 2) {Illegal linkage};
 
 % color swatches for known species
 \draw [g1s1!50!black, fill=g1s1] (159,190) circle (\asvrad);
 \draw [g1s2!50!black, fill=g1s2] (163,190) circle (\asvrad);
 \draw [g1s3!50!black, fill=g1s3] (167,190) circle (\asvrad);
 \draw [g2s1!50!black, fill=g2s1] (171,190) circle (\asvrad) node[right=2mm, color = black] {ASV identified to species};
-\draw [unknown!50!black, fill=unknown] (171,180) circle (\asvrad) node[right=2mm, color = black] {Unidentified ASV};
+\draw [unknown, fill=white] (171,180) circle (\asvrad) node[right=2mm, color = black] {Unidentified ASV};
+
+% Letters to point out specific situations
+\node[draw, fill=white, node font=\Large\bfseries] (A) at (10, 290) {A};
+\draw (A) -- (19, 269);
+\node[draw, fill=white, node font=\Large\bfseries] (B) at (110, 240) {B};
+\draw (B) -- (109, 227);
+\node[draw, fill=white, node font=\Large\bfseries] (C) at (0, 250) {C};
+\draw (C) -- (17, 255);
+\node[draw, fill=white, node font=\Large\bfseries] (D) at (85, 260) {D};
+\draw (D) -- (98, 249);
 
 
 \end{tikzpicture}
