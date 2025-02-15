@@ -1,2 +1,6 @@
 *.pdf
 *_files
+*.log
+.~lock.*#
+*.aux
+tikz*.tex
