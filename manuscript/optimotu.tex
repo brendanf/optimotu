@@ -104,33 +104,34 @@
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
 \hypersetup{
-  pdftitle={OptimOTU: Taxonomically aware OTU clustering with optimized thresholds},
-  pdfauthor={Brendan Furneaux1; Sten Anslan1; Panu Somervuo2; Jenni Hultman3; Nerea Abrego1; Tomas Roslin2,4; Otso Ovaskainen1},
+  pdftitle={OptimOTU: Taxonomically aware OTU clustering with optimized thresholds and a bioinformatics workflow for metabarcoding data},
+  pdfauthor={Brendan Furneaux1; Sten Anslan1; Panu Somervuo2; Jenni Hultman3,4; Nerea Abrego1; Tomas Roslin2,5; Otso Ovaskainen1},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 
-\title{OptimOTU: Taxonomically aware OTU clustering\\
-with optimized thresholds}
-\author{Brendan Furneaux\textsuperscript{1} \and Sten Anslan\textsuperscript{1} \and Panu Somervuo\textsuperscript{2} \and Jenni Hultman\textsuperscript{3} \and Nerea Abrego\textsuperscript{1} \and Tomas Roslin\textsuperscript{2,4} \and Otso Ovaskainen\textsuperscript{1}}
+\title{OptimOTU: Taxonomically aware OTU clustering with optimized thresholds and a bioinformatics workflow for metabarcoding data}
+\author{Brendan Furneaux\textsuperscript{1} \and Sten Anslan\textsuperscript{1} \and Panu Somervuo\textsuperscript{2} \and Jenni Hultman\textsuperscript{3,4} \and Nerea Abrego\textsuperscript{1} \and Tomas Roslin\textsuperscript{2,5} \and Otso Ovaskainen\textsuperscript{1}}
 \date{\textsuperscript{1}Department of Biological and Environmental Science, University of Jyväskylä, Jyväskylä, Finland\\
 \textsuperscript{2}Faculty of Biological and Environmental Sciences, University of Helsinki, Helsinki, Finland\\
-\textsuperscript{3}Faculty of Agriculture and Forestry, University of Helsinki, Helsinki, Finland\\
-\textsuperscript{4}Department of Ecology, Swedish University of Agricultural Sciences, Uppsala, Sweden}
+\textsuperscript{3}Department of Microbiology, University of Helsinki, Helsinki, Finland\\
+\textsuperscript{4}Natural Resources Institue Finland (Luke), Helsinki, Finland\\
+\textsuperscript{5}Department of Ecology, Swedish University of Agricultural Sciences, Uppsala, Sweden}
 
 \begin{document}
 \maketitle
 
-\section{Abstract}\label{abstract}
+\section*{Abstract}\label{abstract}
+\addcontentsline{toc}{section}{Abstract}
 
 To turn environmentally derived metabarcoding data into community matrices for ecological analysis, sequences must first be clustered into operational taxonomic units (OTUs).
-This task is particularly comlex for data including large numbers of taxa with incomplete reference libraries.
+This task is particularly complex for data including large numbers of taxa with incomplete reference libraries.
 OptimOTU offers a taxonomically aware approach to OTU clustering.
 It uses a set of taxonomically identified reference sequences to choose optimal genetic distance thresholds for grouping each ancestor taxon into clusters which most closely match its descendant taxa.
 Then, query sequences are clustered according to preliminary taxonomic identifications and the optimized thresholds for their ancestor taxon.
 The process follows the taxonomic hierarchy, resulting in a full taxonomic classification of all the query sequences into named taxonomic groups as well as placeholder ``pseudotaxa'' which accommodate the sequences that could not be classified to a named taxon at the corresponding rank.
-OptimOTU is implemented as an R package, with computationally intensive steps implemented in C++ for speed, and incorporating open-source libraries for pairwise sequence alignment.
+The OptimOTU clustering algorithm is implemented as an R package, with computationally intensive steps implemented in C++ for speed, and incorporating open-source libraries for pairwise sequence alignment.
 Distances may also be calculated externally, and may be read from a UNIX pipe, allowing clustering of large datasets where the full distance matrix would be inconveniently large to store in memory.
-We also present the OptimOTU pipeline, a bioinformatics workflow for paired-end Illumina sequencing data that incorporates quality filtering, denoising, artifact removal, taxonomic classification, and OTU clustering with OptimOTU.
+The OptimOTU bioinformatics pipeline includes a full workflow for paired-end Illumina sequencing data that incorporates quality filtering, denoising, artifact removal, taxonomic classification, and OTU clustering with OptimOTU.
 The OptimOTU pipeline is developed for use on high performance computing clusters, and scales to datasets with millions of reads per sample, and tens of thousands of samples.
 
 \section{Introduction}\label{introduction}
@@ -151,18 +152,32 @@ However, this ability to distinguish very similar variants also frequently separ
 In both direct clustering and post-denoising clustering, it is common to choose a single threshold, often 97\% similarity, to form OTUs from the sequences, even across large and diverse groups such as invertebrates (e.g., Watts et al. 2019), fungi (e.g., Tedersoo et al. 2021), or microbial eukaryotes (e.g., Jamy et al. 2020).
 However, levels of genetic variation within species are known to vary between taxonomic groups as well as between marker genes (Nilsson et al. 2008; Pentinsaari et al. 2016), so these thresholds may result in over- or under-clustering, and most often both within the same dataset.
 
-An additional challenge is that environmental samples of highly diverse organisms groups typically include a large number of taxa which are not represented in reference libraries.
+An additional challenge is that environmental samples of highly diverse organism groups typically include a large number of taxa which are not represented in reference libraries.
 Thus, a large proportion of the sequences actually derive from taxa which cannot be assigned to a cluster present in the reference set, and for which levels of genetic variation cannot be reliably established.
 
-Here we present OptimOTU, a taxonomically aware approach to OTU clustering, in which optimized thresholds are used for different taxonomic groups.
+Here we present the OptimOTU clustering algorithm, a taxonomically aware approach to OTU clustering, in which optimized thresholds are used for different taxonomic groups.
+We also present the OptimOTU bioinformatics pipeline, which incorporates the OptimOTU clustering algorithm into a full workflow for processing paired-end Illumina sequencing data into OTUs (Fig \ref{fig:pipeline-overview}).
+
+
+
+
+
+\begin{figure}
+\centering
+\includegraphics{pipeline-overview-1.pdf}
+\caption{\label{fig:pipeline-overview}Overview of the OptimOTU workflow
+A typical ASV-to-OTU workflow is shown on the left for comparison.
+The three phases of the OptimOTU pipeline are shown in more detail in Fig \ref{fig:pipeline-phase1}, Fig \ref{fig:pipeline-phase2}, and Fig \ref{fig:pipeline-phase3}.}
+\end{figure}
 
 \section{Implementation}\label{implementation}
 
-The OptimOTU algorithm has three phases: threshold optimization, preliminary taxonomic identification, and clustering.
+The OptimOTU clustering algorithm has three phases: threshold optimization, preliminary taxonomic identification, and clustering.
+The threshold optimization and clustering phases are implemented in the R package \texttt{optimotu}, available at \url{https://github.com/brendanf/optimotu}, while preliminary taxonomic identification can be performed by a variety of third-party algorithms.
 Threshold optimization is usually the most computationally intensive step, but it does not need to be repeated for every study if a set of optimized thresholds for the taxonomic groups of interest has already been determined.
 
 The threshold optimization procedure is similar to the one used by dnabarcoder (Vu, Nilsson, and Verkley 2022).
-It is performed in OptimOTU by the function \texttt{optimize\_thresholds()}, which takes as input a set of reference sequences and their taxonomic identifications.
+It is performed in the OptimOTU clustering algorithm by the function \texttt{optimize\_thresholds()}, which takes as input a set of reference sequences and their taxonomic identifications.
 These can be obtained from a curated global database such as BOLD data release packages (Ratnasingham and Hebert 2013), UNITE (Abarenkov et al. 2010), PR2 (Guillou et al. 2013), or Eukaryome (Tedersoo et al. 2024), or from a local database of sequences.
 It is also possible to use a subset of the focal sequences that has been identified with high confidence by algorithms such as the RDP naive Bayesian classifier (Wang et al. 2007), SINTAX (Edgar 2016a), PROTAX (Somervuo et al. 2016; Abarenkov et al. 2018; Roslin et al. 2022), or similar methods.
 This was, for example, the approach used by Ovaskainen et al. (2024).
@@ -182,7 +197,7 @@ In practice, clustering is performed concurrently for all relevant taxa, with on
 
 \begin{figure}
 \centering
-\includegraphics{optimotu_files/figure-latex/cluster-optimization-1.pdf}
+\includegraphics{cluster-optimization-1.pdf}
 \caption{\label{fig:cluster-optimization}OptimOTU threshold optimization procedure.
 Here we show a constructed example for optimization of clustering thresholds at the ranks of family, genus, and species, within a single taxonomic order.
 The taxonomic identity for the ten reference sequences are shown as colored bars on the right.
@@ -192,14 +207,14 @@ Dashed vertical lines indicate thresholds which optimize AMI for each rank, with
 \end{figure}
 
 Once the optimized thresholds have been determined, they can be used to cluster query sequences.
-It is worth noting that OptimOTU inverts the typical workflow in which sequences are clustered first and then taxonomically identified, and instead uses preliminary taxonomic identification first, followed by clustering informed by the identifications.
+It is worth noting that OptimOTU inverts the typical workflow in which sequences are clustered first and then taxonomically identified, and instead uses preliminary taxonomic identification first, followed by clustering informed by the identifications (Fig \ref{fig:pipeline-overview}).
 The taxonomic identification can be performed by any method with a stopping condition, meaning that taxonomic identification is truncated to higher ranks if the confidence is low.
 The set of applicable methods includes any of the wide range of algorithms which produce confidence scores for classifications at each rank.
 This includes the popular k-mer profile naive Bayesian classifier first implemented by the RDP classifier (Wang et al. 2007) but also available in software such as Mothur (Schloss et al. 2009), QIIME 2 (Bokulich et al. 2018) and DADA2 (Callahan et al. 2016).
 Rankwise confidence scores are also produced by SINTAX (Edgar 2016a), PROTAX (Somervuo et al. 2016; Abarenkov et al. 2018; Roslin et al. 2022), IDTAXA (Murali, Bhargava, and Wright 2018), Gappa (Czech, Barbera, and Stamatakis 2020), BayesANT (Zito, Rigon, and Dunson 2023), and MycoAI (Romeijn, Bernatavicius, and Vu 2024).
 Additionally, algorithms based on last common ancestor (LCA) consensus such as implemented in CREST (Lanzén et al. 2012), USEARCH, (Edgar 2010), VSEARCH (Rognes et al. 2016), and QIIME 2 (Bokulich et al. 2018) may be suitable.
 Taxonomic identification prior to clustering is used to choose thresholds in the clustering process, and also to constrain the clustering.
-These constraints both ensure that the resulting clustering is congruent with the taxonomic identifications, and also serve to split the clustering problem into smaller subproblems, which can be solved more efficiently.
+These constraints both ensure that the resulting clustering is congruent with the taxonomic identifications, and also serve to split the queries into taxonomically defined groups, increasing the computational efficiency of the clustering process.
 
 The clustering process is then performed using the \texttt{optimotu()} function, which proceeds in a hierarchical manner through the taxonomic ranks, starting with the rank below the root.
 Within each rank, the sequences are grouped by their cluster identity at the rank above and processed separately (Fig \ref{fig:clustering}).
@@ -232,8 +247,8 @@ The clusters from the \emph{de novo} clustering are given placeholder taxonomic 
 
 \begin{figure}
 \centering
-\includegraphics{optimotu_files/figure-latex/clustering-1.pdf}
-\caption{\label{fig:clustering}OptimOTU clustering procedure.
+\includegraphics{clustering-1.pdf}
+\caption{\label{fig:clustering}OptimOTU clustering algorithm.
 The same procedure is used at all ranks, but here is illustrated at the species level.
 In this constructed example, ASVs belonging to family F have already been clustered into two named genera G1 and G2 and one pseudogenus PG3 during previous iterations.
 Clustering thresholds are depicted as circular boundaries around ASVs, such that when the circles overlap, the ASVs are more similar than the threshold.
@@ -253,7 +268,7 @@ Clusters at the lowest rank, typically species, are then used as OTUs for furthe
 
 \subsection{Pairwise distance calculation algorithms}\label{pairwise-distance-calculation-algorithms}
 
-OptimOTU can be used with various methods for calculating pairwise distances between sequences.
+The OptimOTU package can use various methods for calculating pairwise distances between sequences.
 Three methods are implemented internally in the R package and can be selected using the option \texttt{dist\_config} to \texttt{optimize\_thresholds()} or \texttt{optimotu()}.
 
 The first method is a simple Hamming distance, which counts the number of differences between two sequences.
@@ -278,29 +293,29 @@ The Edlib method is activated using \texttt{dist\_config\ =\ dist\_edlib()}.
 The third method uses wavefront alignment (WFA) with the open-source C++ library WFA2 (Marco-Sola et al. 2021).
 WFA is especially efficient for very similar sequences.
 In addition to the edit distance, it can also calculate gap-linear, gap-affine, and dual-cost gap-affine alignments.
-Note, however, that although the alignment may be calculated with various scoring functions, the distance used by OptimOTU is always the edit distance (not including end gaps) divided by the alignment length, as used by, e.g., USEARCH (Edgar 2010).
+Note, however, that although the alignment may be calculated with various scoring functions, the distance used by the OptimOTU package is always equivalent to the Hamming distance between the aligned sequences (not including end gaps) divided by the alignment length, as used by, e.g., USEARCH (Edgar 2010).
 Like Edlib, WFA2 support banding and early stopping.
 It is activated by setting \texttt{dist\_config\ =\ dist\_wfa2(match,\ mismatch,\ gap\_open,\ gap\_extend,\ gap\_open2,\ gap\_extend2)}, where the arguments are the scores for the dual-cost gap-affine scoring function.
 When the supplied scores are equivalent to a simpler scoring function (as in the default case, which is edit distance) the alignment is calculated using that simpler function.
-WFA2 in edit-distance mode is the default for OptimOTU.
+WFA2 in edit-distance mode is the default for the OptimOTU package.
 
 Finally, in the fourth method distances are calculated externally and supplied as a distance matrix in three-column (query, reference, distance) format, which can be read from a file or UNIX pipe, allowing the use of arbitrary external tools.
 This alternative is activated by setting \texttt{dist\_config\ =\ dist\_file(filename,\ by\_name)}, where \texttt{filename} is the name of the file or pipe, and \texttt{by\_name} is a logical value indicating whether the sequences are identified by name or by 0-based index.
 Although an external distance matrix can be used by both \texttt{optimize\_thresholds()} and \texttt{optimotu()}, the distances must be read more than once in \texttt{optimotu()}, making it incompatible with piped input.
 However, an additional method is implemented which runs USEARCH (Edgar 2010) to calculate sparse distance matrices via its \texttt{calc\_distmx} command for the optimization and \emph{de novo} clustering stages, and \texttt{usearch\_global} for the closed-reference clustering stage.
 This method is activated by setting \texttt{dist\_config\ =\ dist\_usearch(usearch,\ usearch\_ncpu)}, where \texttt{usearch} is the path to a suitable USEARCH executable, and \texttt{usearch\_ncpu} is the number of threads to request from each invocation of USEARCH.
-Note that these threads are independent of the threads used by OptimOTU, and the total number of threads used by \texttt{dist\_usearch()} is the sum of \texttt{usearch\_ncpu} and the \texttt{threads} argument to the chosen parallelization strategy (see below).
+Note that these threads are independent of the threads used by the OptimOTU clustering algorithm, and the total number of threads used by \texttt{dist\_usearch()} is the sum of \texttt{usearch\_ncpu} and the \texttt{threads} argument to the chosen parallelization strategy (see below).
 Unlike the other distance calculation methods, \texttt{dist\_usearch()} configures USEARCH to use shared k-mer heuristics to choose candidate pairs for alignment in order to avoid calculating the full distance matrix.
-This means it is typically the fastest option for markers such as ITS where global multiple sequence alignment is not feasible, but some pairwise distance which would alter the clustering result may be missing.
+This means it is typically the fastest option for markers such as ITS where global multiple sequence alignment is not feasible, but some pairwise distances which would alter the clustering result may be missing.
 
 \subsection{Clustering algorithms}\label{clustering-algorithms}
 
-OptimOTU implements several single-linkage clustering algorithms, of which SLINK and a novel tree-based algorithm are recommended for use.
+The OptimOTU package implements several single-linkage clustering algorithms, of which SLINK and a novel tree-based algorithm are recommended for use.
 
 The SLINK algorithm (Sibson 1973) operates at the theoretically optimal complexities of \(O(n^2)\) time and \(O(n)\) space, where \(n\) is the number of sequences.
 Unfortunately, SLINK is an inherently serial algorithm which must process the distances in a predefined order.
 Therefore, it is not possible to trivially parallelize (but see Nolet et al. 2023).
-The OptimOTU implementation of SLINK allows clustering of an incomplete distance matrix, provided that the elements which are present are in the correct order.
+The OptimOTU implementation of SLINK allows clustering based on an incomplete distance matrix, provided that the elements which are present are in the correct order.
 When it detects one or more ``skipped'' distances in its input, it proceeds as if the missing elements were at infinite distance.
 It also allows calculation, before each new pairwise distance is processed, of the maximum distance which would need to be obtained in order to cause an update.
 This is used to adaptively set the band width and maximum alignment score for Edlib and WFA2, in order to reduce the number of unnecessary calculations.
@@ -309,10 +324,10 @@ The SLINK algorithm can be activated using the option \texttt{clust\_config\ =\ 
 The tree-based algorithm maintains a full hierarchical clustering tree at all stages of clustering, which is updated as each new pairwise distance is processed.
 Although this algorithm has a higher time complexity than SLINK, it can process the distances in any order.
 Like SLINK, the tree-based algorithm can calculate the maximum relevant distance for a given sequence pair, and use this distance to set the band width and maximum alignment score for Edlib or WFA2.
-Because it is compatible with out-of-order distance matrices, the tree-based algorithm is the default clustering algorithm in OptimOTU, but it can be activated or configured using the option \texttt{clust\_config\ =\ clust\_tree()} to \texttt{optimize\_thresholds()} or \texttt{optimotu()}.
+Because it is compatible with out-of-order distance matrices, the tree-based algorithm is the default clustering algorithm in the OptimOTU package, but it can be activated or configured using the option \texttt{clust\_config\ =\ clust\_tree()} to \texttt{optimize\_thresholds()} or \texttt{optimotu()}.
 
 The two clustering algorithms should always produce identical partitions when run on the same distances.
-The test suite for OptimOTU tests the clustering algorithms with all applicable parallelization options for consistency with each other and the base R \texttt{hclust()} command.
+The test suite for the OptimOTU package tests the clustering algorithms with all applicable parallelization options for consistency with each other and the base R \texttt{hclust()} command.
 Additionally, internal consistency checks can be activated by setting the optional argument \texttt{test\ =\ 1} or \texttt{test\ =\ 2} in \texttt{clust\_tree()}.
 Since these checks are computationally expensive, they are not recommended for routine use.
 However, they offer useful checks for bugs in the tree-based algorithm.
@@ -337,15 +352,15 @@ This is referred to as the ``hierarchical'' option, accessed by setting the opti
 
 \subsection{Measures of clustering quality}\label{measures-of-clustering-quality}
 
-To compare the quality of a clustering partition relative to a reference taxonomy, OptimOTU offers several measures.
+To compare the quality of a clustering partition relative to a reference taxonomy, the OptimOTU package offers several measures.
 The first group of measures are based on pair counting, where deciding whether each pair of sequences belong to the same cluster is treated as a binary classification problem.
 Thus, a \(2\times2\) confusion matrix can be constructed.
 If the sequence pair is grouped together in both the reference taxonomy and in the clustering partition, it is a true positive (TP), if they are in different clusters in both, it is a true negative (TN), if they are in the same cluster in the reference but different clusters in the partition, it is a false negative (FN), and if they are in different clusters in the reference but the same cluster in the partition, it is a false positive (FP).
-Various measures can be calculated from the confusion matrix, of which the Rand index (RI; Rand 1971), adjusted Rand index (ARI; Hubert and Arabie 1985), Fowlkes-Mallows index (FMI; Fowlkes and Mallows 1983), and Matthews correlation coefficient (MCC; Matthews 1975) are implemented in OptimOTU.
+Various measures can be calculated from the confusion matrix, of which the Rand index (RI; Rand 1971), adjusted Rand index (ARI; Hubert and Arabie 1985), Fowlkes-Mallows index (FMI; Fowlkes and Mallows 1983), and Matthews correlation coefficient (MCC; Matthews 1975) are implemented in the OptimOTU package.
 Of these, the RI is not corrected for chance, so it tends to give higher scores to small clustering thresholds, i.e., clusterings with many small clusters.
-for this reason, it is not recommended.
+For this reason, it is not recommended.
 Because the calculation of the confusion matrix is the most computationally expensive part of calculating these measures, it is more efficient to calculate the confusion matrix once and then calculate multiple measures from it if multiple measures are desired.
-This approach is supported in OptimOTU by the function \texttt{confusion\_matrix()},
+This approach is supported in the OptimOTU package by the function \texttt{confusion\_matrix()},
 which is parallelized, and a function for each index which takes the confusion matrix as input.
 
 The second group of measures are based in information theory, and include the mutual information (MI; Strehl and Ghosh 2002) and adjusted mutual information (AMI; Vinh, Epps, and Bailey 2010).
@@ -354,14 +369,16 @@ Because the MI is not corrected for chance and has no consistent upper bound, it
 
 The third group is set-matching measures, where a single measure, the weighted multiclass F-measure (FM; Steinbach 2000), is implemented.
 Unlike the previous measures, the FM considers only the best-matching cluster for each taxon in the reference taxonomy, so it is not sensitive to the number or makeup of any ``extra'' clusters in the test partition.
+FM is the measure used for optimization in dnabarcoder (Vu, Nilsson, and Verkley 2022).
 
 The default behavior of \texttt{optimize\_thresholds()} is to calculate thresholds which optimize each of the supported measures.
-The user may then choose which
+The user may then choose which measure to use for clustering by setting the \texttt{measure} argument to \texttt{optimotu()}.
+Alternatively, one or more measures may be selected by setting the \texttt{measures} argument to \texttt{optimize\_thresholds()}.
 
 \subsection{The OptimOTU pipeline}\label{the-optimotu-pipeline}
 
 The OptimOTU pipeline is a full bioinformatics pipeline built around the OptimOTU clustering algorithm.
-It is used to process demultipexed paired-end reads into a species\,x\,sample occurrence matrix and taxonomy for each OTU.
+It is used to process demultipexed paired-end reads into a species\textsubscript{x}sample occurrence matrix and taxonomy for each OTU.
 The pipeline is implemented using the \texttt{targets} workflow management package (Landau 2021), and is designed to be run across multiple nodes of a high-performance computing cluster using the \texttt{crew.cluster} backend (Landau, Levin, and Furneaux 2024), enabling it to process very large metabarcoding projects.
 For smaller projects, it can also be run on a laptop or desktop computer.
 The \texttt{targets} package allows the pipeline to skip already completed steps when re-run, which is useful both for debugging, and for ``on-line'' processing of new samples as they are sequenced.
@@ -382,14 +399,8 @@ In the first phase, most operations are performed on individual samples, althoug
 This phase ends with the production of a master list of candidate ASVs and a table of read counts for each candidate ASV in each sample.
 In the second phase, operations are performed on the master list of candidate ASVs, which is split into batches for parallel processing.
 Operations at this stage primarily consist of various methods to filter the ASVs to remove artifacts, producing a final ASV list, as well as preliminary taxonomic identification.
-In the third phase, the final ASV list is clustered into OTUs using the OptimOTU algorithm.
+In the third phase, the final ASV list is clustered into OTUs using the OptimOTU clustering algorithm.
 After the main processing steps are complete, optional post-processing steps may be performed, and the results are written to disk.
-
-\begin{figure}
-\centering
-\includegraphics{optimotu_files/figure-latex/pipeline-overview-1.pdf}
-\caption{\label{fig:pipeline-overview}Overview of the OptimOTU pipeline.}
-\end{figure}
 
 Although many of the steps in the pipeline are performed in R using various freely available packages, several external command-line software tools are also used.
 The R version, R packages, and external tools are enumerated along with recommended version numbers in an included Conda environment file (conda contributors, n.d.) which can be used to install the dependencies automatically, or can be read by the user to install the required software manually.
@@ -409,20 +420,19 @@ This option may be useful if the project is set up to use raw reads from a publi
 
 \begin{figure}
 \centering
-\includegraphics{optimotu_files/figure-latex/pipeline-key-1.pdf}
+\includegraphics{pipeline-key-1.pdf}
 \caption{\label{fig:pipeline-key}Key to the symbols used in OptimOTU pipeline flowcharts.}
 \end{figure}
 
 \begin{figure}
 \centering
-\includegraphics{optimotu_files/figure-latex/pipeline-phase1-1.pdf}
+\includegraphics{pipeline-phase1-1.pdf}
 \caption{\label{fig:pipeline-phase1}Phase 1 of the OptimOTU pipeline.}
 \end{figure}
 
 \subsubsection{Phase 1}\label{phase-1}
 
 The first phase of the pipeline (Fig \ref{fig:pipeline-phase1}, shared legend in Fig \ref{fig:pipeline-key}) consists of steps which can be applied independently at the level of sequencing runs.
-Many of the steps could also in principle be applied independently at the level of samples, or at the level of individual reads or read pairs, and some of the processing step.
 For large sequencing runs (\textgreater{} 96 samples) the pipeline processes samples within each sequencing run in batches of at most 96 samples for steps which do not require information from other samples.
 The steps in phase 1 are as follows:
 
@@ -434,7 +444,7 @@ In the ``rev'' orientation, the reverse primer is expected at the 5' end of R1 a
 In the ``mixed'' orientation, both orientations are expected and searched for in every sample.
 Reads detected in the ``fwd'' and ``rev'' orientation are processed separately through phase 1 of the pipeline until pair merging, at which point the reverse-oriented reads are reverse-complemented.
 In the ``custom'' orientation, the user must supply a custom sample table (see above) which includes a column ``orient'' with values ``fwd'', ``rev'', or ``mixed'' for each sample.
-This is primarily used for certain indexing schemes where different samples are sequenced in different orientations to increase the sequence diversity across the flow cell.
+This is primarily used for certain indexing schemes where different samples are sequenced in different orientations to increase multiplexing capacity and sequence diversity across the flow cell.
 
 Primers are specified in the configuration file with the options \texttt{forward\_primer} and \texttt{reverse\_primer}.
 The expected primer at the 5' end of each read is searched for using Cutadapt (Martin 2011).
@@ -469,7 +479,7 @@ The DADA2 standard storage format for the ASV × sample table is as an R matrix 
 In projects with a very large number of samples and high diversity of ASVs, this structure has prohibitively high memory requirements.
 In the OptimOTU pipeine, the unique ASV sequences are stored in a single gzipped FASTA file, which is indexed using the open-source tool FastqIndEx (\url{https://github.com/DKFZ-ODCF/FastqIndEx}) to allows fast random access to sequences.
 The matrix of ASV read counts in each sample is then constructed and stored in coordinate list (COO) sparse matrix format, as a three column R data frame where the columns represent a sample identifier, index of the sequence in the master ASV file, and number of reads.
-Merging ASV\,×\,sample tables for multiple samples and sequencing runs is then a simple matter of row-concatenating the tables for the individual samples.
+Merging ASV\textsubscript{×}sample tables for multiple samples and sequencing runs is then a simple matter of row-concatenating the tables for the individual samples.
 
 \emph{Tag-switching detection:}
 Before assembly of the final global sample table, potential cases of tag-switching are optionally detected and removed using an R implementation of the UNCROSS2 algorithm (Edgar 2018) which operates on the COO matrix format.
@@ -481,12 +491,12 @@ The first is an adaptation of the consensus algorithm implemented in DADA2's \te
 This function first runs \emph{de novo} chimera detection individually on the ASVs from each sample, and then combines the results into a master list of potential bimeras.
 The potential bimeras are then flagged for removal if they were detected as chimeras in a majority (DADA2 default 90\% - 1) of the samples in which they occur.
 The use of a consensus between samples is intended to reduce the number of false positives and preserve more real ASV diversity in the final table.
-The OptimOTU Pipeline uses a partial re-implementation of this method, where the DADA2 intenal function \texttt{C\_table\_bimera2} is used to flag potential bimeras in small subsets of sequences, but then the results are combined across all samples before determining the set of consensus chimeras.
+The OptimOTU pipeline uses a partial re-implementation of this method, where the DADA2 intenal function \texttt{C\_table\_bimera2} is used to flag potential bimeras in small subsets of sequences, but then the results are combined across all samples before determining the set of consensus chimeras.
 Because the \emph{de novo} chimera detection is performed within samples, it is nominally part of phase 1 of the pipeline, even though it is computationally downstream of the candidate ASV table construction.
 
 \begin{figure}
 \centering
-\includegraphics{optimotu_files/figure-latex/pipeline-phase2-1.pdf}
+\includegraphics{pipeline-phase2-1.pdf}
 \caption{\label{fig:pipeline-phase2}Phase 2 of the OptimOTU pipeline.}
 \end{figure}
 
@@ -503,7 +513,7 @@ The steps in phase 2 are as follows:
 \emph{Spike detection:}
 The pipeline includes an optional step to detect spike-ins, which are DNA standards added to the samples at a stage prior to PCR amplification.
 They may be used to estimate the quantity of sample DNA (Ovaskainen et al. 2020) or as a quality control measure.
-A FASTA file containing spike sequences may be specified by the user, and spike detection is performed on the condidate ASV list using the ``usearch\_global'' command (Edgar 2010) in VSEARCH (Rognes et al. 2016).
+A FASTA file containing spike sequences may be specified by the user, and spike detection is performed on the candidate ASV list using the ``usearch\_global'' command (Edgar 2010) in VSEARCH (Rognes et al. 2016).
 The detected spike sequences are removed from the final ASV table, but the number of reads attributed to spike sequences in each sample is reported in the final read count table (see ``Outputs'', below) for downstream analysis.
 The supplied spike sequences are also added to the reference database for chimera detection (below).
 
@@ -518,28 +528,28 @@ Model alignment can be used in three different ways by the pipeline.
 First, the model can be used to detect non-target or partial sequences using the model alignment score for each ASV sequence.
 In this use, the alignment itself is not stored, but low-scoring sequences can be flagged as likely artifacts.
 Even amplicons of highly variable marker genes such as ITS can be aligned to a model for filtering, although in this case the alignment score is mostly derived from the flanking conserved regions.
-Second, the distribution of gaps in the model alignment can be used to detect frame shifts in the ASV sequences for protein coding genes.
+Second, for protein coding genes, the distribution of gaps in the model alignment can be used to detect frame shifts in the ASV sequences.
 Such frame shifts are unlikely to occur in real protein coding sequences, and can be used to detect nuclear mitochondrial (NuMt; see below) or other pseudogenes (Porter and Hajibabaei 2021).
 Alternatively, apparent frame shift mutations may be due to PCR or sequencing errors, which should also be removed.
 Finally, the model alignment may be used as the input to the taxonomic alignment and classification steps, allowing the use of fast Hamming distance calculations.
 Model alignment is performed using the nhmmer command from the HMMER package (Eddy 2011) for HMMs or the cmalign command from the Infernal package (Nawrocki 2014) for CMs.
 
 \emph{NuMt detection:}
-Nuclear mitochondrial pseudogenes (NuMts) are sequences which are derived from the mitochondrial genome but have been inserted into the nuclear genome.
+Nuclear mitochondrial pseudogenes (NuMts) are sequences which are derived from the mitochondrial genome but have been inserted into the nuclear genome, where they are inactive.
 They are common in many eukaryotic genomes, and can be difficult to distinguish from true mitochondrial sequences, which may inflate OTU counts based on mitochondrial marker genes such as COI (Song et al. 2008).
 The OptimOTU pipeline includes an optional pseudogene filter for use especially for mitochondrial protein-coding genes such as COI, which uses two methods to detect pseudogenes.
 The first, alluded to above, is the detection of frame shifts in the model alignment.
 These are defined as insertions or deletion which are not a multiple of three.
 Full codon insertions and deletions relative to the HMM are not considered as pseudogenes, since these are plausibly biological in origin, and are known to occur in some taxa (Pentinsaari et al. 2016).
 The second method is to search for sequences which include in-frame stop codons, which are also extremely unlikely to occur in real protein sequences of conserved genes.
-By default OptimOTU uses the invertebrate mitochondrial stop codons TAA and TAG.
+By default the OptimOTU pipeline uses the invertebrate mitochondrial stop codons TAA and TAG.
 
 \emph{Taxonomic identification:}
 The OptimOTU pipeline uses two implementations of Protax (Somervuo et al. 2016) for taxonomic assignment:
 Protax-Fungi (Abarenkov et al. 2018) for fungal ITS sequences, and Protax-Animal (Roslin et al. 2022; R. Li et al. 2024) for metazoan COI sequences.
 It is also possible for the user to specify a custom Protax model for other marker genes or taxonomic groups.
 The Protax-Fungi implementation is more appropriate for genes which are not easily aligned across the entire taxonomic group of interest, while the Protax-Animal implementation is more appropriate for genes which can be reliably aligned across all query sequences using an HMM or CM.
-Protax produces a probability distribution across different possible taxa for each ASV at each rank, while OptimOTU requires a single taxonomic assignment (or ``unknown'') for each ASV.
+Protax produces a probability distribution across different possible taxa for each ASV at each rank, while the OptimOTU clustering algorithm requires a single taxonomic assignment (or ``unknown'') for each ASV.
 The pipeline uses two alternate probability thresholds, 50\% and 90\%, which are designated ``probable'' and ``reliable'' after Somervuo et al. (2017).
 All analyses downstream of taxonomic identification, most notably OptimOTU clustering, are performed separately for each of these two probability thresholds, and both results are reported in the final outputs.
 
@@ -555,11 +565,11 @@ Outgroup and unknown sequences are not removed until after the clustering stage 
 The final ASV table is constructed by removing sequences flagged by the spike-in detection, chimera detection, model score filtering, and NuMt detection steps.
 Remaining ASVs are sorted from highest to lowest according to prevalence (number of samples they occur in), with ties broken by total abundance (number of reads across all samples), then variance in abundance across samples.
 Remaining ties are broken by sorting the hash of the sequences, which is pseudorandom but consistent across runs.
-The ASVs are then given identifiers according to their position in the sorted list, such that low-numbers are given to ASVs which are more prevalent and abundant across samples, and which show stronger ecological signal in the data.
+The ASVs are then given identifiers according to their position in the sorted list, such that low numbers are given to ASVs which are more prevalent and abundant across samples, and which show stronger ecological signal in the data.
 
 \begin{figure}
 \centering
-\includegraphics{optimotu_files/figure-latex/pipeline-phase3-1.pdf}
+\includegraphics{pipeline-phase3-1.pdf}
 \caption{\label{fig:pipeline-phase3}Phase 3 of the OptimOTU pipeline.}
 \end{figure}
 
@@ -569,7 +579,7 @@ Phase 3 (Fig \ref{fig:pipeline-phase3}, shared legend in Fig \ref{fig:pipeline-k
 The steps in phase 3 are as follows:
 
 \emph{Taxonomically guided clustering:}
-Clustering of the final ASV list is performed using the OptimOTU procedure, as described above.
+Clustering of the final ASV list is performed using the OptimOTU clustering algorithm, as described above.
 The procedure is not performed using a single call to the top-level \texttt{optimotu()} function, but instead the closed reference and \emph{de novo} clustering steps are defined as separate targets in the pipeline for each rank and parent taxon, allowing the work to be split across multiple nodes.
 For aligned sequences, the pairwise distances are calculated using the Hamming distance, while for unaligned sequences pairwise distances are calculated by USEARCH.
 
@@ -593,8 +603,8 @@ Its value is typically the same as the numerical part of \texttt{seq\_id}.
 Finally, the \texttt{nread} column is the number of reads in the sample which map to the ASV.
 
 \emph{ASV taxonomy:} Four files named \texttt{asv\_taxonomy\_\{confidence\}.\{ext\}}, where \texttt{\{confidence\}} is either \texttt{plausible} or \texttt{reliable}, and \texttt{\{ext\}} is either \texttt{rds} or \texttt{tsv}.
-The ASV taxonomy tables contains a variablenumber of columns.
-The first column, \texttt{seq\_id} is the same as in the ASV table, but only ASVs which were assigned to the target taxonomic group are included.
+The ASV taxonomy tables contains a variable number of columns.
+The first column, \texttt{seq\_id}, is the same as in the ASV table, but only ASVs which were retained in the outgroup removal step are included.
 In the RDS formatted files, the sequence identifiers are stored as row names instead of a data column.
 The rest of of the columns are named for the taxonomic ranks, and contain the taxonomic assignments.
 Both named taxa (from taxonomic identifications) and pseudotaxa (from \emph{de novo} clustering) are included.
@@ -614,7 +624,7 @@ The default, ``sparse'' version of the OTU table has six columns.
 The first four columns, \texttt{sample}, \texttt{seqrun}, \texttt{seq\_id}, and \texttt{nread}, are the same as the columns of those names in the ASV table, except that the \texttt{seq\_id} column is the OTU identifier instead of the ASV identifier.
 The last two columns are transformed abundance measurements.
 Column \texttt{fread} is the fraction of all reads in the sample which belong to the OTU in question.
-Column \texttt{w} is the spike-weighted read abundance, defined as the number of reads belonging to the OTU divided by the number of reads in the sample which were identified as spike sequences.
+Column \texttt{w} is the spike-weighted read abundance, defined as the number of reads belonging to the OTU divided by one plus the number of reads in the sample which were identified as spike sequences.
 The ``dense'' version of the OTU table is an integer matrix with rows corresponding to samples and columns corresponding to OTU identifiers.
 If the sample names are not all unique, then the row names include both the sample and the sequencing run.
 The matrix values are then the number of reads for each OTU in each sample.
@@ -630,18 +640,28 @@ The read counts table contains the number of reads in each sample which were pre
 Samples are identified with the same \texttt{sample} and \texttt{seqrun} columns as in the ASV and OTU tables.
 The remainder of the columns are named \texttt{\{stage\}\_nread}, where \texttt{\{stage\}} is the name of the stage in the pipeline.
 Stages which are always included are ``raw'' for the input files, ``trim'' for sequences which passed the Cutadapt orientation and filtering stage, ``filt'' for sequences which passed the expected-errors filter, ``denoise'', ``nochim1'' for sequences not flagged as chimeric by the consensus \emph{de novo} method, ``nochim2'' for sequences not flagged as chimeric by the reference-based method, and ``ingroup'' for the final set of OTU sequences which were classified as ingroup by the outgroup detection step.
+If the tag-switching detection step is included, then the ``uncross'' stage is also included.
 If the spike-in detection step is included, then the ``spike'' and ``nospike'' stages are also included.
 If the model alignment step is included, then the ``full\_length'' stage is also included.
+
+\section*{Software availability}\label{software-availability}
+\addcontentsline{toc}{section}{Software availability}
+
+The R packages \texttt{optimotu} and \texttt{optimotu.pipeline} are available under the MIT license on GitHub at \url{https://github.com/brendanf/optimotu} and \url{https://github.com/brendanf/optimotu.pipeline}, respectively.
+The \texttt{targets} pipeline for the OptimOTU pipeline is available at \url{https://github.com/brendanf/optimotu_targets}.
 
 \section*{Funding}\label{funding}
 \addcontentsline{toc}{section}{Funding}
 
-This work was supported by the Academy of Finland {[}grant number Otso's Academy professor{]}; and the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement No 856506; ERC-synergy project LIFEPLAN and {[}grant number BGE{]}).
+This work was supported by the Research Council of Finland (grant no. 336212 and 345110); and the European Union: the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement No 856506; ERC-synergy project LIFEPLAN) and the HORIZON-CL6-2021-BIODIV-01 project 101059492 (Biodiversity Genomics Europe).
 
 \section*{Acknowledgements}\label{acknowledgements}
 \addcontentsline{toc}{section}{Acknowledgements}
 
-The authors would like to thank various people. Computational resources were provided by CSC -- IT Center For Science, Finland.
+The authors would like to thank Mira Kajanus, Domenica Naranjo-Orrico, and Skylar Burg for pipeline testing. Bess Hardwick and Deirdre Kerdraon provided project management for the GSSP and LIFEPLAN projects under which OptimOTU was developed. Computational resources were provided by CSC -- IT Center For Science,
+
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
 
 \phantomsection\label{refs}
 \begin{CSLReferences}{1}{0}
@@ -802,7 +822,7 @@ Somervuo, Panu, Douglas W. Yu, Charles C. Y. Xu, Yinqiu Ji, Jenni Hultman, Helen
 Song, Hojun, Jennifer E. Buhay, Michael F. Whiting, and Keith A. Crandall. 2008. {``Many Species in One: {DNA} Barcoding Overestimates the Number of Species When Nuclear Mitochondrial Pseudogenes Are Coamplified.''} \emph{Proceedings of the National Academy of Sciences} 105 (36): 13486--91. \url{https://doi.org/10.1073/pnas.0803076105}.
 
 \bibitem[\citeproctext]{ref-sosic2017}
-Šošić, Martin, and Mile Šikić. 2017. {``Edlib: A {C}/{C} ++ Library for Fast, Exact Sequence Alignment Using Edit Distance.''} \emph{Bioinformatics} 33 (9): 1394--95. \url{https://doi.org/10.1093/bioinformatics/btw753}.
+Šošić, Martin, and Mile Šikić. 2017. {``Edlib: A {C}/{C}++ Library for Fast, Exact Sequence Alignment Using Edit Distance.''} \emph{Bioinformatics} 33 (9): 1394--95. \url{https://doi.org/10.1093/bioinformatics/btw753}.
 
 \bibitem[\citeproctext]{ref-steinbach2000}
 Steinbach, Michael. 2000. {``A Comparison of Document Clustering Techniques.''} Technical Report\# 00\_034/University of Minnesota.
