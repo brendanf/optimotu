@@ -69,7 +69,7 @@ write_sequence <- function(seq, fname, ...) {
     if (grepl(fasta_regex, seq)) {
       seq <- Biostrings::readDNAStringSet(seq)
     } else if (grepl(fastq_regex, seq)) {
-      seq <- Biostrings::readFastq(seq)
+      seq <- Biostrings::readDNAStringSet(seq, format = "fastq")
     } else {
       stop("unknown file type: ", seq)
     }

@@ -102,7 +102,7 @@ optimotu <- function(
   checkmate::assert(
     checkmate::test_character(seqs, any.missing = FALSE),
     checkmate::test_data_frame(seqs),
-    checkmate::test_inherits(seqs$seq, "XStringSet")
+    checkmate::test_class(seqs$seq, "XStringSet")
   )
   # convert seqs to a data.frame if it isn't already
   if (is.character(seqs)) {
