@@ -16,3 +16,4 @@ config.log
 config.status
 benchmark
 *bak
+*.Rproj
