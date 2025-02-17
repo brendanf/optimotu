@@ -38,10 +38,14 @@ Rcpp::RObject distmx_cluster_single(
   if (!infile.is_open()) {
     OPTIMOTU_STOP("failed to open input file");
   }
+  if (verbose) OPTIMOTU_CERR << "creating DistanceConverter..." << std::flush;
   auto dconv = create_distance_converter(threshold_config);
+  if (verbose) OPTIMOTU_CERR << "done\ncreating ClusterAlgorithm..." << std::flush;
   Rcpp::IntegerMatrix im(dconv->m, seqnames.size());
   auto algo = create_cluster_algorithm(clust_config, dconv.get())->create(im);
-  auto worker = create_cluster_worker(parallel_config, algo.get(), infile, by_name, seqnames);
+  if (verbose) OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
+  auto worker = create_cluster_worker<std::istream>(parallel_config, algo.get(), infile, by_name, seqnames);
+  if (verbose) OPTIMOTU_CERR << "done\nclustering..." << std::flush;
   int threads = worker->n_threads();
   if (threads == 1) {
     (*worker)(0, 1);
@@ -49,6 +53,7 @@ Rcpp::RObject distmx_cluster_single(
     RcppParallel::parallelFor(0, threads, *worker, 1, threads);
   }
   worker->finalize();
+  if (verbose) OPTIMOTU_CERR << "done\ncreating output..." << std::flush;
   Rcpp::RObject output = R_NilValue;
   if (output_type == "matrix") {
     auto method = element_as_string(clust_config, "method", "clust_config");
@@ -60,6 +65,7 @@ Rcpp::RObject distmx_cluster_single(
   } else if (output_type == "hclust") {
     output = algo->as_hclust(seqnames);
   }
+  if (verbose) OPTIMOTU_CERR << "done" << std::endl;
   return output;
 }
 
@@ -83,30 +89,25 @@ Rcpp::List distmx_cluster_multi(
   if (!infile.is_open()) {
     OPTIMOTU_STOP("failed to open input file");
   }
-  // OPTIMOTU_COUT << "creating DistanceConverter..." << std::flush;
+  if (verbose) OPTIMOTU_CERR << "creating DistanceConverter..." << std::flush;
   auto dconv = create_distance_converter(threshold_config);
-  // OPTIMOTU_COUT << "done" << std::endl
-              // << "creating ClusterAlgorithmFactory..." << std::flush;
+  if (verbose) OPTIMOTU_CERR << "done\ncreating ClusterAlgorithmFactory..."
+                             << std::flush;
   auto factory = create_cluster_algorithm(method_config, dconv.get());
-  // OPTIMOTU_COUT << "done" << std::endl
-  //             << "creating MultipleClusterAlgorithm..." << std::flush;
+  if (verbose) OPTIMOTU_CERR << "done\ncreating MultipleClusterAlgorithm..."
+                             << std::flush;
   auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seqnames, which);
-  // OPTIMOTU_COUT << "done" << std::endl
-  //             << "creating ClusterWorker..." << std::flush;
-  auto worker = create_cluster_worker(parallel_config, algo.get(), infile, by_name, seqnames);
-  // OPTIMOTU_COUT << "done" << std::endl
-  //             << "clustering..." << std::flush;
-
+  if (verbose) OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
+  auto worker = create_cluster_worker<std::istream>(parallel_config, algo.get(), infile, by_name, seqnames);
+  if (verbose) OPTIMOTU_CERR << "done\nclustering..." << std::flush;
   if (worker->n_threads() == 1) {
     (*worker)(0, 1);
   } else {
     RcppParallel::parallelFor(0, worker->n_threads(), *worker, 1, worker->n_threads());
   }
-  // OPTIMOTU_COUT << "done" << std::endl
-  //             << "finalizing worker..." << std::flush;
+  if (verbose) OPTIMOTU_CERR << "done\nfinalizing worker..." << std::flush;
   worker->finalize();
-  // OPTIMOTU_COUT << "done" << std::endl
-  //             << "creating output..." << std::flush;
+  if (verbose) OPTIMOTU_CERR << "done\ncreating output..." << std::flush;
   if (output_type == "matrix") {
     auto outlist = Rcpp::List(which.size());
     auto internal_out = std::vector<RcppParallel::RMatrix<int>>();

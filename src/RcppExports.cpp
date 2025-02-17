@@ -56,8 +56,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx_cluster_multi
-Rcpp::List distmx_cluster_multi(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type, const bool by_name, const bool verbose);
-RcppExport SEXP _optimotu_distmx_cluster_multi(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP whichSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP, SEXP by_nameSEXP, SEXP verboseSEXP) {
+Rcpp::List distmx_cluster_multi(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const std::string output_type, const bool verbose, const bool by_name);
+RcppExport SEXP _optimotu_distmx_cluster_multi(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP whichSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP, SEXP verboseSEXP, SEXP by_nameSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -68,9 +68,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::List >::type method_config(method_configSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type parallel_config(parallel_configSEXP);
     Rcpp::traits::input_parameter< const std::string >::type output_type(output_typeSEXP);
-    Rcpp::traits::input_parameter< const bool >::type by_name(by_nameSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(distmx_cluster_multi(file, seqnames, which, threshold_config, method_config, parallel_config, output_type, by_name, verbose));
+    Rcpp::traits::input_parameter< const bool >::type by_name(by_nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(distmx_cluster_multi(file, seqnames, which, threshold_config, method_config, parallel_config, output_type, verbose, by_name));
     return rcpp_result_gen;
 END_RCPP
 }

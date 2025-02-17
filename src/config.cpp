@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
-// SPDX-License-Identifier: MIT
-
 #include "config.h"
 #include "Wfa2ClusterWorker.h"
 #include "EdlibClusterWorker.h"
@@ -67,43 +64,60 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
   return out;
 }
 
+template<typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     const std::string &method,
     const int threads,
     const int shards,
     ClusterAlgorithm * algo,
-    std::istream &file,
+    distmx_t & distmx,
     const bool by_name,
     const std::vector<std::string> & seqnames
 ) {
   if (method == "merge") {
     if (by_name) {
-      return std::make_unique<MergeClusterWorker<std::string>>(
-        algo, file, seqnames, threads
+      return std::make_unique<MergeClusterWorker<distmx_t, std::string>>(
+          algo, distmx, seqnames, threads
       );
     } else {
-      return std::make_unique<MergeClusterWorker<int>>(algo, file, threads);
+      return std::make_unique<MergeClusterWorker<distmx_t, int>>(
+          algo, distmx, threads
+      );
     }
   } else if (method == "concurrent") {
     if (by_name) {
-      return std::make_unique<ConcurrentClusterWorker<std::string>>(
-        algo, file, seqnames, threads
+      return std::make_unique<ConcurrentClusterWorker<distmx_t, std::string>>(
+          algo, distmx, seqnames, threads
       );
     } else {
-      return std::make_unique<ConcurrentClusterWorker<int>>(algo, file, threads);
+      return std::make_unique<ConcurrentClusterWorker<distmx_t, int>>(
+          algo, distmx, threads
+      );
     }
   } else if (method == "hierarchical") {
     if (by_name) {
-      return std::make_unique<HierarchicalClusterWorker<std::string>>(
-        algo, file, seqnames, threads, shards
+      return std::make_unique<HierarchicalClusterWorker<distmx_t, std::string>>(
+          algo, distmx, seqnames, threads, shards
       );
     } else {
-      return std::make_unique<HierarchicalClusterWorker<int>>(algo, file, threads, shards);
+      return std::make_unique<HierarchicalClusterWorker<distmx_t, int>>(
+          algo, distmx, threads, shards
+      );
     }
   } else {
     OPTIMOTU_STOP("unknown parallelization method");
   }
 }
+
+template std::unique_ptr<ClusterWorker> create_cluster_worker<std::istream>(
+    const std::string &method,
+    const int threads,
+    const int shards,
+    ClusterAlgorithm * algo,
+    std::istream & distmx,
+    const bool by_name,
+    const std::vector<std::string> & seqnames
+);
 
 std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     const std::string &type,
@@ -313,10 +327,10 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
 }
 
 std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
-  Rcpp::List parallel_config,
-  ClusterAlgorithmFactory &factory,
-  Rcpp::CharacterVector seqnames,
-  Rcpp::ListOf<Rcpp::CharacterVector> subset_names
+    Rcpp::List parallel_config,
+    ClusterAlgorithmFactory &factory,
+    Rcpp::CharacterVector seqnames,
+    Rcpp::ListOf<Rcpp::CharacterVector> subset_names
 ) {
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
   auto out = std::make_unique<MultipleClusterAlgorithm>(
@@ -328,10 +342,11 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
   return out;
 }
 
+template<typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     Rcpp::List config,
     ClusterAlgorithm * algo,
-    std::istream &file,
+    distmx_t & distmx,
     bool by_name,
     const Rcpp::CharacterVector seqnames
 ) {
@@ -344,35 +359,54 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
   int threads = element_as_int(config, "threads", "parallel_config");
   if (method == "merge") {
     if (by_name) {
-      return std::make_unique<MergeClusterWorker<std::string>>(
-        algo, file, Rcpp::as<std::vector<std::string>>(seqnames), threads
+      return std::make_unique<MergeClusterWorker<distmx_t, std::string>>(
+          algo, distmx, Rcpp::as<std::vector<std::string>>(seqnames), threads
       );
     } else {
-      return std::make_unique<MergeClusterWorker<int>>(algo, file, threads);
+      return std::make_unique<MergeClusterWorker<distmx_t, int>>(
+          algo, distmx, threads
+      );
     }
   } else if (method == "concurrent") {
     if (by_name) {
-      return std::make_unique<ConcurrentClusterWorker<std::string>>(
-        algo, file, Rcpp::as<std::vector<std::string>>(seqnames), threads
+      return std::make_unique<ConcurrentClusterWorker<distmx_t, std::string>>(
+          algo, distmx, Rcpp::as<std::vector<std::string>>(seqnames), threads
       );
     } else {
-      return std::make_unique<ConcurrentClusterWorker<int>>(algo, file, threads);
+      return std::make_unique<ConcurrentClusterWorker<distmx_t, int>>(
+          algo, distmx, threads
+      );
     }
   } else if (method == "hierarchical") {
     int shards = element_as_int(config, "shards", "parallel_config");
     if (by_name) {
-      return std::make_unique<HierarchicalClusterWorker<std::string>>(
-        algo, file, Rcpp::as<std::vector<std::string>>(seqnames), threads, shards
+      return std::make_unique<HierarchicalClusterWorker<distmx_t, std::string>>(
+          algo, distmx, Rcpp::as<std::vector<std::string>>(seqnames), threads, shards
       );
     } else {
-      return std::make_unique<HierarchicalClusterWorker<int>>(
-        algo, file, threads, shards
+      return std::make_unique<HierarchicalClusterWorker<distmx_t, int>>(
+          algo, distmx, threads, shards
       );
     }
   } else {
     OPTIMOTU_STOP("unknown parallelization method");
   }
 }
+
+template std::unique_ptr<ClusterWorker> create_cluster_worker<std::istream>(
+    Rcpp::List config,
+    ClusterAlgorithm * algo,
+    std::istream & distmx,
+    bool by_name,
+    const Rcpp::CharacterVector seqnames
+);
+template std::unique_ptr<ClusterWorker> create_cluster_worker<Rcpp::DataFrame>(
+    Rcpp::List config,
+    ClusterAlgorithm * algo,
+    Rcpp::DataFrame & distmx,
+    bool by_name,
+    const Rcpp::CharacterVector seqnames
+);
 
 std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     Rcpp::List dist_config,

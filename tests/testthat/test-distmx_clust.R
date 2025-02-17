@@ -94,9 +94,9 @@ hclust2matrix <- function(distmx, thresholds) {
 
 hclust_matrix <- NULL
 testthat::test_that("hclust works for test matrix", {
-  testthat::expect_no_error(
+  testthat::expect_no_error({
     hclust_matrix <<- hclust2matrix(distmx, 0:20 / 20)
-  )
+  })
 })
 subset_hclust_matrix <- NULL
 testthat::test_that("hclust works for test subset matrices", {
@@ -176,7 +176,9 @@ for (p in names(parallels)) {
                   threshold_config = thresholds[[t]],
                   clust_config = algorithms[[a]],
                   parallel_config = parallels[[p]],
-                  output_type = "matrix"
+                  output_type = "matrix",
+                  verbose = FALSE,
+                  by_name = FALSE
                 ),
                 hclust_matrix
               )
@@ -214,7 +216,9 @@ for (p in names(parallels)) {
                   threshold_config = thresholds[[t]],
                   clust_config = algorithms[[a]],
                   parallel_config = parallels[[p]],
-                  output_type = "matrix"
+                  output_type = "matrix",
+                  verbose = FALSE,
+                  by_name = FALSE
                 ),
                 subset_hclust_matrix,
                 confusion_matrix2

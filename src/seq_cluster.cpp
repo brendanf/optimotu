@@ -15,6 +15,21 @@ Rcpp::RObject seq_cluster_single(
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
   }
+  if (!clust_config.inherits("optimotu_cluster_config")) {
+    OPTIMOTU_STOP("clust_config is not a valid cluster configuration");
+  }
+  if (!threshold_config.inherits("optimotu_threshold_config")) {
+    OPTIMOTU_STOP("threshold_config is not a valid threshold configuration");
+  }
+  if (!parallel_config.inherits("optimotu_parallel_config")) {
+    OPTIMOTU_STOP("parallel_config is not a valid parallel configuration");
+  }
+  if (!clust_config.containsElementNamed("method")) {
+    OPTIMOTU_STOP("clust_config does not contain 'method' element");
+  }
+  if (!Rcpp::is<Rcpp::CharacterVector>(clust_config["method"])) {
+    OPTIMOTU_STOP("clust_config$method is not a character vector");
+  }
   if (verbose) {
     OPTIMOTU_CERR << "creating DistanceConverter..." << std::flush;
   }

@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
-// SPDX-License-Identifier: MIT
-
 #ifndef OPTIMOTU_CONFIG_H_INCLUDED
 #define OPTIMOTU_CONFIG_H_INCLUDED
 
@@ -25,6 +22,7 @@ std::unique_ptr<DistanceConverter> create_distance_converter(
     std::vector<double> thresholds,
     double precision
 );
+
 std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     const std::string &method,
     const bool do_binary_search,
@@ -37,15 +35,18 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     const std::vector<std::string> seqnames,
     const std::vector<std::vector<std::string>> subset_names
 );
+
+template <typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     const std::string &method,
     const int threads,
     const int shards,
     ClusterAlgorithm * algo,
-    std::istream &file,
+    distmx_t & distmx,
     const bool by_name,
     const std::vector<std::string> & seqnames
 );
+
 std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     const std::string &type,
     const std::vector<std::string> &seq,
@@ -74,13 +75,16 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     Rcpp::CharacterVector seqnames,
     Rcpp::ListOf<Rcpp::CharacterVector> subset_names
 );
+
+template <typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
   Rcpp::List config,
   ClusterAlgorithm * algo,
-  std::istream &file,
+  distmx_t & distmx,
   bool by_name,
   const Rcpp::CharacterVector seqnames
 );
+
 std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
     Rcpp::List dist_config,
     Rcpp::List parallel_config,
