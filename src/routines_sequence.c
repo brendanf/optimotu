@@ -3,7 +3,7 @@
 #include <inttypes.h>
 
 int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int *start, int *end) {
-  long unsigned int a, am;
+  uint64_t a, am;
   int i, // index in input sequence
       j, // index of output word
       k, // index within output word
