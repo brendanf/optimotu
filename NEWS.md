@@ -1,4 +1,4 @@
-# optimotu (development version)
+# optimotu 0.9.0
 
 * Compilation in Windows is now working in at least some circumstances (GitHub
 Actions tests)
@@ -31,6 +31,7 @@ Actions tests)
 * Added `optimotu()`, a top-level function to run the OptimOTU clustering
   phase, starting from taxonomically identified sequences and the thresholds
   produced by `optimize_thresholds()`.
+* Added `dist_file()` to read a distance matrix from a file.
 
 # optimotu 0.8.1
 
