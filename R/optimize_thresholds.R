@@ -268,6 +268,8 @@ find_best_threshold <- function(
 #' at least `min_taxa` (but should probably be more).
 #' @param id_col (`character(1)`) the name of the column in `taxonomy` which
 #' contains sequence identifiers
+#' @param measures (`character`) one or more measures to calculate optimum
+#' thresholds for
 #' @param verbose (`logical(1)` or `integer(1)`) whether to print progress
 #' messages; values greater than 1 (or TRUE) print more
 #' @return (`data.frame`) a data frame with the following columns:

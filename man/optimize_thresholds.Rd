@@ -54,6 +54,9 @@ at least \code{min_taxa} (but should probably be more).}
 \item{id_col}{(\code{character(1)}) the name of the column in \code{taxonomy} which
 contains sequence identifiers}
 
+\item{measures}{(\code{character}) one or more measures to calculate optimum
+thresholds for}
+
 \item{verbose}{(\code{logical(1)} or \code{integer(1)}) whether to print progress
 messages; values greater than 1 (or TRUE) print more}
 }
