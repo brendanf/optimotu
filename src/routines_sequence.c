@@ -92,7 +92,7 @@ int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int 
 
   return (0);
 }
-#pragma GCC target ("sse4.2")
+
 double pdistB(const uint64_t *a, const uint64_t *ma,
               const uint64_t *b, const uint64_t *mb,
               const int start, const int end, const int min_len)
@@ -125,7 +125,7 @@ double pdistB(const uint64_t *a, const uint64_t *ma,
   if (nend * NUCLEOTIDES_IN_WORD*4 < end) nend++;
 
   for (i=nstart; i<nend; i++) {
-    num_ok += __builtin_popcountl(ma[i] & mb[i]);
+    num_ok += __builtin_popcountll(ma[i] & mb[i]);
     fprintf(stderr, "i=%d, num_ok=%d\n", i, num_ok);
   }
 
@@ -134,7 +134,7 @@ double pdistB(const uint64_t *a, const uint64_t *ma,
   if (nend * NUCLEOTIDES_IN_WORD < end) nend++;
 
   for (i=nstart; i<nend; i++) {
-    num_matches += __builtin_popcountl(a[i] & b[i]);
+    num_matches += __builtin_popcountll(a[i] & b[i]);
     fprintf(stderr, "i=%d, num_matches=%d\n", i, num_matches);
   }
 
@@ -144,7 +144,6 @@ double pdistB(const uint64_t *a, const uint64_t *ma,
     return (1.0);
 }
 
-#pragma GCC target ("sse4.2")
 double pdistB2(const uint64_t *a, const uint64_t *ma,
               const uint64_t *b, const uint64_t *mb,
               const int start, const int end, const int min_len)
@@ -177,30 +176,30 @@ double pdistB2(const uint64_t *a, const uint64_t *ma,
 
   if (nstart + 1 == nend) {
     fprintf(stderr, "single mask\n");
-    mask = 0xffffffffffffffff << (start % (NUCLEOTIDES_IN_WORD*4));
+    mask = (uint64_t)(-1) << (start % (NUCLEOTIDES_IN_WORD*4));
     fprintf(stderr, "mask=%lx\n", mask);
-    mask &= ~(0xffffffffffffffff << (end % (NUCLEOTIDES_IN_WORD*4)));
+    mask &= ~((uint64_t)(-1) << (end % (NUCLEOTIDES_IN_WORD*4)));
     fprintf(stderr, "mask=%016lx\n", mask);
     fprintf(stderr, "ma | mb=%016lx\n", ma[nstart] | mb[nstart]);
-    num_ok = __builtin_popcountl((ma[nstart] | mb[nstart]) & mask);
+    num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
     fprintf(stderr, "num_ok=%d\n", num_ok);
   } else {
     fprintf(stderr, "multiple masks\n");
-    mask = 0xffffffffffffffff << (start % (NUCLEOTIDES_IN_WORD*4));
+    mask = (uint64_t)(-1) << (start % (NUCLEOTIDES_IN_WORD*4));
     fprintf(stderr, "mask=%016lx\n", mask);
-    num_ok = __builtin_popcountl((ma[nstart] | mb[nstart]) & mask);
+    num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
     fprintf(stderr, "num_ok=%d\n", num_ok);
 
     for (i=nstart + 1; i<nend - 1; i++) {
       fprintf(stderr, "i=%d\n", i);
-      fprintf(stderr, "ma | mb=%lx\n", ma[i] | mb[i]);
+      fprintf(stderr, "ma | mb=%016lx\n", ma[i] | mb[i]);
       num_ok += __builtin_popcountl(ma[i] | mb[i]);
       fprintf(stderr, "num_ok=%d\n", num_ok);
     }
 
-    mask = ~(0xffffffffffffffff << (end % (NUCLEOTIDES_IN_WORD*4)));
-    fprintf(stderr, "mask=%lx\n", mask);
-    num_ok += __builtin_popcount((ma[nend-1] | mb[nend-1]) & mask);
+    mask = ~((uint64_t)(-1) << (end % (NUCLEOTIDES_IN_WORD*4)));
+    fprintf(stderr, "mask=%016lx\n", mask);
+    num_ok += __builtin_popcountll((ma[nend-1] | mb[nend-1]) & mask);
     fprintf(stderr, "num_ok=%d\n", num_ok);
   }
 
@@ -213,7 +212,7 @@ double pdistB2(const uint64_t *a, const uint64_t *ma,
   num_matches=0;
   for (i=nstart; i<nend; i++) {
     fprintf(stderr, "i=%d, ", i);
-    num_matches += __builtin_popcountl(a[i] & b[i]);
+    num_matches += __builtin_popcountll(a[i] & b[i]);
     fprintf(stderr, "num_matches=%d\n", num_matches);
   }
 
