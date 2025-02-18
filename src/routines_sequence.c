@@ -1,4 +1,5 @@
 #include "defs.h"
+#include <stdio.h>
 
 int nucleotide2binary(const char *s, const int n, long unsigned int *b, long unsigned int *m, int *start, int *end) {
   long unsigned int a, am;
@@ -97,7 +98,25 @@ double pdistB(const long unsigned int *a, const long unsigned int *ma,
               const int start, const int end, const int min_len)
 {
   int i, num_ok, num_matches, nstart, nend;
-  long unsigned int f;
+
+  fprintf(stderr, "entering pdistB:\n");
+  fprintf(stderr, "a:");
+  for (i=0; i * NUCLEOTIDES_IN_WORD < end; i++) {
+    fprintf(stderr, " %016lx", a[i]);
+  }
+  fprintf(stderr, "\nma:");
+  for (i=0; i * NUCLEOTIDES_IN_WORD*4 < end; i++) {
+    fprintf(stderr, " %016lx", ma[i]);
+  }
+  fprintf(stderr, "\nb: ");
+  for (i=0; i * NUCLEOTIDES_IN_WORD < end; i++) {
+    fprintf(stderr, " %016lx", b[i]);
+  }
+  fprintf(stderr, "\nmb:");
+  for (i=0; i * NUCLEOTIDES_IN_WORD*4 < end; i++) {
+    fprintf(stderr, " %016lx", mb[i]);
+  }
+  fprintf(stderr, "\n");
 
   num_ok=0;
   num_matches=0;
@@ -107,6 +126,7 @@ double pdistB(const long unsigned int *a, const long unsigned int *ma,
 
   for (i=nstart; i<nend; i++) {
     num_ok += __builtin_popcountl(ma[i] & mb[i]);
+    fprintf(stderr, "i=%d, num_ok=%d\n", i, num_ok);
   }
 
   nstart=start/NUCLEOTIDES_IN_WORD;
@@ -115,6 +135,7 @@ double pdistB(const long unsigned int *a, const long unsigned int *ma,
 
   for (i=nstart; i<nend; i++) {
     num_matches += __builtin_popcountl(a[i] & b[i]);
+    fprintf(stderr, "i=%d, num_matches=%d\n", i, num_matches);
   }
 
   if (num_ok >= min_len)
@@ -130,24 +151,57 @@ double pdistB2(const long unsigned int *a, const long unsigned int *ma,
 {
   int i, num_ok, num_matches, nstart, nend;
   long unsigned int mask;
+
+  fprintf(stderr, "entering pdistB2:\n");
+  fprintf(stderr, "a:");
+  for (i=0; i * NUCLEOTIDES_IN_WORD < end; i++) {
+    fprintf(stderr, " %016lx", a[i]);
+  }
+  fprintf(stderr, "\nma:");
+    for (i=0; i * (NUCLEOTIDES_IN_WORD*4) < end; i++) {
+    fprintf(stderr, " %016lx", ma[i]);
+  }
+  fprintf(stderr, "\nb: ");
+  for (i=0; i * NUCLEOTIDES_IN_WORD < end; i++) {
+    fprintf(stderr, " %016lx", b[i]);
+  }
+  fprintf(stderr, "\nmb:");
+  for (i=0; i * (NUCLEOTIDES_IN_WORD*4) < end; i++) {
+    fprintf(stderr, " %016lx", mb[i]);
+  }
+  fprintf(stderr, "\n");
+
   nstart=start/(NUCLEOTIDES_IN_WORD*4);
   nend=end/(NUCLEOTIDES_IN_WORD*4);
   if (nend * NUCLEOTIDES_IN_WORD*4 < end) nend++;
 
   if (nstart + 1 == nend) {
+    fprintf(stderr, "single mask\n");
     mask = 0xffffffffffffffff << (start % (NUCLEOTIDES_IN_WORD*4));
+    fprintf(stderr, "mask=%lx\n", mask);
     mask &= ~(0xffffffffffffffff << (end % (NUCLEOTIDES_IN_WORD*4)));
+    fprintf(stderr, "mask=%016lx\n", mask);
+    fprintf(stderr, "ma | mb=%016lx\n", ma[nstart] | mb[nstart]);
     num_ok = __builtin_popcountl((ma[nstart] | mb[nstart]) & mask);
+    fprintf(stderr, "num_ok=%d\n", num_ok);
   } else {
+    fprintf(stderr, "multiple masks\n");
     mask = 0xffffffffffffffff << (start % (NUCLEOTIDES_IN_WORD*4));
+    fprintf(stderr, "mask=%016lx\n", mask);
     num_ok = __builtin_popcountl((ma[nstart] | mb[nstart]) & mask);
+    fprintf(stderr, "num_ok=%d\n", num_ok);
 
     for (i=nstart + 1; i<nend - 1; i++) {
+      fprintf(stderr, "i=%d\n", i);
+      fprintf(stderr, "ma | mb=%lx\n", ma[i] | mb[i]);
       num_ok += __builtin_popcountl(ma[i] | mb[i]);
+      fprintf(stderr, "num_ok=%d\n", num_ok);
     }
 
     mask = ~(0xffffffffffffffff << (end % (NUCLEOTIDES_IN_WORD*4)));
+    fprintf(stderr, "mask=%lx\n", mask);
     num_ok += __builtin_popcount((ma[nend-1] | mb[nend-1]) & mask);
+    fprintf(stderr, "num_ok=%d\n", num_ok);
   }
 
   if (num_ok == 0) return 1.0;
@@ -158,7 +212,9 @@ double pdistB2(const long unsigned int *a, const long unsigned int *ma,
 
   num_matches=0;
   for (i=nstart; i<nend; i++) {
+    fprintf(stderr, "i=%d, ", i);
     num_matches += __builtin_popcountl(a[i] & b[i]);
+    fprintf(stderr, "num_matches=%d\n", num_matches);
   }
 
   if (num_ok >= min_len)
