@@ -85,7 +85,7 @@ bool ClusterWorkerImpl<distmx_type, id_t>::next_line(DistanceElement & d) {
       do {
         id_t id1, id2;
         double dist;
-        if (!(distmx >> id1 >> id2 >> d)) return false;
+        if (!(distmx >> id1 >> id2 >> dist)) return false;
         auto it1 = id_map->find(id1);
         auto it2 = id_map->find(id2);
         // silently skip the line if either id is not found!
