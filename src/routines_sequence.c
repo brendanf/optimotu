@@ -194,7 +194,7 @@ double pdistB2(const uint64_t *a, const uint64_t *ma,
     for (i=nstart + 1; i<nend - 1; i++) {
       fprintf(stderr, "i=%d\n", i);
       fprintf(stderr, "ma | mb=%016" PRIx64 "\n", ma[i] | mb[i]);
-      num_ok += __builtin_popcountl(ma[i] | mb[i]);
+      num_ok += __builtin_popcountll(ma[i] | mb[i]);
       fprintf(stderr, "num_ok=%d\n", num_ok);
     }
 
