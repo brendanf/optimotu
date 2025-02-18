@@ -254,14 +254,21 @@ void HierarchicalClusterWorker<distmx_t, id_type>::operator()(size_t begin, size
     // mutex.unlock();
 }
 
+template class ClusterWorkerImpl<Rcpp::DataFrame, int>;
+template class ClusterWorkerImpl<std::istream, int>;
+template class ClusterWorkerImpl<Rcpp::DataFrame, std::string>;
+template class ClusterWorkerImpl<std::istream, std::string>;
+
 template class MergeClusterWorker<Rcpp::DataFrame, int>;
 template class MergeClusterWorker<std::istream, int>;
 template class MergeClusterWorker<Rcpp::DataFrame, std::string>;
 template class MergeClusterWorker<std::istream, std::string>;
+
 template class ConcurrentClusterWorker<Rcpp::DataFrame, int>;
 template class ConcurrentClusterWorker<std::istream, int>;
 template class ConcurrentClusterWorker<Rcpp::DataFrame, std::string>;
 template class ConcurrentClusterWorker<std::istream, std::string>;
+
 template class HierarchicalClusterWorker<Rcpp::DataFrame, int>;
 template class HierarchicalClusterWorker<std::istream, int>;
 template class HierarchicalClusterWorker<Rcpp::DataFrame, std::string>;
