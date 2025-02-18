@@ -1,7 +1,7 @@
 #include "defs.h"
 #include <stdio.h>
 
-int nucleotide2binary(const char *s, const int n, long unsigned int *b, long unsigned int *m, int *start, int *end) {
+int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int *start, int *end) {
   long unsigned int a, am;
   int i, // index in input sequence
       j, // index of output word
@@ -93,8 +93,8 @@ int nucleotide2binary(const char *s, const int n, long unsigned int *b, long uns
   return (0);
 }
 #pragma GCC target ("sse4.2")
-double pdistB(const long unsigned int *a, const long unsigned int *ma,
-              const long unsigned int *b, const long unsigned int *mb,
+double pdistB(const uint64_t *a, const uint64_t *ma,
+              const uint64_t *b, const uint64_t *mb,
               const int start, const int end, const int min_len)
 {
   int i, num_ok, num_matches, nstart, nend;
@@ -145,12 +145,12 @@ double pdistB(const long unsigned int *a, const long unsigned int *ma,
 }
 
 #pragma GCC target ("sse4.2")
-double pdistB2(const long unsigned int *a, const long unsigned int *ma,
-              const long unsigned int *b, const long unsigned int *mb,
+double pdistB2(const uint64_t *a, const uint64_t *ma,
+              const uint64_t *b, const uint64_t *mb,
               const int start, const int end, const int min_len)
 {
   int i, num_ok, num_matches, nstart, nend;
-  long unsigned int mask;
+  uint64_t mask;
 
   fprintf(stderr, "entering pdistB2:\n");
   fprintf(stderr, "a:");

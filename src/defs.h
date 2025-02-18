@@ -5,14 +5,16 @@
 #ifndef _DEFS_
 #define _DEFS_
 
+#include <stdint.h>
+
 #define NUCLEOTIDES_IN_WORD 16
 
-int nucleotide2binary(const char *s, const int n, long unsigned int *b, long unsigned int *m, int *start, int *end);
-double pdistB(const long unsigned int *a, const long unsigned int *ma,
-              const long unsigned int *b, const long unsigned int *mb,
+int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int *start, int *end);
+double pdistB(const uint64_t *a, const uint64_t *ma,
+              const uint64_t *b, const uint64_t *mb,
               const int start, const int end, const int min_len);
-double pdistB2(const long unsigned int *a, const long unsigned int *ma,
-              const long unsigned int *b, const long unsigned int *mb,
+double pdistB2(const uint64_t *a, const uint64_t *ma,
+              const uint64_t *b, const uint64_t *mb,
               const int start, const int end, const int min_len);
 
 #endif
