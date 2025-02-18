@@ -82,7 +82,12 @@ double PackedSequenceSet::dist(const int i, const int j, const int min_overlap,
   s = start[j] >= start[i] ? start[j] : start[i];
   e = end[j] <= end[i] ? end[j] : end[i];
   if (s >= e) return 1.0;
-  return pdistB(&packed_seq[i][0], &mask[i][0],
-                &packed_seq[j][0], &mask[j][0],
-                                           s, e, min_overlap);
+  if (ignore_gap) {
+    return pdistB(&packed_seq[i][0], &mask[i][0],
+                  &packed_seq[j][0], &mask[j][0],
+                                             s, e, min_overlap);
+  }
+  return pdistB2(&packed_seq[i][0], &mask[i][0],
+                 &packed_seq[j][0], &mask[j][0],
+                                            s, e, min_overlap);
 }

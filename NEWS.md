@@ -1,3 +1,6 @@
+# optimotu (development version)
+* fix a bug in which `dist_hamming(ignore_gaps=FALSE)` was not followed
+
 # optimotu 0.9.0
 
 * Compilation in Windows is now working in at least some circumstances (GitHub
