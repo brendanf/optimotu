@@ -220,7 +220,7 @@ do_usearch_singlelink <- function(
   } else {
     usearch_ncpu <- 1L
   }
-  if (system2(usearch, "-version", stdout = NULL, stderr = NULL) != 0) {
+  if (system2(usearch, stdout = NULL, stderr = NULL) != 0) {
     stop("usearch could not be found at path: ", usearch)
   }
   system2(usearch, args, wait = FALSE)

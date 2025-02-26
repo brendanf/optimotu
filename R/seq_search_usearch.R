@@ -76,7 +76,7 @@ seq_search_usearch <- function(
     extra_args <- c(rbind(paste0("-", names(extra_args)), unlist(extra_args)))
     args <- c(args, extra_args)
   }
-  if (system2(usearch, "-version", stdout = NULL, stderr = NULL) != 0) {
+  if (system2(usearch, stdout = NULL, stderr = NULL) != 0) {
     stop("usearch could not be found at path: ", usearch)
   }
   status <- system2(

@@ -1,3 +1,6 @@
+# optimotu (development version)
+* Fix a bug when using Usearch version 12 for dist_usearch()
+
 # optimotu 0.9.1
 * Fix a bug in which `dist_hamming(ignore_gaps=FALSE)` was not followed
 * Fix compilation errors in 0.9.0 on Mac.
