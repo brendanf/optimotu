@@ -1,4 +1,10 @@
+# optimotu 0.9.2
+
+* Fix a bug when passing input files without specifying sequence names to
+  `seq_search()`.
+
 # optimotu 0.9.1
+
 * Fix a bug in which `dist_hamming(ignore_gaps=FALSE)` was not followed
 * Fix compilation errors in 0.9.0 on Mac.
 

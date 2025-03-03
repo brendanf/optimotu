@@ -205,9 +205,9 @@ seq_names <- function(seq, name_col = NULL) {
 seq_as_char <- function(seq, seq_col = NULL, name_col = NULL) {
   if (is.character(seq) && length(seq) == 1 && file.exists(seq)) {
     if (grepl(fasta_regex, seq)) {
-      Biostrings::readBStringSet(seq)
+      seq <- Biostrings::readBStringSet(seq)
     } else if (grepl(fastq_regex, seq)) {
-      Biostrings::readBStringSet(seq, format = "fastq")
+      seq <- Biostrings::readBStringSet(seq, format = "fastq")
     } else {
       stop("unknown file type: ", seq)
     }
