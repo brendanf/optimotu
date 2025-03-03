@@ -488,8 +488,13 @@ dist_wfa2 <- function(
   checkmate::assert_count(gap_extend2)
   structure(
     list(
-      method = "wfa2", match = match, mismatch = mismatch, gap_open = gap_open,
-      gap_extend = gap_extend, gap_open2 = gap_open2, gap_extend2 = gap_extend2
+      method = "wfa2",
+      match = as.integer(match),
+      mismatch = as.integer(mismatch),
+      gap_open = as.integer(gap_open),
+      gap_extend = as.integer(gap_extend),
+      gap_open2 = as.integer(gap_open2),
+      gap_extend2 = as.integer(gap_extend2)
     ),
     class = "optimotu_dist_config"
   )
@@ -531,7 +536,11 @@ dist_hamming <- function(min_overlap = 0L, ignore_gaps = TRUE) {
   checkmate::assert_count(min_overlap)
   checkmate::assert_flag(ignore_gaps)
   structure(
-    list(method = "hamming", min_overlap = min_overlap, ignore_gaps = ignore_gaps),
+    list(
+      method = "hamming",
+      min_overlap = as.integer(min_overlap),
+      ignore_gaps = ignore_gaps
+    ),
     class = "optimotu_dist_config"
   )
 }
@@ -546,7 +555,11 @@ dist_usearch <- function(usearch = Sys.which("usearch"), usearch_ncpu = NULL) {
   checkmate::assert_file_exists(usearch, access = "x")
   checkmate::assert_count(usearch_ncpu, null.ok = TRUE)
   structure(
-    list(method = "usearch", usearch = usearch, usearch_ncpu = usearch_ncpu),
+    list(
+      method = "usearch",
+      usearch = usearch,
+      usearch_ncpu = as.integer(usearch_ncpu)
+    ),
     class = "optimotu_dist_config"
   )
 }

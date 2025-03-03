@@ -1,3 +1,8 @@
+# optimotu 0.9.3
+
+* Allow integer-ish arguments (e.g., `3`) to various arguments for
+  `dist_config()`, instead of only actual integers (e.g., `3L`).
+
 # optimotu 0.9.2
 
 * Fix a bug when passing input files without specifying sequence names to
