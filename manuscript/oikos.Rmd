@@ -1,0 +1,118 @@
+---
+title: "OptimOTU: Taxonomically informed dynamic OTU clustering"
+author: "Brendan Furneaux"
+output:
+  beamer_presentation:
+    includes:
+      in_header: "beamer_header.tex"
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results = "asis", fig.width=8, fig.height=5)
+options(tinytex.engine = "xelatex")
+```
+
+## Introduction
+
+\small
+Not every unique environmental sequence is a distinct species
+\begin{enumerate}
+  \item \alert<2-3>{Variation between species}
+  \item \alert<3-5,7>{Variation within species}
+  \item \alert<4-5,7>{Variation within individuals}
+  \only<5->{\makebox(0,0){\put(0.5em,4.5\normalbaselineskip){%
+      $\left.\rule{0pt}{1.8\normalbaselineskip}\right\}$ biological variation}}}
+  \item \alert<4-6>{PCR amplification error}
+  \item \alert<4-6>{Sequencing error (incl. basecalling)}
+  \only<5->{\makebox(0,0){\put(0em,2.2\normalbaselineskip){%
+      $\left.\rule{0pt}{1.1\normalbaselineskip}\right\}$ error}}}
+\end{enumerate}
+
+\visible<2->{\alert<2-3>{\textbf{As community ecologists}}, we care about (1) \visible<3->{and sometimes (2).}}
+
+\visible<4->{\alert<4-5>{\textbf{Traditional OTU clustering:}} remove (2)--(5), retain (1).}  
+
+\visible<6->{\alert<6>{\textbf{Denoising ("ASV" methods):}} remove (4)--(5), retain (1)--(3).}  
+
+\visible<7->{\alert<7>{\textbf{Post-denoising clustering:}} merge (2)--(3), retain (1).}  
+
+\visible<8->{\textbf{Problem:} (1)--(3) are not constant across the tree of life, so no single clustering threshold works for everything.}
+
+## Solution: taxonomically aware dynamic clustering
+
+1. Use optimized clustering thresholds for each taxon.
+2. Perform taxonomic assignment before clustering.
+3. Use taxonomic assignments to select appropriate thresholds and constrain clustering.
+
+## Taxonomically aware dynamic clustering
+
+::: {.overprint data-latex=""}
+
+\onslide<+>
+ASVs to cluster \invisible{()}
+
+```{tikz clust_asvs, code=readLines("clustering0.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Single family (from previous iteration)
+
+```{tikz clust-fam, code=readLines("clustering01-family.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Three genera (from previous iteration)
+
+```{tikz clust-gen, code=readLines("clustering02-genera.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-thresh, code=readLines("clustering03-thresholds.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Standard single-link clustering result (for comparison)
+
+```{tikz clust-std, code=readLines("clustering04-slink.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-id, code=readLines("clustering03-thresholds.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Taxonomic assignments \invisible{()}
+
+```{tikz clust-tax, code=readLines("clustering05-taxonomy.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Cluster cores from taxonomic assignment \invisible{()}
+
+```{tikz clust-core, code=readLines("clustering06-cores.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 1 \invisible{()}
+
+```{tikz clust-closed1, code=readLines("clustering07-closed1.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 2 \invisible{()}
+
+```{tikz clust-closed2, code=readLines("clustering08-closed2.tex"), cache=TRUE}
+```
+
+\onslide<+>
+*De novo* single-linkage clustering -- "pseudotaxa" \invisible{()}
+
+```{tikz clust-denovo, code=readLines("clustering09-denovo.tex"), cache=TRUE}
+```
+
+:::
