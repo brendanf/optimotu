@@ -20,8 +20,8 @@ dist_wfa2(
   mismatch = 1L,
   gap_open = 0L,
   gap_extend = 1L,
-  gap_open2 = 0L,
-  gap_extend2 = 1L
+  gap_open2 = gap_open,
+  gap_extend2 = gap_extend
 )
 
 dist_edlib()
@@ -41,16 +41,16 @@ dist_file(filename, by_name = TRUE)
 
 \item{match}{(non-negative \code{integer} scalar) score for a match}
 
-\item{mismatch}{(non-negative \code{integer} scalar) penalty for a mismatch}
+\item{mismatch}{(positive \code{integer} scalar) penalty for a mismatch}
 
 \item{gap_open}{(non-negative \code{integer} scalar) penalty for gap opening}
 
-\item{gap_extend}{(non-negative \code{integer} scalar) penalty for gap extension}
+\item{gap_extend}{(positive \code{integer} scalar) penalty for gap extension}
 
 \item{gap_open2}{(non-negative \code{integer} scalar) alternate penalty for gap
 opening}
 
-\item{gap_extend2}{(non-negative \code{integer} scalar) alternate penalty for gap
+\item{gap_extend2}{(positive \code{integer} scalar) alternate penalty for gap
 extension}
 
 \item{cutoff}{(\code{numeric} scalar) A pairwise distance to decide when sequences

@@ -1,3 +1,7 @@
+# optimotu (development version)
+
+* Fix parameterization of WFA2-lib with single or dual gap-affine penalties.
+
 # optimotu 0.9.3
 
 * Allow integer-ish arguments (e.g., `3`) to various arguments for

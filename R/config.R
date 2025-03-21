@@ -465,12 +465,12 @@ dist_config <- function(
 }
 
 #' @param match (non-negative `integer` scalar) score for a match
-#' @param mismatch (non-negative `integer` scalar) penalty for a mismatch
+#' @param mismatch (positive `integer` scalar) penalty for a mismatch
 #' @param gap_open (non-negative `integer` scalar) penalty for gap opening
-#' @param gap_extend (non-negative `integer` scalar) penalty for gap extension
+#' @param gap_extend (positive `integer` scalar) penalty for gap extension
 #' @param gap_open2 (non-negative `integer` scalar) alternate penalty for gap
 #' opening
-#' @param gap_extend2 (non-negative `integer` scalar) alternate penalty for gap
+#' @param gap_extend2 (positive `integer` scalar) alternate penalty for gap
 #' extension
 #'
 #' @export
@@ -478,14 +478,14 @@ dist_config <- function(
 dist_wfa2 <- function(
     match = 0L, mismatch = 1L,
     gap_open = 0L, gap_extend = 1L,
-    gap_open2 = 0L, gap_extend2 = 1L
+    gap_open2 = gap_open, gap_extend2 = gap_extend
 ) {
   checkmate::assert_count(match)
-  checkmate::assert_count(mismatch)
+  checkmate::assert_count(mismatch, positive = TRUE)
   checkmate::assert_count(gap_open)
-  checkmate::assert_count(gap_extend)
+  checkmate::assert_count(gap_extend, positive = TRUE)
   checkmate::assert_count(gap_open2)
-  checkmate::assert_count(gap_extend2)
+  checkmate::assert_count(gap_extend2, positive = TRUE)
   structure(
     list(
       method = "wfa2",

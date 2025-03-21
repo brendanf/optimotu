@@ -439,19 +439,19 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<Wfa2SplitClusterWorker<0>>(
           seq,
-          cluster, threads, match, mismatch,
+          cluster, threads, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose == 1) {
         return std::make_unique<Wfa2SplitClusterWorker<1>>(
           seq,
-          cluster, threads, match, mismatch,
+          cluster, threads, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose >= 2) {
         return std::make_unique<Wfa2SplitClusterWorker<2>>(
           seq,
-          cluster, threads, match, mismatch,
+          cluster, threads, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else {
@@ -461,19 +461,19 @@ std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<0>>(
           seq,
-          cluster, threads, match, mismatch,
+          cluster, threads, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose == 1) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<1>>(
           seq,
-          cluster, threads, match, mismatch,
+          cluster, threads, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose >= 2) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<2>>(
           seq,
-          cluster, threads, match, mismatch,
+          cluster, threads, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else {
