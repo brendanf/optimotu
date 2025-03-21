@@ -1,5 +1,6 @@
 #include "optimotu.h"
 #include "pairwise_alignment.h"
+#include "config.h"
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -34,7 +35,7 @@ std::string cigar_wfa2(const std::string &a, const std::string &b,
                        int match, int mismatch,
                        int gap_open, int gap_extend,
                        int gap_open2, int gap_extend2) {
-  wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
+  wfa::WFAlignerChoose aligner{-match, mismatch, gap_open, gap_extend,
                                gap_open2, gap_extend2,
                                wfa::WFAligner::AlignmentScope::Alignment};
   wfa::WFAligner::AlignmentStatus status;
@@ -132,4 +133,126 @@ double align_wfa2(const std::string a, const std::string b,
 double align_edlib(const std::string a, const std::string b) {
   auto config = edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0);
   return distance_edlib(a, b, config);
+}
+
+std::vector<std::string> align_from_cigar(
+    const std::string & a,
+    const std::string & b,
+    const std::string & cigar
+) {
+  std::vector<std::string> out(2);
+  out[0].reserve(cigar.size());
+  out[1].reserve(cigar.size());
+  size_t i = 0, j = 0;
+  for (char c : cigar) {
+    switch (c) {
+    case 'M':
+      out[0].push_back(a[i]);
+      out[1].push_back(b[j]);
+      i++;
+      j++;
+      break;
+    case 'D':
+      out[0].push_back(a[i]);
+      out[1].push_back('-');
+      i++;
+      break;
+    case 'I':
+      out[0].push_back('-');
+      out[1].push_back(b[j]);
+      j++;
+      break;
+    case 'X':
+      out[0].push_back(a[i]);
+      out[1].push_back(b[j]);
+      i++;
+      j++;
+      break;
+    }
+  }
+  return out;
+}
+
+std::vector<std::string> align_from_compressed_cigar(
+    const std::string & a,
+    const std::string & b,
+    const std::string & cigar
+) {
+  std::vector<std::string> out(2);
+  out[0].reserve(cigar.size());
+  out[1].reserve(cigar.size());
+  size_t i = 0, j = 0;
+  size_t k = 0;
+  while (k < cigar.size()) {
+    size_t l = 0;
+    while (k + l < cigar.size() && cigar[k + l] >= '0' && cigar[k + l] <= '9') {
+      l++;
+    }
+    int n = std::stoi(cigar.substr(k, l));
+    k += l;
+    switch (cigar[k]) {
+    case '=':
+      for (int m = 0; m < n; m++) {
+        out[0].push_back(a[i]);
+        out[1].push_back(b[j]);
+        i++;
+        j++;
+      }
+      break;
+    case 'D':
+      for (int m = 0; m < n; m++) {
+        out[0].push_back(a[i]);
+        out[1].push_back('-');
+        i++;
+      }
+      break;
+    case 'I':
+      for (int m = 0; m < n; m++) {
+        out[0].push_back('-');
+        out[1].push_back(b[j]);
+        j++;
+      }
+      break;
+    case 'X':
+      for (int m = 0; m < n; m++) {
+        out[0].push_back(a[i]);
+        out[1].push_back(b[j]);
+        i++;
+        j++;
+      }
+      break;
+    }
+    k++;
+  }
+  return out;
+
+}
+
+// [[Rcpp::export]]
+std::vector<std::string> pairwise_alignment(
+  std::string a,
+  std::string b,
+  Rcpp::List dist_config
+) {
+  if (!dist_config.inherits("optimotu_dist_config")) {
+    OPTIMOTU_STOP(
+      "'dist_config' must be of class 'optimotu_dist_config'"
+    );
+  }
+  std::string dist_method = element_as_string(dist_config, "method", "dist_config");
+  if (dist_method == "wfa2") {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    return align_from_compressed_cigar(a, b, cigar_wfa2(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+  } else if (dist_method == "edlib") {
+    return align_from_cigar(a, b, cigar_edlib(a, b));
+  } else {
+    OPTIMOTU_STOP(
+      "Unknown distance method: '" + dist_method + "'"
+    );
+  }
 }

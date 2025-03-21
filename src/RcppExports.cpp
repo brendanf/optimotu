@@ -222,6 +222,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// pairwise_alignment
+std::vector<std::string> pairwise_alignment(std::string a, std::string b, Rcpp::List dist_config);
+RcppExport SEXP _optimotu_pairwise_alignment(SEXP aSEXP, SEXP bSEXP, SEXP dist_configSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type a(aSEXP);
+    Rcpp::traits::input_parameter< std::string >::type b(bSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type dist_config(dist_configSEXP);
+    rcpp_result_gen = Rcpp::wrap(pairwise_alignment(a, b, dist_config));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cigar_wfa2
 std::string cigar_wfa2(const std::string& a, const std::string& b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
 RcppExport SEXP _optimotu_cigar_wfa2(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
@@ -403,6 +416,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_distmx_kmer", (DL_FUNC) &_optimotu_seq_distmx_kmer, 10},
     {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 3},
     {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 3},
+    {"_optimotu_pairwise_alignment", (DL_FUNC) &_optimotu_pairwise_alignment, 3},
     {"_optimotu_cigar_wfa2", (DL_FUNC) &_optimotu_cigar_wfa2, 8},
     {"_optimotu_cigar_edlib", (DL_FUNC) &_optimotu_cigar_edlib, 2},
     {"_optimotu_align_wfa2", (DL_FUNC) &_optimotu_align_wfa2, 8},

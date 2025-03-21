@@ -151,6 +151,10 @@ adjusted_mutual_information <- function(k, c, threads = 1L) {
     .Call(`_optimotu_adjusted_mutual_information`, k, c, threads)
 }
 
+pairwise_alignment <- function(a, b, dist_config) {
+    .Call(`_optimotu_pairwise_alignment`, a, b, dist_config)
+}
+
 #' @return (`character(1)`) CIGAR string
 #' @export
 #' @keywords internal
