@@ -1,0 +1,502 @@
+---
+title: |
+ | OptimOTU:
+ | Taxonomically informed dynamic OTU clustering
+subtitle: Extended edition!
+author: "Brendan Furneaux"
+output:
+  beamer_presentation:
+    includes:
+      in_header: "beamer_header.tex"
+    latex_engine: xelatex
+classoption: "aspectratio=169"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results = "asis")
+options(tinytex.engine = "xelatex")
+```
+
+## Introduction
+
+\small
+Not every unique environmental sequence is a distinct species
+\begin{enumerate}
+  \item \alert<2-3,8>{Variation between species}
+  \item \alert<3-5,7-8>{Variation within species}
+  \item \alert<4-5,7-8>{Variation within individuals}
+  \only<5->{\makebox(0,0){\put(0.5em,4.5\normalbaselineskip){%
+      $\left.\rule{0pt}{1.8\normalbaselineskip}\right\}$ biological variation}}}
+  \item \alert<4-6>{PCR amplification error}
+  \item \alert<4-6>{Sequencing error (incl. basecalling)}
+  \only<5->{\makebox(0,0){\put(0em,2.2\normalbaselineskip){%
+      $\left.\rule{0pt}{1.1\normalbaselineskip}\right\}$ error}}}
+\end{enumerate}
+
+\visible<2->{\alert<2-3>{\textbf{As community ecologists}}, we care about (1) \visible<3->{and sometimes (2).}}
+
+\visible<4->{\alert<4-5>{\textbf{Traditional OTU clustering:}} remove (2)--(5), retain (1).}  
+
+\visible<6->{\alert<6>{\textbf{Denoising ("ASV" methods):}} remove (4)--(5), retain (1)--(3).}  
+
+\visible<7->{\alert<7>{\textbf{Post-denoising clustering:}} merge (2)--(3), retain (1).}  
+
+\visible<8->{\alert<8>{\textbf{Problem:} (1)--(3) are not constant across the tree of life.}}
+
+## Solution: taxonomically aware dynamic clustering
+
+1. \alert<3>{Use optimized clustering thresholds for each taxon.}
+
+2. Perform taxonomic assignment before clustering.
+
+3. \alert<2>{Use taxonomic assignments to select appropriate thresholds and constrain clustering.}
+
+## Deleted scene: Optimizing clustering thresholds
+
+- Cluster **taxonomically identified** sequences at a range of thresholds.
+  - Can be a reference database.
+  - Also possible to "bootstrap" by using confidently identified sequences from your own data.
+  - Only needs to be done once -- thresholds can be reused for other datasets.
+- Find which threshold gives the best agreement with the taxonomic assignments.
+  - Using various clustering quality metrics like Adjusted Mutual Information (AMI), Matthews Correlation Coefficient (MCC), F-measure, etc.
+- Repeat at different taxonomic ranks, and within different taxa.
+  - Within whole kingdom-level dataset, find best thresholds for species--phylum.
+  - Within each phylum, find best thresholds for species--class.
+  - Within each class, find best thresholds for species--order.
+  - ...
+  - Within each genus, find best thresholds for species.
+
+## Deleted scene: Optimizing clustering thresholds
+
+```{r cluster-optimization, fig.width = 7, fig.height = 4}
+library(ggplot2)
+library(ggtree)
+
+true_taxonomy <- tibble::tribble(
+  ~seq_id, ~family, ~genus, ~species,
+  "seq1", "A", "B", "C",
+  "seq2", "A", "B", "D",
+  "seq3", "A", "E", "F",
+  "seq4", "G", "H", "I",
+  "seq5", "G", "H", "J",
+  "seq6", "G", "K", "L",
+  "seq7", "A", "E", "F",
+  "seq8", "G", "H", "I",
+  "seq9", "G", "K", "L",
+  "seq10", "A", "E", "M"
+) |>
+  dplyr::mutate(across(everything(), ~ forcats::fct_inorder(., ordered = TRUE)))
+
+true_taxtree <- ape::as.phylo(~family/genus/species/seq_id, data = true_taxonomy, collapse = FALSE)
+true_taxtree$edge.length <- rep(1, nrow(true_taxtree$edge))
+# plot(true_taxtree, show.tip.label = TRUE, edge.width = 2)
+
+set.seed(123)
+dist_matrix <- tidyr::crossing(x = true_taxonomy$seq_id, y = true_taxonomy$seq_id) |>
+  dplyr::filter(x >= y)|>
+  dplyr::left_join(true_taxonomy, by = c("x" = "seq_id")) |>
+  dplyr::left_join(true_taxonomy, by = c("y" = "seq_id")) |>
+  dplyr::mutate(
+    distance = 0.15 * exp(rnorm(x, sd=0.6)) * as.numeric(family.x != family.y) +
+      0.10 * exp(rnorm(x, sd=0.6)) * as.numeric(genus.x != genus.y) +
+      0.05 * exp(rnorm(x, sd=0.6)) * as.numeric(species.x != species.y) +
+      0.02 * exp(rnorm(x, sd=0.6)) * as.numeric(x != y),
+    across(everything(), as.character)
+  ) |>
+  dplyr::select(x, y, distance) |>
+  tidyr::pivot_wider(names_from = y, values_from = distance) |>
+  tibble::column_to_rownames("x") |>
+  as.matrix() |>
+  as.dist()
+
+test_hclust <- hclust(dist_matrix, method = "single")
+
+# round the heights away from the thresholds which will be used,
+# to avoid overlapping nodes and bars
+test_hclust$height <- ifelse(
+  test_hclust$height %% 0.02 < 0.005,
+  (test_hclust$height %/% 0.02) * 0.02  +.005,
+  ifelse(
+    test_hclust$height %% 0.02 > 0.015,
+    (test_hclust$height %/% 0.02) * 0.02 + 0.015,
+    test_hclust$height
+  )
+)
+
+depth <- max(test_hclust$height)
+
+test_tree <- ape::as.phylo(test_hclust)
+# as.phylo scales the branches by 0.5 (so that distances between tips are sum
+# of total branch length, rather than just node heights) so we need to double
+# them
+test_tree$edge.length <- 2 * test_tree$edge.length
+
+# use ggtree to calculate the geometry, but we will modify the coordinates
+# and to the actual plotting with standard geoms
+tree_plot <- ggtree(test_tree)
+
+# extract the data from the ggtree object
+treedat <- tree_plot$data |>
+  dplyr::mutate(
+    x = depth - x, # flip the x-axis so that the tips are at 0
+    branch.length = ifelse(parent == node, 0.3 - x, branch.length), # add root branch
+    # row and column for faceting
+    row = "cluster",
+    col = "test"
+  )
+# add info to draw the node lines
+treedat <- dplyr::left_join(
+  treedat,
+  dplyr::select(treedat, parent = node, parent_y = y),
+  by = "parent"
+)
+
+# calculate clusters
+test_clusters <- cutree(test_hclust, h = seq(0, 0.3, 0.02)) |>
+  t() |>
+  tibble::as_tibble(rownames = "threshold")
+
+cluster_scores <- purrr::map_dfr(
+  true_taxonomy[-1],
+  \(x)
+  optimotu::adjusted_mutual_information(
+    as.matrix(tibble::column_to_rownames(test_clusters, "threshold")),
+    x
+  ) |>
+    tibble::as_tibble(rownames = "threshold") |>
+    dplyr::mutate(threshold = as.numeric(threshold)),
+  .id = "rank"
+) |>
+  dplyr::mutate(row = "a_score", col = "test")
+
+optima <- cluster_scores |>
+  dplyr::filter(AMI == max(AMI, na.rm = TRUE), .by = rank) |>
+  dplyr::summarize(threshold = optimotu:::strict_median(threshold), .by = c(rank, col))
+
+clust_bars <- test_clusters |>
+  tidyr::pivot_longer(cols = -threshold, names_to = "seq_id", values_to = "cluster") |>
+  dplyr::mutate(
+    threshold = as.numeric(threshold),
+    seq_id = as.numeric(ordered(seq_id, levels = rev(get_taxa_name(tree_plot))))
+  ) |>
+  dplyr::summarize(
+    start = min(seq_id),
+    end = max(seq_id),
+    # row and column for faceting
+    row = "cluster",
+    col = "test",
+    .by = c(threshold, cluster)
+  )
+
+true_cluster_bars <-
+  true_taxonomy |>
+  dplyr::mutate(
+    dplyr::across(-seq_id, as.character),
+    seq_id = as.numeric(ordered(seq_id, levels = rev(get_taxa_name(tree_plot))))
+  ) |>
+  tidyr::pivot_longer(cols = -seq_id, names_to = "rank", values_to = "taxon") |>
+  dplyr::mutate(rank = ordered(rank, levels = c("species", "genus", "family"))) |>
+  dplyr::summarize(
+    start = min(seq_id),
+    end = max(seq_id),
+    ## row and column for faceting
+    row = "cluster",
+    col = "true",
+    .by = c(rank, taxon)
+  ) |>
+  dplyr::arrange(start)
+
+# get the taxa in the order they will be presented
+families <- dplyr::filter(true_cluster_bars, rank == "family")$taxon
+genera <- dplyr::filter(true_cluster_bars, rank == "genus")$taxon
+species <- dplyr::filter(true_cluster_bars, rank == "species")$taxon
+
+taxon_color_scheme <- c(
+  # families in shades of blue
+  RColorBrewer::brewer.pal(3, "Blues")[c(1,3)] |> `names<-`(families),
+  # genera in shades of green
+  RColorBrewer::brewer.pal(4, "Greens") |> `names<-`(genera),
+  # species in shades of red
+  RColorBrewer::brewer.pal(7, "Reds") |> `names<-`(species)
+)
+
+darker_color_scheme <- colorspace::darken(taxon_color_scheme) |>
+  `names<-`(names(taxon_color_scheme))
+
+rank_color_scheme <- c(
+  "species" = RColorBrewer::brewer.pal(3, "Reds")[3],
+  "genus" = RColorBrewer::brewer.pal(3, "Greens")[3],
+  "family" = RColorBrewer::brewer.pal(3, "Blues")[3]
+)
+
+
+cluster_step <- 0.02 # distance between cluster bars
+cluster_width <- 0.008 # width of the cluster bars
+cluster_sep <- 0.15 # separation between clusters on y axis
+
+# plot
+ggplot(treedat) +
+  # clusters
+  ggchicklet:::geom_rrect(
+      aes(
+        xmin = threshold - cluster_width/2,
+        xmax = threshold + cluster_width/2,
+        ymin = start - (1 - cluster_sep)/2,
+        ymax = end + (1 - cluster_sep)/2
+      ),
+      fill = "gray",
+      color = "gray60",
+      radius = unit(1, "mm"),
+      data = clust_bars,
+      show.legend = FALSE
+  ) +
+  # branches
+  geom_segment(
+    aes(x = x, xend = x + branch.length, y = y, yend = y),
+    linewidth = 1,
+    lineend = "round"
+  ) +
+  # nodes
+  geom_segment(
+    aes(x = x + branch.length, xend = x + branch.length, y = y, yend = parent_y),
+    linewidth = 1,
+    lineend = "round") +
+  # true clusters
+  ggchicklet:::geom_rrect(
+    aes(
+      xmin = (as.numeric(rank) - 0.45) * cluster_step,
+      xmax = (as.numeric(rank) + 0.45) * cluster_step,
+      ymin = start - (1 - cluster_sep)/2,
+      ymax = end + (1 - cluster_sep)/2,
+      fill = taxon,
+      color = taxon
+    ),
+    radius = unit(1, "mm"),
+    data = true_cluster_bars,
+    show.legend = FALSE
+  ) +
+  # separate the plots by faceting
+  ggh4x::facet_grid2(
+    row ~ col,
+    scales = "free",
+    space = "free",
+    labeller = as_labeller(c(
+      test = "Clustering threshold",
+      true = "Taxonomic rank",
+      cluster = "Cluster assignment",
+      a_score = "AMI"
+    )),
+    switch = "both",
+    drop = TRUE,
+    render_empty = FALSE
+  ) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_fill_manual(values = taxon_color_scheme, guide = NULL) +
+  scale_color_manual(
+    values = c(darker_color_scheme, rank_color_scheme),
+    breaks = names(rank_color_scheme),
+    name = NULL
+  )+
+  ggh4x::facetted_pos_scales(
+    x = list(
+      scale_x_continuous(
+        expand = c(0.003, 0.003),
+        breaks = seq(0, 0.3, cluster_step),
+        labels = scales::number_format(accuracy = 0.01)
+      ),
+      scale_x_continuous(
+        breaks = 1:3 * cluster_step,
+        labels = c("species", "genus", "family")
+      )
+    ),
+    y = list(
+      scale_y_continuous(
+        expand = c(0.05, 0.05),
+        breaks = seq(0, 1, 0.5),
+        sec.axis = dup_axis(name = "Reference taxonomy", breaks = NULL)
+      ),
+      scale_y_continuous(
+        expand = c(0.02, 0.02),
+        breaks = seq_along(get_taxa_name(tree_plot)),
+        labels = paste0("seq", rev(seq_along(get_taxa_name(tree_plot))))
+      )
+    )
+  ) +
+  geom_hline(aes(yintercept = c(0,0.5,1)), color="gray90", data = cluster_scores[1:3,]) +
+  geom_vline(aes(xintercept = threshold), color="gray90", data = cluster_scores) +
+  geom_line(aes(threshold, AMI, color = rank, group = rank), data = cluster_scores) +
+  geom_vline(aes(xintercept = threshold, color = rank), data = optima,
+             linetype = "dashed", show.legend = FALSE) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = -30, hjust = 0),
+    axis.title = element_text(size = 10),
+    axis.line.x = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text = element_text(size = 10),
+    legend.position = c(0.9, 0.9),
+    legend.background = element_blank()
+  ) +
+  ggh4x::force_panelsizes(rows = c(1, 4))
+```
+
+## Deleted scene: Taxonomic assignment
+
+- **OptimOTU R package** leaves this to the user
+- Can use any tool with "stopping condition"
+  - Stopping condition -- way to prevent "overclassification".
+  - Confidence score (with threshold) - PROTAX, RDP classifier, SINTAX, etc.
+  - Other stopping conditions, like last-common ancestor (LCA) consensus, sequence similarity thresholds (e.g., Dnabarcoder), phylogenetic placement (e.g., EPA-ng, APPLES).
+
+- Searching for the best match with BLAST, VSEARCH, or similar (1-NN) has no stopping condition.
+- Many existing AI methods (e.g., BarcodeBERT) have no stopping condition.
+
+- **OptimOTU pipeline** uses PROTAX with two different thresholds:
+  - **Reliable** -- 90% confidence
+  - **Plausible** -- 50% confidence
+
+## Taxonomically aware dynamic clustering
+
+::: {.overprint data-latex=""}
+
+\onslide<+>
+ASVs to cluster \invisible{()}
+
+```{tikz clust_asvs, code=readLines("clustering0.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Single family (from previous iteration)
+
+```{tikz clust-fam, code=readLines("clustering01-family.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Three genera (from previous iteration)
+
+```{tikz clust-gen, code=readLines("clustering02-genera.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-thresh, code=readLines("clustering03-thresholds.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Standard single-link clustering result (for comparison)
+
+```{tikz clust-std, code=readLines("clustering04-slink.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-id, code=readLines("clustering03-thresholds.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Taxonomic assignments \invisible{()}
+
+```{tikz clust-tax, code=readLines("clustering05-taxonomy.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Cluster cores from taxonomic assignment \invisible{()}
+
+```{tikz clust-core, code=readLines("clustering06-cores.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 1 \invisible{()}
+
+```{tikz clust-closed1, code=readLines("clustering07-closed1.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 2 \invisible{()}
+
+```{tikz clust-closed2, code=readLines("clustering08-closed2.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+*De novo* single-linkage clustering -- "pseudotaxa" \invisible{()}
+
+```{tikz clust-denovo, code=readLines("clustering09-denovo.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+:::
+
+## Acknowledgements
+
+:::{.columns}
+
+::::{.column width=60%}
+
+PredCom group:
+
+```{r out.width="100%"}
+knitr::include_graphics("PredCom_Oikos_2025.jpeg")
+```
+
+```{r out.height = "27%"}
+knitr::include_graphics("aka.png")
+knitr::include_graphics("erc.png")
+knitr::include_graphics("slu_logo_webb.png")
+```
+
+::::
+
+::::{.column width=40%}
+
+LifePlan:
+
+```{r out.width="100%"}
+knitr::include_graphics("lifeplan.jpg")
+```
+
+::::
+
+:::
+
+
+
+## Availability
+
+::: {.columns align="center"}
+
+:::: {.column width=60%}
+
+**OptimOTU R package:**  
+<https://github.com/brendanf/optimotu>
+
+\vspace{1em}
+
+**OptimOTU bioinformatics pipeline:**  
+<https://github.com/brendanf/optimotu_targets>
+
+\vspace{1em}
+
+**Available in PipeCraft2 bioinformatics GUI:**  
+<https://github.com/pipecraft2/pipecraft>
+
+\vspace{1em}
+
+**Preprint:**  
+<https://doi.org/10.48550/arXiv.2502.10350>
+
+::::
+
+:::: {.column width=40%}
+
+```{r out.width="100%", fig.align="center", fig.height=3, fig.width=3}
+qrcode::qr_code("https://doi.org/10.48550/arXiv.2502.10350") |> plot()
+```
+
+::::
+
+:::
+
