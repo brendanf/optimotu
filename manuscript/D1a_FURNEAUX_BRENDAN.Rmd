@@ -1,0 +1,192 @@
+---
+title: |
+ | OptimOTU:
+ | Taxonomically informed dynamic OTU clustering
+author: "Brendan Furneaux"
+output:
+  beamer_presentation:
+    includes:
+      in_header: "beamer_header.tex"
+    latex_engine: xelatex
+classoption: "aspectratio=169"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results = "asis")
+options(tinytex.engine = "xelatex")
+```
+
+## Introduction
+
+\small
+Not every unique environmental sequence is a distinct species
+\begin{enumerate}
+  \item \alert<2-3,8>{Variation between species}
+  \item \alert<3-5,7-8>{Variation within species}
+  \item \alert<4-5,7-8>{Variation within individuals}
+  \only<5->{\makebox(0,0){\put(0.5em,4.5\normalbaselineskip){%
+      $\left.\rule{0pt}{1.8\normalbaselineskip}\right\}$ biological variation}}}
+  \item \alert<4-6>{PCR amplification error}
+  \item \alert<4-6>{Sequencing error (incl. basecalling)}
+  \only<5->{\makebox(0,0){\put(0em,2.2\normalbaselineskip){%
+      $\left.\rule{0pt}{1.1\normalbaselineskip}\right\}$ error}}}
+\end{enumerate}
+
+\visible<2->{\alert<2-3>{\textbf{As community ecologists}}, we care about (1) \visible<3->{and sometimes (2).}}
+
+\visible<4->{\alert<4-5>{\textbf{Traditional OTU clustering:}} remove (2)--(5), retain (1).}  
+
+\visible<6->{\alert<6>{\textbf{Denoising ("ASV" methods):}} remove (4)--(5), retain (1)--(3).}  
+
+\visible<7->{\alert<7>{\textbf{Post-denoising clustering:}} merge (2)--(3), retain (1).}  
+
+\visible<8->{\alert<8>{\textbf{Problem:} (1)--(3) are not constant across the tree of life.}}
+
+## Solution: taxonomically aware dynamic clustering
+
+1. Use optimized clustering thresholds for each taxon.
+
+2. Perform taxonomic assignment before clustering.
+
+3. \alert<2>{Use taxonomic assignments to select appropriate thresholds and constrain clustering.}
+
+## Taxonomically aware dynamic clustering
+
+::: {.overprint data-latex=""}
+
+\onslide<+>
+ASVs to cluster \invisible{()}
+
+```{tikz clust_asvs, code=readLines("clustering0.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Single family (from previous iteration)
+
+```{tikz clust-fam, code=readLines("clustering01-family.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Three genera (from previous iteration)
+
+```{tikz clust-gen, code=readLines("clustering02-genera.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-thresh, code=readLines("clustering03-thresholds.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Standard single-link clustering result (for comparison)
+
+```{tikz clust-std, code=readLines("clustering04-slink.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-id, code=readLines("clustering03-thresholds.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Taxonomic assignments \invisible{()}
+
+```{tikz clust-tax, code=readLines("clustering05-taxonomy.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Cluster cores from taxonomic assignment \invisible{()}
+
+```{tikz clust-core, code=readLines("clustering06-cores.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 1 \invisible{()}
+
+```{tikz clust-closed1, code=readLines("clustering07-closed1.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 2 \invisible{()}
+
+```{tikz clust-closed2, code=readLines("clustering08-closed2.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+\onslide<+>
+*De novo* single-linkage clustering -- "pseudotaxa" \invisible{()}
+
+```{tikz clust-denovo, code=readLines("clustering09-denovo.tex"), cache=TRUE, fig.width=8, fig.height=5, out.height="85%", fig.align="center"}
+```
+
+:::
+
+## Acknowledgements
+
+:::{.columns}
+
+::::{.column width=47%}
+
+PredCom group:
+
+```{r out.width="100%"}
+knitr::include_graphics("predcom.jpg")
+```
+
+::::
+
+::::{.column width=47%}
+
+LifePlan group:
+
+```{r out.width="100%", fig.wid}
+knitr::include_graphics("lifeplan.jpg")
+```
+
+::::
+
+:::
+
+```{r out.height = "30%"}
+knitr::include_graphics("aka.png")
+knitr::include_graphics("erc.png")
+knitr::include_graphics("slu_logo_webb.png")
+```
+
+## Availability
+
+::: {.columns align="center"}
+
+:::: {.column width=60%}
+
+**OptimOTU R package:**  
+<https://github.com/brendanf/optimotu>
+
+\vspace{1em}
+
+**OptimOTU bioinformatics pipeline:**  
+<https://github.com/brendanf/optimotu_targets>
+
+\vspace{1em}
+
+**Available in PipeCraft2 bioinformatics GUI:**  
+<https://github.com/pipecraft2/pipecraft>
+
+\vspace{1em}
+
+**Preprint:**  
+<https://doi.org/10.48550/arXiv.2502.10350>
+
+::::
+
+:::: {.column width=40%}
+
+```{r out.width="100%", fig.align="center", fig.height=3, fig.width=3}
+qrcode::qr_code("https://doi.org/10.48550/arXiv.2502.10350") |> plot()
+```
+
+::::
+
+:::
+

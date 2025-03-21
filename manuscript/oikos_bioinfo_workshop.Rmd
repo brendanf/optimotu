@@ -1,0 +1,1053 @@
+---
+title: "OptimOTU and the OptimOTU pipeline"
+author: "Brendan Furneaux"
+date: "Oikos-Finland 2025 Bioinformatics workshop" 
+output:
+  beamer_presentation:
+    latex_engine: xelatex
+    includes:
+      in_header: beamer_header.tex
+    keep_tex: true
+classoption: "aspectratio=169"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, results=FALSE, warning=FALSE, out.height="85%", fig.align = "center")
+```
+
+## Outline
+
+1) **OptimOTU**  
+  - Method for optimized molecular OTU clustering using dynamic thresholds and taxonomic constraints.
+  - Implemented as an R package.
+
+2) **The OptimOTU pipeline**  
+  - A bioinformatics pipeline incorporating OptimOTU.
+  - Implemented as a `{targets}` workflow.
+  - Can be run from PipeCraft2.
+
+3) **OptimOTU pipeline outputs**
+
+# OptimOTU
+
+## What problems does OptimOTU address?
+
+1) **ASVs are not always biologically meaningful.**
+  - Especially in sexually reproducing eukaryotes.
+  - Marker genes may have significant variation within a species.
+  - Not necessarily linked to genes with adaptive significance.
+  - Also may have significant variation within an individual (especially ITS).
+2) **No single threshold is ideal for species-level OTUs across the tree of life.**
+  - Different groups have different rates of evolution in the marker gene.
+  - Different groups have different speciation rates.
+3) **Sometimes we want a full taxonomic tree of all OTUs.**
+  - Rough approximation of phylogenetic tree (e.g., HMSC).
+  - Many OTUs cannot be assigned to known taxa.
+
+## How does OptimOTU work?
+
+1) **Optimize thresholds** (function `optimize_thresholds()`)
+  - Cluster **taxonomically identified** sequences at a range of thresholds.
+  - Find which threshold gives the best agreement with the taxonomic assignments.
+  - Repeat at different taxonomic ranks, and within different taxa.
+
+2) **Assign taxonomy** (not part of OptimOTU package)
+  - Use other tool with "stopping condition" (e.g., PROTAX, RDP classifier, SINTAX, etc.).
+
+3) **Cluster sequences** (function `optimotu()`)
+  - Use assigned taxonomy to choose optimized thresholds.
+  - Clustering is constrained by taxonomic assignments.
+  - Hierarchical clustering provides taxonomy at all levels, including "pseudotaxa".
+
+## 1) Optimize thresholds -- `optimize_thresholds()`
+
+- Cluster **taxonomically identified** sequences at a range of thresholds.
+  - Can be a reference database.
+  - Also possible to "bootstrap" by using confidently identified sequences from your own data.
+  - Only needs to be done once -- thresholds can be reused for other datasets.
+- Find which threshold gives the best agreement with the taxonomic assignments.
+  - Using various clustering quality metrics like Adjusted Mutual Information (AMI), Matthews Correlation Coefficient (MCC), F-measure, etc.
+- Repeat at different taxonomic ranks, and within different taxa.
+  - Within whole kingdom-level dataset, find best thresholds for species--phylum.
+  - Within each phylum, find best thresholds for species--class.
+  - Within each class, find best thresholds for species--order.
+  - ...
+  - Within each genus, find best thresholds for species.
+
+
+## 1) Optimize thresholds -- `optimize_thresholds()`
+
+```{r cluster-optimization, fig.width = 7, fig.height = 4}
+library(ggplot2)
+library(ggtree)
+
+true_taxonomy <- tibble::tribble(
+  ~seq_id, ~family, ~genus, ~species,
+  "seq1", "A", "B", "C",
+  "seq2", "A", "B", "D",
+  "seq3", "A", "E", "F",
+  "seq4", "G", "H", "I",
+  "seq5", "G", "H", "J",
+  "seq6", "G", "K", "L",
+  "seq7", "A", "E", "F",
+  "seq8", "G", "H", "I",
+  "seq9", "G", "K", "L",
+  "seq10", "A", "E", "M"
+) |>
+  dplyr::mutate(across(everything(), ~ forcats::fct_inorder(., ordered = TRUE)))
+
+true_taxtree <- ape::as.phylo(~family/genus/species/seq_id, data = true_taxonomy, collapse = FALSE)
+true_taxtree$edge.length <- rep(1, nrow(true_taxtree$edge))
+# plot(true_taxtree, show.tip.label = TRUE, edge.width = 2)
+
+set.seed(123)
+dist_matrix <- tidyr::crossing(x = true_taxonomy$seq_id, y = true_taxonomy$seq_id) |>
+  dplyr::filter(x >= y)|>
+  dplyr::left_join(true_taxonomy, by = c("x" = "seq_id")) |>
+  dplyr::left_join(true_taxonomy, by = c("y" = "seq_id")) |>
+  dplyr::mutate(
+    distance = 0.15 * exp(rnorm(x, sd=0.6)) * as.numeric(family.x != family.y) +
+      0.10 * exp(rnorm(x, sd=0.6)) * as.numeric(genus.x != genus.y) +
+      0.05 * exp(rnorm(x, sd=0.6)) * as.numeric(species.x != species.y) +
+      0.02 * exp(rnorm(x, sd=0.6)) * as.numeric(x != y),
+    across(everything(), as.character)
+  ) |>
+  dplyr::select(x, y, distance) |>
+  tidyr::pivot_wider(names_from = y, values_from = distance) |>
+  tibble::column_to_rownames("x") |>
+  as.matrix() |>
+  as.dist()
+
+test_hclust <- hclust(dist_matrix, method = "single")
+
+# round the heights away from the thresholds which will be used,
+# to avoid overlapping nodes and bars
+test_hclust$height <- ifelse(
+  test_hclust$height %% 0.02 < 0.005,
+  (test_hclust$height %/% 0.02) * 0.02  +.005,
+  ifelse(
+    test_hclust$height %% 0.02 > 0.015,
+    (test_hclust$height %/% 0.02) * 0.02 + 0.015,
+    test_hclust$height
+  )
+)
+
+depth <- max(test_hclust$height)
+
+test_tree <- ape::as.phylo(test_hclust)
+# as.phylo scales the branches by 0.5 (so that distances between tips are sum
+# of total branch length, rather than just node heights) so we need to double
+# them
+test_tree$edge.length <- 2 * test_tree$edge.length
+
+# use ggtree to calculate the geometry, but we will modify the coordinates
+# and to the actual plotting with standard geoms
+tree_plot <- ggtree(test_tree)
+
+# extract the data from the ggtree object
+treedat <- tree_plot$data |>
+  dplyr::mutate(
+    x = depth - x, # flip the x-axis so that the tips are at 0
+    branch.length = ifelse(parent == node, 0.3 - x, branch.length), # add root branch
+    # row and column for faceting
+    row = "cluster",
+    col = "test"
+  )
+# add info to draw the node lines
+treedat <- dplyr::left_join(
+  treedat,
+  dplyr::select(treedat, parent = node, parent_y = y),
+  by = "parent"
+)
+
+# calculate clusters
+test_clusters <- cutree(test_hclust, h = seq(0, 0.3, 0.02)) |>
+  t() |>
+  tibble::as_tibble(rownames = "threshold")
+
+cluster_scores <- purrr::map_dfr(
+  true_taxonomy[-1],
+  \(x)
+  optimotu::adjusted_mutual_information(
+    as.matrix(tibble::column_to_rownames(test_clusters, "threshold")),
+    x
+  ) |>
+    tibble::as_tibble(rownames = "threshold") |>
+    dplyr::mutate(threshold = as.numeric(threshold)),
+  .id = "rank"
+) |>
+  dplyr::mutate(row = "a_score", col = "test")
+
+optima <- cluster_scores |>
+  dplyr::filter(AMI == max(AMI, na.rm = TRUE), .by = rank) |>
+  dplyr::summarize(threshold = optimotu:::strict_median(threshold), .by = c(rank, col))
+
+clust_bars <- test_clusters |>
+  tidyr::pivot_longer(cols = -threshold, names_to = "seq_id", values_to = "cluster") |>
+  dplyr::mutate(
+    threshold = as.numeric(threshold),
+    seq_id = as.numeric(ordered(seq_id, levels = rev(get_taxa_name(tree_plot))))
+  ) |>
+  dplyr::summarize(
+    start = min(seq_id),
+    end = max(seq_id),
+    # row and column for faceting
+    row = "cluster",
+    col = "test",
+    .by = c(threshold, cluster)
+  )
+
+true_cluster_bars <-
+  true_taxonomy |>
+  dplyr::mutate(
+    dplyr::across(-seq_id, as.character),
+    seq_id = as.numeric(ordered(seq_id, levels = rev(get_taxa_name(tree_plot))))
+  ) |>
+  tidyr::pivot_longer(cols = -seq_id, names_to = "rank", values_to = "taxon") |>
+  dplyr::mutate(rank = ordered(rank, levels = c("species", "genus", "family"))) |>
+  dplyr::summarize(
+    start = min(seq_id),
+    end = max(seq_id),
+    ## row and column for faceting
+    row = "cluster",
+    col = "true",
+    .by = c(rank, taxon)
+  ) |>
+  dplyr::arrange(start)
+
+# get the taxa in the order they will be presented
+families <- dplyr::filter(true_cluster_bars, rank == "family")$taxon
+genera <- dplyr::filter(true_cluster_bars, rank == "genus")$taxon
+species <- dplyr::filter(true_cluster_bars, rank == "species")$taxon
+
+taxon_color_scheme <- c(
+  # families in shades of blue
+  RColorBrewer::brewer.pal(3, "Blues")[c(1,3)] |> `names<-`(families),
+  # genera in shades of green
+  RColorBrewer::brewer.pal(4, "Greens") |> `names<-`(genera),
+  # species in shades of red
+  RColorBrewer::brewer.pal(7, "Reds") |> `names<-`(species)
+)
+
+darker_color_scheme <- colorspace::darken(taxon_color_scheme) |>
+  `names<-`(names(taxon_color_scheme))
+
+rank_color_scheme <- c(
+  "species" = RColorBrewer::brewer.pal(3, "Reds")[3],
+  "genus" = RColorBrewer::brewer.pal(3, "Greens")[3],
+  "family" = RColorBrewer::brewer.pal(3, "Blues")[3]
+)
+
+
+cluster_step <- 0.02 # distance between cluster bars
+cluster_width <- 0.008 # width of the cluster bars
+cluster_sep <- 0.15 # separation between clusters on y axis
+
+# plot
+ggplot(treedat) +
+  # clusters
+  ggchicklet:::geom_rrect(
+      aes(
+        xmin = threshold - cluster_width/2,
+        xmax = threshold + cluster_width/2,
+        ymin = start - (1 - cluster_sep)/2,
+        ymax = end + (1 - cluster_sep)/2
+      ),
+      fill = "gray",
+      color = "gray60",
+      radius = unit(1, "mm"),
+      data = clust_bars,
+      show.legend = FALSE
+  ) +
+  # branches
+  geom_segment(
+    aes(x = x, xend = x + branch.length, y = y, yend = y),
+    linewidth = 1,
+    lineend = "round"
+  ) +
+  # nodes
+  geom_segment(
+    aes(x = x + branch.length, xend = x + branch.length, y = y, yend = parent_y),
+    linewidth = 1,
+    lineend = "round") +
+  # true clusters
+  ggchicklet:::geom_rrect(
+    aes(
+      xmin = (as.numeric(rank) - 0.45) * cluster_step,
+      xmax = (as.numeric(rank) + 0.45) * cluster_step,
+      ymin = start - (1 - cluster_sep)/2,
+      ymax = end + (1 - cluster_sep)/2,
+      fill = taxon,
+      color = taxon
+    ),
+    radius = unit(1, "mm"),
+    data = true_cluster_bars,
+    show.legend = FALSE
+  ) +
+  # separate the plots by faceting
+  ggh4x::facet_grid2(
+    row ~ col,
+    scales = "free",
+    space = "free",
+    labeller = as_labeller(c(
+      test = "Clustering threshold",
+      true = "Taxonomic rank",
+      cluster = "Cluster assignment",
+      a_score = "AMI"
+    )),
+    switch = "both",
+    drop = TRUE,
+    render_empty = FALSE
+  ) +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_fill_manual(values = taxon_color_scheme, guide = NULL) +
+  scale_color_manual(
+    values = c(darker_color_scheme, rank_color_scheme),
+    breaks = names(rank_color_scheme),
+    name = NULL
+  )+
+  ggh4x::facetted_pos_scales(
+    x = list(
+      scale_x_continuous(
+        expand = c(0.003, 0.003),
+        breaks = seq(0, 0.3, cluster_step),
+        labels = scales::number_format(accuracy = 0.01)
+      ),
+      scale_x_continuous(
+        breaks = 1:3 * cluster_step,
+        labels = c("species", "genus", "family")
+      )
+    ),
+    y = list(
+      scale_y_continuous(
+        expand = c(0.05, 0.05),
+        breaks = seq(0, 1, 0.5),
+        sec.axis = dup_axis(name = "Reference taxonomy", breaks = NULL)
+      ),
+      scale_y_continuous(
+        expand = c(0.02, 0.02),
+        breaks = seq_along(get_taxa_name(tree_plot)),
+        labels = paste0("seq", rev(seq_along(get_taxa_name(tree_plot))))
+      )
+    )
+  ) +
+  geom_hline(aes(yintercept = c(0,0.5,1)), color="gray90", data = cluster_scores[1:3,]) +
+  geom_vline(aes(xintercept = threshold), color="gray90", data = cluster_scores) +
+  geom_line(aes(threshold, AMI, color = rank, group = rank), data = cluster_scores) +
+  geom_vline(aes(xintercept = threshold, color = rank), data = optima,
+             linetype = "dashed", show.legend = FALSE) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = -30, hjust = 0),
+    axis.title = element_text(size = 10),
+    axis.line.x = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text = element_text(size = 10),
+    legend.position = c(0.9, 0.9),
+    legend.background = element_blank()
+  ) +
+  ggh4x::force_panelsizes(rows = c(1, 4))
+```
+
+## 2) Assign taxonomy
+
+- Use a tool with "stopping condition"
+  - Stopping condition -- way to prevent "overclassification".
+  - Confidence score (with threshold) - PROTAX, RDP classifier, SINTAX, etc.
+  - Other stopping conditions, like last-common ancestor (LCA) consensus, sequence similarity thresholds (e.g., Dnabarcoder), phylogenetic placement (e.g., EPA-ng, APPLES).
+
+- In OptimOTU pipeline we use PROTAX with two different thresholds:
+  - **Reliable** -- 90% confidence
+  - **Plausible** -- 50% confidence
+
+## 3) Cluster sequences -- `optimotu()`
+
+::: {.overprint data-latex=""}
+
+\onslide<+>
+
+- Use assigned taxonomy to choose optimized thresholds.
+  - Thresholds are "inherited" from nearest ancestor with threshold at appropriate rank.
+  - Example: genus-level threshold is inherited from order if:
+    - Family could not be taxonomically assigned; or
+    - Assigned family did not have enough genera in reference for optimization.
+- Clustering is constrained by taxonomic assignments.
+  - Sequences placed in the same taxon are never "split".
+  - Sequences placed in different taxa are never "lumped".
+- Hierarchical clustering provides taxonomy at all levels, including "pseudotaxa".
+  - These are given unique names like "pseudogenus_0037".
+  - Can be used for downstream analyses, but should be treated with caution.
+  - Probably "split" more than "lump" at higher ranks -- may give 100's or 1000's of "pseudophyla".
+  - Clusters at species rank (both named species and pseudospecies) are "OTUs".
+
+\onslide<+>
+ASVs to cluster \invisible{()}
+
+```{tikz clust_asvs, code=readLines("clustering0.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Single family (from previous iteration)
+
+```{tikz clust-fam, code=readLines("clustering01-family.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Three genera (from previous iteration)
+
+```{tikz clust-gen, code=readLines("clustering02-genera.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-thresh, code=readLines("clustering03-thresholds.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Standard single-link clustering result (for comparison)
+
+```{tikz clust-std, code=readLines("clustering04-slink.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Taxon-specific clustering thresholds \invisible{()}
+
+```{tikz clust-id, code=readLines("clustering03-thresholds.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Taxonomic assignments \invisible{()}
+
+```{tikz clust-tax, code=readLines("clustering05-taxonomy.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Cluster cores from taxonomic assignment \invisible{()}
+
+```{tikz clust-core, code=readLines("clustering06-cores.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 1 \invisible{()}
+
+```{tikz clust-closed1, code=readLines("clustering07-closed1.tex"), cache=TRUE}
+```
+
+\onslide<+>
+Closed reference clustering - iteration 2 \invisible{()}
+
+```{tikz clust-closed2, code=readLines("clustering08-closed2.tex"), cache=TRUE}
+```
+
+\onslide<+>
+*De novo* single-linkage clustering -- "pseudotaxa" \invisible{()}
+
+```{tikz clust-denovo, code=readLines("clustering09-denovo.tex"), cache=TRUE}
+```
+
+:::
+
+## OptimOTU R package
+
+Available from Github: <https://github.com/brendanf/optimotu>
+
+Uses compiled C++ code and Git submodules, so installation is more complex than some R packages, expecially on Windows.
+
+Installation with `renv`:
+
+```r
+library(renv)
+install("brendanf/optimotu")
+```
+
+Installation with `pak`:
+
+```r
+library(pak)
+pkg_install("brendanf/optimotu")
+```
+
+# The OptimOTU pipeline
+
+## The OptimOTU pipeline
+
+- A bioinformatics pipeline incorporating OptimOTU.
+  - Uses DADA2 ASV workflow as a starting point.
+- Implemented as a `{targets}` workflow.
+  - Deployable on high-performance computing (HPC) clusters.
+  - Scales to very large datasets.
+    - 32k samples, 1M reads per sample, 2.5M ASVs
+  - Requires some work to set up, especially for a cluster.
+  - Significantly easier on Puhti (Finnish HPC cluster) specifically.
+    - Free for Finnish academic use - <http://my.csc.fi>
+- Can be run from PipeCraft2.
+  - Best for smaller datasets - but still 1000's of samples.
+
+## OptimOTU pipeline configuration
+
+::: {.columns align="center"}
+
+:::: {.column width="60%"}
+
+OptimOTU pipeline uses a configuration file called `pipeline_options.yaml`.
+
+- In a human-readable format (YAML).
+- Includes comments (after `#`) to explain each option.
+- PipeCraft2 writes this for you if you are using it.
+- Pipeline includes two example configuration files:  
+`pipeline_options_example_fungi.yaml`  
+`pipeline_options_example_metazoa.yaml`
+
+
+::::
+\tiny
+:::: {.column width="40%"}
+```yaml
+################################
+### primer trimming settings ###
+################################
+
+#forward PCR primer
+#Currently supports only a single fwd primer.
+forward_primer: "CCHGAYATRGCHTTYCCHCG" #BF3
+#reverse PCR primer
+#Currently supports only a single rev primer.
+reverse_primer: "TCDGGRTGNCCRAARAAYCA" #BR2
+
+trimming:
+  max_err: 0.2
+  min_overlap: 10
+  truncQ_R1: [2, 2]
+  truncQ_R2: [2, 2]
+  max_n: 0
+  min_length: 100
+  cut_R1: 0
+  cut_R2: 0
+  action: "trim"
+
+##################################
+### quality filtering settings ###
+##################################
+filtering:
+  maxEE_R1: 1
+```
+
+::::
+
+:::
+
+## Optional and unique steps in the OptimOTU pipeline
+
+\small
+
+::: {.overprint data-latex=""}
+
+\onslide<+>
+
+:::: {.columns}
+
+::::: {.column width="50%"}
+
+1) **Custom sample table** (optional)
+  - Can configure sample, sequencing run, and file names.
+  - Set orientation, trimming, and filtering parameters on per-sample basis.
+
+:::::
+
+::::: {.column width="50%"}
+
+2) **Sparse OTU table** (default)
+  - Instead of standard OTU table with samples in rows and OTUs in columns.
+    - Most of the entries in this kind of table are usually 0.
+    - Takes a lot of memory and disk for very big datasets (32k samples $\times$ 2.5M ASVs = 320 Gb matrix in R)
+  - Sparse table stores only non-zero entries.
+  - Dense table can be enabled in configuration file or PipeCraft.
+
+:::::
+
+::::
+
+\onslide<+>
+
+::::{.columns}
+
+::::{.column width="50%"}
+
+3) **Spike-in and positive control detection** (optional)
+  - Detects control sequences and removes them from the final ASV and OTU tables.
+  - You provide the sequences of your spikes/positive controls in the configuration file.
+  - Total in each sample are provided in read counts table (see later slides).
+
+::::
+
+::::{.column width="50%"}
+
+4) **Target taxa** (optional)
+  - Can be used to specify taxa of special interest. 
+  - For example:
+    - Red listed species
+    - Invasive or harmful species
+    - Taxa which were manipulated in the study
+  - Additional files will be provided in the output which contain details about all ASVs and OTUs which were identified as these taxa at *any* probability.
+  - Add a file `data/target_taxa.txt` with the taxon names, one per line.
+
+::::
+
+:::
+
+\onslide<+>
+
+:::: {.columns}
+
+::::: {.column width="50%"}
+
+5) **Model alignment** (optional)  
+  - Align sequences to a model (HMM or CM) of the marker gene.
+  - Can be used to remove non-target or partial sequences.
+  - Provide globally aligned sequences to speed up later steps (especially PROTAX, outgroup identification, and clustering).
+    - Required for NuMt filter.
+    - Most relevant for COI.
+    - Could be used for rDNA (12S/16S/18S/28S), but will discard the most variable sites.
+    - Not recommended for ITS.
+  
+:::::
+
+::::: {.column width="50%"}
+  
+6) **NuMt detection** (optional)
+  - Detects nuclear mitochondrial DNA (NuMt) or other pseudogene sequences.
+  - Looks for frame-shift mutations and in-frame stop codons.
+  - Only relevant for protein-coding sequences.
+  
+:::::
+
+::::
+
+\onslide<+>
+
+:::: {.columns}
+
+::::: {.column width="50%"}
+
+7) **PROTAX**
+  - Probabilistic taxonomic assignment.
+  - Model explicitly includes "unknown" taxa and possibility of misidentified reference sequences.
+  - Different implementations available:
+    - Protax-Fungi: Unaligned fungal ITS, based on UNITE database v7.
+    - FinPROTAX: Aligned insect & arachnid COI, based on FinBOL.
+    - ProtaxAnimal: Aligned animal COI, based on BOLD.
+    
+:::::
+
+::::: {.column width="50%"}
+
+8) **Outgroup identification**
+  - Identify sequences that are not from the target group (i.e., not included in the reference data for PROTAX).
+  - "Best-hit" method with USEARCH/VSEARCH for unaligned sequences.
+  - Fast custom code for aligned sequences.
+  - Results are applied *after* clustering.
+  
+:::::
+
+::::
+
+:::
+
+# OptimOTU pipeline outputs
+
+## OptimOTU pipeline outputs -- main results
+
+1) **OTU table** (sparse) \visible<2->{--- TSV and RDS} \visible<3->{--- "plausible" and "reliable"}
+
+2) **OTU taxonomy** \visible<2->{--- TSV and RDS} \visible<3->{--- "plausible" and "reliable"}
+
+3) **OTU representative sequences** \visible<3->{--- "plausible" and "reliable"}
+
+4) **Read counts table** \visible<2->{--- TSV and RDS} \visible<3->{--- "plausible" and "reliable"}
+
+\onslide<2->
+TSV (tab-separated values) - human-readable, can be opened by lots of software.  
+RDS (R data store) - R-specific binary format, can be read by R faster than TSV.
+
+\onslide<3->
+Plausible - Cluster cores from PROTAX assignment with at least 50% confidence.  
+Reliable - Cluster cores from PROTAX assignment with at least 90% confidence.
+
+\onslide<4->
+5) ZIP archive - contains all of the above
+
+## OTU table -- sparse version
+
+\vspace{0.5em}
+
+:::{.columns align="center"}
+
+::::{.column width="49%"}
+
+**`otu_table_sparse_{confidence}.{ext}`**
+
+::::
+
+::::{.column width="0.1%"}
+
+\rule{0.1mm}{2\baselineskip}
+
+::::
+
+::::{.column width="49%"}
+
+`{confidence}`: `reliable` or `plausible`  
+`{ext}`: `tsv` or `rds`
+
+::::
+
+:::
+
+\small
+
+```{r results="asis"}
+readr::read_tsv(here::here("../optimotu_pipecraft/output/otu_table_sparse_plausible.tsv")) |>
+  head(n=8) |>
+  knitr::kable(format="simple")
+```
+
+## OTU table -- dense version (optional)
+
+\vspace{0.5em}
+
+:::{.columns align="center"}
+
+::::{.column width="49%"}
+
+**`otu_table_{confidence}.{ext}`**
+
+::::
+
+::::{.column width="0.1%"}
+
+\rule{0.1mm}{2\baselineskip}
+
+::::
+
+::::{.column width="49%"}
+
+`{confidence}`: `reliable` or `plausible`  
+`{ext}`: `tsv` or `rds`
+
+::::
+
+:::
+
+\small
+
+```{r results="asis"}
+readRDS(here::here("../optimotu_pipecraft/output/otu_table_plausible.rds")) |>
+  head(n=8) |>
+  knitr::kable(format="simple")
+```
+
+## OTU taxonomy
+
+\vspace{0.5em}
+
+:::{.columns align="center"}
+
+::::{.column width="49%"}
+
+**`otu_taxonomy_{confidence}.{ext}`**
+
+::::
+
+::::{.column width="0.1%"}
+
+\rule{0.1mm}{2\baselineskip}
+
+::::
+
+::::{.column width="49%"}
+
+`{confidence}`: `reliable` or `plausible`  
+`{ext}`: `tsv` or `rds`
+
+::::
+
+:::
+
+\tiny
+
+```{r results="asis"}
+readr::read_tsv(here::here("../optimotu_pipecraft/output/otu_taxonomy_reliable.tsv")) |>
+  dplyr::select(-(class:family)) |>
+  tibble::add_column(`..` = "...", .before = "genus") |>
+  head(n=15) |>
+  knitr::kable(format="simple")
+```
+
+## OTU representative sequences
+
+\vspace{0.5em}
+
+:::{.columns align="center"}
+
+::::{.column width="49%"}
+
+**`otu_{confidence}.fasta.gz`**
+
+::::
+
+::::{.column width="0.1%"}
+
+\rule{0.1mm}{1\baselineskip}
+
+::::
+
+::::{.column width="49%"}
+
+`{confidence}`: `reliable` or `plausible`
+
+::::
+
+:::
+
+\small
+
+```{r results="asis"}
+cat("```\n")
+readLines(here::here("../optimotu_pipecraft/output/otu_reliable.fasta.gz"), n = 10) |>
+  substr(1, 75) |>
+  paste0(c("", "...")) |>
+  cat(sep = "\n")
+cat("```\n")
+```
+
+## Read counts table
+
+\vspace{1em}
+
+::: {.columns align="center"}
+
+:::: {.column width="50%"}
+
+**`read_counts_{confidence}.{ext}`**
+
+::::
+
+:::: {.column width="50%"}
+
+`{confidence}`: `reliable` or `plausible`  
+`{ext}`: `tsv` or `rds`
+
+::::
+
+:::
+
+\tiny
+
+```{r results="asis"}
+read_counts <- readr::read_tsv(here::here("../optimotu_pipecraft/output/read_counts_reliable.tsv")) |>
+  head(n=8)
+
+dplyr::select(read_counts, sample:uncross_nread) |>
+  knitr::kable(format="simple")
+
+dplyr::select(read_counts, nochim1_nread:ingroup_nread) |>
+  knitr::kable(format="simple")
+```
+
+## ZIP archive
+
+\vspace{1em}
+
+::: {.columns align="center"}
+
+:::: {.column width="50%"}
+
+**`{project_name}_{YYYYMMDD}.zip`**
+
+::::
+
+:::: {.column width="50%"}
+
+`{project_name}`: name of the project  
+`{YYYYMMDD}`: date of the run
+
+::::
+
+:::
+
+- Contains all of the outputs generated during a run.
+- Allows comparison of results with previous runs, different settings, etc.
+
+# Extra slides
+
+## OptimOTU pipeline outputs -- additional results
+
+1) **ASV table** (sparse) \visible<2->{--- RDS *only*}
+
+2) **ASV taxonomy** \visible<2->{--- RDS *only*} \visible<3->{--- "plausible" and "reliable"}
+
+3) **Krona plot** \visible<2->{--- HTML} \visible<3->{--- "plausible" and "reliable"}
+
+4) **OTU unknowns table** \visible<2->{--- TSV *only*}\visible<3->{--- "plausible" and "reliable"}
+
+## ASV table
+
+\vspace{0.5em}
+
+**`output/asv_tab.rds`**
+
+\small
+
+```{r results="asis"}
+readRDS(here::here("../optimotu_pipecraft/output/asv_tab.rds")) |>
+  head(n=8) |>
+  knitr::kable(format="simple")
+```
+
+## ASV taxonomy
+
+\vspace{0.5em}
+
+::: {.columns align="center"}
+
+:::: {.column width="49%"}
+
+**`output/asv2tax_{confidence}.rds`**
+
+::::
+
+:::: {.column width="0.1%"}
+
+\rule{0.1mm}{1\baselineskip}
+
+::::
+
+:::: {.column width="49%"}
+
+`{confidence}`: `reliable` or `plausible`
+
+::::
+
+:::
+
+\tiny
+
+```{r results="asis"}
+readRDS(here::here("../optimotu_pipecraft/output/asv2tax_plausible.rds")) |>
+  head(n=15) |>
+  knitr::kable(format="simple")
+```
+
+## Krona plot
+
+\vspace{0.5em}
+
+::: {.columns align="center"}
+
+:::: {.column width="49%"}
+
+**`output/otu_krona_{confidence}.html`**
+
+::::
+
+:::: {.column width="0.1%"}
+
+\rule{0.1mm}{1\baselineskip}
+
+::::
+
+:::: {.column width="49%"}
+
+`{confidence}`: `reliable` or `plausible`
+
+::::
+
+:::
+
+```{r results="asis"}
+knitr::include_graphics(here::here("manuscript/krona_example.png"))
+```
+
+## OTU unknowns table
+
+\vspace{0.5em}
+
+::: {.columns align="center"}
+
+:::: {.column width="49%"}
+
+**`output/otu_unknowns_{confidence}.tsv`**
+
+::::
+
+:::: {.column width="0.1%"}
+
+\rule{0.1mm}{1\baselineskip}
+
+::::
+
+:::: {.column width="49%"}
+
+`{confidence}`: `reliable` or `plausible`
+
+::::
+
+:::
+
+**known:** taxonomically identified with probability >= threshold (90% or 50%)
+
+**unknown:** sum of all "unknown" identifications >= threshold (90% or 50%)
+
+**uncertain:** neither of the above apply
+
+\small
+
+```{r results="asis"}
+readr::read_tsv(here::here("../optimotu_pipecraft/output/otu_unknowns_reliable.tsv")) |>
+  head(n=6) |>
+  knitr::kable(format="simple")
+```
+
+## OptimOTU pipeline -- intermediate results
+
+\vspace{0.5em}
+
+### `_targets` directory
+
+\small
+
+- Intermediate results from most pipeline steps.
+- Re-runs of the pipeline will use these intermediate results to avoid re-computation.
+- These are not usually needed for downstream analyses, but can be accessed if necessary.
+- Can be loaded in R using `tar_read()` from the `{targets}` package. Example:
+
+```r
+library(targets)
+
+# Load the full PROTAX results, including alternative classifications with
+# lower probability.
+full_protax_results <- tar_read(asv_all_tax_prob)
+
+# Load full list of correspondences between ASVs and OTUs
+asv_otu_correspondence <- tar_read(asv_otu_map)
+```
+
+## ASV sequences
+
+\vspace{0.5em}
+
+These are not usually needed as output, but the files are present:
+
+`sequences/04_denoised/all_asv.fasta.gz` :
+
+- "candidate" ASVs (before artifact filtering)
+- sequence names are `1`, `2`, `3`, `4`, `5`, ...
+
+`sequences/04_denoised/asv.fasta.gz` :
+
+- "final" ASVs (after artifact filtering)
+- sequence names are `ASV_0001`, `ASV_0002`, `ASV_0003`, ...
