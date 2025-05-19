@@ -220,6 +220,7 @@ optimotu <- function(
       rank = .parent_rank,
       taxon_table = known_taxon_table,
       optima = threshold_optima,
+      ranks = ranks,
       measure = measure
     )
 
@@ -268,7 +269,9 @@ optimotu <- function(
     denovo_thresholds <- calc_subtaxon_thresholds(
       rank = .parent_rank,
       taxon_table = predenovo_taxon_table,
-      optima = threshold_optima
+      optima = threshold_optima,
+      ranks = ranks,
+      measure = measure
     )
 
     # split the pre-denovo taxon table by the parent rank
