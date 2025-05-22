@@ -1,7 +1,10 @@
 # optimotu (development version)
 
 * Fix parameterization of WFA2-lib with single or dual gap-affine penalties.
+<<<<<<< HEAD
 * Fix a bug in `optimotu()` that caused it to fail when using non-default ranks.
+=======
+>>>>>>> b744b51f6 (fix missing parentheses typos)
 * Fix a bug which caused `seq.cluster()` to fail for certain combinations of
 arguments.
 

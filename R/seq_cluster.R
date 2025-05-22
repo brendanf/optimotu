@@ -71,7 +71,7 @@ seq_cluster.character <- function(
 ) {
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   if (identical(dist_config$method, "usearch")) {
-    mycall <- match.call
+    mycall <- match.call()
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
@@ -79,7 +79,7 @@ seq_cluster.character <- function(
     return(eval(mycall, envir = parent.frame()))
   }
   if (identical(dist_config$method, "file")) {
-    mycall <- match.call
+    mycall <- match.call()
     mycall$dist_config <- NULL
     mycall$seq <- NULL
     mycall$names <- mycall$seq_id
@@ -146,7 +146,7 @@ seq_cluster.DNAStringSet <- function(
     which = TRUE,
     verbose = FALSE
 ) {
-  mycall <- match.call
+  mycall <- match.call()
   if (identical(dist_config$method, "usearch")) {
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
