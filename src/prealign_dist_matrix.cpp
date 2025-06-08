@@ -149,6 +149,14 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   }
 };
 
+//' @param match (`integer` scalar) score for a match, default: 1
+//' @param mismatch (`integer` scalar) score for a mismatch, default: 2
+//' @param gap_open (`integer` scalar) score for opening a gap, default: 10
+//' @param gap_extend (`integer` scalar) score for extending a gap, default: 1
+//' @param gap_open2 (`integer` scalar) alternate score for opening a gap,
+//' default: 0
+//' @param gap_extend2 (`integer` scalar) alternate score for extending a gap,
+//' default: 0
 //' @param prealign (`logical` flag) if `TRUE`, do a prealignment using
 //' edit-distance as alignment score (`match = 0, mismatch = 1, gap_open = 0,
 //' gap_extend = 1, gap_open2 = 0, gap_extend2 = 1`) to test feasibility before

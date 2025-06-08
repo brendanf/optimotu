@@ -55,6 +55,20 @@ computation.}
 (number of shared kmers / number of kmers in the shorter sequence) for full
 alignment.}
 
+\item{match}{(\code{integer} scalar) score for a match, default: 1}
+
+\item{mismatch}{(\code{integer} scalar) score for a mismatch, default: 2}
+
+\item{gap_open}{(\code{integer} scalar) score for opening a gap, default: 10}
+
+\item{gap_extend}{(\code{integer} scalar) score for extending a gap, default: 1}
+
+\item{gap_open2}{(\code{integer} scalar) alternate score for opening a gap,
+default: 0}
+
+\item{gap_extend2}{(\code{integer} scalar) alternate score for extending a gap,
+default: 0}
+
 \item{prealign}{(\code{logical} flag) if \code{TRUE}, do a prealignment using
 edit-distance as alignment score (\verb{match = 0, mismatch = 1, gap_open = 0, gap_extend = 1, gap_open2 = 0, gap_extend2 = 1}) to test feasibility before
 aligning with alternate alignment scores. Note that, since pairwise distance
