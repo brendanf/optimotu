@@ -75,17 +75,6 @@ fastq_names <- function(x) {
     .Call(`_optimotu_fastq_names`, x)
 }
 
-#' @param breakpoint (`numeric` scalar) threshold for deciding whether to use
-#' WFA2 or edlib for edit-distance alignment.  This parameter is interpreted as
-#' an edit distance if greater than or equal to `1`, or as a pairwise
-#' dissimilarity if less than 1. In either case, WFA2 is used below the
-#' breakpoint, and edlib is used above it.
-#' @export
-#' @rdname seq_distmx
-seq_distmx_hybrid <- function(seq, dist_threshold, breakpoint = 0.1, threads = 1L) {
-    .Call(`_optimotu_seq_distmx_hybrid`, seq, dist_threshold, breakpoint, threads)
-}
-
 #' Size of the intersection between two sorted sets
 #'
 #' This implementation is much faster that `length(intersect(c, k))`. However
@@ -249,23 +238,6 @@ seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_c
 #' @keywords internal
 seq_search_internal <- function(query, ref, dist_config, parallel_config, threshold, verbose = 0L, return_cigar = FALSE, span = 0L) {
     .Call(`_optimotu_seq_search_internal`, query, ref, dist_config, parallel_config, threshold, verbose, return_cigar, span)
-}
-
-#' @param match (non-negative `integer`) alignment score for matching nucleotides
-#' @param mismatch (non-negative `integer`) alignment penalty for mismatched
-#' nucleotides.
-#' @param gap_open (non-negative `integer`) alignment penalty for opening a new
-#' gap (i.e., insertion or deletion).
-#' @param gap_extend (non-negative `integer`) alignment penalty for each
-#' position in a gap.
-#' @param gap_open2 (non-negative `integer`) alternate alignment penalty for
-#' opening a new gap (i.e., insertion or deletion).
-#' @param gap_extend2 (non-negative `integer`) alternate alignment penalty for
-#' each position in a gap.
-#' @rdname seq_distmx
-#' @export
-seq_distmx_snsn <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, constrain = TRUE, threads = 1L) {
-    .Call(`_optimotu_seq_distmx_snsn`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, constrain, threads)
 }
 
 #' Summarize taxonomic ranks by superordinate rank

@@ -1,9 +1,6 @@
 [submodule "src/WFA2-lib"]
 	path = src/WFA2-lib
 	url = https://github.com/brendanf/WFA2-lib.git
-[submodule "src/SneakySnake"]
-	path = src/SneakySnake
-	url = https://github.com/brendanf/SneakySnake.git
 [submodule "src/edlib"]
 	path = src/edlib
 	url = https://github.com/brendanf/edlib.git

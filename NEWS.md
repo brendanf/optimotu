@@ -15,6 +15,8 @@ either sequence for WFA2, and does not penalize gaps at the 3' end of the longer
 sequence for edlib.
 * Fix a bug in `optimotu()` which led to an error when supplying sequences as an
 `XStringSet` object.
+* The SneakySnake library has been removed from the OptimOTU code base, because
+of license incompatibility.
 
 # optimotu 0.9.3
 

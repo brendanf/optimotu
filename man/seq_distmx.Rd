@@ -2,15 +2,11 @@
 % Please edit documentation in R/RcppExports.R
 \name{seq_distmx_edlib}
 \alias{seq_distmx_edlib}
-\alias{seq_distmx_hybrid}
 \alias{seq_distmx_kmer}
 \alias{seq_distmx_wfa2}
-\alias{seq_distmx_snsn}
 \title{Sparse distance matrix between DNA sequences}
 \usage{
 seq_distmx_edlib(seq, dist_threshold, constrain = TRUE, threads = 1L)
-
-seq_distmx_hybrid(seq, dist_threshold, breakpoint = 0.1, threads = 1L)
 
 seq_distmx_kmer(
   seq,
@@ -38,19 +34,6 @@ seq_distmx_wfa2(
   constrain = TRUE,
   threads = 1L
 )
-
-seq_distmx_snsn(
-  seq,
-  dist_threshold,
-  match = 1L,
-  mismatch = 2L,
-  gap_open = 10L,
-  gap_extend = 1L,
-  gap_open2 = 0L,
-  gap_extend2 = 0L,
-  constrain = TRUE,
-  threads = 1L
-)
 }
 \arguments{
 \item{seq}{(\code{character} vector) DNA sequences to calculate distances for}
@@ -68,32 +51,9 @@ that the results do not change.}
 \item{threads}{(\code{integer} count) number of parallel threads to use for
 computation.}
 
-\item{breakpoint}{(\code{numeric} scalar) threshold for deciding whether to use
-WFA2 or edlib for edit-distance alignment.  This parameter is interpreted as
-an edit distance if greater than or equal to \code{1}, or as a pairwise
-dissimilarity if less than 1. In either case, WFA2 is used below the
-breakpoint, and edlib is used above it.}
-
 \item{udist_threshold}{(\code{numeric} scalar between 0 and 1) maximum udist
 (number of shared kmers / number of kmers in the shorter sequence) for full
 alignment.}
-
-\item{match}{(non-negative \code{integer}) alignment score for matching nucleotides}
-
-\item{mismatch}{(non-negative \code{integer}) alignment penalty for mismatched
-nucleotides.}
-
-\item{gap_open}{(non-negative \code{integer}) alignment penalty for opening a new
-gap (i.e., insertion or deletion).}
-
-\item{gap_extend}{(non-negative \code{integer}) alignment penalty for each
-position in a gap.}
-
-\item{gap_open2}{(non-negative \code{integer}) alternate alignment penalty for
-opening a new gap (i.e., insertion or deletion).}
-
-\item{gap_extend2}{(non-negative \code{integer}) alternate alignment penalty for
-each position in a gap.}
 
 \item{prealign}{(\code{logical} flag) if \code{TRUE}, do a prealignment using
 edit-distance as alignment score (\verb{match = 0, mismatch = 1, gap_open = 0, gap_extend = 1, gap_open2 = 0, gap_extend2 = 1}) to test feasibility before
