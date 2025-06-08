@@ -4,24 +4,83 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <optional>
 
-double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
-  auto status = aligner.alignEnd2End(a, b);
-  if (status != wfa::WFAligner::StatusAlgCompleted) return 1.0;
-  std::string cigar(aligner.getCIGAR(true));
-  std::uint16_t match = 0, length = 0;
-  std::uint16_t l;
-  char c;
-  std::istringstream ss(cigar);
-  while (ss >> l >> c) {
-    if (c == '=') {
-      match += l;
-    }
-    length += l;
+
+// stream insertion operator for std::optional
+// treats the stream as still valid even if nothing was found for the optional.
+template<typename T>
+std::istream& operator>>(std::istream& is, std::optional<T>& obj)
+{
+  if (T result; is >> result) {
+    obj = result;
   }
-  return 1.0 - double(match) / double(length);
+  else {
+    obj = {};
+    is.clear();
+  }
+  return is;
 }
 
+// calculate distance from a cigar that may or may not be compressed.
+double distance_from_cigar(const std::string & cigar) {
+  if (cigar == "=") return 0.0;
+
+  std::uint16_t match = 0, length = 0;
+  std::optional<std::uint16_t> n;
+  char op;
+  std::istringstream ss(cigar);
+  while (ss >> n >> op) {
+    if (op == '=' || op == 'M') {
+      match += n.value_or(1);
+    }
+    length += n.value_or(1);
+  }
+  return double(length - match) / double(length);
+}
+
+double distance_from_cigar_extend(const std::string & cigar) {
+  if (cigar == "=") return 0.0;
+
+  std::uint16_t match = 0, length = 0, end_gap = 0;
+  std::optional<std::uint16_t> n;
+  char op;
+  std::istringstream ss(cigar);
+  while (ss >> n >> op) {
+    if (op == '=' || op == 'M') {
+      match += n.value_or(1);
+      end_gap = 0;
+    } else if (op == 'I' || op == 'D') {
+      end_gap += n.value_or(1);
+    }
+    length += n.value_or(1);
+  }
+  return double(length - match - end_gap) / double(length - end_gap);
+}
+
+template<enum AlignmentSpan span>
+double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
+  wfa::WFAligner::AlignmentStatus status;
+
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    status = aligner.alignEnd2End(a, b);
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    status = aligner.alignExtension(a, b);
+  } else {
+    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+  }
+  if (status != wfa::WFAligner::StatusAlgCompleted &&
+      status != wfa::WFAligner::StatusAlgPartial) return 1.0;
+  std::string cigar(aligner.getCIGAR(true));
+  if constexpr (span == AlignmentSpan::EXTEND) {
+    return distance_from_cigar_extend(cigar);
+  } else {
+    return distance_from_cigar(cigar);
+  }
+}
+
+// calculate distance using edlib, with a pre-initialized config object
+// this is
 double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner) {
   auto aln = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(), aligner);
   if (aln.status != EDLIB_STATUS_OK) return 1.0;
@@ -31,36 +90,107 @@ double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConf
   return d;
 }
 
-std::string cigar_wfa2(const std::string &a, const std::string &b,
-                       int match, int mismatch,
-                       int gap_open, int gap_extend,
-                       int gap_open2, int gap_extend2) {
-  wfa::WFAlignerChoose aligner{-match, mismatch, gap_open, gap_extend,
-                               gap_open2, gap_extend2,
-                               wfa::WFAligner::AlignmentScope::Alignment};
-  wfa::WFAligner::AlignmentStatus status;
-  // if (a.size() >= b.size()) {
-  status = aligner.alignEnd2End(a, b);
-  // } else {
-  //   status = aligner.alignEnd2End(b, a);
-  // }
-  switch (status) {
-  case wfa::WFAligner::StatusOOM:
-    OPTIMOTU_STOP("Aligner out of memory.");
-    break;
-  case wfa::WFAligner::StatusAlgPartial:
-  case wfa::WFAligner::StatusMaxStepsReached:
-    OPTIMOTU_STOP("Alignment not feasible with given constraints.");
-    break;
-  case wfa::WFAligner::StatusAlgCompleted:
-    break;
+template<enum AlignmentSpan span>
+double distance_edlib(const std::string &a, const std::string &b) {
+  EdlibAlignMode mode;
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    mode = EDLIB_MODE_NW;
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    mode = EDLIB_MODE_SHW;
+  } else {
+    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
   }
+  auto aligner = edlibNewAlignConfig(-1, mode, EDLIB_TASK_PATH, NULL, 0);
+  return distance_edlib(a, b, aligner);
+}
+
+template<enum AlignmentSpan span>
+std::string cigar_wfa2(const std::string &a, const std::string &b,
+                       wfa::WFAligner &aligner) {
+  wfa::WFAligner::AlignmentStatus status;
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    status = aligner.alignEnd2End(a, b);
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    status = aligner.alignExtension(a, b);
+  } else {
+    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+  }
+  if (status != wfa::WFAligner::StatusAlgCompleted) return "";
   return aligner.getCIGAR(true);
 }
 
+std::string cigar_wfa2_global(const std::string &a, const std::string &b,
+                              int match, int mismatch,
+                              int gap_open, int gap_extend,
+                              int gap_open2, int gap_extend2) {
+  wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
+                               gap_open2, gap_extend2,
+                               wfa::WFAligner::AlignmentScope::Alignment};
+  return cigar_wfa2<AlignmentSpan::GLOBAL>(a, b, aligner);
+}
+
+std::string cigar_wfa2_extend(const std::string &a, const std::string &b,
+                              int match, int mismatch,
+                              int gap_open, int gap_extend,
+                              int gap_open2, int gap_extend2) {
+  wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
+                               gap_open2, gap_extend2,
+                               wfa::WFAligner::AlignmentScope::Alignment};
+  return cigar_wfa2<AlignmentSpan::EXTEND>(a, b, aligner);
+}
+
+template<enum AlignmentSpan span>
+std::pair<double, std::string> distance_and_cigar_wfa2(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+) {
+  wfa::WFAligner::AlignmentStatus status;
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    status = aligner.alignEnd2End(a, b);
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    status = aligner.alignExtension(a, b);
+  } else {
+    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+  }
+
+  if (status != wfa::WFAligner::StatusAlgCompleted) return {1.0, ""};
+  std::string cigar(aligner.getCIGAR(true));
+  if constexpr (span == AlignmentSpan::EXTEND) {
+    return {distance_from_cigar_extend(cigar), cigar};
+  } else {
+    return {distance_from_cigar(cigar), cigar};
+  }
+}
+
+// explicit instantiations
+template
+std::pair<double, std::string> distance_and_cigar_wfa2<AlignmentSpan::EXTEND>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+
+template
+std::pair<double, std::string> distance_and_cigar_wfa2<AlignmentSpan::GLOBAL>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+
+template<enum AlignmentSpan span>
 std::string cigar_edlib(const std::string &a, const std::string &b) {
-  auto config = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW,
-                                    EdlibAlignTask::EDLIB_TASK_PATH, NULL, 0);
+
+  EdlibAlignMode mode;
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    mode = EDLIB_MODE_NW;
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    mode = EDLIB_MODE_SHW;
+  } else {
+    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+  }
+  auto config = edlibNewAlignConfig(-1, mode, EDLIB_TASK_PATH, NULL, 0);
+
   std::vector<char> key;
   EdlibAlignResult alignment;
   // if (a.size() >= b.size()){
@@ -88,50 +218,83 @@ std::string cigar_edlib(const std::string &a, const std::string &b) {
   return out;
 }
 
-std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
+std::string cigar_edlib_global(const std::string &a, const std::string &b) {
+  return cigar_edlib<AlignmentSpan::GLOBAL>(a, b);
+}
+
+std::string cigar_edlib_extend(const std::string &a, const std::string &b) {
+  return cigar_edlib<AlignmentSpan::EXTEND>(a, b);
+}
+
+template<enum AlignmentSpan span>
+std::pair<int, double> score_and_distance_wfa2(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+) {
   wfa::WFAligner::AlignmentStatus status;
   // if (a.size() >= b.size()) {
-  status = aligner.alignEnd2End(a, b);
-  // } else {
-  //   status = aligner.alignEnd2End(b, a);
-  // }
-  if (status != wfa::WFAligner::StatusAlgCompleted) return {std::max(a.size(), b.size()), 1.0};
-  auto cigar = aligner.getCIGAR(true);
-  std::uint16_t match = 0, length = 0;
-  for (char c : cigar) {
-    if (c == 'M') {
-      match++;
-    }
-    length++;
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    status = aligner.alignEnd2End(a, b);
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    status = aligner.alignExtension(a, b);
+  } else {
+    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
   }
-  return {length - match, double(length - match) / double(length)};
-}
-
-std::pair<int, double> score_and_distance_wfa2(const std::string &a, const std::string &b, wfa::WFAlignerEdit &aligner) {
-  wfa::WFAligner::AlignmentStatus status;
-  // if (a.size() >= b.size()) {
-  status = aligner.alignEnd2End(a, b);
   // } else {
   //   status = aligner.alignEnd2End(b, a);
   // }
-  if (status != wfa::WFAligner::StatusAlgCompleted) return {std::max(a.size(), b.size()), 1.0};
+  if (status != wfa::WFAligner::StatusAlgCompleted) return {
+    std::max(a.size(), b.size()), 1.0};
   auto cigar = aligner.getCIGAR(true);
-  return {aligner.getAlignmentScore(),
-          double(aligner.getAlignmentScore()) / double(cigar.size())};
+  if constexpr (span == AlignmentSpan::EXTEND) {
+    return {aligner.getAlignmentScore(), distance_from_cigar_extend(cigar)};
+  } else {
+    return {aligner.getAlignmentScore(), distance_from_cigar(cigar)};
+  }
 }
 
-double align_wfa2(const std::string a, const std::string b,
+// explicit instantiations
+template std::pair<int, double> score_and_distance_wfa2<AlignmentSpan::GLOBAL>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+
+template std::pair<int, double> score_and_distance_wfa2<AlignmentSpan::EXTEND>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+
+
+double align_wfa2_global(const std::string a, const std::string b,
              int match, int mismatch,
              int gap_open, int gap_extend,
              int gap_open2, int gap_extend2) {
   wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
                                gap_open2, gap_extend2,
                                wfa::WFAligner::AlignmentScope::Alignment};
-  return distance_wfa2(a, b, aligner);
+  return distance_wfa2<AlignmentSpan::GLOBAL>(a, b, aligner);
 }
 
-double align_edlib(const std::string a, const std::string b) {
+double align_wfa2_extend(const std::string a, const std::string b,
+             int match, int mismatch,
+             int gap_open, int gap_extend,
+             int gap_open2, int gap_extend2) {
+  wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
+                               gap_open2, gap_extend2,
+                               wfa::WFAligner::AlignmentScope::Alignment};
+  return distance_wfa2<AlignmentSpan::EXTEND>(a, b, aligner);
+}
+
+double align_edlib_global(const std::string a, const std::string b) {
   auto config = edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0);
+  return distance_edlib(a, b, config);
+}
+
+double align_edlib_extend(const std::string a, const std::string b) {
+  auto config = edlibNewAlignConfig(-1, EDLIB_MODE_SHW, EDLIB_TASK_PATH, NULL, 0);
   return distance_edlib(a, b, config);
 }
 
@@ -179,20 +342,29 @@ std::vector<std::string> align_from_compressed_cigar(
     const std::string & cigar
 ) {
   std::vector<std::string> out(2);
-  out[0].reserve(cigar.size());
-  out[1].reserve(cigar.size());
+  out[0].reserve(std::max({cigar.size(), a.size(), b.size()}));
+  out[1].reserve(out[0].capacity());
   size_t i = 0, j = 0;
   size_t k = 0;
   while (k < cigar.size()) {
-    size_t l = 0;
-    while (k + l < cigar.size() && cigar[k + l] >= '0' && cigar[k + l] <= '9') {
-      l++;
+    // if there are digits, parse them
+    size_t n = 0;
+    while (k < cigar.size() && std::isdigit(cigar[k])) {
+      n = 10 * n + (cigar[k] - '0');
+      k++;
     }
-    int n = std::stoi(cigar.substr(k, l));
-    k += l;
+    // if no digits, assume 1
+    if (n == 0) {
+      n = 1;
+    }
+    if (k >= cigar.size()) {
+      OPTIMOTU_STOP("CIGAR string ends with a number");
+    }
     switch (cigar[k]) {
     case '=':
-      for (int m = 0; m < n; m++) {
+    case 'M':
+    case 'X':
+      for (size_t m = 0; m < n; m++) {
         out[0].push_back(a[i]);
         out[1].push_back(b[j]);
         i++;
@@ -200,39 +372,34 @@ std::vector<std::string> align_from_compressed_cigar(
       }
       break;
     case 'D':
-      for (int m = 0; m < n; m++) {
+      for (size_t m = 0; m < n; m++) {
         out[0].push_back(a[i]);
         out[1].push_back('-');
         i++;
       }
       break;
     case 'I':
-      for (int m = 0; m < n; m++) {
+      for (size_t m = 0; m < n; m++) {
         out[0].push_back('-');
         out[1].push_back(b[j]);
         j++;
       }
       break;
-    case 'X':
-      for (int m = 0; m < n; m++) {
-        out[0].push_back(a[i]);
-        out[1].push_back(b[j]);
-        i++;
-        j++;
-      }
+    default:
+      OPTIMOTU_STOP("Unknown CIGAR character: " + std::string(1, cigar[k]));
       break;
     }
     k++;
   }
   return out;
-
 }
 
 // [[Rcpp::export]]
 std::vector<std::string> pairwise_alignment(
   std::string a,
   std::string b,
-  Rcpp::List dist_config
+  Rcpp::List dist_config,
+  int span = 0
 ) {
   if (!dist_config.inherits("optimotu_dist_config")) {
     OPTIMOTU_STOP(
@@ -247,9 +414,21 @@ std::vector<std::string> pairwise_alignment(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
-    return align_from_compressed_cigar(a, b, cigar_wfa2(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    if (span == 0) {
+      return align_from_compressed_cigar(a, b, cigar_wfa2_global(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    } else if (span == 1) {
+      return align_from_compressed_cigar(a, b, cigar_wfa2_extend(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    } else {
+      OPTIMOTU_STOP(
+        "Unknown alignment span: '" + std::to_string(span) + "'"
+      );
+    }
   } else if (dist_method == "edlib") {
-    return align_from_cigar(a, b, cigar_edlib(a, b));
+    if (span == 0) {
+      return align_from_compressed_cigar(a, b, cigar_edlib_global(a, b));
+    } else if (span == 1) {
+      return align_from_compressed_cigar(a, b, cigar_edlib_extend(a, b));
+    }
   } else {
     OPTIMOTU_STOP(
       "Unknown distance method: '" + dist_method + "'"

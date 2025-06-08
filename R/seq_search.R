@@ -14,10 +14,14 @@
 #' @param parallel_config (`optimotu_parallel_config`) configuration for parallel
 #' processing, as returned by `parallel_config()` or its helpers.
 #' @param verbose (`logical` or `integer` scalar) print progress messages.
+#' @param return_cigar (`logical` scalar) if `TRUE`, return the cigar string
+#' @param span (`character` string) the span of the alignment; currently
+#' accepted values are "global" and "extension".  The default is "global".
 #' @param ... passed to methods
 #' @return (`data.frame`) with columns "seq_id" (`character`),
 #' "ref_id" (`character`), and "dist" (`numeric`) giving the distance between
-#' the query and reference.
+#' the query and reference. If `return_cigar` is `TRUE`, the CIGAR string is
+#' returned in a column "cigar" (`character`).
 #' @export
 
 seq_search <- function(
@@ -29,12 +33,19 @@ seq_search <- function(
     dist_config = dist_wfa2(),
     parallel_config = parallel_concurrent(1),
     verbose = FALSE,
+    return_cigar = FALSE,
+    span = c("global", "extension"),
     ...
 ) {
   checkmate::assert_character(query_id, null.ok = TRUE, len = length(query), unique = TRUE)
   checkmate::assert_character(ref_id, null.ok = TRUE, len = length(ref), unique = TRUE)
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
+  checkmate::assert_flag(return_cigar)
+  checkmate::assert_character(span)
+  span <- match.arg(span, c("global", "extension"), several.ok = FALSE)
+  checkmate::assert_choice(span, c("global", "extension"))
+  span <- match(span, c("global", "extension")) - 1L
 
   mycall <- match.call()
 
@@ -55,6 +66,12 @@ seq_search <- function(
 
     if (identical(dist_config$method, "file")) {
       checkmate::assert_file(dist_config$filename)
+      if (isTRUE(return_cigar)) {
+        stop("CIGAR strings are not supported for external distance files.")
+      }
+      if (span != 0L) {
+        stop("Span is not supported for external distance files.")
+      }
       if (dist_config$by_name == TRUE) {
         out <- utils::read.table(
           file = dist_config$filename,
@@ -90,7 +107,9 @@ seq_search <- function(
         dist_config = dist_config,
         parallel_config = parallel_config,
         threshold = threshold,
-        verbose = verbose
+        verbose = verbose,
+        return_cigar = return_cigar,
+        span = span
       )
     }
   }

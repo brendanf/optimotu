@@ -17,7 +17,10 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
-    SearchHit & hit = hits[i];
+    if (!hits[i]) {
+      hits[i] = std::make_unique<SearchHit>();
+    }
+    SearchHit & hit = *hits[i];
     for (std::size_t j = 0; j < ref.size(); j++) {
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;
       OPTIMOTU_DEBUG(
@@ -39,7 +42,7 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
       );
       if (d == 1.0) continue;
       ++my_aligned;
-      if (d < hit.best_dist) {
+      if (d < max_dist) {
         OPTIMOTU_DEBUG(
           2,
           << "Thread " << begin

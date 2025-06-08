@@ -151,37 +151,63 @@ adjusted_mutual_information <- function(k, c, threads = 1L) {
     .Call(`_optimotu_adjusted_mutual_information`, k, c, threads)
 }
 
-pairwise_alignment <- function(a, b, dist_config) {
-    .Call(`_optimotu_pairwise_alignment`, a, b, dist_config)
+pairwise_alignment <- function(a, b, dist_config, span = 0L) {
+    .Call(`_optimotu_pairwise_alignment`, a, b, dist_config, span)
 }
 
-#' @return (`character(1)`) CIGAR string
+#' @describeIn pairwise_alignment Compute pairwise global alignment CIGAR with WFA2
 #' @export
 #' @keywords internal
-#' @describeIn pairwise_alignment Generate alignment CIGAR with WFA2
-cigar_wfa2 <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 1L) {
-    .Call(`_optimotu_cigar_wfa2`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+#' // [[Rcpp::export]]
+NULL
+
+#' @describeIn pairwise_alignment Compute pairwise extension alignment CIGAR with WFA2
+#' @export
+#' @keywords internal
+cigar_wfa2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 1L) {
+    .Call(`_optimotu_cigar_wfa2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
 }
 
-#' @describeIn pairwise_alignment Generate alignment CIGAR with Edlib
+#' @describeIn pairwise_alignment Compute pairwise global alignment CIGAR with Edlib
 #' @export
 #' @keywords internal
-cigar_edlib <- function(a, b) {
-    .Call(`_optimotu_cigar_edlib`, a, b)
+cigar_edlib_global <- function(a, b) {
+    .Call(`_optimotu_cigar_edlib_global`, a, b)
+}
+
+#' @describeIn pairwise_alignment Compute pairwise extension alignment CIGAR with Edlib
+#' @export
+#' @keywords internal
+cigar_edlib_extend <- function(a, b) {
+    .Call(`_optimotu_cigar_edlib_extend`, a, b)
 }
 
 #' @describeIn pairwise_alignment Compute pairwise alignment distance with WFA2
 #' @export
 #' @keywords internal
-align_wfa2 <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
-    .Call(`_optimotu_align_wfa2`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+align_wfa2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
+    .Call(`_optimotu_align_wfa2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
 }
 
-#' @describeIn pairwise_alignment Compute pairwise alignment distance with Edlib
+#' @describeIn pairwise_alignment Compute pairwise alignment distance with WFA2
 #' @export
 #' @keywords internal
-align_edlib <- function(a, b) {
-    .Call(`_optimotu_align_edlib`, a, b)
+align_wfa2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
+    .Call(`_optimotu_align_wfa2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+}
+
+#' @describeIn pairwise_alignment Compute pairwise  global alignment distance with Edlib
+#' @export
+#' @keywords internal
+align_edlib_global <- function(a, b) {
+    .Call(`_optimotu_align_edlib_global`, a, b)
+}
+
+#' @describeIn pairwise_alignment Compute pairwise extension alignment distance with Edlib
+#' @export
+#' @keywords internal
+align_edlib_extend <- function(a, b) {
+    .Call(`_optimotu_align_edlib_extend`, a, b)
 }
 
 #' @param prealign (`logical` flag) if `TRUE`, do a prealignment using
@@ -220,8 +246,8 @@ seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_c
 #' and reference sequences)
 #' @export
 #' @keywords internal
-seq_search_internal <- function(query, ref, dist_config, parallel_config, threshold, verbose = 0L) {
-    .Call(`_optimotu_seq_search_internal`, query, ref, dist_config, parallel_config, threshold, verbose)
+seq_search_internal <- function(query, ref, dist_config, parallel_config, threshold, verbose = 0L, return_cigar = FALSE, span = 0L) {
+    .Call(`_optimotu_seq_search_internal`, query, ref, dist_config, parallel_config, threshold, verbose, return_cigar, span)
 }
 
 #' @param match (non-negative `integer`) alignment score for matching nucleotides

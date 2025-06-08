@@ -13,6 +13,8 @@ seq_search(
   dist_config = dist_wfa2(),
   parallel_config = parallel_concurrent(1),
   verbose = FALSE,
+  return_cigar = FALSE,
+  span = c("global", "extension"),
   ...
 )
 }
@@ -39,12 +41,18 @@ processing, as returned by \code{parallel_config()} or its helpers.}
 
 \item{verbose}{(\code{logical} or \code{integer} scalar) print progress messages.}
 
+\item{return_cigar}{(\code{logical} scalar) if \code{TRUE}, return the cigar string}
+
+\item{span}{(\code{character} string) the span of the alignment; currently
+accepted values are "global" and "extension".  The default is "global".}
+
 \item{...}{passed to methods}
 }
 \value{
 (\code{data.frame}) with columns "seq_id" (\code{character}),
 "ref_id" (\code{character}), and "dist" (\code{numeric}) giving the distance between
-the query and reference.
+the query and reference. If \code{return_cigar} is \code{TRUE}, the CIGAR string is
+returned in a column "cigar" (\code{character}).
 }
 \description{
 Search for the closest match(es) to sequences in a reference database

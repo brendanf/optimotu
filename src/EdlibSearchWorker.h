@@ -2,13 +2,14 @@
 #define OPTIMOTU_EDLIBSEARCHWORKER_H
 
 #include "SearchWorker.h"
+#include "alignment_enums.h"
 
 class EdlibSearchWorker : public SearchWorker {
 public :
   using SearchWorker::SearchWorker;
 };
 
-template<int verbose>
+template<int verbose, enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 class EdlibSearchWorkerImpl : public EdlibSearchWorker {
   using SearchWorker::query;
   using SearchWorker::ref;

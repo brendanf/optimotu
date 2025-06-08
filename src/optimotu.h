@@ -1,7 +1,7 @@
 #ifndef OPTIMOTU_H_INCLUDED
 
 #ifdef OPTIMOTU_R
-
+#include <Rcpp.h>
 #include <RcppThread.h>
 #define OPTIMOTU_COUT RcppThread::Rcout
 #define OPTIMOTU_CERR RcppThread::Rcerr

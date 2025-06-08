@@ -99,7 +99,9 @@ std::unique_ptr<SearchWorker> create_search_worker(
     const std::vector<std::string> & query,
     const std::vector<std::string> & ref,
     double threshold,
-    int verbose = 0
+    int verbose = 0,
+    bool return_cigar = false,
+    int span = 0
 );
 
 #endif //OPTIMOTU_R

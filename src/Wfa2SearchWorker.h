@@ -2,6 +2,7 @@
 #define OPTIMOTU_WFA2SEARCHWORKER_H
 
 #include "SearchWorker.h"
+#include "alignment_enums.h"
 
 class Wfa2SearchWorker : public SearchWorker {
 protected:
@@ -22,7 +23,7 @@ public:
   gap_extend(gap_extend), gap_open2(gap_open2), gap_extend2(gap_extend2) {}
 };
 
-template<int verbose>
+template<int verbose, bool do_cigar, enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 class Wfa2SearchWorkerImpl : public Wfa2SearchWorker {
   using SearchWorker::query;
   using SearchWorker::ref;

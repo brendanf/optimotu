@@ -1,12 +1,18 @@
 # optimotu (development version)
 
 * Fix parameterization of WFA2-lib with single or dual gap-affine penalties.
-<<<<<<< HEAD
 * Fix a bug in `optimotu()` that caused it to fail when using non-default ranks.
-=======
->>>>>>> b744b51f6 (fix missing parentheses typos)
 * Fix a bug which caused `seq.cluster()` to fail for certain combinations of
 arguments.
+* Add functions `cigar_wfa2()` and `cigar_edlib()` to return CIGAR (compressed
+idiosyncratic gapped alignment report) strings using WFA2 and edlib.
+* Add argument `return_cigar` to `seq_search()` to return the CIGAR strings for
+  the best match. This is only supported for WFA2 and edlib searches.
+* Add argument `span` to `seq_search()`, which is also only relevant for WFA2
+and edlib searches.  The default, "global", aligns the entire query sequence
+to the target sequence.  "Extension" does not penalize gaps at the 3' end of
+either sequence for WFA2, and does not penalize gaps at the 3' end of the longer
+sequence for edlib.
 
 # optimotu 0.9.3
 

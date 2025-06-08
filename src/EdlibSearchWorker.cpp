@@ -3,8 +3,8 @@
 #include <edlib.h>
 #include "pairwise_alignment.h"
 
-template<int verbose>
-void EdlibSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end) {
+template<int verbose, enum AlignmentSpan span>
+void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::size_t end) {
   std::size_t begin_i = (begin * query.size()) / threads;
   std::size_t end_i = (end * query.size()) / threads;
   OPTIMOTU_DEBUG(
@@ -14,11 +14,19 @@ void EdlibSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t e
     << ", "<< end_i << ")" << std::endl
   );
 
-  EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
+  EdlibAlignMode mode;
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    mode = EdlibAlignMode::EDLIB_MODE_NW;
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    mode = EdlibAlignMode::EDLIB_MODE_SHW;
+  } else {
+    static_assert(span != span, "Invalid alignment span");
+  }
+  EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
-    SearchHit & hit = hits[i];
+    SearchHit & hit = *hits[i];
     for (std::size_t j = 0; j < ref.size(); j++) {
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;
       OPTIMOTU_DEBUG(

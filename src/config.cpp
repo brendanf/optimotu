@@ -622,7 +622,9 @@ std::unique_ptr<SearchWorker> create_search_worker(
     const std::vector<std::string> & query,
     const std::vector<std::string> & ref,
     double threshold,
-    int verbose
+    int verbose,
+    bool return_cigar,
+    int span
 ) {
   if (!dist_config.inherits("optimotu_dist_config")) {
     OPTIMOTU_STOP(
@@ -645,22 +647,121 @@ std::unique_ptr<SearchWorker> create_search_worker(
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
     switch (verbose) {
     case 0:
-      return std::make_unique<Wfa2SearchWorkerImpl<0>>(
-        query, ref, threshold, threads, match, mismatch,
-        gap_open, gap_extend, gap_open2, gap_extend2
-      );
+      if (return_cigar) {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<0, true>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<0, true, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      } else {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<0, false>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<0, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      }
     case 1:
-      return std::make_unique<Wfa2SearchWorkerImpl<1>>(
-        query, ref, threshold, threads, match, mismatch,
-        gap_open, gap_extend, gap_open2, gap_extend2
-      );
+      if (return_cigar) {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<1, true>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<1, true, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      } else {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<1, false>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<1, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      }
     default:
-      return std::make_unique<Wfa2SearchWorkerImpl<2>>(
-        query, ref, threshold, threads, match, mismatch,
-        gap_open, gap_extend, gap_open2, gap_extend2
-      );
+      if (return_cigar) {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<2, true>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<2, true, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      } else {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<2, false>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<2, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          break;
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      }
     }
   } else if (dist_method == "edlib") {
+    if (span > 0) {
+      OPTIMOTU_STOP("span is not implemented for edlib distance");
+    }
+    if (return_cigar) {
+      OPTIMOTU_STOP("cigar is not implemented for edlib distance");
+    }
     switch (verbose) {
     case 0:
       return std::make_unique<EdlibSearchWorkerImpl<0>>(query, ref, threshold,
@@ -673,6 +774,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
                                                         threads);
     }
   } else if (dist_method == "hybrid") {
+    if (span > 0) {
+      OPTIMOTU_STOP("span is not implemented for hybrid distance");
+    }
+    if (return_cigar) {
+      OPTIMOTU_STOP("cigar is not implemented for hybrid distance");
+    }
     double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
     switch (verbose) {
     case 0:
@@ -688,6 +795,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
   } else if (dist_method == "hamming") {
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
+    if (span > 0) {
+      OPTIMOTU_STOP("span is not implemented for hamming distance");
+    }
+    if (return_cigar) {
+      OPTIMOTU_STOP("cigar is not implemented for hamming distance");
+    }
     switch (verbose) {
     case 0:
       return std::make_unique<HammingSearchWorkerImpl<0>>(query, ref, threshold,

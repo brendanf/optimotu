@@ -10,7 +10,9 @@ seq_search_internal(
   dist_config,
   parallel_config,
   threshold,
-  verbose = 0L
+  verbose = 0L,
+  return_cigar = FALSE,
+  span = 0L
 )
 }
 \arguments{
