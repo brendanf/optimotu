@@ -67,7 +67,7 @@ ClusterIndexedMatrix<A>::~ClusterIndexedMatrix() {
 template <class A>
 void ClusterIndexedMatrix<A>::dump_index() {
   OPTIMOTU_CERR << std::endl << "index dump:" << std::endl;
-  for (int i = 0; i < n; i++) {
+  for (j_t i = 0; i < n; i++) {
     OPTIMOTU_CERR << "tip=" << i << " prev=";
     if (index[i].prev) {
       OPTIMOTU_CERR << index[i].prev->j << "(";
@@ -112,7 +112,7 @@ void ClusterIndexedMatrix<A>::print_index() {
 template <class A>
 void ClusterIndexedMatrix<A>::verify_index() {
   auto t = index;
-  int i = 0;
+  j_t i = 0;
   while (t->next) {
     t = t->next;
     i++;
@@ -121,7 +121,7 @@ void ClusterIndexedMatrix<A>::verify_index() {
       OPTIMOTU_STOP("circular reference formed");
     }
   }
-  if (i < n - 1) {
+  if (i + 1 < n) {
     dump_index();
     OPTIMOTU_STOP("broken list");
   }
@@ -594,7 +594,7 @@ Rcpp::List ClusterIndexedMatrix<A>::as_hclust(
   int last_clust = 0;
   {
     std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
-    for (int j = 0; j < this->m * this->n; j += this->n) {
+    for (j_t j = 0; j < this->m * this->n; j += this->n) {
       double d = this->dconv.inverse(j);
       for (int i : remaining[this_remaining]) {
         int clust = this->ca[j+i];

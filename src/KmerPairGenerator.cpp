@@ -41,9 +41,10 @@ KmerPairGenerator::KmerPairGenerator(
   const std::size_t end,
   const std::vector<std::string> & seq,
   const double udist_threshold
-) : PairGenerator(begin, end), udist_threshold(udist_threshold),
+) : PairGenerator(begin, end),
 kmer_seq_index(std::make_shared<std::vector<std::vector<std::size_t>>>()),
 seq_kmer_index(std::make_shared<std::vector<std::vector<std::uint16_t>>>()),
+udist_threshold(udist_threshold),
 i(begin == 0 ? 1 : begin) {
   // Rcpp::Rcout << "Indexing k-mers...";
   // index: for each kmer, which sequences is it found in, and how many times?

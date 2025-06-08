@@ -151,22 +151,20 @@ void ClusterSLINK::write_to_matrix(internal_matrix_t &out) {
   //                 << std::setw(3) << Pi[i]
   //                 << std::setw(7) << Lambda[i] << std::endl;
   // }
-  j_t j, jp;
+  j_t j;
   std::size_t k = 0;
   for (std::uint32_t i = 0; i < this->n; i++) {
     j = i;
-    jp = Pi[j];
-    j_t i2 = 0;
+    d_t i2 = 0;
     while (i2 < this->m) {
       d_t max = Lambda[j];
-      if (this->m < (size_t)max) max = this->m;
-      while (i2 < (size_t)max) {
+      if (this->m < max) max = this->m;
+      while (i2 < max) {
         out[k++] = j;
         i2++;
       }
       if (i2 < this->m) {
         j = Pi[j];
-        jp = Pi[j];
       }
     }
   }
@@ -225,7 +223,7 @@ Rcpp::List ClusterSLINK::as_hclust(const Rcpp::CharacterVector &seqnames) const 
   }
   int j = 0;
   for (j_t i = 0; i < this->n - 1; ++i) {
-    if (1 - clust_id[i] == i) {
+    if (i + (int)clust_id[i] == 1) {
       merge(last_clust, 0) = clust_id[i];
       merge(last_clust, 1) = clust_id[this->n - 1];
       height[last_clust] = 1.0;

@@ -428,6 +428,10 @@ std::vector<std::string> pairwise_alignment(
       return align_from_compressed_cigar(a, b, cigar_edlib_global(a, b));
     } else if (span == 1) {
       return align_from_compressed_cigar(a, b, cigar_edlib_extend(a, b));
+    } else {
+      OPTIMOTU_STOP(
+        "Unknown alignment span: '" + std::to_string(span) + "'"
+      );
     }
   } else {
     OPTIMOTU_STOP(

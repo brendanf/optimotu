@@ -69,7 +69,7 @@ ClusterWorkerImpl<distmx_type, id_t>::ClusterWorkerImpl(
     OPTIMOTU_STOP("Unsupported distmx_t type");
   }
   id_map = std::make_shared<id_map_type>();
-  for (int i = 0; i < id_list.size(); ++i) {
+  for (int i = 0; (size_t)i < id_list.size(); ++i) {
     id_map->insert({id_list[i], i});
   }
 }

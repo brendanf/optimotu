@@ -331,7 +331,7 @@ Rcpp::List ClusterMatrix<BM, F, A>::as_hclust(
   int last_clust = 0;
   {
     std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
-    for (int j = 0; j < this->m * this->n; j += this->n) {
+    for (j_t j = 0; j < this->m * this->n; j += this->n) {
       double d = this->dconv.inverse(j);
       for (int i : remaining[this_remaining]) {
         int clust = this->ca[j+i];
