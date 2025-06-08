@@ -1,5 +1,5 @@
 CXX_STD = CXX17
-PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./SneakySnake -I./edlib
+PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./edlib
 PKG_CFLAGS =  -DGMP -DSKIP_MAIN
 PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") -lz
 

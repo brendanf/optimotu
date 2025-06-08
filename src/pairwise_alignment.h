@@ -28,7 +28,7 @@ std::string cigar_wfa2(const std::string &a, const std::string &b,
 //' @describeIn pairwise_alignment Compute pairwise global alignment CIGAR with WFA2
 //' @export
 //' @keywords internal
-//' // [[Rcpp::export]]
+// [[Rcpp::export]]
 std::string cigar_wfa2_global(const std::string &a, const std::string &b,
                        int match = 0, int mismatch = 1,
                        int gap_open = 0, int gap_extend = 1,
@@ -58,6 +58,7 @@ std::string cigar_edlib(const std::string &a, const std::string &b);
 //' @keywords internal
 // [[Rcpp::export]]
 std::string cigar_edlib_global(const std::string &a, const std::string &b);
+
 //' @describeIn pairwise_alignment Compute pairwise extension alignment CIGAR with Edlib
 //' @export
 //' @keywords internal

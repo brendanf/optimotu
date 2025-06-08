@@ -236,6 +236,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cigar_wfa2_global
+std::string cigar_wfa2_global(const std::string& a, const std::string& b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
+RcppExport SEXP _optimotu_cigar_wfa2_global(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type b(bSEXP);
+    Rcpp::traits::input_parameter< int >::type match(matchSEXP);
+    Rcpp::traits::input_parameter< int >::type mismatch(mismatchSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    rcpp_result_gen = Rcpp::wrap(cigar_wfa2_global(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cigar_wfa2_extend
 std::string cigar_wfa2_extend(const std::string& a, const std::string& b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
 RcppExport SEXP _optimotu_cigar_wfa2_extend(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
@@ -462,6 +480,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_mutual_information", (DL_FUNC) &_optimotu_mutual_information, 3},
     {"_optimotu_adjusted_mutual_information", (DL_FUNC) &_optimotu_adjusted_mutual_information, 3},
     {"_optimotu_pairwise_alignment", (DL_FUNC) &_optimotu_pairwise_alignment, 4},
+    {"_optimotu_cigar_wfa2_global", (DL_FUNC) &_optimotu_cigar_wfa2_global, 8},
     {"_optimotu_cigar_wfa2_extend", (DL_FUNC) &_optimotu_cigar_wfa2_extend, 8},
     {"_optimotu_cigar_edlib_global", (DL_FUNC) &_optimotu_cigar_edlib_global, 2},
     {"_optimotu_cigar_edlib_extend", (DL_FUNC) &_optimotu_cigar_edlib_extend, 2},

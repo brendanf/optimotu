@@ -158,8 +158,9 @@ pairwise_alignment <- function(a, b, dist_config, span = 0L) {
 #' @describeIn pairwise_alignment Compute pairwise global alignment CIGAR with WFA2
 #' @export
 #' @keywords internal
-#' // [[Rcpp::export]]
-NULL
+cigar_wfa2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 1L) {
+    .Call(`_optimotu_cigar_wfa2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+}
 
 #' @describeIn pairwise_alignment Compute pairwise extension alignment CIGAR with WFA2
 #' @export
