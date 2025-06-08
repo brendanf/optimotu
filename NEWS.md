@@ -13,6 +13,8 @@ and edlib searches.  The default, "global", aligns the entire query sequence
 to the target sequence.  "Extension" does not penalize gaps at the 3' end of
 either sequence for WFA2, and does not penalize gaps at the 3' end of the longer
 sequence for edlib.
+* Fix a bug in `optimotu()` which led to an error when supplying sequences as an
+`XStringSet` object.
 
 # optimotu 0.9.3
 
