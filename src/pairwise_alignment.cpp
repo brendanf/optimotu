@@ -79,6 +79,19 @@ double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner 
   }
 }
 
+// explicit instantiations
+template double distance_wfa2<AlignmentSpan::EXTEND>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+
+template double distance_wfa2<AlignmentSpan::GLOBAL>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+
 // calculate distance using edlib, with a pre-initialized config object
 // this is
 double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner) {
@@ -103,6 +116,12 @@ double distance_edlib(const std::string &a, const std::string &b) {
   auto aligner = edlibNewAlignConfig(-1, mode, EDLIB_TASK_PATH, NULL, 0);
   return distance_edlib(a, b, aligner);
 }
+
+//explicit instantiations
+template double distance_edlib<AlignmentSpan::GLOBAL>(
+    const std::string &a, const std::string &b);
+template double distance_edlib<AlignmentSpan::EXTEND>(
+    const std::string &a, const std::string &b);
 
 template<enum AlignmentSpan span>
 std::string cigar_wfa2(const std::string &a, const std::string &b,
