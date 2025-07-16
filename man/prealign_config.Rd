@@ -5,7 +5,6 @@
 \alias{prealign_kmer}
 \alias{prealign_wfa2}
 \alias{prealign_edlib}
-\alias{prealign_sneakysnake}
 \title{Config helper for prealignment methods}
 \usage{
 prealign_config(method = c("kmer", "wfa2", "edlib", "sneakysnake"), ...)
@@ -15,8 +14,6 @@ prealign_kmer(udist_threshold = 1)
 prealign_wfa2()
 
 prealign_edlib()
-
-prealign_sneakysnake()
 }
 \arguments{
 \item{method}{(\code{character} string) prealignment method to use}
@@ -50,7 +47,5 @@ relevant sequence pairs are considered.
 prealigner, wfa2 is always configured to use edit distance.
 
 \item \code{prealign_edlib()}: helper function for method \code{"edlib"}
-
-\item \code{prealign_sneakysnake()}: helper function for method \code{"sneakysnake"}
 
 }}

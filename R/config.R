@@ -607,8 +607,7 @@ prealign_config <- function(
     method,
     kmer = prealign_kmer(...),
     wfa2 = prealign_wfa2(...),
-    edlib = prealign_edlib(...),
-    sneakysnake = prealign_sneakysnake(...)
+    edlib = prealign_edlib(...)
   )
 }
 
@@ -647,17 +646,6 @@ prealign_edlib <- function() {
   structure(
     list(
       method = "edlib"
-    ),
-    class = "optimotu_prealign_config"
-  )
-}
-
-#' @export
-#' @describeIn prealign_config helper function for method `"sneakysnake"`
-prealign_sneakysnake <- function() {
-  structure(
-    list(
-      method = "sneakysnake"
     ),
     class = "optimotu_prealign_config"
   )
