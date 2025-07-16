@@ -13,7 +13,10 @@
 #' [`DNAStringSet`][Biostrings::XStringSet-class]) sequences to search within
 #' @param threshold (`numeric`) distance threshold for clustering
 #' @param ... additional arguments to pass to `seq_search()`
-#' @return (`data.frame`) table of sequence IDs and their cluster assignments.
+#' @return (`data.frame`) table with three columns: `seq_id` for the ID of the
+#' query sequence, `ref_id` for the ID of the reference sequence, and `dist`
+#' for the distance between the query and reference sequences.
+#' @export
 closed_ref_cluster <- function(query, ref, threshold, ...) {
   last_out <- data.frame(seq_id = character(0), ref_id = character(0))
   out = list(last_out)
@@ -30,9 +33,9 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
       result <- do.call(rbind, result)
     }
     if (nrow(last_out) == 0) {
-      last_out <- result <- result[, c("seq_id", "ref_id")]
+      last_out <- result <- result[, c("seq_id", "ref_id", "dist")]
     } else {
-      result <- result[, c("seq_id", "ref_id")]
+      result <- result[, c("seq_id", "ref_id", "dist")]
       names(result)[2] <- "temp"
       result <- merge(
         result,
@@ -40,7 +43,7 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
         by.x = "temp",
         by.y = "seq_id"
       )
-      last_out <- result <- result[, c("seq_id", "ref_id")]
+      last_out <- result <- result[, c("seq_id", "ref_id", "dist")]
     }
     out <- c(out, list(result))
     ref <- select_sequence(query, result$seq_id)
@@ -48,7 +51,6 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
   }
   do.call(rbind, out)
 }
-
 
 #' Taxonomically guided OTU clustering using optimized thresholds
 #'

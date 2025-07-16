@@ -18,8 +18,10 @@ sequence for edlib.
 * The SneakySnake library has been removed from the OptimOTU code base, because
 of license incompatibility.
 * Configuration objects (from `dist_config()`, `threshold_config()`,
-  `parallel_config()`, etc.) now have a `$call` member, allowing them to be
-  updated with `update.default()`.
+`parallel_config()`, etc.) now have a `$call` member, allowing them to be
+updated with `update.default()`.
+* `closed_ref_cluster()`, formerly an internal method to `optimotu()` is now
+exported for stand-alone use.
 
 # optimotu 0.9.3
 
