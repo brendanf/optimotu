@@ -191,7 +191,12 @@ clust_tree <- function(verbose = FALSE, test = FALSE) {
     checkmate::check_integerish(test, lower = 1L)
   )
   structure(
-    list(method = "tree", verbose = as.integer(verbose), test = as.integer(test)),
+    list(
+      method = "tree",
+      verbose = as.integer(verbose),
+      test = as.integer(test),
+      call = match.call()
+    ),
     class = "optimotu_cluster_config"
   )
 }
@@ -218,7 +223,8 @@ clust_matrix <- function(
     list(
       method = "matrix",
       binary_search = binary_search,
-      fill_method = switch(fill_method, linear = 1L, binary = 2L, topdown = 3L)
+      fill_method = switch(fill_method, linear = 1L, binary = 2L, topdown = 3L),
+      call = match.call()
     ),
     class = "optimotu_cluster_config"
   )
@@ -228,7 +234,10 @@ clust_matrix <- function(
 #' @describeIn clust_config helper function for method `"index"`
 clust_index <- function() {
   structure(
-    list(method = "index"),
+    list(
+      method = "index",
+      call = match.call()
+    ),
     class = "optimotu_cluster_config"
   )
 }
@@ -237,7 +246,10 @@ clust_index <- function() {
 #' @describeIn clust_config helper function for method `"slink"`
 clust_slink <- function() {
   structure(
-    list(method = "slink"),
+    list(
+      method = "slink",
+      call = match.call()
+    ),
     class = "optimotu_cluster_config"
   )
 }
@@ -269,7 +281,13 @@ threshold_config <- function(type = c("uniform", "set", "lookup"), ...) {
 threshold_uniform <- function(from, to, by, thresh_names = NULL) {
   verify_threshold_steps(from, to, by)
   structure(
-    list(type = "uniform", from = from, to = to, by = by, thresh_names = thresh_names),
+    list(
+      type = "uniform",
+      from = from,
+      to = to, by = by,
+      thresh_names = thresh_names,
+      call = match.call()
+    ),
     class = "optimotu_threshold_config"
   )
 }
@@ -316,7 +334,10 @@ threshold_set <- function(thresholds, thresh_names = names(thresholds)) {
     c(
       list(type = "set"),
       deduplicate_thresholds(thresholds),
-      list(thresh_names = thresh_names)
+      list(
+        thresh_names = thresh_names,
+        call = match.call()
+      )
     ),
     class = "optimotu_threshold_config"
   )
@@ -333,7 +354,11 @@ threshold_lookup <- function(thresholds, precision, thresh_names = names(thresho
     c(
       list(type = "lookup"),
       deduplicate_thresholds(thresholds),
-      list(precision = precision, thresh_names = thresh_names)
+      list(
+        precision = precision,
+        thresh_names = thresh_names,
+        call = match.call()
+      )
     ),
     class = "optimotu_threshold_config"
   )
@@ -345,22 +370,22 @@ threshold_lookup <- function(thresholds, precision, thresh_names = names(thresho
 #'
 #' # Merge method
 #'
-#' In the merge method, each thread works on an independent clustering of the
-#' data, based on its own (disjoint) subset of the distance matrix. When each
-#' thread finishes clustering, it merges its results into the master clustering.
-#' This avoids concurrency collisions between the threads during the main
-#' clustering, although collisions can still occur if multiple threads try to
+#' In the merge method, each thread works on an independent clustering object,
+#' based on its own (disjoint) subset of the distance matrix. When each thread
+#' finishes clustering, it merges its results into the master clustering object.
+#' This avoids concurrency collisions between the threads during the first phase
+#' of clustering, although collisions can still occur if multiple threads try to
 #' merge at the same time.
 #'
 #' # Concurrent method
 #'
-#' In the concurrent method, all threads work jointly on the same clustering of
-#' the data. Although many threads can simultaneously read the clustering to
+#' In the concurrent method, all threads work jointly on the same clustering
+#' object. Although many threads can simultaneously read the object to
 #' determine whether a new pairwise distance will lead to an update (most do
-#' not), only one thread can update the clustering at a time, so this method
-#' can lead to more concurrency collisions when many threads are in use.
-#' However, sharing the state of the clustering between threads leads to fewer
-#' total updates than the merge method.
+#' not), only one thread can update the clustering object at a time, so this
+#' method can lead to more concurrency collisions when many threads are in use.
+#' However, sharing the state of the clustering object between threads leads to
+#' fewer total updates than the merge method.
 #'
 #' # Hierarchical method
 #'
@@ -368,8 +393,8 @@ threshold_lookup <- function(thresholds, precision, thresh_names = names(thresho
 #' in turn has multiple threads. Each shard has one clustering object, which the
 #' threads within the shard update concurrently. When all threads in the shard
 #' have finished, then the results from the shard are merged into the master
-#' clustering. This is probably the most efficient method when there are very
-#' many threads, but the optimal number of shards varies between data sets.
+#' clustering object. This is probably the most efficient method when there are
+#' very many threads, but the optimal number of shards varies between data sets.
 #'
 #' @param method (`character` string) parallelization method.
 #' @param threads (positive `integer` scalar) total number of threads to use
@@ -393,7 +418,11 @@ parallel_config <- function(method = c("merge", "concurrent", "hierarchical"), .
 parallel_merge <- function(threads) {
   checkmate::assert_integerish(threads, lower = 1L)
   structure(
-    list(method = "merge", threads = as.integer(threads)),
+    list(
+      method = "merge",
+      threads = as.integer(threads),
+      call = match.call()
+    ),
     class = "optimotu_parallel_config"
   )
 }
@@ -404,7 +433,11 @@ parallel_merge <- function(threads) {
 parallel_concurrent <- function(threads) {
   checkmate::assert_integerish(threads, lower = 1L)
   structure(
-    list(method = "concurrent", threads = as.integer(threads)),
+    list(
+      method = "concurrent",
+      threads = as.integer(threads),
+      call = match.call()
+    ),
     class = "optimotu_parallel_config"
   )
 }
@@ -422,7 +455,8 @@ parallel_hierarchical <- function(threads, shards) {
     list(
       method = "hierarchical",
       threads = as.integer(threads),
-      shards = as.integer(shards)
+      shards = as.integer(shards),
+      call = match.call()
     ),
     class = "optimotu_parallel_config"
   )
@@ -494,7 +528,8 @@ dist_wfa2 <- function(
       gap_open = as.integer(gap_open),
       gap_extend = as.integer(gap_extend),
       gap_open2 = as.integer(gap_open2),
-      gap_extend2 = as.integer(gap_extend2)
+      gap_extend2 = as.integer(gap_extend2),
+      call = match.call()
     ),
     class = "optimotu_dist_config"
   )
@@ -504,7 +539,10 @@ dist_wfa2 <- function(
 #' @describeIn dist_config helper function for method `"edlib"`
 dist_edlib <- function() {
   structure(
-    list(method = "edlib"),
+    list(
+      method = "edlib",
+      call = match.call()
+      ),
     class = "optimotu_dist_config"
   )
 }
@@ -517,7 +555,11 @@ dist_edlib <- function() {
 dist_hybrid <- function(cutoff = 0.1) {
   checkmate::assert_number(cutoff, lower = 0)
   structure(
-    list(method = "hybrid", cutoff = cutoff),
+    list(
+      method = "hybrid",
+      cutoff = cutoff,
+      call = match.call(),
+    ),
     class = "optimotu_dist_config"
   )
 }
@@ -539,7 +581,8 @@ dist_hamming <- function(min_overlap = 0L, ignore_gaps = TRUE) {
     list(
       method = "hamming",
       min_overlap = as.integer(min_overlap),
-      ignore_gaps = ignore_gaps
+      ignore_gaps = ignore_gaps,
+      call = match.call()
     ),
     class = "optimotu_dist_config"
   )
@@ -558,7 +601,8 @@ dist_usearch <- function(usearch = Sys.which("usearch"), usearch_ncpu = NULL) {
     list(
       method = "usearch",
       usearch = usearch,
-      usearch_ncpu = as.integer(usearch_ncpu)
+      usearch_ncpu = as.integer(usearch_ncpu),
+      call = match.call()
     ),
     class = "optimotu_dist_config"
   )
@@ -576,7 +620,12 @@ dist_file <- function(filename, by_name = TRUE) {
   checkmate::assert_file_exists(filename, access = "r")
   checkmate::assert_flag(by_name)
   structure(
-    list(method = "file", filename = filename),
+    list(
+      method = "file",
+      filename = filename,
+      by_name = by_name,
+      call = match.call()
+    ),
     class = "optimotu_dist_config"
   )
 }
@@ -622,7 +671,8 @@ prealign_kmer <- function(udist_threshold = 1) {
   structure(
     list(
       method = "kmer",
-      udist_threshold = udist_threshold
+      udist_threshold = udist_threshold,
+      call = match.call()
     ),
     class = "optimotu_prealign_config"
   )
@@ -634,7 +684,8 @@ prealign_kmer <- function(udist_threshold = 1) {
 prealign_wfa2 <- function() {
   structure(
     list(
-      method = "wfa2"
+      method = "wfa2",
+      call = match.call()
     ),
     class = "optimotu_prealign_config"
   )
@@ -645,7 +696,8 @@ prealign_wfa2 <- function() {
 prealign_edlib <- function() {
   structure(
     list(
-      method = "edlib"
+      method = "edlib",
+      call = match.call()
     ),
     class = "optimotu_prealign_config"
   )

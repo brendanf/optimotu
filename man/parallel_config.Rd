@@ -43,22 +43,22 @@ Configuration for parallelization options
 
 }}
 \section{Merge method}{
-In the merge method, each thread works on an independent clustering of the
-data, based on its own (disjoint) subset of the distance matrix. When each
-thread finishes clustering, it merges its results into the master clustering.
-This avoids concurrency collisions between the threads during the main
-clustering, although collisions can still occur if multiple threads try to
+In the merge method, each thread works on an independent clustering object,
+based on its own (disjoint) subset of the distance matrix. When each thread
+finishes clustering, it merges its results into the master clustering object.
+This avoids concurrency collisions between the threads during the first phase
+of clustering, although collisions can still occur if multiple threads try to
 merge at the same time.
 }
 
 \section{Concurrent method}{
-In the concurrent method, all threads work jointly on the same clustering of
-the data. Although many threads can simultaneously read the clustering to
+In the concurrent method, all threads work jointly on the same clustering
+object. Although many threads can simultaneously read the object to
 determine whether a new pairwise distance will lead to an update (most do
-not), only one thread can update the clustering at a time, so this method
-can lead to more concurrency collisions when many threads are in use.
-However, sharing the state of the clustering between threads leads to fewer
-total updates than the merge method.
+not), only one thread can update the clustering object at a time, so this
+method can lead to more concurrency collisions when many threads are in use.
+However, sharing the state of the clustering object between threads leads to
+fewer total updates than the merge method.
 }
 
 \section{Hierarchical method}{
@@ -66,7 +66,7 @@ The hierarchical method is a combination of several "shards", each of which
 in turn has multiple threads. Each shard has one clustering object, which the
 threads within the shard update concurrently. When all threads in the shard
 have finished, then the results from the shard are merged into the master
-clustering. This is probably the most efficient method when there are very
-many threads, but the optimal number of shards varies between data sets.
+clustering object. This is probably the most efficient method when there are
+very many threads, but the optimal number of shards varies between data sets.
 }
 

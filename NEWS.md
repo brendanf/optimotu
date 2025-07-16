@@ -7,16 +7,19 @@ arguments.
 * Add functions `cigar_wfa2()` and `cigar_edlib()` to return CIGAR (compressed
 idiosyncratic gapped alignment report) strings using WFA2 and edlib.
 * Add argument `return_cigar` to `seq_search()` to return the CIGAR strings for
-  the best match. This is only supported for WFA2 and edlib searches.
+the best match. This is only supported for WFA2 and edlib searches.
 * Add argument `span` to `seq_search()`, which is also only relevant for WFA2
 and edlib searches.  The default, "global", aligns the entire query sequence
-to the target sequence.  "Extension" does not penalize gaps at the 3' end of
+to the target sequence.  "extension" does not penalize gaps at the 3' end of
 either sequence for WFA2, and does not penalize gaps at the 3' end of the longer
 sequence for edlib.
 * Fix a bug in `optimotu()` which led to an error when supplying sequences as an
 `XStringSet` object.
 * The SneakySnake library has been removed from the OptimOTU code base, because
 of license incompatibility.
+* Configuration objects (from `dist_config()`, `threshold_config()`,
+  `parallel_config()`, etc.) now have a `$call` member, allowing them to be
+  updated with `update.default()`.
 
 # optimotu 0.9.3
 
