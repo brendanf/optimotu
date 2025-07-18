@@ -22,6 +22,9 @@ of license incompatibility.
 updated with `update.default()`.
 * `closed_ref_cluster()`, formerly an internal method to `optimotu()` is now
 exported for stand-alone use.
+* `calc_taxon_thresholds()` and `calc_subtaxon_thresholds()` now interpret a
+`taxon_table` where `all(is.na(taxon_table$seq_id))` as though it had zero rows;
+this is because `targets` sometimes needs something to branch over.
 
 # optimotu 0.9.3
 

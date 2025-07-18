@@ -55,7 +55,7 @@ calc_subtaxon_thresholds <- function(rank, taxon_table, optima,
     names(taxon_table),
     must.include = c("seq_id", superranks(rank, ranks), rank, subranks(rank, ranks)[1])
   )
-  if (nrow(taxon_table) == 0) {
+  if (nrow(taxon_table) == 0 || all(is.na(taxon_table$seq_id))) {
     return(list())
   }
   checkmate::assert_data_frame(optima)
