@@ -168,13 +168,15 @@ verify_precision <- function(precision) {
 #' @export
 clust_config <- function(method = c("tree", "matrix", "index", "slink"), ...) {
   method = match.arg(method)
-  switch(
+  cc <- switch(
     method,
     tree = clust_tree(...),
     matrix = clust_matrix(...),
     index = clust_index(...),
     slink = clust_slink(...)
   )
+  cc$call <- match.call()
+  cc
 }
 
 #' @param verbose (`logical` flag or `integer`) print progress messages
@@ -263,12 +265,14 @@ clust_slink <- function() {
 #' @export
 threshold_config <- function(type = c("uniform", "set", "lookup"), ...) {
   type = match.arg(type)
-  switch(
+  tc <- switch(
     type,
     uniform = threshold_uniform(...),
     set = threshold_set(...),
     lookup = threshold_lookup(...)
   )
+  tc$call <- match.call()
+  tc
 }
 
 #' @param from (`numeric` scalar) smallest threshold; typically between 0 and 1
@@ -404,12 +408,14 @@ threshold_lookup <- function(thresholds, precision, thresh_names = names(thresho
 #' @export
 parallel_config <- function(method = c("merge", "concurrent", "hierarchical"), ...) {
   method = match.arg(method)
-  switch(
+  pc <- switch(
     method,
     merge = parallel_merge(...),
     concurrent = parallel_concurrent(...),
     hierarchical = parallel_hierarchical(...)
   )
+  pc$call <- match.call()
+  pc
 }
 
 
@@ -487,7 +493,7 @@ dist_config <- function(
     ...
 ) {
   method = match.arg(method)
-  switch(
+  dc <- switch(
     method,
     wfa2 = dist_wfa2(...),
     edlib = dist_edlib(...),
@@ -496,6 +502,8 @@ dist_config <- function(
     hamming = dist_hamming(...),
     usearch = dist_usearch(...)
   )
+  dc$call <- match.call()
+  dc
 }
 
 #' @param match (non-negative `integer` scalar) score for a match
@@ -652,12 +660,14 @@ prealign_config <- function(
     ...
 ) {
   method = match.arg(method)
-  switch(
+  pc <- switch(
     method,
     kmer = prealign_kmer(...),
     wfa2 = prealign_wfa2(...),
     edlib = prealign_edlib(...)
   )
+  pc$call <- match.call()
+  pc
 }
 
 #' @param udist_threshold (positive `numeric` scalar) kmer distance threshold

@@ -75,7 +75,7 @@ seq_cluster.character <- function(
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
-    mycall[[1]] <- quote(seq_cluster_usearch.character)
+    mycall[[1]] <- quote(optimotu::seq_cluster_usearch)
     return(eval(mycall, envir = parent.frame()))
   }
   if (identical(dist_config$method, "file")) {
@@ -85,7 +85,7 @@ seq_cluster.character <- function(
     mycall$names <- mycall$seq_id
     mycall$seq_id <- NULL
     mycall$by_names <- dist_config$by_names
-    mycall[[1]] <- quote(distmx_cluster)
+    mycall[[1]] <- quote(optimotu::distmx_cluster)
     return(eval(mycall, envir = parent.frame()))
   }
   output_type = match.arg(output_type)

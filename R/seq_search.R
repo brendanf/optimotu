@@ -50,7 +50,7 @@ seq_search <- function(
   mycall <- match.call()
 
   if (identical(dist_config$method, "usearch")) {
-    mycall[[1]] <- seq_search_usearch
+    mycall[[1]] <- quote(optimotu::seq_search_usearch)
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
     eval(mycall, envir = parent.frame())
