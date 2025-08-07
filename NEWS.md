@@ -25,6 +25,8 @@ exported for stand-alone use.
 * `calc_taxon_thresholds()` and `calc_subtaxon_thresholds()` now interpret a
 `taxon_table` where `all(is.na(taxon_table$seq_id))` as though it had zero rows;
 this is because `targets` sometimes needs something to branch over.
+* Fix a bug in `select_sequence()` when the sequence is in the form of a
+fasta/fastq file.
 
 # optimotu 0.9.3
 

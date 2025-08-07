@@ -110,13 +110,13 @@ select_sequence <- function(sequence, which, negate = FALSE, name_col = NULL) {
 
   if (is.character(sequence) && length(sequence) == 1 && file.exists(sequence)) {
     if (grepl(fasta_regex, sequence)) {
-      seq <- Biostrings::readBStringSet(sequence)
+      sequence <- Biostrings::readBStringSet(sequence)
     } else if (grepl(fastq_regex, sequence)) {
-      seq <- Biostrings::readBStringSet(sequence, format = "fastq")
+      sequence <- Biostrings::readBStringSet(sequence, format = "fastq")
     } else {
       stop("unknown file type: ", sequence)
     }
-    seq <- as.character(seq)
+    sequence <- as.character(sequence)
   } else if (is.data.frame(sequence)) {
     if (is.null(name_col)) {
       name_col <- find_name_col(sequence)
@@ -129,7 +129,7 @@ select_sequence <- function(sequence, which, negate = FALSE, name_col = NULL) {
       return(merge(out, sequence, by = name_col, sort = FALSE))
     }
   }
-  seq[which]
+  sequence[which]
 }
 
 #' Get the number of sequences in a set
