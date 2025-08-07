@@ -4,7 +4,7 @@
 #' Perform closed-reference pseudo-single-linkage clustering by iterative
 #' searching
 #'
-#' When a sequence is equally distance from multiple references, a random
+#' When a sequence is equally distant from multiple references, a random
 #' reference is chosen.
 #'
 #' @param query (file name, named `character`, `data.frame` or
@@ -14,8 +14,7 @@
 #' @param threshold (`numeric`) distance threshold for clustering
 #' @param ... additional arguments to pass to `seq_search()`
 #' @return (`data.frame`) table with three columns: `seq_id` for the ID of the
-#' query sequence, `ref_id` for the ID of the reference sequence, and `dist`
-#' for the distance between the query and reference sequences.
+#' query sequence, `ref_id` for the ID of the reference sequence.
 #' @export
 closed_ref_cluster <- function(query, ref, threshold, ...) {
   last_out <- data.frame(seq_id = character(0), ref_id = character(0))
@@ -23,19 +22,22 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
   while (sequence_size(ref) > 0 && sequence_size(query) > 0) {
     result <- seq_search(query = query, ref = ref, threshold = threshold, ...)
     if (nrow(result) > 0) {
-      result <- split(result, result$seq_id)
-      result <- lapply(result, function(x) {
-        if (nrow(x) > 1) {
-          x <- x[sample.int(nrow(x), 1), ]
-        }
-        x
-      })
-      result <- do.call(rbind, result)
+      result <- result[result$dist <= threshold, c("seq_id", "ref_id"), drop = FALSE]
+      if (nrow(result) > 0) {
+        result <- split(result, result$seq_id)
+        result <- lapply(result, function(x) {
+          if (nrow(x) > 1) {
+            x <- x[sample.int(nrow(x), 1), ]
+          }
+          x
+        })
+        result <- do.call(rbind, result)
+      }
     }
     if (nrow(last_out) == 0) {
-      last_out <- result <- result[, c("seq_id", "ref_id", "dist")]
+      last_out <- result <- result[, c("seq_id", "ref_id")]
     } else {
-      result <- result[, c("seq_id", "ref_id", "dist")]
+      result <- result[, c("seq_id", "ref_id")]
       names(result)[2] <- "temp"
       result <- merge(
         result,
@@ -43,7 +45,7 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
         by.x = "temp",
         by.y = "seq_id"
       )
-      last_out <- result <- result[, c("seq_id", "ref_id", "dist")]
+      last_out <- result <- result[, c("seq_id", "ref_id")]
     }
     out <- c(out, list(result))
     ref <- select_sequence(query, result$seq_id)

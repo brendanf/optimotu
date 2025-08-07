@@ -19,9 +19,10 @@ closed_ref_cluster(query, ref, threshold, ...)
 \item{...}{additional arguments to pass to \code{seq_search()}}
 }
 \value{
-(\code{data.frame}) table of sequence IDs and their cluster assignments.
+(\code{data.frame}) table with three columns: \code{seq_id} for the ID of the
+query sequence, \code{ref_id} for the ID of the reference sequence.
 }
 \description{
-When a sequence is equally distance from multiple references, a random
+When a sequence is equally distant from multiple references, a random
 reference is chosen.
 }
