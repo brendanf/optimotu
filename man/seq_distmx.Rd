@@ -6,7 +6,13 @@
 \alias{seq_distmx_wfa2}
 \title{Sparse distance matrix between DNA sequences}
 \usage{
-seq_distmx_edlib(seq, dist_threshold, constrain = TRUE, threads = 1L)
+seq_distmx_edlib(
+  seq,
+  dist_threshold,
+  constrain = TRUE,
+  threads = 1L,
+  verbose = 0L
+)
 
 seq_distmx_kmer(
   seq,
@@ -50,6 +56,8 @@ that the results do not change.}
 
 \item{threads}{(\code{integer} count) number of parallel threads to use for
 computation.}
+
+\item{verbose}{(\code{integer} level) verbosity level}
 
 \item{udist_threshold}{(\code{numeric} scalar between 0 and 1) maximum udist
 (number of shared kmers / number of kmers in the shorter sequence) for full

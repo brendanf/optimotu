@@ -55,6 +55,7 @@ distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method
 #' that the results do not change.
 #' @param threads (`integer` count) number of parallel threads to use for
 #' computation.
+#' @param verbose (`integer` level) verbosity level
 #'
 #' @return (`data.frame`) a sparse distance matrix; columns are `seq1` and
 #' `seq2` for the 0-based indices of two sequences; `score1` and `score2` are
@@ -64,8 +65,8 @@ distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method
 #'
 #' @export
 #' @rdname seq_distmx
-seq_distmx_edlib <- function(seq, dist_threshold, constrain = TRUE, threads = 1L) {
-    .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, constrain, threads)
+seq_distmx_edlib <- function(seq, dist_threshold, constrain = TRUE, threads = 1L, verbose = 0L) {
+    .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, constrain, threads, verbose)
 }
 
 #' Get the names of reads in a FASTQ file

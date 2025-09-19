@@ -75,8 +75,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_distmx_edlib
-Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold, bool constrain, std::uint8_t threads);
-RcppExport SEXP _optimotu_seq_distmx_edlib(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
+Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold, bool constrain, std::uint8_t threads, int verbose);
+RcppExport SEXP _optimotu_seq_distmx_edlib(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP constrainSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -84,7 +84,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type dist_threshold(dist_thresholdSEXP);
     Rcpp::traits::input_parameter< bool >::type constrain(constrainSEXP);
     Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_distmx_edlib(seq, dist_threshold, constrain, threads));
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(seq_distmx_edlib(seq, dist_threshold, constrain, threads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -434,7 +435,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix2", (DL_FUNC) &_optimotu_confusion_matrix2, 3},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 8},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 9},
-    {"_optimotu_seq_distmx_edlib", (DL_FUNC) &_optimotu_seq_distmx_edlib, 4},
+    {"_optimotu_seq_distmx_edlib", (DL_FUNC) &_optimotu_seq_distmx_edlib, 5},
     {"_optimotu_fastq_names", (DL_FUNC) &_optimotu_fastq_names, 1},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},

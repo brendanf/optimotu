@@ -14,6 +14,7 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
   const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
+  const int verbose = 0;
 
   EdlibAlignWorker(
     const std::vector<std::string> &seq,
@@ -22,13 +23,14 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
     const std::uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
-    size_t &aligned
+    size_t &aligned,
+    const int verbose = 0
   ) : seq(seq),
   dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
   sim_threshold_plus_1(1.0 + sim_threshold),
   is_constrained(constrain),
   threads(threads),
-  sdm(sdm), prealigned(prealigned), aligned(aligned) {};
+  sdm(sdm), prealigned(prealigned), aligned(aligned), verbose(verbose) {};
 
   void operator()(std::size_t begin, std::size_t end) {
     double n = seq.size();
@@ -57,10 +59,11 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
       begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
     }
     size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
-    sdm.mutex.lock();
-    std::cout << "EdlibAlignWorker thread " << begin << " entered; sequences [" <<
-      begin_i << ", "<< end_i << ")" << std::endl;
-    sdm.mutex.unlock();
+
+    if (verbose >= 2) {
+      RcppThread::Rcerr << "EdlibAlignWorker thread " << begin << " entered; sequences [" <<
+        begin_i << ", "<< end_i << ")" << std::endl;
+    }
     for (size_t i = begin_i; i < end_i; i++) {
       for (size_t j = 0; j < i; j++) {
 
@@ -68,8 +71,10 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
         size_t s1 = is_seqj_longer ? i : j;
         size_t s2 = is_seqj_longer ? j : i;
         double l1 = seq[s1].size(), l2 = seq[s2].size();
-        // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
-        //             << j << " (l2=" << l2 <<")####" << std::endl;
+        if (verbose >= 3) {
+          RcppThread::Rcerr << "#### seq " << i << " (l1=" << l1 << ") and "
+                            << j << " (l2=" << l2 <<")####" << std::endl;
+        }
 
         if (l1/l2 < sim_threshold) continue;
 
@@ -127,6 +132,7 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
 //' that the results do not change.
 //' @param threads (`integer` count) number of parallel threads to use for
 //' computation.
+//' @param verbose (`integer` level) verbosity level
 //'
 //' @return (`data.frame`) a sparse distance matrix; columns are `seq1` and
 //' `seq2` for the 0-based indices of two sequences; `score1` and `score2` are
@@ -138,7 +144,8 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
 //' @rdname seq_distmx
 // [[Rcpp::export]]
 Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold,
-                                 bool constrain = true, std::uint8_t threads = 1) {
+                                 bool constrain = true, std::uint8_t threads = 1,
+                                 int verbose = 0) {
   size_t prealigned = 0, aligned = 0;
 
   std::vector<size_t> seq1, seq2;
@@ -148,17 +155,19 @@ Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_thres
   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
   EdlibAlignWorker worker(seq,
                           dist_threshold, constrain, threads,
-                          sdm, prealigned, aligned);
+                          sdm, prealigned, aligned, verbose);
   if (threads > 1) {
     RcppParallel::parallelFor(0, threads, worker, 1, threads);
   } else {
     worker(0, 1);
   }
 
-  Rcpp::Rcout << seq1.size() << " included / "
-              << aligned << " aligned / "
-              << prealigned << " prealigned"
-              << std::endl;
+  if (verbose >= 1) {
+    Rcpp::Rcout << seq1.size() << " included / "
+                << aligned << " aligned / "
+                << prealigned << " prealigned"
+                << std::endl;
+  }
 
   Rcpp::DataFrame out = Rcpp::DataFrame::create(
     Rcpp::Named("seq1") = Rcpp::wrap(seq1),
