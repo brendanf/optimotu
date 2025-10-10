@@ -159,6 +159,10 @@ struct KmerAlignWorker : public RcppParallel::Worker {
     KmerBitField match_hits;
     wfa::WFAlignerChoose aligner{match, mismatch, gap, extend, gap2, extend2,
                                  wfa::WFAligner::Alignment};
+
+    double sim_threshold = 1.0 - dist_threshold;
+    double sim_threshold_plus_1 = 1.0 + sim_threshold;
+
     if (begin == 0) {
       begin_i = 1;
     } else {
@@ -202,7 +206,20 @@ struct KmerAlignWorker : public RcppParallel::Worker {
         }
         if (d1 <= udist_threshold) {
           ++my_aligned;
-          auto d2 = score_and_distance_wfa2(seq[match.first], seq[i], aligner);
+          bool is_seqj_longer = seq[match.first].size() > seq[i].size();
+          size_t s1 = is_seqj_longer ? i : match.first;
+          size_t s2 = is_seqj_longer ? match.first : i;
+          double l1 = seq[s1].size(), l2 = seq[s2].size();
+          if (l1/l2 < sim_threshold) continue;
+          int min_k = -(int)ceil((l1 - l2 * sim_threshold) /
+            sim_threshold_plus_1);
+          int max_k = (int)ceil((l2 - l1 * sim_threshold) /
+            sim_threshold_plus_1);
+          int max_score = (int)ceil((l1 + l2) * sim_threshold_plus_1);
+          aligner.setMaxAlignmentSteps(max_score);
+          aligner.setHeuristicBandedStatic(min_k, max_k);
+
+          auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);
           if (d2.second <= dist_threshold) {
             my_seq1.push_back(match.first);
             my_seq2.push_back(i);
@@ -253,11 +270,18 @@ uint8_t lookup(char c) {
 //' @export
 //' @rdname seq_distmx
 // [[Rcpp::export]]
-Rcpp::DataFrame seq_distmx_kmer(std::vector<std::string> seq, double dist_threshold,
-                                double udist_threshold,
-                                int match = 1, int mismatch = 2, int gap_open = 10,
-                                int gap_extend = 1, int gap_open2 = 0, int gap_extend2 = 0,
-                                std::uint8_t threads = 1) {
+Rcpp::DataFrame seq_distmx_kmer(
+  std::vector<std::string> seq,
+  double dist_threshold,
+  double udist_threshold,
+  int match = -1,
+  int mismatch = 2,
+  int gap_open = 10,
+  int gap_extend = 1,
+  int gap_open2 = 0,
+  int gap_extend2 = 0,
+  std::uint8_t threads = 1
+) {
 
   Rcpp::Rcout << "Indexing k-mers...";
   // index: for each kmer, which sequences is it found in, and how many times?

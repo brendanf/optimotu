@@ -18,7 +18,7 @@ seq_distmx_kmer(
   seq,
   dist_threshold,
   udist_threshold,
-  match = 1L,
+  match = -1L,
   mismatch = 2L,
   gap_open = 10L,
   gap_extend = 1L,
@@ -30,7 +30,7 @@ seq_distmx_kmer(
 seq_distmx_wfa2(
   seq,
   dist_threshold,
-  match = 1L,
+  match = -1L,
   mismatch = 2L,
   gap_open = 10L,
   gap_extend = 1L,

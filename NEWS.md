@@ -27,6 +27,8 @@ exported for stand-alone use.
 this is because `targets` sometimes needs something to branch over.
 * Fix a bug in `select_sequence()` when the sequence is in the form of a
 fasta/fastq file.
+* Update `seq_distmx_wfa2()` and `seq_distmx_kmer()` for compatibility with
+changes introduced in 0.9.0.
 
 # optimotu 0.9.3
 

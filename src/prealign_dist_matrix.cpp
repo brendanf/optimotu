@@ -170,7 +170,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
 Rcpp::DataFrame seq_distmx_wfa2(
     std::vector<std::string> seq,
     double dist_threshold,
-    int match = 1, int mismatch = 2,
+    int match = -1, int mismatch = 2,
     int gap_open = 10, int gap_extend = 1,
     int gap_open2 = 0, int gap_extend2 = 0,
     bool prealign = true,

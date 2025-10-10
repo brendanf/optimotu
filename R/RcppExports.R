@@ -113,7 +113,7 @@ fmeasure_matrix <- function(k, c, ncpu = 1L) {
 #' alignment.
 #' @export
 #' @rdname seq_distmx
-seq_distmx_kmer <- function(seq, dist_threshold, udist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
+seq_distmx_kmer <- function(seq, dist_threshold, udist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
     .Call(`_optimotu_seq_distmx_kmer`, seq, dist_threshold, udist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads)
 }
 
@@ -218,7 +218,7 @@ align_edlib_extend <- function(a, b) {
 #' on the edit distance score.
 #' @export
 #' @rdname seq_distmx
-seq_distmx_wfa2 <- function(seq, dist_threshold, match = 1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {
+seq_distmx_wfa2 <- function(seq, dist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {
     .Call(`_optimotu_seq_distmx_wfa2`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
 }
 
