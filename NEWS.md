@@ -29,6 +29,8 @@ this is because `targets` sometimes needs something to branch over.
 fasta/fastq file.
 * Update `seq_distmx_wfa2()` and `seq_distmx_kmer()` for compatibility with
 changes introduced in 0.9.0.
+* Implement `seq_distmx_hamming()` to calculate sparse distance matrix based on
+Hamming distance.
 
 # optimotu 0.9.3
 

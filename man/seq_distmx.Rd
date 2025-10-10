@@ -4,6 +4,7 @@
 \alias{seq_distmx_edlib}
 \alias{seq_distmx_kmer}
 \alias{seq_distmx_wfa2}
+\alias{seq_distmx_hamming}
 \title{Sparse distance matrix between DNA sequences}
 \usage{
 seq_distmx_edlib(
@@ -39,6 +40,15 @@ seq_distmx_wfa2(
   prealign = TRUE,
   constrain = TRUE,
   threads = 1L
+)
+
+seq_distmx_hamming(
+  seq,
+  dist_threshold,
+  min_overlap = 0L,
+  ignore_gap = FALSE,
+  threads = 1L,
+  verbose = 0L
 )
 }
 \arguments{

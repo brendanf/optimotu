@@ -10,11 +10,13 @@
 #define NUCLEOTIDES_IN_WORD 16
 
 int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int *start, int *end);
-double pdistB(const uint64_t *a, const uint64_t *ma,
-              const uint64_t *b, const uint64_t *mb,
-              const int start, const int end, const int min_len);
-double pdistB2(const uint64_t *a, const uint64_t *ma,
-              const uint64_t *b, const uint64_t *mb,
-              const int start, const int end, const int min_len);
+int pdistB(const uint64_t *a, const uint64_t *ma,
+           const uint64_t *b, const uint64_t *mb,
+           const int start, const int end, const int min_len,
+           int *num_ok, int *num_matches, double *dist);
+int pdistB2(const uint64_t *a, const uint64_t *ma,
+            const uint64_t *b, const uint64_t *mb,
+            const int start, const int end, const int min_len,
+            int *num_ok, int *num_matches, double *dist);
 
 #endif

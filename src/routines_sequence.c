@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+//#define DEBUG 1
 
 #ifdef DEBUG
 #define debugprintf(...) fprintf(stderr, __VA_ARGS__)
@@ -49,6 +50,7 @@ int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int 
       else if (s[i] == 'T') {a += 8;}
       i++;
     }
+    a <<= (4 * (NUCLEOTIDES_IN_WORD - n_remaining));
     b[j] = a;
   }
 
@@ -95,20 +97,22 @@ int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int 
       i++;
       l++;
     }
+    am <<= (NUCLEOTIDES_IN_WORD*4 - n_remaining);
     m[j] = am;
   }
 
   return (0);
 }
 
-double pdistB(const uint64_t *a, const uint64_t *ma,
+int pdistB(const uint64_t *a, const uint64_t *ma,
               const uint64_t *b, const uint64_t *mb,
-              const int start, const int end, const int min_len)
+              const int start, const int end, const int min_len,
+              int *num_ok, int *num_matches, double *dist)
 {
-  int i, num_ok, num_matches, nstart, nend;
+  int i, nstart, nend;
 
   debugprintf("entering pdistB:\n");
-  debugprintf("a:");
+  debugprintf("a: ");
   for (i=0; i * NUCLEOTIDES_IN_WORD < end; i++) {
     debugprintf(" %016" PRIx64, a[i]);
   }
@@ -126,15 +130,20 @@ double pdistB(const uint64_t *a, const uint64_t *ma,
   }
   debugprintf("\n");
 
-  num_ok=0;
-  num_matches=0;
+  *num_ok=0;
+  *num_matches=0;
   nstart=start/(NUCLEOTIDES_IN_WORD*4);
   nend=end/(NUCLEOTIDES_IN_WORD*4);
   if (nend * NUCLEOTIDES_IN_WORD*4 < end) nend++;
 
   for (i=nstart; i<nend; i++) {
-    num_ok += __builtin_popcountll(ma[i] & mb[i]);
-    debugprintf("i=%d, num_ok=%d\n", i, num_ok);
+    *num_ok += __builtin_popcountll(ma[i] & mb[i]);
+    debugprintf("i=%d, num_ok=%d\n", i, *num_ok);
+  }
+
+  if (*num_ok == 0 || *num_ok < min_len) {
+    *dist = 1.0;
+    return 1;
   }
 
   nstart=start/NUCLEOTIDES_IN_WORD;
@@ -142,25 +151,24 @@ double pdistB(const uint64_t *a, const uint64_t *ma,
   if (nend * NUCLEOTIDES_IN_WORD < end) nend++;
 
   for (i=nstart; i<nend; i++) {
-    num_matches += __builtin_popcountll(a[i] & b[i]);
-    debugprintf("i=%d, num_matches=%d\n", i, num_matches);
+    *num_matches += __builtin_popcountll(a[i] & b[i]);
+    debugprintf("i=%d, num_matches=%d\n", i, *num_matches);
   }
 
-  if (num_ok >= min_len)
-    return (1.0 - (double) num_matches / num_ok);
-  else
-    return (1.0);
+  *dist = 1.0 - (double) *num_matches / *num_ok;
+  return 0;
 }
 
-double pdistB2(const uint64_t *a, const uint64_t *ma,
-              const uint64_t *b, const uint64_t *mb,
-              const int start, const int end, const int min_len)
+int pdistB2(const uint64_t *a, const uint64_t *ma,
+            const uint64_t *b, const uint64_t *mb,
+            const int start, const int end, const int min_len,
+            int *num_ok, int *num_matches, double *dist)
 {
-  int i, num_ok, num_matches, nstart, nend;
+  int i, nstart, nend;
   uint64_t mask;
 
   debugprintf("entering pdistB2:\n");
-  debugprintf("a:");
+  debugprintf("a: ");
   for (i=0; i * NUCLEOTIDES_IN_WORD < end; i++) {
     debugprintf(" %016" PRIx64, a[i]);
   }
@@ -178,54 +186,55 @@ double pdistB2(const uint64_t *a, const uint64_t *ma,
   }
   debugprintf("\n");
 
+  *num_ok = 0;
+  *num_matches=0;
   nstart=start/(NUCLEOTIDES_IN_WORD*4);
   nend=end/(NUCLEOTIDES_IN_WORD*4);
   if (nend * NUCLEOTIDES_IN_WORD*4 < end) nend++;
-
   if (nstart + 1 == nend) {
     debugprintf("single mask\n");
-    mask = (uint64_t)(-1) << (start % (NUCLEOTIDES_IN_WORD*4));
+    mask = (uint64_t)(-1) >> (start % (NUCLEOTIDES_IN_WORD*4));
     debugprintf("mask=%016" PRIx64 "\n", mask);
-    mask &= ~((uint64_t)(-1) << (end % (NUCLEOTIDES_IN_WORD*4)));
+    mask &= ~((uint64_t)(-1) >> (end % (NUCLEOTIDES_IN_WORD*4)));
     debugprintf("mask=%016" PRIx64 "\n", mask);
     debugprintf("ma | mb=%016" PRIx64 "\n", ma[nstart] | mb[nstart]);
-    num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
-    debugprintf("num_ok=%d\n", num_ok);
+    *num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
+    debugprintf("num_ok=%d\n", *num_ok);
   } else {
     debugprintf("multiple masks\n");
-    mask = (uint64_t)(-1) << (start % (NUCLEOTIDES_IN_WORD*4));
+    mask = (uint64_t)(-1) >> (start % (NUCLEOTIDES_IN_WORD*4));
     debugprintf("mask=%016" PRIx64 "\n", mask);
-    num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
-    debugprintf("num_ok=%d\n", num_ok);
+    *num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
+    debugprintf("num_ok=%d\n", *num_ok);
 
     for (i=nstart + 1; i<nend - 1; i++) {
       debugprintf("i=%d\n", i);
       debugprintf("ma | mb=%016" PRIx64 "\n", ma[i] | mb[i]);
-      num_ok += __builtin_popcountll(ma[i] | mb[i]);
-      debugprintf("num_ok=%d\n", num_ok);
+      *num_ok += __builtin_popcountll(ma[i] | mb[i]);
+      debugprintf("num_ok=%d\n", *num_ok);
     }
 
-    mask = ~((uint64_t)(-1) << (end % (NUCLEOTIDES_IN_WORD*4)));
+    mask = ~((uint64_t)(-1) >> (end % (NUCLEOTIDES_IN_WORD*4)));
     debugprintf("mask=%016" PRIx64 "\n", mask);
-    num_ok += __builtin_popcountll((ma[nend-1] | mb[nend-1]) & mask);
-    debugprintf("num_ok=%d\n", num_ok);
+    *num_ok += __builtin_popcountll((ma[nend-1] | mb[nend-1]) & mask);
+    debugprintf("num_ok=%d\n", *num_ok);
   }
 
-  if (num_ok == 0) return 1.0;
+  if (*num_ok == 0 || *num_ok < min_len) {
+    *dist = 1.0;
+    return 1;
+  }
 
   nstart=start/NUCLEOTIDES_IN_WORD;
   nend=end/NUCLEOTIDES_IN_WORD;
   if (nend * NUCLEOTIDES_IN_WORD < end) nend++;
 
-  num_matches=0;
   for (i=nstart; i<nend; i++) {
     debugprintf("i=%d, ", i);
-    num_matches += __builtin_popcountll(a[i] & b[i]);
-    debugprintf("num_matches=%d\n", num_matches);
+    *num_matches += __builtin_popcountll(a[i] & b[i]);
+    debugprintf("num_matches=%d\n", *num_matches);
   }
 
-  if (num_ok >= min_len)
-    return (1.0 - (double) num_matches / num_ok);
-  else
-    return (1.0);
+  *dist = 1.0 - (double) *num_matches / *num_ok;
+  return 0;
 }

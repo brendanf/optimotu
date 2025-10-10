@@ -230,6 +230,12 @@ seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_c
     .Call(`_optimotu_seq_cluster_multi`, seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
 }
 
+#' @export
+#' @rdname seq_distmx
+seq_distmx_hamming <- function(seq, dist_threshold, min_overlap = 0L, ignore_gap = FALSE, threads = 1L, verbose = 0L) {
+    .Call(`_optimotu_seq_distmx_hamming`, seq, dist_threshold, min_overlap, ignore_gap, threads, verbose)
+}
+
 #' Search for best match(es) of query sequences in reference sequences
 #' @param query (named `character`) query sequences
 #' @param ref (named `character`) reference sequences

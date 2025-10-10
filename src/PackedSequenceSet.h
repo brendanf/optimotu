@@ -4,6 +4,9 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <utility>
+#include <tuple>
+#include "optimotu.h"
 
 // Analogous to SequenceSetB in C code
 struct PackedSequenceSet {
@@ -18,8 +21,25 @@ struct PackedSequenceSet {
     const std::vector<std::string> & seq2
   );
 
-  double dist(const int i, const int j, const int min_overlap,
-              const bool ignore_gap) const;
+  double dist(
+    const int i,
+    const int j,
+    const int min_overlap,
+    const bool ignore_gap
+  ) const;
+  std::pair<int, double> score_and_dist(
+    const int i,
+    const int j,
+    const int min_overlap,
+    const bool ignore_gap
+  ) const;
+  std::tuple<bool, int, double> success_score_and_dist(
+    const int i,
+    const int j,
+    const int min_overlap,
+    const bool ignore_gap
+  ) const;
+  bool verify(const std::vector<std::string> & seq) const;
 };
 
 #endif

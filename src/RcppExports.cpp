@@ -399,6 +399,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// seq_distmx_hamming
+Rcpp::DataFrame seq_distmx_hamming(const std::vector<std::string> seq, const double dist_threshold, const int min_overlap, const bool ignore_gap, const std::uint8_t threads, const int verbose);
+RcppExport SEXP _optimotu_seq_distmx_hamming(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP min_overlapSEXP, SEXP ignore_gapSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<std::string> >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< const double >::type dist_threshold(dist_thresholdSEXP);
+    Rcpp::traits::input_parameter< const int >::type min_overlap(min_overlapSEXP);
+    Rcpp::traits::input_parameter< const bool >::type ignore_gap(ignore_gapSEXP);
+    Rcpp::traits::input_parameter< const std::uint8_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< const int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(seq_distmx_hamming(seq, dist_threshold, min_overlap, ignore_gap, threads, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 // seq_search_internal
 Rcpp::RObject seq_search_internal(Rcpp::CharacterVector query, Rcpp::CharacterVector ref, Rcpp::List dist_config, Rcpp::List parallel_config, double threshold, int verbose, bool return_cigar, int span);
 RcppExport SEXP _optimotu_seq_search_internal(SEXP querySEXP, SEXP refSEXP, SEXP dist_configSEXP, SEXP parallel_configSEXP, SEXP thresholdSEXP, SEXP verboseSEXP, SEXP return_cigarSEXP, SEXP spanSEXP) {
@@ -457,6 +473,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_distmx_wfa2", (DL_FUNC) &_optimotu_seq_distmx_wfa2, 11},
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},
     {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 8},
+    {"_optimotu_seq_distmx_hamming", (DL_FUNC) &_optimotu_seq_distmx_hamming, 6},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
     {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 2},
     {NULL, NULL, 0}
