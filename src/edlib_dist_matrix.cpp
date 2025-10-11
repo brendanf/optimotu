@@ -121,6 +121,8 @@ struct EdlibAlignWorker : public RcppParallel::Worker {
 
 //' Sparse distance matrix between DNA sequences
 //'
+//' @name seq_distmx
+//'
 //' @param seq (`character` vector) DNA sequences to calculate distances for
 //' @param dist_threshold (`numeric` scalar) maximum sequence distance (edit
 //' distance / alignment length) threshold for reporting
