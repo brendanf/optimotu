@@ -42,35 +42,6 @@ distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method
     .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type, verbose, by_name)
 }
 
-#' Sparse distance matrix between DNA sequences
-#'
-#' @name seq_distmx
-#'
-#' @param seq (`character` vector) DNA sequences to calculate distances for
-#' @param dist_threshold (`numeric` scalar) maximum sequence distance (edit
-#' distance / alignment length) threshold for reporting
-#' @param constrain (`logical` flag) if `TRUE`, the alignment algorithm will
-#' use optimizations that will cause it to exit early if the optimal alignment
-#' has a distance greater than the distance threshold. This should not change
-#' the correctness of distance calculations below the threshold, and results in
-#' a large speedup. It is recommended to use `constrain=FALSE` only to verify
-#' that the results do not change.
-#' @param threads (`integer` count) number of parallel threads to use for
-#' computation.
-#' @param verbose (`integer` level) verbosity level
-#'
-#' @return (`data.frame`) a sparse distance matrix; columns are `seq1` and
-#' `seq2` for the 0-based indices of two sequences; `score1` and `score2` are
-#' the optimal alignment score for the two sequences in the "prealignment" (if
-#' any) and "alignment" stages; `dist1` and `dist2` are the corresponding
-#' sequence distances.
-#'
-#' @export
-#' @rdname seq_distmx
-seq_distmx_edlib <- function(seq, dist_threshold, details = 0L, span = 0L, constrain = TRUE, threads = 1L, verbose = 0L) {
-    .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, details, span, constrain, threads, verbose)
-}
-
 #' Get the names of reads in a FASTQ file
 #' @param x (`character`) FASTQ file path, optionally gzipped.
 #' @return (`character`) Read names.
@@ -229,8 +200,8 @@ add_gapstats <- function(df, cigar_column) {
 #' on the edit distance score.
 #' @export
 #' @rdname seq_distmx
-seq_distmx_wfa2 <- function(seq, dist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {
-    .Call(`_optimotu_seq_distmx_wfa2`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
+seq_distmx_prealign <- function(seq, dist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {
+    .Call(`_optimotu_seq_distmx_prealign`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
 }
 
 seq_cluster_single <- function(seq, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = 0L) {
@@ -264,12 +235,6 @@ seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_c
 #' @keywords internal
 seq_distmx_internal <- function(seq, dist_config, parallel_config, threshold, verbose = 0L, details = 0L, span = 0L, constrain = TRUE) {
     .Call(`_optimotu_seq_distmx_internal`, seq, dist_config, parallel_config, threshold, verbose, details, span, constrain)
-}
-
-#' @export
-#' @rdname seq_distmx
-seq_distmx_hamming <- function(seq, dist_threshold, min_overlap = 0L, ignore_gap = FALSE, threads = 1L, verbose = 0L) {
-    .Call(`_optimotu_seq_distmx_hamming`, seq, dist_threshold, min_overlap, ignore_gap, threads, verbose)
 }
 
 #' Search for best match(es) of query sequences in reference sequences

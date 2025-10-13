@@ -167,7 +167,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
 //' @export
 //' @rdname seq_distmx
 // [[Rcpp::export]]
-Rcpp::DataFrame seq_distmx_wfa2(
+Rcpp::DataFrame seq_distmx_prealign(
     std::vector<std::string> seq,
     double dist_threshold,
     int match = -1, int mismatch = 2,

@@ -17,7 +17,8 @@ seq_distmx_usearch(
 )
 }
 \arguments{
-\item{seq}{(\code{character}, \code{data.frame}, or \code{XStringSet}) sequences to search}
+\item{seq}{(\code{character}, \code{data.frame}, or \code{XStringSet}) DNA sequences to
+calculate distances for}
 
 \item{threshold}{(\code{numeric} scalar) maximum distance to consider a match, in
 [0, 1] where 0 is identical.}
@@ -36,6 +37,10 @@ parallel processing, as returned by \code{parallel_config()} or its helpers.}
 \item{details}{(one of "none", "gapstats", or "cigar") if "gapstats", return
 #' the gap statistics. If "cigar", return the CIGAR string. Otherwise return
 only the score and distance}
+
+\item{id_is_int}{(\code{logical} scalar) if \code{TRUE}, the sequence IDs are
+parsed as integers, and the returned IDs are integers.
+The default is \code{FALSE}.}
 
 \item{...}{passed to methods (currently inactive)}
 }

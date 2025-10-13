@@ -29,8 +29,15 @@ this is because `targets` sometimes needs something to branch over.
 fasta/fastq file.
 * Update `seq_distmx_wfa2()` and `seq_distmx_kmer()` for compatibility with
 changes introduced in 0.9.0.
-* Implement `seq_distmx_hamming()` to calculate sparse distance matrix based on
-Hamming distance.
+* `seq_distmx()` is a new unified function to calculate a sparse distance
+matrix using various methods as defined by `dist_config()`. Earlier functions
+`seq_distmx_edlib()` and `seq_distmx_wfa2()`, as well as the new
+`seq_distmx_hamming()`, are now shortcuts to call `seq_distmx()` with the
+appropriate configuration. Because the output format of these functions has
+changed, this is a potentially a breaking change.  Note that `seq_dist_kmer()`
+is still retained, and the old `seq_distmx_wfa2()` is retained and renamed
+`seq_distmx_prealign()`, because their functionality is not (yet) available in
+`seq_distmx()`.
 
 # optimotu 0.9.3
 

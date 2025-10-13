@@ -1,6 +1,7 @@
 #' Search for the closest match(es) to sequences in a reference database
 #'
-#' @param seq (`character`, `data.frame`, or `XStringSet`) sequences to search
+#' @param seq (`character`, `data.frame`, or `XStringSet`) DNA sequences to
+#' calculate distances for
 #' @param seq_id (`character` vector) names for the sequences.  If they
 #' are already named, this will replace the names.
 #' @param threshold (`numeric` scalar) maximum distance to consider a match, in
@@ -16,12 +17,12 @@
 #' @param span (`character` string) the span of the alignment; currently
 #' accepted values are "global" and "extension".  The default is "global".
 #' @param constrain (`logical` flag) if `TRUE`, the alignment algorithm will
-#' use optimizations that will cause it to exit early if the optimal alignment
-#' has a distance greater than the distance threshold. This should not change
+#' use optimizations that will cause it to exit early if all possible alignments
+#' have a distance greater than the distance threshold. This should not change
 #' the correctness of distance calculations below the threshold, and results in
-#' a large speedup. It is recommended to use `constrain=FALSE` only to verify
-#' that the results do not change.
-#' @param id_is_integer (`logical` scalar) if `TRUE`, the sequence IDs are
+#' a large speedup for WFA2 and edlib. It is recommended to use
+#' `constrain=FALSE` only to verify that the results do not change.
+#' @param id_is_int (`logical` scalar) if `TRUE`, the sequence IDs are
 #' parsed as integers, and the returned IDs are integers.
 #' The default is `FALSE`.
 #' @param ... passed to methods
@@ -45,7 +46,7 @@ seq_distmx <- function(
   details = c("none", "gapstats", "cigar"),
   span = c("global", "extension"),
   constrain = TRUE,
-  id_is_integer = is.data.frame(seq) && "seq_idx" %in% names(seq),
+  id_is_int = is.data.frame(seq) && "seq_idx" %in% names(seq),
   ...
 ) {
   checkmate::assert_character(seq_id, null.ok = TRUE, len = length(seq),
@@ -58,7 +59,7 @@ seq_distmx <- function(
   if (!missing(span)) checkmate::assert_string(span)
   span <- match.arg(span, several.ok = FALSE)
   span <- match(span, c("global", "extension")) - 1L
-  checkmate::assert_flag(id_is_integer)
+  checkmate::assert_flag(id_is_int)
 
   mycall <- match.call()
 
@@ -99,7 +100,7 @@ seq_distmx <- function(
         )
         out <- out[out$seq_idx1 + 1 <= length(seq), ]
         out <- out[out$seq_idx2 + 1 <= length(seq), ]
-        if (id_is_integer) {
+        if (id_is_int) {
           out$seq_idx1 <- out$seq_idx1 + 1
           out$seq_idx2 <- out$seq_idx2 + 1
         } else {
@@ -122,7 +123,7 @@ seq_distmx <- function(
         span = span,
         constrain = constrain
       )
-      if (isFALSE(id_is_integer)) {
+      if (isFALSE(id_is_int)) {
         out$seq_idx1 <- names(seq)[out$seq_idx1 + 1]
         out$seq_idx2 <- names(seq)[out$seq_idx2 + 1]
         names(out)[1:2] <- c("seq_id1", "seq_id2")
@@ -130,4 +131,101 @@ seq_distmx <- function(
       out
     }
   }
+}
+
+#' @export
+#' @rdname seq_distmx
+seq_distmx_edlib <- function(
+  seq,
+  threshold,
+  details = 0L,
+  span = 0L,
+  constrain = TRUE,
+  threads = 1L,
+  verbose = 0L,
+  ...
+) {
+  call <- match.call()
+  call[[1]] <- quote(optimotu::seq_distmx)
+  call$dist_config <- dist_edlib()
+  call$parallel_config <- parallel_concurrent(threads)
+  call$threads <- NULL
+  eval(call, envir = parent.frame())
+}
+
+#' @param min_overlap (`integer` scalar) minimum length of overlap between two
+#' sequences (i.e., length after subtracting end gaps in either sequence). If
+#' the required overlap is not met, the distance is returned as 1.
+#' @param ignore_gaps (`logical` flag) if `TRUE`, columns containing an internal
+#' gap in one sequence are ignored, i.e. not counted as a mismatch and also not
+#' counted towards the total aligned length. If `FALSE`, such columns are
+#' counted as mismatches.  End gaps in either sequence, and internal gaps shared
+#' by both sequences, are always ignored.
+#' @export
+#' @rdname seq_distmx
+seq_distmx_hamming <- function(
+  seq,
+  threshold,
+  min_overlap = 0L,
+  ignore_gaps = FALSE,
+  threads = 1L,
+  verbose = 0L,
+  ...
+) {
+  call <- match.call()
+  call[[1]] <- quote(optimotu::seq_distmx)
+  call$dist_config <- dist_hamming(
+    min_overlap = min_overlap,
+    ignore_gaps = ignore_gaps
+  )
+  call$parallel_config <- parallel_concurrent(threads)
+  call$min_overlap <- NULL
+  call$ignore_gaps <- NULL
+  call$threads <- NULL
+  eval(call, envir = parent.frame())
+}
+
+#' @param match (non-negative `integer` scalar) score for a match
+#' @param mismatch (positive `integer` scalar) penalty for a mismatch
+#' @param gap_open (non-negative `integer` scalar) penalty for gap opening
+#' @param gap_extend (positive `integer` scalar) penalty for gap extension
+#' @param gap_open2 (non-negative `integer` scalar) alternate penalty for gap
+#' opening
+#' @param gap_extend2 (positive `integer` scalar) alternate penalty for gap
+#' extension
+#' @export
+#' @rdname seq_distmx
+seq_distmx_wfa2 <- function(
+  seq,
+  threshold,
+  match = -1L,
+  mismatch = 2L,
+  gap_open = 10L,
+  gap_extend = 1L,
+  gap_open2 = 0L,
+  gap_extend2 = 0L,
+  constrain = TRUE,
+  threads = 1L,
+  verbose = 0L,
+  ...
+) {
+  call <- match.call()
+  call[[1]] <- quote(optimotu::seq_distmx)
+  call$dist_config <- dist_wfa2(
+    match = match,
+    mismatch = mismatch,
+    gap_open = gap_open,
+    gap_extend = gap_extend,
+    gap_open2 = gap_open2,
+    gap_extend2 = gap_extend2
+  )
+  call$parallel_config <- parallel_concurrent(threads)
+  call$match <- NULL
+  call$mismatch <- NULL
+  call$gap_open <- NULL
+  call$gap_extend <- NULL
+  call$gap_open2 <- NULL
+  call$gap_extend2 <- NULL
+  call$threads <- NULL
+  eval(call, envir = parent.frame())
 }

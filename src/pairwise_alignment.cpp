@@ -226,6 +226,19 @@ std::string cigar_wfa2_extend(const std::string &a, const std::string &b,
   return cigar_wfa2<AlignmentSpan::EXTEND>(a, b, aligner);
 }
 
+// explicit instantiations
+// shouldn't be needed, but without them I get linker errors
+template std::string cigar_wfa2<AlignmentSpan::GLOBAL>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+template std::string cigar_wfa2<AlignmentSpan::EXTEND>(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner
+);
+
 template<enum AlignmentSpan span>
 std::pair<double, std::string> distance_and_cigar_wfa2(
     const std::string &a,

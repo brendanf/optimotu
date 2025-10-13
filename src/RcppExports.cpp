@@ -74,23 +74,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// seq_distmx_edlib
-Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold, int details, int span, bool constrain, std::uint8_t threads, int verbose);
-RcppExport SEXP _optimotu_seq_distmx_edlib(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP detailsSEXP, SEXP spanSEXP, SEXP constrainSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<std::string> >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< double >::type dist_threshold(dist_thresholdSEXP);
-    Rcpp::traits::input_parameter< int >::type details(detailsSEXP);
-    Rcpp::traits::input_parameter< int >::type span(spanSEXP);
-    Rcpp::traits::input_parameter< bool >::type constrain(constrainSEXP);
-    Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
-    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_distmx_edlib(seq, dist_threshold, details, span, constrain, threads, verbose));
-    return rcpp_result_gen;
-END_RCPP
-}
 // fastq_names
 Rcpp::CharacterVector fastq_names(std::string x);
 RcppExport SEXP _optimotu_fastq_names(SEXP xSEXP) {
@@ -357,9 +340,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// seq_distmx_wfa2
-Rcpp::DataFrame seq_distmx_wfa2(std::vector<std::string> seq, double dist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, bool prealign, bool constrain, std::uint8_t threads);
-RcppExport SEXP _optimotu_seq_distmx_wfa2(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP prealignSEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
+// seq_distmx_prealign
+Rcpp::DataFrame seq_distmx_prealign(std::vector<std::string> seq, double dist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, bool prealign, bool constrain, std::uint8_t threads);
+RcppExport SEXP _optimotu_seq_distmx_prealign(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP prealignSEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -374,7 +357,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type prealign(prealignSEXP);
     Rcpp::traits::input_parameter< bool >::type constrain(constrainSEXP);
     Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_distmx_wfa2(seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads));
+    rcpp_result_gen = Rcpp::wrap(seq_distmx_prealign(seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -431,22 +414,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// seq_distmx_hamming
-Rcpp::DataFrame seq_distmx_hamming(const std::vector<std::string> seq, const double dist_threshold, const int min_overlap, const bool ignore_gap, const std::uint8_t threads, const int verbose);
-RcppExport SEXP _optimotu_seq_distmx_hamming(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP min_overlapSEXP, SEXP ignore_gapSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<std::string> >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const double >::type dist_threshold(dist_thresholdSEXP);
-    Rcpp::traits::input_parameter< const int >::type min_overlap(min_overlapSEXP);
-    Rcpp::traits::input_parameter< const bool >::type ignore_gap(ignore_gapSEXP);
-    Rcpp::traits::input_parameter< const std::uint8_t >::type threads(threadsSEXP);
-    Rcpp::traits::input_parameter< const int >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_distmx_hamming(seq, dist_threshold, min_overlap, ignore_gap, threads, verbose));
-    return rcpp_result_gen;
-END_RCPP
-}
 // seq_search_internal
 Rcpp::RObject seq_search_internal(Rcpp::CharacterVector query, Rcpp::CharacterVector ref, Rcpp::List dist_config, Rcpp::List parallel_config, double threshold, int verbose, bool return_cigar, int span);
 RcppExport SEXP _optimotu_seq_search_internal(SEXP querySEXP, SEXP refSEXP, SEXP dist_configSEXP, SEXP parallel_configSEXP, SEXP thresholdSEXP, SEXP verboseSEXP, SEXP return_cigarSEXP, SEXP spanSEXP) {
@@ -483,7 +450,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix2", (DL_FUNC) &_optimotu_confusion_matrix2, 3},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 8},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 9},
-    {"_optimotu_seq_distmx_edlib", (DL_FUNC) &_optimotu_seq_distmx_edlib, 7},
     {"_optimotu_fastq_names", (DL_FUNC) &_optimotu_fastq_names, 1},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},
@@ -503,11 +469,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_align_edlib_global", (DL_FUNC) &_optimotu_align_edlib_global, 2},
     {"_optimotu_align_edlib_extend", (DL_FUNC) &_optimotu_align_edlib_extend, 2},
     {"_optimotu_add_gapstats", (DL_FUNC) &_optimotu_add_gapstats, 2},
-    {"_optimotu_seq_distmx_wfa2", (DL_FUNC) &_optimotu_seq_distmx_wfa2, 11},
+    {"_optimotu_seq_distmx_prealign", (DL_FUNC) &_optimotu_seq_distmx_prealign, 11},
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},
     {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 8},
     {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
-    {"_optimotu_seq_distmx_hamming", (DL_FUNC) &_optimotu_seq_distmx_hamming, 6},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
     {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 2},
     {NULL, NULL, 0}

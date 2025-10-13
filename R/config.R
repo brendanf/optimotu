@@ -550,7 +550,7 @@ dist_edlib <- function() {
     list(
       method = "edlib",
       call = match.call()
-      ),
+    ),
     class = "optimotu_dist_config"
   )
 }
@@ -566,7 +566,7 @@ dist_hybrid <- function(cutoff = 0.1) {
     list(
       method = "hybrid",
       cutoff = cutoff,
-      call = match.call(),
+      call = match.call()
     ),
     class = "optimotu_dist_config"
   )
