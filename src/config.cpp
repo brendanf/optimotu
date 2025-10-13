@@ -1,12 +1,18 @@
 #include "config.h"
+
 #include "Wfa2ClusterWorker.h"
 #include "EdlibClusterWorker.h"
 #include "HybridClusterWorker.h"
 #include "HammingClusterWorker.h"
+
 #include "Wfa2SearchWorker.h"
 #include "EdlibSearchWorker.h"
 #include "HybridSearchWorker.h"
 #include "HammingSearchWorker.h"
+
+#include "Wfa2DistWorker.h"
+#include "EdlibDistWorker.h"
+#include "HammingDistWorker.h"
 
 std::unique_ptr<DistanceConverter> create_distance_converter(
     const std::string &type,
@@ -820,4 +826,61 @@ std::unique_ptr<SearchWorker> create_search_worker(
                   dist_method.c_str());
   }
 }
+
+std::unique_ptr<DistWorker> create_dist_worker(
+    Rcpp::List dist_config,
+    Rcpp::List parallel_config,
+    const std::vector<std::string> &seq,
+    double threshold,
+    SparseDistanceMatrix &sdm,
+    int verbose,
+    int span,
+    bool constrain
+) {
+  if (!dist_config.inherits("optimotu_dist_config")) {
+    OPTIMOTU_STOP(
+      "'dist_config' must be of class 'optimotu_dist_config'"
+    );
+  }
+  if (!parallel_config.inherits("optimotu_parallel_config")) {
+    OPTIMOTU_STOP(
+      "'parallel_config' must be of class 'optimotu_parallel_config'"
+    );
+  }
+  int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  std::string dist_method = element_as_string(dist_config, "method", "dist_config");
+  AlignmentSpan span_enum;
+  switch (span) {
+    case 0:
+      span_enum = AlignmentSpan::GLOBAL;
+      break;
+    case 1:
+      span_enum = AlignmentSpan::EXTEND;
+      break;
+    default:
+      OPTIMOTU_STOP("span must be 0 or 1");
+  }
+  if (dist_method == "wfa2") {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    return create_wfa2_dist_worker(seq, threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, span_enum, constrain);
+  } else if (dist_method == "edlib") {
+    return create_edlib_dist_worker(seq, threshold, threads, sdm, verbose, span_enum, constrain);
+  } else if (dist_method == "hamming") {
+    if (constrain == false) {
+      RcppThread::Rcerr << "Note: Constrained alignment is not relevant for Hamming distance" << std::endl;
+    }
+    int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
+    bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
+    return create_hamming_dist_worker(seq, threshold, threads, sdm,
+      min_overlap, ignore_gaps, verbose);
+  } else {
+    OPTIMOTU_STOP("unknown distance method: %s", dist_method.c_str());
+  }
+}
+
 #endif // OPTIMOTU_R

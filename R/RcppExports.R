@@ -67,8 +67,8 @@ distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method
 #'
 #' @export
 #' @rdname seq_distmx
-seq_distmx_edlib <- function(seq, dist_threshold, constrain = TRUE, threads = 1L, verbose = 0L) {
-    .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, constrain, threads, verbose)
+seq_distmx_edlib <- function(seq, dist_threshold, details = 0L, span = 0L, constrain = TRUE, threads = 1L, verbose = 0L) {
+    .Call(`_optimotu_seq_distmx_edlib`, seq, dist_threshold, details, span, constrain, threads, verbose)
 }
 
 #' Get the names of reads in a FASTQ file
@@ -203,6 +203,15 @@ align_edlib_extend <- function(a, b) {
     .Call(`_optimotu_align_edlib_extend`, a, b)
 }
 
+#' Add gap statistics to a DataFrame containing CIGAR strings
+#' @param df (DataFrame) containing a column with CIGAR strings
+#' @param cigar_column (character) name of the column containing the CIGAR strings
+#' @return (DataFrame) with the added gap statistics
+#' @keywords internal
+add_gapstats <- function(df, cigar_column) {
+    .Call(`_optimotu_add_gapstats`, df, cigar_column)
+}
+
 #' @param match (`integer` scalar) score for a match, default: 1
 #' @param mismatch (`integer` scalar) score for a mismatch, default: 2
 #' @param gap_open (`integer` scalar) score for opening a gap, default: 10
@@ -230,6 +239,31 @@ seq_cluster_single <- function(seq, dist_config, threshold_config, clust_config,
 
 seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = 0L) {
     .Call(`_optimotu_seq_cluster_multi`, seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
+}
+
+#' Search for best match(es) of query sequences in reference sequences
+#'
+#' @param seq (named `character`) sequences
+#' @param dist_config (`optimotu_dist_config`) distance configuration
+#' @param parallel_config (`optimotu_parallel_config`) parallelization
+#' configuration. Search methods do not treat the different methods differently;
+#' only the number of threads is used.
+#' @param threshold (`numeric`) distance threshold for the search; larger
+#' distances are not considered
+#' @param verbose (`integer`) verbosity level
+#' @param details (`integer`) detail level; 0 = score only, 1 = score and gap
+#' stats, 2 = score and cigar
+#' @param span (`integer`) alignment span
+#' @return `data.frame` with columns `seq_id1` (first sequence ID),
+#' `seq_id2` (second sequence ID), `score1` and `score2` (optimal alignment
+#' score for the two sequences in the "prealignment" (if any) and "alignment"
+#' stages), `dist1` and `dist2` (corresponding sequence distances). If
+#' `details` is 1, also includes columns `align_length`, `n_insert`,
+#' `n_delete`, `max_insert`, and `max_delete`. If `details` is 2, also
+#' includes column `cigar`.
+#' @keywords internal
+seq_distmx_internal <- function(seq, dist_config, parallel_config, threshold, verbose = 0L, details = 0L, span = 0L, constrain = TRUE) {
+    .Call(`_optimotu_seq_distmx_internal`, seq, dist_config, parallel_config, threshold, verbose, details, span, constrain)
 }
 
 #' @export

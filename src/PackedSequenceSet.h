@@ -39,6 +39,12 @@ struct PackedSequenceSet {
     const int min_overlap,
     const bool ignore_gap
   ) const;
+  std::tuple<bool, int, double, int, int, int, int> success_score_and_dist_gap(
+    const int i,
+    const int j,
+    const int min_overlap,
+    const bool ignore_gap
+  ) const;
   bool verify(const std::vector<std::string> & seq) const;
 };
 

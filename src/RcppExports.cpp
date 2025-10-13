@@ -75,17 +75,19 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_distmx_edlib
-Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold, bool constrain, std::uint8_t threads, int verbose);
-RcppExport SEXP _optimotu_seq_distmx_edlib(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP constrainSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
+Rcpp::DataFrame seq_distmx_edlib(std::vector<std::string> seq, double dist_threshold, int details, int span, bool constrain, std::uint8_t threads, int verbose);
+RcppExport SEXP _optimotu_seq_distmx_edlib(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP detailsSEXP, SEXP spanSEXP, SEXP constrainSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<std::string> >::type seq(seqSEXP);
     Rcpp::traits::input_parameter< double >::type dist_threshold(dist_thresholdSEXP);
+    Rcpp::traits::input_parameter< int >::type details(detailsSEXP);
+    Rcpp::traits::input_parameter< int >::type span(spanSEXP);
     Rcpp::traits::input_parameter< bool >::type constrain(constrainSEXP);
     Rcpp::traits::input_parameter< std::uint8_t >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_distmx_edlib(seq, dist_threshold, constrain, threads, verbose));
+    rcpp_result_gen = Rcpp::wrap(seq_distmx_edlib(seq, dist_threshold, details, span, constrain, threads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -343,6 +345,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// add_gapstats
+Rcpp::RObject add_gapstats(Rcpp::DataFrame df, std::string cigar_column);
+RcppExport SEXP _optimotu_add_gapstats(SEXP dfSEXP, SEXP cigar_columnSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type df(dfSEXP);
+    Rcpp::traits::input_parameter< std::string >::type cigar_column(cigar_columnSEXP);
+    rcpp_result_gen = Rcpp::wrap(add_gapstats(df, cigar_column));
+    return rcpp_result_gen;
+END_RCPP
+}
 // seq_distmx_wfa2
 Rcpp::DataFrame seq_distmx_wfa2(std::vector<std::string> seq, double dist_threshold, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2, bool prealign, bool constrain, std::uint8_t threads);
 RcppExport SEXP _optimotu_seq_distmx_wfa2(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP, SEXP prealignSEXP, SEXP constrainSEXP, SEXP threadsSEXP) {
@@ -399,6 +413,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// seq_distmx_internal
+Rcpp::RObject seq_distmx_internal(Rcpp::CharacterVector seq, Rcpp::List dist_config, Rcpp::List parallel_config, double threshold, int verbose, int details, int span, bool constrain);
+RcppExport SEXP _optimotu_seq_distmx_internal(SEXP seqSEXP, SEXP dist_configSEXP, SEXP parallel_configSEXP, SEXP thresholdSEXP, SEXP verboseSEXP, SEXP detailsSEXP, SEXP spanSEXP, SEXP constrainSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type dist_config(dist_configSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parallel_config(parallel_configSEXP);
+    Rcpp::traits::input_parameter< double >::type threshold(thresholdSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< int >::type details(detailsSEXP);
+    Rcpp::traits::input_parameter< int >::type span(spanSEXP);
+    Rcpp::traits::input_parameter< bool >::type constrain(constrainSEXP);
+    rcpp_result_gen = Rcpp::wrap(seq_distmx_internal(seq, dist_config, parallel_config, threshold, verbose, details, span, constrain));
+    return rcpp_result_gen;
+END_RCPP
+}
 // seq_distmx_hamming
 Rcpp::DataFrame seq_distmx_hamming(const std::vector<std::string> seq, const double dist_threshold, const int min_overlap, const bool ignore_gap, const std::uint8_t threads, const int verbose);
 RcppExport SEXP _optimotu_seq_distmx_hamming(SEXP seqSEXP, SEXP dist_thresholdSEXP, SEXP min_overlapSEXP, SEXP ignore_gapSEXP, SEXP threadsSEXP, SEXP verboseSEXP) {
@@ -451,7 +483,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix2", (DL_FUNC) &_optimotu_confusion_matrix2, 3},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 8},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 9},
-    {"_optimotu_seq_distmx_edlib", (DL_FUNC) &_optimotu_seq_distmx_edlib, 5},
+    {"_optimotu_seq_distmx_edlib", (DL_FUNC) &_optimotu_seq_distmx_edlib, 7},
     {"_optimotu_fastq_names", (DL_FUNC) &_optimotu_fastq_names, 1},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},
     {"_optimotu_intersect_length_string", (DL_FUNC) &_optimotu_intersect_length_string, 2},
@@ -470,9 +502,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_align_wfa2_extend", (DL_FUNC) &_optimotu_align_wfa2_extend, 8},
     {"_optimotu_align_edlib_global", (DL_FUNC) &_optimotu_align_edlib_global, 2},
     {"_optimotu_align_edlib_extend", (DL_FUNC) &_optimotu_align_edlib_extend, 2},
+    {"_optimotu_add_gapstats", (DL_FUNC) &_optimotu_add_gapstats, 2},
     {"_optimotu_seq_distmx_wfa2", (DL_FUNC) &_optimotu_seq_distmx_wfa2, 11},
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},
     {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 8},
+    {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
     {"_optimotu_seq_distmx_hamming", (DL_FUNC) &_optimotu_seq_distmx_hamming, 6},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
     {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 2},

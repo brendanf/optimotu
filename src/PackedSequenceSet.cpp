@@ -311,3 +311,23 @@ std::tuple<bool, int, double> PackedSequenceSet::success_score_and_dist(
   }
   return std::make_tuple(result == 0, num_matches, dist);
 }
+
+std::tuple<bool, int, double, int, int, int, int> PackedSequenceSet::success_score_and_dist_gap(
+  const int i, const int j, const int min_overlap, const bool ignore_gap) const {
+  int s, e;
+  s = start[j] >= start[i] ? start[j] : start[i];
+  e = end[j] <= end[i] ? end[j] : end[i];
+  if (s >= e) return std::make_tuple(false, 0, 1.0, 0, 0, 0, 0);
+  int result, num_ok, num_matches, num_ins, num_del, max_ins, max_del;
+  double dist;
+  if (ignore_gap) {
+    result = pdistB_gap(packed_seq[i].data(), mask[i].data(),
+                       packed_seq[j].data(), mask[j].data(),
+                       s, e, min_overlap, &num_ok, &num_matches, &dist, &num_ins, &num_del, &max_ins, &max_del);
+  } else {
+    result = pdistB2_gap(packed_seq[i].data(), mask[i].data(),
+                       packed_seq[j].data(), mask[j].data(),
+                       s, e, min_overlap, &num_ok, &num_matches, &dist, &num_ins, &num_del, &max_ins, &max_del);
+  }
+  return std::make_tuple(result == 0, num_matches, dist, num_ins, num_del, max_ins, max_del);
+}

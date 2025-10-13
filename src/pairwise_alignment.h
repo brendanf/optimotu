@@ -65,6 +65,12 @@ std::string cigar_edlib_global(const std::string &a, const std::string &b);
 // [[Rcpp::export]]
 std::string cigar_edlib_extend(const std::string &a, const std::string &b);
 
+template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+std::pair<double, std::string> distance_and_cigar_edlib(
+    const std::string &a,
+    const std::string &b,
+    EdlibAlignConfig &aligner
+);
 
 template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 std::pair<int, double> score_and_distance_wfa2(
@@ -102,4 +108,19 @@ double align_edlib_global(const std::string a, const std::string b);
 //' @keywords internal
 // [[Rcpp::export]]
 double align_edlib_extend(const std::string a, const std::string b);
+
+double distance_from_cigar(const std::string &cigar);
+double distance_from_cigar_extend(const std::string &cigar);
+std::tuple<double, int, int, int, int, int> dist_gapstats_from_cigar(const std::string & cigar);
+std::tuple<double, int, int, int, int, int> dist_gapstats_from_cigar_extend(const std::string & cigar);
+
+#ifdef OPTIMOTU_R
+//' Add gap statistics to a DataFrame containing CIGAR strings
+//' @param df (DataFrame) containing a column with CIGAR strings
+//' @param cigar_column (character) name of the column containing the CIGAR strings
+//' @return (DataFrame) with the added gap statistics
+//' @keywords internal
+// [[Rcpp::export]]
+Rcpp::RObject add_gapstats(Rcpp::DataFrame df, std::string cigar_column);
+#endif //OPTIMOTU_R
 #endif //OPTIMOTU_PAIRWISE_ALIGNMENT_H_INCLUDED

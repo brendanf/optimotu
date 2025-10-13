@@ -9,6 +9,8 @@
 #include "DistanceConverter.h"
 
 #include "AlignClusterWorker.h"
+#include "DistWorker.h"
+#include "alignment_enums.h"
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -102,6 +104,17 @@ std::unique_ptr<SearchWorker> create_search_worker(
     int verbose = 0,
     bool return_cigar = false,
     int span = 0
+);
+
+std::unique_ptr<DistWorker> create_dist_worker(
+    Rcpp::List dist_config,
+    Rcpp::List parallel_config,
+    const std::vector<std::string> &seq,
+    double dist_threshold,
+    SparseDistanceMatrix &sdm,
+    int verbose = 0,
+    int span = 0,
+    bool constrain = true
 );
 
 #endif //OPTIMOTU_R

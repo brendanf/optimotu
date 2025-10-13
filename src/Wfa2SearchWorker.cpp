@@ -27,6 +27,7 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
       }
     }
     SearchHit & hit = *hits[i];
+
     for (std::size_t j = 0; j < ref.size(); j++) {
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;
       OPTIMOTU_DEBUG(

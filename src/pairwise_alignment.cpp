@@ -58,6 +58,74 @@ double distance_from_cigar_extend(const std::string & cigar) {
   return double(length - match - end_gap) / double(length - end_gap);
 }
 
+std::tuple<double, int, int, int, int, int> dist_gapstats_from_cigar(const std::string & cigar) {
+  // difficult case because the CIGAR string does not tell the length
+  if (cigar == "=") return {0.0, 0, 0, 0, 0, 0};
+  std::uint16_t match = 0;
+  int length = 0, n_insert = 0, n_delete = 0, max_insert = 0, max_delete = 0, ins_run = 0, del_run = 0;
+  std::optional<std::uint16_t> n;
+  char op;
+  std::istringstream ss(cigar);
+  while (ss >> n >> op) {
+    if (op == '=' || op == 'M') {
+      match += n.value_or(1);
+      ins_run = 0;
+      del_run = 0;
+    } else if (op == 'I') {
+      n_insert += n.value_or(1);
+      ins_run += n.value_or(1);
+      if (ins_run > max_insert) max_insert = ins_run;
+    } else if (op == 'D') {
+      n_delete += n.value_or(1);
+      del_run += n.value_or(1);
+      if (del_run > max_delete) max_delete = del_run;
+    } else {
+      ins_run = 0;
+      del_run = 0;
+    }
+    length += n.value_or(1);
+  }
+  return {double(length - match) / double(length), length, n_insert, n_delete, max_insert, max_delete};
+}
+
+std::tuple<double, int, int, int, int, int> dist_gapstats_from_cigar_extend(const std::string & cigar) {
+  if (cigar == "=") return {0.0, 0, 0, 0, 0, 0};
+  std::uint16_t match = 0, end_ins = 0, end_del = 0;
+  int length = 0, n_insert = 0, n_delete = 0, max_insert = 0, max_delete = 0, ins_run = 0, del_run = 0;
+  std::optional<std::uint16_t> n;
+  char op;
+  std::istringstream ss(cigar);
+  while (ss >> n >> op) {
+    if (op == '=' || op == 'M') {
+      match += n.value_or(1);
+      if (ins_run > max_insert) max_insert = ins_run;
+      if (del_run > max_delete) max_delete = del_run;
+      ins_run = 0;
+      del_run = 0;
+      end_ins = 0;
+      end_del = 0;
+    } else if (op == 'I') {
+      end_ins += n.value_or(1);
+      n_insert += n.value_or(1);
+      ins_run += n.value_or(1);
+    } else if (op == 'D') {
+      end_del += n.value_or(1);
+      n_delete += n.value_or(1);
+      del_run += n.value_or(1);
+    } else {
+      if (ins_run > max_insert) max_insert = ins_run;
+      if (del_run > max_delete) max_delete = del_run;
+      ins_run = 0;
+      del_run = 0;
+      end_ins = 0;
+      end_del = 0;
+    }
+    length += n.value_or(1);
+  }
+  return {double(length - match - end_ins - end_del) / double(length - end_ins - end_del), length, n_insert - end_ins, n_delete - end_del, max_insert, max_delete};
+}
+
+
 template<enum AlignmentSpan span>
 double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
   wfa::WFAligner::AlignmentStatus status;
@@ -96,9 +164,9 @@ template double distance_wfa2<AlignmentSpan::GLOBAL>(
 // this is
 double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner) {
   auto aln = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(), aligner);
-  if (aln.status != EDLIB_STATUS_OK) return 1.0;
-  if (aln.editDistance == -1) return 1.0;
-  double d = (double)aln.editDistance / (double)aln.alignmentLength;
+  double d = 1.0;
+  if (aln.status == EDLIB_STATUS_OK && aln.editDistance >= 0)
+    d = (double)aln.editDistance / (double)aln.alignmentLength;
   edlibFreeAlignResult(aln);
   return d;
 }
@@ -244,6 +312,39 @@ std::string cigar_edlib_global(const std::string &a, const std::string &b) {
 std::string cigar_edlib_extend(const std::string &a, const std::string &b) {
   return cigar_edlib<AlignmentSpan::EXTEND>(a, b);
 }
+
+template<enum AlignmentSpan span>
+std::pair<double, std::string> distance_and_cigar_edlib(
+    const std::string &a,
+    const std::string &b,
+    EdlibAlignConfig &aligner
+) {
+  aligner.task = EDLIB_TASK_PATH;
+  auto alignment = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(), aligner);
+  if (alignment.status != EDLIB_STATUS_OK) return {1.0, ""};
+  if (alignment.editDistance == -1) return {1.0, ""};
+  double d = (double)alignment.editDistance / (double)alignment.alignmentLength;
+  std::string cigar;
+  cigar.reserve(alignment.alignmentLength);
+  std::vector<char> key = {'M', 'D', 'I', 'X'};
+  for (int k = 0; k < alignment.alignmentLength; ++k) {
+    cigar.push_back(key[alignment.alignment[k]]);
+  }
+  edlibFreeAlignResult(alignment);
+  return {d, cigar};
+}
+
+// explicit instantiations
+template std::pair<double, std::string> distance_and_cigar_edlib<AlignmentSpan::GLOBAL>(
+    const std::string &a,
+    const std::string &b,
+    EdlibAlignConfig &aligner
+);
+template std::pair<double, std::string> distance_and_cigar_edlib<AlignmentSpan::EXTEND>(
+    const std::string &a,
+    const std::string &b,
+    EdlibAlignConfig &aligner
+);
 
 template<enum AlignmentSpan span>
 std::pair<int, double> score_and_distance_wfa2(
@@ -458,3 +559,32 @@ std::vector<std::string> pairwise_alignment(
     );
   }
 }
+
+#ifdef OPTIMOTU_R
+Rcpp::RObject add_gapstats(Rcpp::DataFrame df, std::string cigar_column) {
+  Rcpp::CharacterVector cigars = df[cigar_column];
+  std::vector<std::string> cigars_vec = Rcpp::as<std::vector<std::string>>(cigars);
+  std::vector<int> align_length;
+  std::vector<int> n_insert;
+  std::vector<int> n_delete;
+  std::vector<int> max_insert;
+  std::vector<int> max_delete;
+  for (const std::string & cigar : cigars_vec) {
+    auto [dist, alen, n_ins, n_del, max_ins, max_del] =
+      dist_gapstats_from_cigar(cigar);
+    align_length.push_back(alen);
+    n_insert.push_back(n_ins);
+    n_delete.push_back(n_del);
+    max_insert.push_back(max_ins);
+    max_delete.push_back(max_del);
+  }
+  df["align_length"] = align_length;
+  df["n_insert"] = n_insert;
+  df["n_delete"] = n_delete;
+  df["max_insert"] = max_insert;
+  df["max_delete"] = max_delete;
+  df.attr("class") = Rcpp::CharacterVector::create("tbl_df", "tbl", "data.frame");
+  df.attr("row.names") = Rcpp::IntegerVector::create(NA_INTEGER, -align_length.size());
+  return df;
+}
+#endif //OPTIMOTU_R
