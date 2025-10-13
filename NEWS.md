@@ -1,4 +1,4 @@
-# optimotu (development version)
+# optimotu 0.9.4
 
 * Fix parameterization of WFA2-lib with single or dual gap-affine penalties.
 * Fix a bug in `optimotu()` that caused it to fail when using non-default ranks.
