@@ -113,6 +113,10 @@ calc_taxon_thresholds <- function(
     optima <- optima[optima$measure == measure, ]
     }
   }
+  # ensure the thresholds are represented as fractional (not percent) distances
+  # (not similarities)
+  optima$threshold <- threshold_as_dist(optima$threshold)
+
   checkmate::assert_string(default)
 
   # we only need unique rows, for cases where the taxon is known
