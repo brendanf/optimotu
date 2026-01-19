@@ -4,13 +4,17 @@
 \alias{summarize_by_rank}
 \title{Summarize taxonomic ranks by superordinate rank}
 \usage{
-summarize_by_rank(data, ranks)
+summarize_by_rank(data, ranks, id_col = "seq_id")
 }
 \arguments{
 \item{data}{('data.frame') the taxonomy to summarize; should contain a
 column named \code{seq_id} and columns for each value of \code{ranks}}
 
 \item{ranks}{('character') the ranks to summarize}
+
+\item{id_col}{('character') the name of the column in \code{data} containing
+sequence IDs; defaults to \code{seq_id}. Note that the \emph{output} will always
+name the column \code{seq_id}.}
 }
 \value{
 a data frame with columns:
@@ -21,7 +25,7 @@ a data frame with columns:
 \item \code{n_taxa} (\code{integer}) the number of unique taxa at the rank
 \item \code{n_seq} (\code{integer}) the number of sequences
 \item \code{seq_id} (\code{list} of \code{character}) a list of sequence IDs
-\item \code{true_parition} (\code{list} of \code{integer}) integer mapping to taxa for each
+\item \code{true_partition} (\code{list} of \code{integer}) integer mapping to taxa for each
 element in \code{seq_id}
 }
 }

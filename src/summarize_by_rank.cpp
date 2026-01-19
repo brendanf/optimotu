@@ -34,6 +34,9 @@ typedef std::map<std::string, Subtaxa> SupertaxonMap;
 //' @param data ('data.frame') the taxonomy to summarize; should contain a
 //' column named `seq_id` and columns for each value of `ranks`
 //' @param ranks ('character') the ranks to summarize
+//' @param id_col ('character') the name of the column in `data` containing
+//'  sequence IDs; defaults to `seq_id`. Note that the *output* will always
+//'  name the column `seq_id`.
 //' @return a data frame with columns:
 //'
 //'  - `supertaxon` (`character`) the superordinate taxon
@@ -42,23 +45,25 @@ typedef std::map<std::string, Subtaxa> SupertaxonMap;
 //'  - `n_taxa` (`integer`) the number of unique taxa at the rank
 //'  - `n_seq` (`integer`) the number of sequences
 //'  - `seq_id` (`list` of `character`) a list of sequence IDs
-//'  - `true_parition` (`list` of `integer`) integer mapping to taxa for each
+//'  - `true_partition` (`list` of `integer`) integer mapping to taxa for each
 //'     element in `seq_id`
 //' @keywords internal
 //' @export
 // [[Rcpp::export]]
 Rcpp::RObject summarize_by_rank(
     Rcpp::DataFrame data,
-    Rcpp::CharacterVector ranks
+    Rcpp::CharacterVector ranks,
+    std::string id_col = "seq_id"
 ) {
 
+  auto id_col_cstr = id_col.c_str();
   // access the columns by name
-  if (!data.containsElementNamed("seq_id")) {
-    Rcpp::stop("data must contain a column named 'seq_id'");
+  if (!data.containsElementNamed(id_col_cstr)) {
+    Rcpp::stop("data must contain a column named '%s'", id_col_cstr);
   }
-  Rcpp::CharacterVector seq_id = data["seq_id"];
+  Rcpp::CharacterVector seq_id = data[id_col];
   if (Rcpp::any(Rcpp::is_na(seq_id))) {
-    Rcpp::stop("data$seq_id cannot contain NA values");
+    Rcpp::stop("data$%s cannot contain NA values", id_col_cstr);
   }
   std::vector<std::string> seq_id_str = Rcpp::as<std::vector<std::string>>(seq_id);
 

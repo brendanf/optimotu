@@ -322,7 +322,7 @@ optimize_thresholds <- function(
   }
 
   # Calculate which subsets to optimize
-  testset_select <- summarize_by_rank(taxonomy, ranks)
+  testset_select <- summarize_by_rank(taxonomy, ranks, id_col)
   testset_select <- testset_select[
     (testset_select$n_seq >= min_refseq & testset_select$n_taxa >= min_taxa) |
       testset_select$supertaxon %in% taxonomy[[ranks[1]]],

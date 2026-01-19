@@ -1,8 +1,10 @@
-# optimotu (development version)
+# optimotu 0.9.5
 
 * Fix a bug in which default cluster thresholds are calculated incorrectly when
 the optimized thresholds are not given as fractional distances (as opposed to,
 e.g., percent identity).
+* Fix use of `id_col` to specify a non-default column name for sequence IDs in
+the `taxonomy` argument to `optimize_thresholds()`.
 
 # optimotu 0.9.4
 

@@ -433,14 +433,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // summarize_by_rank
-Rcpp::RObject summarize_by_rank(Rcpp::DataFrame data, Rcpp::CharacterVector ranks);
-RcppExport SEXP _optimotu_summarize_by_rank(SEXP dataSEXP, SEXP ranksSEXP) {
+Rcpp::RObject summarize_by_rank(Rcpp::DataFrame data, Rcpp::CharacterVector ranks, std::string id_col);
+RcppExport SEXP _optimotu_summarize_by_rank(SEXP dataSEXP, SEXP ranksSEXP, SEXP id_colSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::DataFrame >::type data(dataSEXP);
     Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type ranks(ranksSEXP);
-    rcpp_result_gen = Rcpp::wrap(summarize_by_rank(data, ranks));
+    Rcpp::traits::input_parameter< std::string >::type id_col(id_colSEXP);
+    rcpp_result_gen = Rcpp::wrap(summarize_by_rank(data, ranks, id_col));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -474,7 +475,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 8},
     {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
-    {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 2},
+    {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 3},
     {NULL, NULL, 0}
 };
 
