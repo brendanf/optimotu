@@ -10,7 +10,7 @@
 #include <RcppThread.h>
 #include "ClusterAlgorithm.h"
 
-class AlignClusterWorker : public RcppParallel::Worker {
+class DistClusterWorker : public RcppParallel::Worker {
 protected:
   const std::vector<std::string> &seq;
   ClusterAlgorithm &clust_algo;
@@ -18,7 +18,7 @@ protected:
   std::mutex mutex;
   size_t _prealigned = 0, _aligned = 0;
 public :
-  AlignClusterWorker(
+  DistClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
     const std::uint8_t threads

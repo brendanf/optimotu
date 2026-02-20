@@ -11,7 +11,7 @@ HammingClusterWorker::HammingClusterWorker(
   const std::uint8_t threads,
   const int min_overlap,
   const bool ignore_gaps
-) : AlignClusterWorker(seq, clust_algo, threads), pss(seq),
+) : DistClusterWorker(seq, clust_algo, threads), pss(seq),
 min_overlap(min_overlap), ignore_gaps(ignore_gaps) {};
 
 template<int verbose>

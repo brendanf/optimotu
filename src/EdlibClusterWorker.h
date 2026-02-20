@@ -1,21 +1,21 @@
 #ifndef OPTIMOTU_EDLIBCLUSTERWORKER_H
 #define OPTIMOTU_EDLIBCLUSTERWORKER_H
 
-#include "AlignClusterWorker.h"
+#include "DistClusterWorker.h"
 
-class EdlibClusterWorker : public AlignClusterWorker {
+class EdlibClusterWorker : public DistClusterWorker {
 public :
-  using AlignClusterWorker::AlignClusterWorker;
+  using DistClusterWorker::DistClusterWorker;
 };
 
 template <int verbose>
 class EdlibSplitClusterWorker : public EdlibClusterWorker {
-  using AlignClusterWorker::seq;
-  using AlignClusterWorker::clust_algo;
-  using AlignClusterWorker::threads;
-  using AlignClusterWorker::mutex;
-  using AlignClusterWorker::_prealigned;
-  using AlignClusterWorker::_aligned;
+  using DistClusterWorker::seq;
+  using DistClusterWorker::clust_algo;
+  using DistClusterWorker::threads;
+  using DistClusterWorker::mutex;
+  using DistClusterWorker::_prealigned;
+  using DistClusterWorker::_aligned;
 public:
   using EdlibClusterWorker::EdlibClusterWorker;
   void operator()(std::size_t begin, std::size_t end);
@@ -23,12 +23,12 @@ public:
 
 template <int verbose>
 class EdlibConcurrentClusterWorker : public EdlibClusterWorker {
-  using AlignClusterWorker::seq;
-  using AlignClusterWorker::threads;
-  using AlignClusterWorker::mutex;
-  using AlignClusterWorker::clust_algo;
-  using AlignClusterWorker::_prealigned;
-  using AlignClusterWorker::_aligned;
+  using DistClusterWorker::seq;
+  using DistClusterWorker::threads;
+  using DistClusterWorker::mutex;
+  using DistClusterWorker::clust_algo;
+  using DistClusterWorker::_prealigned;
+  using DistClusterWorker::_aligned;
 public:
   using EdlibClusterWorker::EdlibClusterWorker;
   void operator()(std::size_t begin, std::size_t end);

@@ -43,7 +43,7 @@ Rcpp::RObject seq_cluster_single(
   if (verbose) {
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
   }
-  auto worker = create_align_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
+  auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
   if (verbose) {
     OPTIMOTU_CERR << "done\nclustering..." << std::endl;
   }
@@ -117,7 +117,7 @@ Rcpp::List seq_cluster_multi(
   auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seq.names(), which);
   if (verbose)
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
-  auto worker = create_align_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
+  auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
   if (verbose)
     OPTIMOTU_CERR << "done\nclustering..." << std::endl;
 

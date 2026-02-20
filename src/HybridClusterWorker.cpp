@@ -13,7 +13,7 @@ HybridClusterWorker::HybridClusterWorker(
   ClusterAlgorithm &clust_algo,
   const std::uint8_t threads,
   const double breakpoint
-) : AlignClusterWorker(seq, clust_algo, threads), breakpoint(breakpoint) {};
+) : DistClusterWorker(seq, clust_algo, threads), breakpoint(breakpoint) {};
 
 template<int verbose>
 void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {

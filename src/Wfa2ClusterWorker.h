@@ -1,9 +1,9 @@
 #ifndef OPTIMOTU_WFA2CLUSTERWORKER_H
 #define OPTIMOTU_WFA2CLUSTERWORKER_H
 
-#include "AlignClusterWorker.h"
+#include "DistClusterWorker.h"
 
-class Wfa2ClusterWorker : public AlignClusterWorker {
+class Wfa2ClusterWorker : public DistClusterWorker {
 protected:
   int match = 0, mismatch = 1,
     gap_open = 0, gap_extend = 1,
@@ -21,12 +21,12 @@ public :
 
 template<int verbose>
 class Wfa2SplitClusterWorker : public Wfa2ClusterWorker {
-  using AlignClusterWorker::seq;
-  using AlignClusterWorker::clust_algo;
-  using AlignClusterWorker::threads;
-  using AlignClusterWorker::mutex;
-  using AlignClusterWorker::_prealigned;
-  using AlignClusterWorker::_aligned;
+  using DistClusterWorker::seq;
+  using DistClusterWorker::clust_algo;
+  using DistClusterWorker::threads;
+  using DistClusterWorker::mutex;
+  using DistClusterWorker::_prealigned;
+  using DistClusterWorker::_aligned;
 
   using Wfa2ClusterWorker::match;
   using Wfa2ClusterWorker::mismatch;
@@ -41,12 +41,12 @@ public:
 
 template<int verbose>
 class Wfa2ConcurrentClusterWorker : public Wfa2ClusterWorker {
-  using AlignClusterWorker::seq;
-  using AlignClusterWorker::clust_algo;
-  using AlignClusterWorker::threads;
-  using AlignClusterWorker::mutex;
-  using AlignClusterWorker::_prealigned;
-  using AlignClusterWorker::_aligned;
+  using DistClusterWorker::seq;
+  using DistClusterWorker::clust_algo;
+  using DistClusterWorker::threads;
+  using DistClusterWorker::mutex;
+  using DistClusterWorker::_prealigned;
+  using DistClusterWorker::_aligned;
 
   using Wfa2ClusterWorker::match;
   using Wfa2ClusterWorker::mismatch;

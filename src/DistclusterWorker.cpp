@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
 // SPDX-License-Identifier: MIT
 
-#include "AlignClusterWorker.h"
+#include "DistClusterWorker.h"
 
-size_t AlignClusterWorker::prealigned() {
+size_t DistClusterWorker::prealigned() {
   return _prealigned;
 }
 
-size_t AlignClusterWorker::aligned() {
+size_t DistClusterWorker::aligned() {
   return _aligned;
 }
 
-std::uint8_t AlignClusterWorker::n_threads() {
+std::uint8_t DistClusterWorker::n_threads() {
   return threads;
 }

@@ -9,7 +9,7 @@ Wfa2ClusterWorker::Wfa2ClusterWorker(
   const int match, const int mismatch,
   const int gap_open, const int gap_extend,
   const int gap_open2, const int gap_extend2
-) : AlignClusterWorker(seq, clust_algo, threads),
+) : DistClusterWorker(seq, clust_algo, threads),
 match(match), mismatch(mismatch), gap_open(gap_open), gap_extend(gap_extend),
 gap_open2(gap_open2), gap_extend2(gap_extend2) {};
 

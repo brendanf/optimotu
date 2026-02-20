@@ -1,10 +1,10 @@
 #ifndef OPTIMOTU_HAMMINGCLUSTERWORKER_H_INCLUDED
 #define OPTIMOTU_HAMMINGCLUSTERWORKER_H_INCLUDED
 
-#include "AlignClusterWorker.h"
+#include "DistClusterWorker.h"
 #include "PackedSequenceSet.h"
 
-class HammingClusterWorker : public AlignClusterWorker {
+class HammingClusterWorker : public DistClusterWorker {
 protected:
   const PackedSequenceSet pss;
   const int min_overlap;
@@ -22,13 +22,13 @@ public :
 template<int verbose>
 class HammingSplitClusterWorker : public HammingClusterWorker {
   using HammingClusterWorker::pss;
-  using AlignClusterWorker::clust_algo;
-  using AlignClusterWorker::threads;
-  using AlignClusterWorker::mutex;
+  using DistClusterWorker::clust_algo;
+  using DistClusterWorker::threads;
+  using DistClusterWorker::mutex;
   using HammingClusterWorker::min_overlap;
   using HammingClusterWorker::ignore_gaps;
-  using AlignClusterWorker::_prealigned;
-  using AlignClusterWorker::_aligned;
+  using DistClusterWorker::_prealigned;
+  using DistClusterWorker::_aligned;
 
 public :
   HammingSplitClusterWorker(
@@ -44,13 +44,13 @@ public :
 template<int verbose>
 class HammingConcurrentClusterWorker : public HammingClusterWorker {
   using HammingClusterWorker::pss;
-  using AlignClusterWorker::clust_algo;
-  using AlignClusterWorker::threads;
-  using AlignClusterWorker::mutex;
+  using DistClusterWorker::clust_algo;
+  using DistClusterWorker::threads;
+  using DistClusterWorker::mutex;
   using HammingClusterWorker::min_overlap;
   using HammingClusterWorker::ignore_gaps;
-  using AlignClusterWorker::_prealigned;
-  using AlignClusterWorker::_aligned;
+  using DistClusterWorker::_prealigned;
+  using DistClusterWorker::_aligned;
 public :
   HammingConcurrentClusterWorker(
     const std::vector<std::string> &seq,

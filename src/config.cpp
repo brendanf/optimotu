@@ -125,7 +125,7 @@ template std::unique_ptr<ClusterWorker> create_cluster_worker<std::istream>(
     const std::vector<std::string> & seqnames
 );
 
-std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
+std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     const std::string &type,
     const std::vector<std::string> &seq,
     const double breakpoint,
@@ -414,7 +414,7 @@ template std::unique_ptr<ClusterWorker> create_cluster_worker<Rcpp::DataFrame>(
     const Rcpp::CharacterVector seqnames
 );
 
-std::unique_ptr<AlignClusterWorker> create_align_cluster_worker(
+std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     Rcpp::List dist_config,
     Rcpp::List parallel_config,
     const std::vector<std::string> &seq,
