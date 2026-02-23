@@ -7,11 +7,11 @@
 void KmerPairGenerator::update_match_index() {
   this->match_index.clear();
   do {
-    const std::vector<std::uint16_t> &index = (*seq_kmer_index)[this->i];
+    const std::vector<std::uint16_t> &index = (*seq_kmer_index)[this->_i];
     if (index.size() == 0) continue;
     for (auto &kmer : index) {
       for (auto &match : (*kmer_seq_index)[kmer]) {
-        if (match >= this->i) break;
+        if (match >= this->_i) break;
         auto entry = match_index.find(match);
         if (entry == match_index.end()) {
           match_index[match] = 1;
@@ -20,52 +20,55 @@ void KmerPairGenerator::update_match_index() {
         }
       }
     }
-  } while (match_index.size() == 0 && ++(this->i) < this->end);
-  this->j = match_index.begin();
+  } while (match_index.size() == 0 && ++(this->_i) < this->n);
+  this->match_index_j = match_index.begin();
 }
 
 KmerPairGenerator::KmerPairGenerator(
-  const std::size_t begin,
-  const std::size_t end,
-  const std::shared_ptr<std::vector<std::vector<std::size_t>>> kmer_seq_index,
-  const std::shared_ptr<std::vector<std::vector<std::uint16_t>>> seq_kmer_index,
-  const double udist_threshold
-) : PairGenerator(begin, end), kmer_seq_index(kmer_seq_index),
-  seq_kmer_index(seq_kmer_index), udist_threshold(udist_threshold),
-  i(begin == 0 ? 1 : begin) {
+  const std::shared_ptr<kmer_seq_index_t> kmer_seq_index,
+  const std::shared_ptr<seq_kmer_index_t> seq_kmer_index,
+  const double udist_threshold,
+  const std::size_t offset
+) : DivisiblePairGenerator(seq_kmer_index->size()),
+  kmer_seq_index(kmer_seq_index),
+  seq_kmer_index(seq_kmer_index),
+  udist_threshold(udist_threshold),
+  offset(offset) {
   update_match_index();
 };
 
-KmerPairGenerator::KmerPairGenerator(
-  const std::size_t begin,
-  const std::size_t end,
+void initialize_kmer_index(
   const std::vector<std::string> & seq,
-  const double udist_threshold
-) : PairGenerator(begin, end),
-kmer_seq_index(std::make_shared<std::vector<std::vector<std::size_t>>>()),
-seq_kmer_index(std::make_shared<std::vector<std::vector<std::uint16_t>>>()),
-udist_threshold(udist_threshold),
-i(begin == 0 ? 1 : begin) {
-  // Rcpp::Rcout << "Indexing k-mers...";
-  // index: for each kmer, which sequences is it found in, and how many times?
-  this->kmer_seq_index->reserve(65536);
+  kmer_seq_index_t & kmer_seq_index,
+  seq_kmer_index_t & seq_kmer_index,
+  const std::size_t begin_i,
+  const std::size_t end_i
+) {
+  // initialize the kmer-to-sequence index
+  kmer_seq_index.clear();
+  kmer_seq_index.reserve(65536);
   for (std::size_t k = 0; k < 65536; k++) {
-    kmer_seq_index->emplace_back();
+    kmer_seq_index.emplace_back();
   }
+  // initialize the sequence-to-kmer index
+  seq_kmer_index.clear();
+  seq_kmer_index.reserve(end_i - begin_i);
 
-  this->seq_kmer_index->reserve(seq.size());
-  std::size_t ii = 0;
-  std::unordered_set<std::uint16_t> kmer_location;
-  // index: for each sequence, which kmers are found in it?
-  for (auto & s : seq) {
-      seq_kmer_index->emplace_back();
+  // fill the indices
+  std::unordered_set<std::uint16_t> found_kmers;
+  for (std::size_t i = begin_i; i < end_i; i++) {
+    const std::string & s = seq[i];
+    seq_kmer_index.emplace_back();
     if (s.size() > 7) {
-      seq_kmer_index->back().reserve(s.size() - 7);
+      seq_kmer_index.back().reserve(s.size() - 7);
     } else {
       continue;
     }
+    // kmer ending with current character
     std::uint16_t kmer = 0;
-    std::size_t jj = 0;
+    // number of valid characters in current kmer
+    std::size_t j = 0;
+
     // go character by character, updating the index
     for (auto c : s) {
       std::uint8_t newval = lookup(c);
@@ -73,56 +76,116 @@ i(begin == 0 ? 1 : begin) {
         kmer = (kmer << 2) + newval;
       } else {
         // if we meet an ambiguous character, just reset to 0
-        jj = 0;
+        j = 0;
         kmer <<= 2;
       }
-      if (jj >= 7) {
-        // Rcpp::Rcout << "found kmer " << std::hex << kmer << " in seq " << std::dec << i;
-        if (kmer_location.insert(kmer).second) {
-          // Rcpp::Rcout << " (new)" << std::endl;
-          this->seq_kmer_index->back().push_back(kmer);
-          (*this->kmer_seq_index)[kmer].push_back(ii);
+      if (j >= 7) {
+        if (found_kmers.insert(kmer).second) {
+          seq_kmer_index.back().push_back(kmer);
+          kmer_seq_index[kmer].push_back(i - begin_i);
         }
       }
-      ++jj;
+      ++j;
     }
-    std::sort(
-      this->seq_kmer_index->back().begin(),
-      this->seq_kmer_index->back().end()
-    );
-    ++ii;
+    std::sort(seq_kmer_index.back().begin(), seq_kmer_index.back().end());
   }
 }
 
-std::unique_ptr<PairGenerator> KmerPairGenerator::subset(
-    const std::size_t begin,
-    const std::size_t end
-) const {
-  return std::unique_ptr<KmerPairGenerator>(
-    new KmerPairGenerator(
-        begin,
-        end,
-        this->kmer_seq_index,
-        this->seq_kmer_index,
-        this->udist_threshold
-    )
-  );
+KmerPairGenerator::KmerPairGenerator(
+  const std::vector<std::string> & seq,
+  const double udist_threshold,
+  const std::size_t offset
+) : DivisiblePairGenerator(seq.size()),
+  kmer_seq_index(std::make_shared<kmer_seq_index_t>()),
+  seq_kmer_index(std::make_shared<seq_kmer_index_t>()),
+  udist_threshold(udist_threshold),
+  offset(offset) {
+  initialize_kmer_index(seq, *kmer_seq_index, *seq_kmer_index, offset, seq.size());
 }
 
-bool KmerPairGenerator::operator()(std::pair<std::size_t, std::size_t> & pair) {
+KmerPairGenerator& KmerPairGenerator::operator++() {
   while (true) {
-    if (++(this->j) == this->match_index.end()) {
-      ++(this->i);
+    if (++(this->match_index_j) == this->match_index.end()) {
+      ++(this->_i);
       update_match_index();
     }
-    if (i >= end) return false;
-    double udist = 1.0 - (double)this->j->second / (double) std::max(
-      (*this->kmer_seq_index)[this->j->first].size(),
-      (*this->kmer_seq_index)[this->i].size()
+    if (this->_i >= this->n) {
+      this->has_more = false;
+      return *this;
+    }
+    double udist = 1.0 - (double)this->match_index_j->second / (double) std::max(
+      (*this->seq_kmer_index)[this->match_index_j->first].size(),
+      (*this->seq_kmer_index)[this->_i].size()
     );
     if (udist > this->udist_threshold) continue;
-    pair.first = i;
-    pair.second = this->j->first;
-    return true;
+    this->_j = this->match_index_j->first;
+    return *this;
   }
+}
+
+std::size_t KmerPairGenerator::forward_map(const std::size_t value) const {
+  return value + this->offset;
+}
+std::size_t KmerPairGenerator::reverse_map(const std::size_t value) const {
+  return value - this->offset;
+}
+std::size_t KmerPairGenerator::i0() const {
+  return this->_i + this->offset;
+}
+std::size_t KmerPairGenerator::j0() const {
+  return this->_j + this->offset;
+}
+
+std::vector<std::unique_ptr<PairGenerator>> KmerPairGenerator::Builder::build() const {
+
+  // First initialize the kmer and sequence indices for each tile.
+  std::vector<std::shared_ptr<kmer_seq_index_t>> kmer_seq_index;
+  std::vector<std::shared_ptr<seq_kmer_index_t>> seq_kmer_index;
+  double range = n;
+  for (std::size_t tile_i = 0; tile_i < n_tiles; tile_i++) {
+    std::size_t begin_i = tile_i * range / n_tiles;
+    std::size_t end_i = (tile_i + 1) * range / n_tiles;
+    kmer_seq_index.push_back(std::make_shared<kmer_seq_index_t>());
+    seq_kmer_index.push_back(std::make_shared<seq_kmer_index_t>());
+    initialize_kmer_index(
+      seq,
+      *kmer_seq_index.back(),
+      *seq_kmer_index.back(),
+      begin_i,
+      end_i
+    );
+  }
+  std::vector<std::unique_ptr<PairGenerator>> generators;
+  generators.reserve(n_subgenerators);
+  // create the subgenerators along the main diagonal
+  for (std::size_t tile_i = 0; tile_i < n_tiles; tile_i++) {
+    std::size_t begin_i = tile_i * range / n_tiles;
+    std::size_t end_i = (tile_i + 1) * range / n_tiles;
+    if (begin_i == end_i) continue;
+    generators.push_back(std::make_unique<KmerPairGenerator>(
+      kmer_seq_index[tile_i],
+      seq_kmer_index[tile_i],
+      udist_threshold,
+      offset + begin_i
+    ));
+  }
+  // create the subgenerators below the diagonal
+  for (std::size_t tile_i = 1; tile_i < n_tiles; tile_i++) {
+    std::size_t begin_i = tile_i * range / n_tiles;
+    std::size_t end_i = (tile_i + 1) * range / n_tiles;
+    if (begin_i == end_i) continue;
+    for (std::size_t tile_j = 0; tile_j < tile_i; tile_j++) {
+      std::size_t begin_j = tile_j * range / n_tiles;
+      std::size_t end_j = (tile_j + 1) * range / n_tiles;
+      if (begin_j == end_j) continue;
+      generators.push_back(std::make_unique<BipartiteKmerPairGenerator>(
+        begin_i, end_i, begin_j, end_j,
+        udist_threshold,
+        seq_kmer_index[tile_i],
+        seq_kmer_index[tile_j],
+        kmer_seq_index[tile_j]
+      ));
+    }
+  }
+  return generators;
 }

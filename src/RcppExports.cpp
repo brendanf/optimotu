@@ -446,6 +446,8 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP run_testthat_tests(SEXP);
+
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix", (DL_FUNC) &_optimotu_confusion_matrix, 3},
     {"_optimotu_confusion_matrix2", (DL_FUNC) &_optimotu_confusion_matrix2, 3},
@@ -476,6 +478,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
     {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 3},
+    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},
     {NULL, NULL, 0}
 };
 
