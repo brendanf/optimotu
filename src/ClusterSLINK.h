@@ -6,6 +6,7 @@
 
 #include "single_linkage.h"
 #include "ClusterAlgorithm.h"
+#include "MappedClusterAlgorithm.h"
 #include "ClusterTree.h"
 
 #ifdef OPTIMOTU_R
@@ -13,6 +14,7 @@
 #endif
 
 class ClusterSLINK : public SingleClusterAlgorithm {
+  friend class MappedClusterAlgorithm;
 protected:
   std::vector<j_t> Pi; // first higher-numbered leaf which is joined
   std::vector<d_t> Lambda; // level at which Pi[i] is joined
@@ -25,13 +27,16 @@ protected:
   void update();
   void finish_iter();
 
-  ClusterSLINK(SingleClusterAlgorithm * parent);
+  ClusterSLINK(ClusterAlgorithm * parent, j_t n);
+
+  ClusterSLINK * make_inner_child(ClusterAlgorithm * parent, const j_t n) override;
 
 public:
   ClusterSLINK(const DistanceConverter &dconv, const j_t n);
   ClusterSLINK(const DistanceConverter &dconv, init_matrix_t im);
 
   ClusterSLINK * make_child() override;
+  MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
 
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
 

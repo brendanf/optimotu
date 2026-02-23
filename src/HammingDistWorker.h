@@ -18,7 +18,7 @@ public:
   HammingDistWorker(
     const std::vector<std::string> &seq,
     const double dist_threshold,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pgb,
     SparseDistanceMatrix &sdm,
     const int min_overlap,
     const bool ignore_gap
@@ -29,7 +29,7 @@ template<int verbose, typename SparseDistanceMatrixType = SparseDistanceMatrix>
 class HammingDistWorkerImpl : public HammingDistWorker {
   using DistWorker::seq;
   using DistWorker::dist_threshold;
-  using DistWorker::threads;
+  using DistWorker::pair_generators;
   using DistWorker::sdm;
 
   using HammingDistWorker::pss;
@@ -44,7 +44,7 @@ public:
 std::unique_ptr<HammingDistWorker> create_hamming_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   const int min_overlap,
   const bool ignore_gap,

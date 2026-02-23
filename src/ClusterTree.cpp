@@ -301,8 +301,8 @@ void ClusterTree::initialize() {
   }
 }
 
-ClusterTree::ClusterTree(SingleClusterAlgorithm * parent) :
-  SingleClusterAlgorithm(parent),
+ClusterTree::ClusterTree(ClusterAlgorithm * parent, const j_t n) :
+  SingleClusterAlgorithm(parent, n),
   pool(2*n), pool0(pool.data()), poolend(pool0 + 2*n),
   tip0(pool0), tipend(tip0 + n),
   node0(tipend), nodeend(node0+n) {
@@ -904,16 +904,39 @@ Rcpp::List ClusterTreeImpl<verbose, test>::as_hclust(const Rcpp::CharacterVector
 template<int verbose, int test>
 ClusterTreeImpl<verbose, test> * ClusterTreeImpl<verbose, test>::make_child() {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  if (own_child) {
-    auto child_ptr = new ClusterTreeImpl<verbose, test>(this);
-    auto child = std::unique_ptr<ClusterAlgorithm>(
-      (ClusterAlgorithm*)child_ptr
-    );
-    this->children.push_back(std::move(child));
-    return child_ptr;
-  }
-  this->own_child = true;
-  return this;
+  auto child_ptr = new ClusterTreeImpl<verbose, test>(this, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template<int verbose, int test>
+MappedClusterAlgorithm * ClusterTreeImpl<verbose, test>::make_child(
+  PairGenerator * pg
+) {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new MappedClusterAlgorithm(this, pg);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template<int verbose, int test>
+ClusterTreeImpl<verbose, test> * ClusterTreeImpl<verbose, test>::make_inner_child(
+  ClusterAlgorithm * parent,
+  const j_t n
+) {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new ClusterTreeImpl<verbose, test>(parent, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
 }
 
 std::string ClusterTree::clust(const cluster * c) const {

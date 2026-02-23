@@ -6,6 +6,7 @@
 
 #include "single_linkage.h"
 #include "DistanceConverter.h"
+#include "PairGenerator.h"
 #include <vector>
 #include <mutex>
 #include <shared_mutex>
@@ -39,6 +40,11 @@ inline std::istream & operator >> (std::istream &in, DistanceElement &d) {
 class DistanceConsumer {
 public:
   virtual void operator()(j_t seq1, j_t seq2, double dist, int thread = 0)=0;
+  virtual void operator()(PairGenerator & pg, double dist, int thread = 0) {
+    if (pg) {
+      this->operator()(pg.i0(), pg.j0(), dist, thread);
+    }
+  }
   virtual void operator()(DistanceElement d, int thread = 0) {
     this->operator()(d.seq1, d.seq2, d.dist, thread);
   };
@@ -52,12 +58,12 @@ public:
 protected:
   mutable std::shared_timed_mutex mutex;
   ClusterAlgorithm * const parent = nullptr;
-  bool own_child = false;
   std::deque<std::unique_ptr<ClusterAlgorithm>> children;
 
   // constructor for child objects
   ClusterAlgorithm(ClusterAlgorithm * parent) :
     dconv(parent->dconv), m(parent->m), parent(parent) {};
+
 public:
   using DistanceConsumer::operator();
 
@@ -69,7 +75,7 @@ public:
 
   // move constructor
   // ClusterAlgorithm(ClusterAlgorithm&& c) : dconv(c.dconv), m(c.m),
-  // parent(c.parent), own_child(c.own_child), children(std::move(c.children)) {};
+  // parent(c.parent), children(std::move(c.children)) {};
 
   // send consumer() pairwise distances to ensure it is up-to-date with this
   // clustering
@@ -81,19 +87,28 @@ public:
 
   // send parent pairwise distances to ensure it is up-to-date
   virtual void merge_into_parent() {
-    if (parent && !own_child) this->merge_into(*parent);
+    if (parent) this->merge_into(*parent);
   }
 
   // create a copy of this algorithm, which will merge its results into this one
   // when it is finished
   virtual ClusterAlgorithm * make_child() = 0;
+  virtual ClusterAlgorithm * make_child(PairGenerator * pg) = 0;
 
   // calculate the maximum distance between seq1 and seq2 which would actually
   // cause an update
   virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const=0;
+  virtual double max_relevant(PairGenerator & pg, int thread = 0) const {
+    return this->max_relevant(pg.i0(), pg.j0(), thread);
+  }
 
   // update clustering based on pairwise distance index between seq1 and seq2
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0)=0;
+  virtual void operator()(PairGenerator & pg, d_t i, int thread = 0) {
+    if (pg) {
+      this->operator()(pg.i0(), pg.j0(), i, thread);
+    }
+  }
 
   // update clustering based on pairwise distance between seq1 and seq2
   void operator()(j_t seq1, j_t seq2, double dist, int thread = 0) override {
@@ -101,6 +116,10 @@ public:
     d_t i = dconv.convert(dist);
     (*this)(seq1, seq2, i);
   };
+
+  virtual void operator()(PairGenerator & pg, double dist, int thread = 0) override {
+    this->operator()(pg, dconv.convert(dist), thread);
+  }
 
 #ifdef OPTIMOTU_R
   // convert the clustering results to an hclust object
@@ -110,36 +129,48 @@ public:
 };
 
 class SingleClusterAlgorithm : public ClusterAlgorithm {
+  friend class MappedClusterAlgorithm;
 public:
   const j_t n;
 protected:
 
   // constructor for child objects
-  SingleClusterAlgorithm(SingleClusterAlgorithm * parent) :
-    ClusterAlgorithm(parent), n(parent->n) {};
+  SingleClusterAlgorithm(ClusterAlgorithm * parent, j_t n) :
+    ClusterAlgorithm(parent), n(n) {};
 
-  // construct a SingleClusterAlgorithm with the given DistanceConverter, to cluster
-  // n objects at m thresholds.
+  // Construct a SingleClusterAlgorithm with the given DistanceConverter, to
+  // cluster n objects at m thresholds.
   SingleClusterAlgorithm(const DistanceConverter &dconv, const j_t n) :
     ClusterAlgorithm(dconv), n(n) {};
 
-  // construct a SingleClusterAlgorithm with the given DistanceConverter, to cluster
-  // at m thresholds, with the number of objects determined by the size of im.
-  // Optionally im can also be used as internal storage
+  // Construct a SingleClusterAlgorithm with the given DistanceConverter, to
+  // cluster at m thresholds, with the number of objects determined by the size
+  // of im. Optionally im can also be used as internal storage
   SingleClusterAlgorithm(const DistanceConverter &dconv, init_matrix_t im) :
     ClusterAlgorithm(dconv), n(im.size() / dconv.m) {};
 
   // move constructor
   // SingleClusterAlgorithm(SingleClusterAlgorithm&& c) : ClusterAlgorithm(c), n(c.n) {};
 
-public:
+  // Called by MappedClusterAlgorithm to create the "inner" child algorithm
+  // Should create a new SingleClusterAlgorithm with the same DistanceConverter
+  // as this object, typically also of the same derived type. However, it
+  // should assign the parent as requested. This object should own the new
+  // child object!
+  virtual SingleClusterAlgorithm * make_inner_child(
+    ClusterAlgorithm * parent,
+    const j_t n
+  ) = 0;
 
-  // write results to the provided clustering matrix
-  virtual void write_to_matrix(internal_matrix_t &out)=0;
+public:
 
   // create a copy of this algorithm, which will merge its results into this one
   // when it is finished
   virtual SingleClusterAlgorithm * make_child() = 0;
+  virtual SingleClusterAlgorithm * make_child(PairGenerator * pg) = 0;
+  
+  // write results to the provided clustering matrix
+  virtual void write_to_matrix(internal_matrix_t &out)=0;
 };
 
 #endif //OPTIMOTU_CLUSTERALGORITHM_H_INCLUDED

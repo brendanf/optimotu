@@ -10,11 +10,13 @@
 #include <cstdint>
 
 #include "SparseDistanceMatrix.h"
+#include "PairGenerator.h"
 
 class DistWorker : public RcppParallel::Worker {
 protected:
   const std::vector<std::string> &seq;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
+  std::vector<std::unique_ptr<PairGenerator>> pair_generators;
   const std::uint8_t threads;
   std::size_t _prealigned = 0, _aligned = 0;
   SparseDistanceMatrix &sdm;
@@ -23,13 +25,14 @@ public:
   DistWorker(
     const std::vector<std::string> &seq,
     const double dist_threshold,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pair_generator_builder,
     SparseDistanceMatrix &sdm
   ) : seq(seq),
       dist_threshold(dist_threshold),
       sim_threshold(1.0 - dist_threshold),
       sim_threshold_plus_1(1.0 + sim_threshold),
-      threads(threads),
+      pair_generators(pair_generator_builder.build()),
+      threads(pair_generators.size()),
       sdm(sdm) {}
 
   virtual ~DistWorker() = default;

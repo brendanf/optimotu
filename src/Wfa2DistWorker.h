@@ -12,7 +12,7 @@ public:
   Wfa2DistWorker(
     const std::vector<std::string> &seq,
     const double dist_threshold,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pgb,
     SparseDistanceMatrix &sdm,
     int match, int mismatch,
     int gap_open, int gap_extend,
@@ -41,7 +41,7 @@ public:
 std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   int match = 0,
   int mismatch = 1,

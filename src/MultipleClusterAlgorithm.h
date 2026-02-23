@@ -11,21 +11,49 @@
 class MultipleClusterAlgorithm : public ClusterAlgorithm {
 protected:
   const ClusterAlgorithmFactory & factory;
+  // the names of the sequences
   const std::vector<std::string> names;
+  // the indices of the sequences in each subset
+  const std::vector<std::vector<j_t>> subset_indices;
+  // the names of the sequences in each subset
   const std::vector<std::vector<std::string>> subset_names;
+  // the number of threads
   const int threads;
-  std::vector<SingleClusterAlgorithm*> subsets;
+
   // for each element, which subsets does it belong to? sorted
   std::vector<std::vector<j_t>> subset_key;
+
   // for each subset, map from universal index to index in the subset
   std::vector<std::unordered_map<j_t, j_t>> fwd_map;
-  // temp, declare once (per thread) and reuse
-  mutable std::vector<std::vector<j_t>> whichsets;
-  // remember which the last sequence pairs were
-  mutable std::vector<std::pair<j_t, j_t>> ws_keys;
+
+  // clustering algorithms which handle subsets
+  std::vector<SingleClusterAlgorithm*> subsets;
+
+  // owned subsets are subsets that are owned by this MultipleClusterAlgorithm
   std::vector<std::unique_ptr<SingleClusterAlgorithm>> owned_subsets;
 
+  // temp, declare once (per thread) and reuse
+  mutable std::vector<std::vector<j_t>> whichsets;
+
+  // remember which the last sequence pairs were
+  mutable std::vector<std::pair<j_t, j_t>> ws_keys;
+
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
+
+  // Constructor for child objects
+  // It makes sense to calculate many const members all together,
+  // rather than serially, so these are calculated in make_child().
+  MultipleClusterAlgorithm(
+    MultipleClusterAlgorithm * parent,
+    const std::vector<std::string> names,
+    const std::vector<std::vector<j_t>> subset_indices,
+    const std::vector<std::vector<std::string>> subset_names,
+    const std::vector<std::vector<j_t>> subset_key,
+    const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
+    const std::vector<j_t> child_to_parent_map,
+    PairGenerator * pg,
+    const int threads = 1
+  );
 
 public:
   MultipleClusterAlgorithm(
@@ -58,6 +86,8 @@ public:
   void merge_into_parent() override;
 
   MultipleClusterAlgorithm * make_child() override;
+
+  MultipleClusterAlgorithm * make_child(PairGenerator * pg) override;
 
   void write_to_matrix(std::vector<internal_matrix_t> &matrix_list);
 

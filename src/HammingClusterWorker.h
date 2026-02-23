@@ -13,9 +13,9 @@ public :
   HammingClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
-    const bool ignore_gaps = TRUE
+    const bool ignore_gaps = true
   );
 };
 
@@ -24,6 +24,7 @@ class HammingSplitClusterWorker : public HammingClusterWorker {
   using HammingClusterWorker::pss;
   using DistClusterWorker::clust_algo;
   using DistClusterWorker::threads;
+  using DistClusterWorker::pair_generators;
   using DistClusterWorker::mutex;
   using HammingClusterWorker::min_overlap;
   using HammingClusterWorker::ignore_gaps;
@@ -34,7 +35,7 @@ public :
   HammingSplitClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
     const bool ignore_gaps = TRUE
   );
@@ -46,6 +47,7 @@ class HammingConcurrentClusterWorker : public HammingClusterWorker {
   using HammingClusterWorker::pss;
   using DistClusterWorker::clust_algo;
   using DistClusterWorker::threads;
+  using DistClusterWorker::pair_generators;
   using DistClusterWorker::mutex;
   using HammingClusterWorker::min_overlap;
   using HammingClusterWorker::ignore_gaps;
@@ -55,11 +57,11 @@ public :
   HammingConcurrentClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
-    const bool ignore_gaps = TRUE
+    const bool ignore_gaps = true
   );
-  void operator()(std::size_t begin, std::size_t end);
+  void operator()(std::size_t begin, std::size_t end) override;
 };
 
 #endif //OPTIMOTU_HAMMINGCLUSTERWORKER_H_INCLUDED

@@ -1,3 +1,8 @@
+# optimotu (development version)
+
+* Implement a new method to divide distance + cluster calculations among
+threads.
+
 # optimotu 0.9.5
 
 * Fix a bug in which default cluster thresholds are calculated incorrectly when

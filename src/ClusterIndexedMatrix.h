@@ -5,6 +5,7 @@
 #define OPTIMOTU_CLUSTERINDEXEDMATRIX_H_INCLUDED
 
 #include "ClusterAlgorithm.h"
+#include "MappedClusterAlgorithm.h"
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
 // [[Rcpp::depends(RcppParallel)]]
@@ -35,7 +36,12 @@ protected:
 
   void initialize();
 
-  ClusterIndexedMatrix(SingleClusterAlgorithm * parent);
+  ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n);
+
+  SingleClusterAlgorithm * make_inner_child(
+    ClusterAlgorithm * parent,
+    const j_t n
+  ) override;
 
 public:
   ClusterIndexedMatrix(const DistanceConverter &dconv, size_t n);
@@ -64,6 +70,8 @@ public:
 
   SingleClusterAlgorithm * make_child() override;
 
+  MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
+
   double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
 
   void write_to_matrix(internal_matrix_t &out) override;
@@ -89,7 +97,8 @@ cim_internal::ClusterIndexedMatrix(
 
 template<>
 cim_internal::ClusterIndexedMatrix(
-    SingleClusterAlgorithm * parent
+    ClusterAlgorithm * parent,
+    const j_t n
 ) = delete;
 
 #undef cim_internal

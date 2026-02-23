@@ -7,12 +7,12 @@
 Wfa2DistWorker::Wfa2DistWorker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   int match, int mismatch,
   int gap_open, int gap_extend,
   int gap_open2, int gap_extend2
-) : DistWorker(seq, dist_threshold, threads, sdm),
+) : DistWorker(seq, dist_threshold, pgb, sdm),
 match(match), mismatch(mismatch),
 gap_open(gap_open), gap_extend(gap_extend),
 gap_open2(gap_open2), gap_extend2(gap_extend2) {}
@@ -164,18 +164,18 @@ template<int verbose, bool is_constrained, enum AlignmentSpan span>
 std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   int match, int mismatch,
   int gap_open, int gap_extend,
   int gap_open2, int gap_extend2
 ) {
   if (dynamic_cast<SparseDistanceMatrixCigar*>(&sdm)) {
-    return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixCigar>>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
+    return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixCigar>>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
   } else if (dynamic_cast<SparseDistanceMatrixGapstats*>(&sdm)) {
-    return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixGapstats>>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
+    return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixGapstats>>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
   } else {
-    return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrix>>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
+    return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrix>>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
   }
 }
 
@@ -183,7 +183,7 @@ template<int verbose, bool is_constrained>
 std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   int match, int mismatch,
   int gap_open, int gap_extend,
@@ -192,9 +192,9 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
 ) {
   switch (span) {
     case AlignmentSpan::GLOBAL:
-      return create_wfa2_dist_worker<verbose, is_constrained, AlignmentSpan::GLOBAL>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
+      return create_wfa2_dist_worker<verbose, is_constrained, AlignmentSpan::GLOBAL>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
     case AlignmentSpan::EXTEND:
-      return create_wfa2_dist_worker<verbose, is_constrained, AlignmentSpan::EXTEND>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
+      return create_wfa2_dist_worker<verbose, is_constrained, AlignmentSpan::EXTEND>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
     default:
       OPTIMOTU_STOP("span must be 0 or 1");
   }
@@ -204,7 +204,7 @@ template<int verbose>
 std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   int match, int mismatch,
   int gap_open, int gap_extend,
@@ -213,16 +213,16 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   bool is_constrained
 ) {
   if (is_constrained) {
-    return create_wfa2_dist_worker<verbose, true>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span);
+    return create_wfa2_dist_worker<verbose, true>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span);
   } else {
-    return create_wfa2_dist_worker<verbose, false>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span);
+    return create_wfa2_dist_worker<verbose, false>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span);
   }
 }
 
 std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   int match, int mismatch,
   int gap_open, int gap_extend,
@@ -233,11 +233,11 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
 ) {
   switch (verbose) {
     case 0:
-      return create_wfa2_dist_worker<0>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
+      return create_wfa2_dist_worker<0>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
     case 1:
-      return create_wfa2_dist_worker<1>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
+      return create_wfa2_dist_worker<1>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
     default:
-      return create_wfa2_dist_worker<2>(seq, dist_threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
+      return create_wfa2_dist_worker<2>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
   }
 }
 

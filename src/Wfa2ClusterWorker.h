@@ -12,7 +12,7 @@ public :
   Wfa2ClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pgb,
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
     const int gap_open2 = 0, const int gap_extend2 = 1
@@ -36,7 +36,7 @@ class Wfa2SplitClusterWorker : public Wfa2ClusterWorker {
   using Wfa2ClusterWorker::gap_extend2;
 public:
   using Wfa2ClusterWorker::Wfa2ClusterWorker;
-  void operator()(std::size_t begin, std::size_t end);
+  void operator()(std::size_t begin, std::size_t end) override;
 };
 
 template<int verbose>
@@ -56,7 +56,7 @@ class Wfa2ConcurrentClusterWorker : public Wfa2ClusterWorker {
   using Wfa2ClusterWorker::gap_extend2;
 public:
   using Wfa2ClusterWorker::Wfa2ClusterWorker;
-  void operator()(std::size_t begin, std::size_t end);
+  void operator()(std::size_t begin, std::size_t end) override;
 };
 
 #endif

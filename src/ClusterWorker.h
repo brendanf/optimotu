@@ -5,16 +5,18 @@
 #include <RcppParallel.h>
 #include "ClusterAlgorithm.h"
 #include "MultipleClusterAlgorithm.h"
+#include "PairGenerator.h"
 #include <unordered_map>
 #include <memory>
 
 class ClusterWorker : public RcppParallel::Worker {
 protected:
+  std::vector<std::unique_ptr<PairGenerator>> pair_generators;
   const int threads;
   int line_number = 0;
   ClusterAlgorithm * algo;
 public:
-  ClusterWorker(ClusterAlgorithm * algo, const int threads);
+  ClusterWorker(ClusterAlgorithm * algo, const int threads = 1);
   virtual ~ClusterWorker() = default;
   virtual void finalize() {};
   int n_threads();
@@ -78,11 +80,30 @@ protected:
   bool next_line(DistanceElement & d);
 public:
   typedef std::vector<id_t> id_list_type;
-  ClusterWorkerImpl(ClusterAlgorithm * algo, distmx_t &distmx, const int threads);
-  ClusterWorkerImpl(ClusterAlgorithm * algo, distmx_t &distmx,
-                    const id_list_type & id_list, const int threads);
+  ClusterWorkerImpl(
+    ClusterAlgorithm * algo,
+    distmx_t &distmx,
+    const int threads = 1
+  );
+  ClusterWorkerImpl(
+    ClusterAlgorithm * algo,
+    distmx_t &distmx,
+    const id_list_type & id_list,
+    const int threads = 1
+  );
 };
 
+// The MergeClusterWorker is a ClusterWorker that works on separate
+// instances of the ClusterAlgorithm, one for each thread.
+// This means that the individual instances can be smaller, and there
+// is no worry about concurrency issues among the different instances.
+// They do each need to merge their results into the parent algorithm
+// when they are finished, but this can typically be done using
+// fewer steps than the original clustering.
+// Implementations need to use PairGenerator::i() and PairGenerator::j()
+// to get the indices of the pair in the cluster algorithm, but
+// PairGenerator::i0() and PairGenerator::j0() to get the indices of the pair
+// in the original sequence list.
 template <class distmx_t, class id_t>
 class MergeClusterWorker : public ClusterWorkerImpl<distmx_t, id_t> {
 protected:
@@ -92,13 +113,26 @@ protected:
   using ClusterWorkerImpl<distmx_t, id_t>::next_line;
 public:
   using typename ClusterWorkerImpl<distmx_t, id_t>::id_list_type;
-  MergeClusterWorker(ClusterAlgorithm * algo, distmx_t &distmx, const int threads);
-  MergeClusterWorker(ClusterAlgorithm * algo, distmx_t &distmx,
-                    const id_list_type & id_list, const int threads);
+  MergeClusterWorker(
+    ClusterAlgorithm * algo,
+    distmx_t &distmx,
+    const int threads = 1
+    );
+  MergeClusterWorker(
+    ClusterAlgorithm * algo,
+    distmx_t &distmx,
+    const id_list_type & id_list,
+    const int threads = 1
+  );
 
   void operator()(size_t begin, size_t end) override;
 };
 
+// The ConcurrentClusterWorker is a ClusterWorker that works on a single
+// instance of the ClusterAlgorithm, but uses multiple threads to process
+// the pairs.
+// Implementations need to use PairGenerator::i0() and PairGenerator::j0()
+// for indexes in both the cluster algorithm and the original sequence list.
 template <class distmx_t, class id_t>
 class ConcurrentClusterWorker : public ClusterWorkerImpl<distmx_t, id_t> {
 protected:
@@ -112,6 +146,16 @@ public:
   void operator()(size_t begin, size_t end) override;
 };
 
+// The HierarchicalClusterWorker is a ClusterWorker that works on
+// multiple instances of the ClusterAlgorithm (shards), each working on
+// multiple subsets of pairs (threads). This means that the different instances
+// can be smaller than in the serial case or the ConcurrentClusterWorker,
+// but there is still some capability for concurrency.
+// Unfortunately there are potentially three different indexes to keep track of:
+// - the index of the pair in the pair generator (thread-level) -- i() and j()
+// - the index of the pair in the cluster algorithm (shard-level) -- ??
+// - the index of the pair in the original sequence list (global) -- i0() and j0()
+// The first and last are easy to keep track of, but the middle is not implemented.
 template <class distmx_t, class id_t>
 class HierarchicalClusterWorker : public ClusterWorkerImpl<distmx_t, id_t> {
 protected:

@@ -14,6 +14,8 @@
 #include "EdlibDistWorker.h"
 #include "HammingDistWorker.h"
 
+#include "AllPairGenerator.h"
+
 std::unique_ptr<DistanceConverter> create_distance_converter(
     const std::string &type,
     const double from,
@@ -133,23 +135,24 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     const std::uint8_t threads,
     int verbose
 ) {
+  AllPairGenerator::Builder pgb(seq.size(), threads);
   if (type == "split") {
     if (verbose == 0) {
-      return std::make_unique<HybridSplitClusterWorker<0>>(seq, cluster, threads, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<0>>(seq, cluster, pgb, breakpoint);
     } else if (verbose == 1) {
-      return std::make_unique<HybridSplitClusterWorker<1>>(seq, cluster, threads, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<1>>(seq, cluster, pgb, breakpoint);
     } else if (verbose >= 2) {
-      return std::make_unique<HybridSplitClusterWorker<2>>(seq, cluster, threads, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<2>>(seq, cluster, pgb, breakpoint);
     } else {
       OPTIMOTU_STOP("invalid verbose level");
     }
   } else if (type == "concurrent") {
     if (verbose == 0) {
-      return std::make_unique<HybridConcurrentClusterWorker<0>>(seq, cluster, threads, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<0>>(seq, cluster, pgb, breakpoint);
     } else if (verbose == 1) {
-      return std::make_unique<HybridConcurrentClusterWorker<1>>(seq, cluster, threads, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<1>>(seq, cluster, pgb, breakpoint);
     } else if (verbose >= 2) {
-      return std::make_unique<HybridConcurrentClusterWorker<2>>(seq, cluster, threads, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<2>>(seq, cluster, pgb, breakpoint);
     } else {
       OPTIMOTU_STOP("invalid verbose level");
     }
@@ -434,6 +437,7 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
   std::string par_method = element_as_string(parallel_config, "method", "parallel_config");
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  AllPairGenerator::Builder pgb(seq.size(), threads);
   if (dist_method == "wfa2") {
     int match = element_as_int(dist_config, "match", "dist_config");
     int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
@@ -445,19 +449,19 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<Wfa2SplitClusterWorker<0>>(
           seq,
-          cluster, threads, -match, mismatch,
+          cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose == 1) {
         return std::make_unique<Wfa2SplitClusterWorker<1>>(
           seq,
-          cluster, threads, -match, mismatch,
+          cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose >= 2) {
         return std::make_unique<Wfa2SplitClusterWorker<2>>(
           seq,
-          cluster, threads, -match, mismatch,
+          cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else {
@@ -467,19 +471,19 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<0>>(
           seq,
-          cluster, threads, -match, mismatch,
+          cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose == 1) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<1>>(
           seq,
-          cluster, threads, -match, mismatch,
+          cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else if (verbose >= 2) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<2>>(
           seq,
-          cluster, threads, -match, mismatch,
+          cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
       } else {
@@ -493,17 +497,17 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<EdlibSplitClusterWorker<0>>(
           seq,
-          cluster, threads
+          cluster, pgb
         );
       } else if (verbose == 1) {
         return std::make_unique<EdlibSplitClusterWorker<1>>(
           seq,
-          cluster, threads
+          cluster, pgb
         );
       } else if (verbose >= 2) {
         return std::make_unique<EdlibSplitClusterWorker<2>>(
           seq,
-          cluster, threads
+          cluster, pgb
         );
       } else {
         OPTIMOTU_STOP("invalid verbose level");
@@ -512,17 +516,17 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<EdlibConcurrentClusterWorker<0>>(
           seq,
-          cluster, threads
+          cluster, pgb
         );
       } else if (verbose == 1) {
         return std::make_unique<EdlibConcurrentClusterWorker<1>>(
           seq,
-          cluster, threads
+          cluster, pgb
         );
       } else if (verbose >= 2) {
         return std::make_unique<EdlibConcurrentClusterWorker<2>>(
           seq,
-          cluster, threads
+          cluster, pgb
         );
       } else {
         OPTIMOTU_STOP("invalid verbose level");
@@ -536,17 +540,17 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<HybridSplitClusterWorker<0>>(
           seq,
-          cluster, threads, breakpoint
+          cluster, pgb, breakpoint
         );
       } else if (verbose == 1) {
         return std::make_unique<HybridSplitClusterWorker<1>>(
           seq,
-          cluster, threads, breakpoint
+          cluster, pgb, breakpoint
         );
       } else if (verbose >= 2) {
         return std::make_unique<HybridSplitClusterWorker<2>>(
           seq,
-          cluster, threads, breakpoint
+          cluster, pgb, breakpoint
         );
       } else {
         OPTIMOTU_STOP("invalid verbose level");
@@ -555,17 +559,17 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<HybridConcurrentClusterWorker<0>>(
           seq,
-          cluster, threads, breakpoint
+          cluster, pgb, breakpoint
         );
       } else if (verbose == 1) {
         return std::make_unique<HybridConcurrentClusterWorker<1>>(
           seq,
-          cluster, threads, breakpoint
+          cluster, pgb, breakpoint
         );
       } else if (verbose >= 2) {
         return std::make_unique<HybridConcurrentClusterWorker<2>>(
           seq,
-          cluster, threads, breakpoint
+          cluster, pgb, breakpoint
         );
       } else {
         OPTIMOTU_STOP("invalid verbose level");
@@ -580,17 +584,17 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<HammingSplitClusterWorker<0>>(
           seq,
-          cluster, threads, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps
         );
       } else if (verbose == 1) {
         return std::make_unique<HammingSplitClusterWorker<1>>(
           seq,
-          cluster, threads, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps
         );
       } else if (verbose >= 2) {
         return std::make_unique<HammingSplitClusterWorker<2>>(
           seq,
-          cluster, threads, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps
         );
       } else {
         OPTIMOTU_STOP("invalid verbose level");
@@ -599,17 +603,17 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (verbose == 0) {
         return std::make_unique<HammingConcurrentClusterWorker<0>>(
           seq,
-          cluster, threads, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps
         );
       } else if (verbose == 1) {
         return std::make_unique<HammingConcurrentClusterWorker<1>>(
           seq,
-          cluster, threads, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps
         );
       } else if (verbose >= 2) {
         return std::make_unique<HammingConcurrentClusterWorker<2>>(
           seq,
-          cluster, threads, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps
         );
       } else {
         OPTIMOTU_STOP("invalid verbose level");
@@ -860,6 +864,7 @@ std::unique_ptr<DistWorker> create_dist_worker(
     default:
       OPTIMOTU_STOP("span must be 0 or 1");
   }
+  AllPairGenerator::Builder pgb(seq.size(), threads);
   if (dist_method == "wfa2") {
     int match = element_as_int(dist_config, "match", "dist_config");
     int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
@@ -867,16 +872,16 @@ std::unique_ptr<DistWorker> create_dist_worker(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
-    return create_wfa2_dist_worker(seq, threshold, threads, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, span_enum, constrain);
+    return create_wfa2_dist_worker(seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, span_enum, constrain);
   } else if (dist_method == "edlib") {
-    return create_edlib_dist_worker(seq, threshold, threads, sdm, verbose, span_enum, constrain);
+    return create_edlib_dist_worker(seq, threshold, pgb, sdm, verbose, span_enum, constrain);
   } else if (dist_method == "hamming") {
     if (constrain == false) {
       RcppThread::Rcerr << "Note: Constrained alignment is not relevant for Hamming distance" << std::endl;
     }
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
-    return create_hamming_dist_worker(seq, threshold, threads, sdm,
+    return create_hamming_dist_worker(seq, threshold, pgb, sdm,
       min_overlap, ignore_gaps, verbose);
   } else {
     OPTIMOTU_STOP("unknown distance method: %s", dist_method.c_str());

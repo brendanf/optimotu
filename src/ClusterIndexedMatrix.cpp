@@ -34,8 +34,11 @@ void ClusterIndexedMatrix<A>::initialize() {
 }
 
 template <>
-ClusterIndexedMatrix<>::ClusterIndexedMatrix(SingleClusterAlgorithm * parent) :
-  SingleClusterAlgorithm(parent), clust_array(m*n), ca(&clust_array[0]) {
+ClusterIndexedMatrix<>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n) :
+  SingleClusterAlgorithm(parent, n),
+  clust_array(m*n),
+  ca(&clust_array[0])
+{
   initialize();
 }
 
@@ -513,18 +516,36 @@ void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) {
 }
 
 template <class A>
-SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(){
+SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  if (own_child) {
-    auto child_ptr = new ClusterIndexedMatrix<>(this);
-    auto child = std::unique_ptr<ClusterAlgorithm>(
-      (ClusterAlgorithm*)child_ptr
-    );
-    this->children.push_back(std::move(child));
-    return (SingleClusterAlgorithm *)child_ptr;
-  }
-  this->own_child = true;
-  return this;
+  auto child_ptr = new ClusterIndexedMatrix<>(parent, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <class A>
+SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child() {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new ClusterIndexedMatrix<>(this, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <class A>
+MappedClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(PairGenerator * pg){
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new MappedClusterAlgorithm(this, pg);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
 }
 
 template <class A>

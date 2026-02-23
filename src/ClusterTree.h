@@ -6,6 +6,7 @@
 
 #include "single_linkage.h"
 #include "ClusterAlgorithm.h"
+#include "MappedClusterAlgorithm.h"
 #include <deque>
 #include <cstdint>
 
@@ -56,7 +57,7 @@ protected:
 
   void initialize();
 
-  ClusterTree(SingleClusterAlgorithm * parent);
+  ClusterTree(ClusterAlgorithm * parent, const j_t n);
 
   void assign_ids();
 
@@ -147,11 +148,17 @@ class ClusterTreeImpl : public ClusterTree {
 
 #endif // OPTIMOTU_R
 
+ClusterTreeImpl<verbose, test> * make_inner_child(
+  ClusterAlgorithm * parent,
+  const j_t n
+) override;
+
 public:
 
   using ClusterTree::ClusterTree;
 
-  ClusterTreeImpl * make_child() override;
+  ClusterTreeImpl<verbose, test> * make_child() override;
+  MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
 
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
 

@@ -1,7 +1,11 @@
 #include "ClusterWorker.h"
 
-ClusterWorker::ClusterWorker(ClusterAlgorithm * algo, const int threads) :
-  threads(threads), algo(algo) {}
+ClusterWorker::ClusterWorker(
+  ClusterAlgorithm * algo,
+  const int threads
+) :
+  threads(threads),
+  algo(algo) {}
 
 int ClusterWorker::n_threads() {
   return this->threads;

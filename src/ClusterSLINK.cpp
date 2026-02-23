@@ -4,8 +4,8 @@
 #include "ClusterSLINK.h"
 #include <cstdint>
 
-ClusterSLINK::ClusterSLINK(SingleClusterAlgorithm * parent) :
-  SingleClusterAlgorithm(parent), Pi(n), Lambda(n, m), M(n, m), delegate(dconv, n) {}
+ClusterSLINK::ClusterSLINK(ClusterAlgorithm * parent, j_t n) :
+  SingleClusterAlgorithm(parent, n), Pi(n), Lambda(n, m), M(n, m), delegate(dconv, n) {}
 
 ClusterSLINK::ClusterSLINK(const DistanceConverter &dconv, const j_t n) :
   SingleClusterAlgorithm(dconv, n),
@@ -78,18 +78,35 @@ void ClusterSLINK::finalize() {
   finish_iter();
 }
 
+ClusterSLINK * ClusterSLINK::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
+  // this is not locked, because it is called during the MappedClusterAlgorithm,
+  // constructor, which is called by make_child(), which is already locked.
+  auto child_ptr = new ClusterSLINK(parent, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
 ClusterSLINK * ClusterSLINK::make_child() {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  if (own_child) {
-    auto child_ptr = new ClusterSLINK(&delegate);
-    auto child = std::unique_ptr<ClusterAlgorithm>(
-      (ClusterAlgorithm*)child_ptr
-    );
-    this->children.push_back(std::move(child));
-    return child_ptr;
-  }
-  this->own_child = true;
-  return this;
+  auto child_ptr = new ClusterSLINK(&delegate, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+MappedClusterAlgorithm * ClusterSLINK::make_child(PairGenerator * pg) {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new MappedClusterAlgorithm(this, &delegate, pg);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
 }
 
 void ClusterSLINK::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
@@ -142,7 +159,7 @@ void ClusterSLINK::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
 }
 
 void ClusterSLINK::write_to_matrix(internal_matrix_t &out) {
-  if (own_child && children.size() > 0) return delegate.write_to_matrix(out);
+  if (children.size() > 0) return delegate.write_to_matrix(out);
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   // OPTIMOTU_CERR << "preparing to write matrix" << std::endl
   //               << " i Pi Lambda" << std::endl;
@@ -178,7 +195,7 @@ struct RevOrderElement {
 };
 
 Rcpp::List ClusterSLINK::as_hclust(const Rcpp::CharacterVector &seqnames) const {
-  if (own_child && children.size() > 0) return delegate.as_hclust(seqnames);
+  if (children.size() > 0) return delegate.as_hclust(seqnames);
 
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   Rcpp::IntegerMatrix merge(this->n - 1, 2);
@@ -264,8 +281,8 @@ void ClusterSLINK::merge_into(ClusterAlgorithm &consumer) {
 }
 
 void ClusterSLINK::merge_into_parent() {
-  if (parent && !own_child) this->merge_into(*parent);
-  if (own_child && children.size() > 0) this->merge_into(delegate);
+  if (parent && children.size() == 0) this->merge_into(*parent);
+  if (parent && children.size() > 0) this->delegate.merge_into(*parent);
 }
 
 double ClusterSLINK::max_relevant(j_t seq1, j_t seq2, int thread) const {

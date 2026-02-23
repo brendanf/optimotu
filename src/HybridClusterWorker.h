@@ -10,7 +10,7 @@ public :
   HybridClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    const std::uint8_t threads,
+    DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1
   );
 };
@@ -23,6 +23,7 @@ class HybridSplitClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::mutex;
   using DistClusterWorker::_prealigned;
   using DistClusterWorker::_aligned;
+  using DistClusterWorker::pair_generators;
 public :
   using HybridClusterWorker::HybridClusterWorker;
   void operator()(std::size_t begin, std::size_t end);
@@ -36,6 +37,7 @@ class HybridConcurrentClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::mutex;
   using DistClusterWorker::_prealigned;
   using DistClusterWorker::_aligned;
+  using DistClusterWorker::pair_generators;
 public :
   using HybridClusterWorker::HybridClusterWorker;
   void operator()(std::size_t begin, std::size_t end);

@@ -7,9 +7,12 @@
 #include "ClusterMatrix.h"
 
 template<bool BM, int F, typename A>
-ClusterMatrix<BM, F, A>::ClusterMatrix(SingleClusterAlgorithm * parent):
-SingleClusterAlgorithm(parent),
-clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
+ClusterMatrix<BM, F, A>::ClusterMatrix(ClusterAlgorithm * parent, const j_t n):
+  SingleClusterAlgorithm(parent, n),
+  clust_array(m*n),
+  ca(&clust_array[0]),
+  toclust(m, 0)
+{
   initialize();
 }
 
@@ -235,18 +238,38 @@ void ClusterMatrix<BM, F, A>::merge_into(ClusterAlgorithm &consumer) {
 
 template<bool BM, int F, typename A>
 SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new ClusterMatrix<>(this, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template<bool BM, int F, typename A>
+MappedClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child(
+  PairGenerator * pg
+) {
   // std::lock_guard<std::mutex> lock(this->mutex);
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  if (own_child) {
-    auto child_ptr = new ClusterMatrix<BM,F>(this);
-    auto child = std::unique_ptr<ClusterAlgorithm>(
-      (ClusterAlgorithm*)child_ptr
-    );
-    this->children.push_back(std::move(child));
-    return child_ptr;
-  }
-  this->own_child = true;
-  return this;
+  auto child_ptr = new MappedClusterAlgorithm(this, pg);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template<bool BM, int F, typename A>
+SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new ClusterMatrix<>(parent, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
 }
 
 template<bool BM, int F, typename A>
@@ -412,7 +435,7 @@ ClusterMatrix<false, TOPDOWN_FILL>::ClusterMatrix(
 ) = delete;
 
 #define deleted_funcs template<>                                     \
-cm::ClusterMatrix(SingleClusterAlgorithm * parent) = delete;         \
+cm::ClusterMatrix(ClusterAlgorithm * parent, const j_t n) = delete;         \
 template<>                                                           \
 cm::ClusterMatrix(const DistanceConverter &dconv, size_t n) = delete
 

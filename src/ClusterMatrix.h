@@ -5,6 +5,7 @@
 #define OPTIMOTU_CLUSTERMATRIX_H_INCLUDED
 
 #include "ClusterAlgorithm.h"
+#include "MappedClusterAlgorithm.h"
 #ifdef OPTIMOTU_R
 #include <RcppParallel.h>
 #endif // OPTIMOTU_R
@@ -20,6 +21,7 @@ template <bool BINARY_SEARCH=true, //alt would be linear
           class ARRAY_T = std::vector<int>>
 class ClusterMatrix : public SingleClusterAlgorithm {
   template<bool, int, typename> friend class ClusterMatrix;
+  friend class MappedClusterAlgorithm;
 private:
   ARRAY_T clust_array;
   int *const ca;
@@ -28,7 +30,12 @@ private:
 protected:
   void initialize();
 
-  ClusterMatrix(SingleClusterAlgorithm * parent);
+  ClusterMatrix(ClusterAlgorithm * parent, const j_t n);
+
+  SingleClusterAlgorithm * make_inner_child(
+    ClusterAlgorithm * parent,
+    const j_t n
+  ) override;
 
 public:
   ClusterMatrix(const DistanceConverter &dconv, size_t n);
@@ -44,6 +51,7 @@ public:
   void merge_into(ClusterAlgorithm &consumer) override final;
 
   SingleClusterAlgorithm * make_child() override;
+  MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
 
   double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
 

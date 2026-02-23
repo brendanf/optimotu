@@ -5,11 +5,11 @@
 HammingDistWorker::HammingDistWorker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   const int min_overlap,
   const bool ignore_gap
-) : DistWorker(seq, dist_threshold, threads, sdm),
+) : DistWorker(seq, dist_threshold, pgb, sdm),
 pss(seq),
 min_overlap(min_overlap),
 ignore_gap(ignore_gap) {}
@@ -141,35 +141,35 @@ template<int verbose>
 std::unique_ptr<HammingDistWorker> create_hamming_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   const int min_overlap,
   const bool ignore_gap
 ) {
   if (dynamic_cast<SparseDistanceMatrixGapstats*>(&sdm)) {
-    return std::make_unique<HammingDistWorkerImpl<verbose, SparseDistanceMatrixGapstats>>(seq, dist_threshold, threads, sdm, min_overlap, ignore_gap);
+    return std::make_unique<HammingDistWorkerImpl<verbose, SparseDistanceMatrixGapstats>>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
   } else if (dynamic_cast<SparseDistanceMatrixCigar*>(&sdm)) {
     OPTIMOTU_STOP("Cigar is not implemented for Hamming distance");
   } else {
-    return std::make_unique<HammingDistWorkerImpl<verbose, SparseDistanceMatrix>>(seq, dist_threshold, threads, sdm, min_overlap, ignore_gap);
+    return std::make_unique<HammingDistWorkerImpl<verbose, SparseDistanceMatrix>>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
   }
 }
 
 std::unique_ptr<HammingDistWorker> create_hamming_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   const int min_overlap,
   const bool ignore_gap,
   int verbose
 ) {
   if (verbose == 0) {
-    return create_hamming_dist_worker<0>(seq, dist_threshold, threads, sdm, min_overlap, ignore_gap);
+    return create_hamming_dist_worker<0>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
   } else if (verbose == 1) {
-    return create_hamming_dist_worker<1>(seq, dist_threshold, threads, sdm, min_overlap, ignore_gap);
+    return create_hamming_dist_worker<1>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
   } else {
-    return create_hamming_dist_worker<2>(seq, dist_threshold, threads, sdm, min_overlap, ignore_gap);
+    return create_hamming_dist_worker<2>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
   }
 }
 

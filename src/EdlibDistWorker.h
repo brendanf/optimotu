@@ -32,7 +32,7 @@ struct EdlibDistWorkerImpl : public EdlibDistWorker {
 std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
   const std::vector<std::string> &seq,
   const double dist_threshold,
-  const std::uint8_t threads,
+  DivisiblePairGenerator::Builder & pair_generator_builder,
   SparseDistanceMatrix &sdm,
   int verbose = 0,
   AlignmentSpan span = AlignmentSpan::GLOBAL,
