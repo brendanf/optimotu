@@ -2,6 +2,7 @@
 
 * Implement a new method to divide distance + cluster calculations among
 threads.
+* Improve speed of cluster set verification in `optimize_thresholds()`.
 
 # optimotu 0.9.5
 

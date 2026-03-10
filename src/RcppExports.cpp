@@ -445,6 +445,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// verify_which_impl
+void verify_which_impl(Rcpp::List which, const Rcpp::CharacterVector seqnames);
+RcppExport SEXP _optimotu_verify_which_impl(SEXP whichSEXP, SEXP seqnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type which(whichSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector >::type seqnames(seqnamesSEXP);
+    verify_which_impl(which, seqnames);
+    return R_NilValue;
+END_RCPP
+}
 
 RcppExport SEXP run_testthat_tests(SEXP);
 
@@ -478,6 +489,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
     {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 3},
+    {"_optimotu_verify_which_impl", (DL_FUNC) &_optimotu_verify_which_impl, 2},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},
     {NULL, NULL, 0}
 };

@@ -279,3 +279,11 @@ summarize_by_rank <- function(data, ranks, id_col = "seq_id") {
     .Call(`_optimotu_summarize_by_rank`, data, ranks, id_col)
 }
 
+#' Verify that `which` is a valid list of sequence subsets
+#' @param which (`Rcpp::List`) The list of sequence subsets.
+#' @param seqnames (`Rcpp::CharacterVector`) The names of the sequences.
+#' @return (`void`) Throws an error if `which` is not a valid list of sequence subsets.
+verify_which_impl <- function(which, seqnames) {
+    invisible(.Call(`_optimotu_verify_which_impl`, which, seqnames))
+}
+

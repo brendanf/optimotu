@@ -1,15 +1,17 @@
+#' Verify that `which` is a valid list of sequence subsets
+#' @param which (`list` of `character` vectors) The list of sequence subsets.
+#' @param seqnames (`character` vector) The names of the sequences.
+#' @return (`logical` scalar) `TRUE` (invisibly), or an error is thrown if
+#' `which` is not a valid list of sequence subsets.
 verify_which <- function(which, seqnames) {
    checkmate::assert_list(
       which,
       any.missing = FALSE
    )
-   if (!all(vapply(lapply(which, `%in%`, table = seqnames), all, TRUE))) {
-      stop("Elements of 'which' must all be in 'seqnames'.")
-   }
+  checkmate::assert_character(seqnames, any.missing = FALSE)
+  verify_which_impl(which, seqnames)
    invisible(TRUE)
 }
-
-
 
 is_list_of_character <- function(x) {
   all(vapply(x, is.character, TRUE))
