@@ -17,3 +17,7 @@ config.status
 benchmark
 *bak
 *.Rproj
+manuscript
+data-raw
+temp
+.vscode
