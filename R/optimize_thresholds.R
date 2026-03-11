@@ -281,19 +281,19 @@ find_best_threshold <- function(
 #'   - `value` (`numeric`) the value of the measure at the threshold
 #' @export
 optimize_thresholds <- function(
-    taxonomy,
-    refseq,
-    ranks = c("kingdom", "phylum", "class", "order", "family", "genus",
-               "species"),
-    dist_config = dist_wfa2(),
-    threshold_config = threshold_uniform(0.0, 0.4, 0.001),
-    clust_config = clust_tree(),
-    parallel_config = parallel_concurrent(threads = 1),
-    min_taxa = 5L,
-    min_refseq = 2L * min_taxa,
-    id_col = "seq_id",
-    measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
-    verbose = FALSE
+  taxonomy,
+  refseq,
+  ranks = c("kingdom", "phylum", "class", "order", "family", "genus",
+            "species"),
+  dist_config = dist_wfa2(),
+  threshold_config = threshold_uniform(0.0, 0.4, 0.001),
+  clust_config = clust_tree(),
+  parallel_config = parallel_concurrent(threads = 1),
+  min_taxa = 5L,
+  min_refseq = 2L * min_taxa,
+  id_col = "seq_id",
+  measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
+  verbose = FALSE
 ) {
 
   # Check input
@@ -309,7 +309,8 @@ optimize_thresholds <- function(
   checkmate::assert_integerish(min_refseq, lower = 1L)
   checkmate::assert_integerish(min_taxa, lower = 1L)
   checkmate::assert_character(measures)
-  checkmate::assert_subset(measures, c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"))
+  checkmate::assert_subset(measures, c("MCC", "RI", "ARI", "FMI", "MI", "AMI",
+                                       "FM"))
   checkmate::assert(
     checkmate::check_flag(verbose),
     checkmate::check_integerish(verbose, lower = 0L)

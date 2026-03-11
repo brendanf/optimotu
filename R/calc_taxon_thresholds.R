@@ -17,7 +17,6 @@ superrank_thresholds <- function(supertaxa, superrank, rank, optima) {
   unname(chosen_thresholds[supertaxa])
 }
 
-
 #' Calculate clustering thresholds for each taxon, falling back to its ancestor
 #' taxa as necessary
 #'

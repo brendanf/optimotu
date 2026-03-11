@@ -4,13 +4,13 @@
 #' @return (`logical` scalar) `TRUE` (invisibly), or an error is thrown if
 #' `which` is not a valid list of sequence subsets.
 verify_which <- function(which, seqnames) {
-   checkmate::assert_list(
-      which,
-      any.missing = FALSE
-   )
+  checkmate::assert_list(
+    which,
+    any.missing = FALSE
+  )
   checkmate::assert_character(seqnames, any.missing = FALSE)
   verify_which_impl(which, seqnames)
-   invisible(TRUE)
+  invisible(TRUE)
 }
 
 is_list_of_character <- function(x) {

@@ -110,9 +110,12 @@ seq_cluster.character <- function(
     )
   } else {
     checkmate::assert(
-      checkmate::check_list(which, types = "logical", any.missing = FALSE, min.len = 1),
-      checkmate::check_list(which, types = "integerish", any.missing = FALSE, min.len = 1),
-      checkmate::check_list(which, types = "character", any.missing = FALSE, min.len = 1)
+      checkmate::check_list(which, types = "logical", any.missing = FALSE,
+                            min.len = 1),
+      checkmate::check_list(which, types = "integerish", any.missing = FALSE,
+                            min.len = 1),
+      checkmate::check_list(which, types = "character", any.missing = FALSE,
+                            min.len = 1),
     )
     if (is.list(which) && !is.character(which[[1]])) {
       which <- lapply(which, `[`, x = seq_id)
