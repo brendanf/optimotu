@@ -1,4 +1,5 @@
 #include "HammingDistWorker.h"
+#include <algorithm>
 
 #ifdef OPTIMOTU_R
 
@@ -28,6 +29,9 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(std::s
     begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
   }
   size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
+  const size_t n_seq = static_cast<size_t>(pss.num_seqs);
+  begin_i = std::min(begin_i, n_seq);
+  end_i = std::min(end_i, n_seq);
   OPTIMOTU_DEBUG(2,
     << "HammingDistWorker thread " << begin
     << " entered; sequences [" << begin_i

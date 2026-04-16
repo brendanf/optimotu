@@ -134,9 +134,22 @@ void SparseDistanceMatrixCigar::append(
     std::vector<double> &dist1new,
     std::vector<double> &dist2new,
     std::vector<std::string> &cigarnew) {
-  SparseDistanceMatrix::append(seq1new, seq2new, score1new, score2new, dist1new, dist2new);
+  mutex.lock();
+  std::copy(seq1new.begin(), seq1new.end(), std::back_inserter(seq1));
+  seq1new.clear();
+  std::copy(seq2new.begin(), seq2new.end(), std::back_inserter(seq2));
+  seq2new.clear();
+  std::copy(score1new.begin(), score1new.end(), std::back_inserter(score1));
+  score1new.clear();
+  std::copy(score2new.begin(), score2new.end(), std::back_inserter(score2));
+  score2new.clear();
+  std::copy(dist1new.begin(), dist1new.end(), std::back_inserter(dist1));
+  dist1new.clear();
+  std::copy(dist2new.begin(), dist2new.end(), std::back_inserter(dist2));
+  dist2new.clear();
   this->cigar.insert(this->cigar.end(), cigarnew.begin(), cigarnew.end());
   cigarnew.clear();
+  mutex.unlock();
 }
 
 SparseDistanceMatrixGapstats::SparseDistanceMatrixGapstats(
@@ -199,7 +212,19 @@ void SparseDistanceMatrixGapstats::append(
     std::vector<int> &n_deletenew,
     std::vector<int> &max_insertnew,
     std::vector<int> &max_deletenew) {
-  SparseDistanceMatrix::append(seq1new, seq2new, score1new, score2new, dist1new, dist2new);
+  mutex.lock();
+  std::copy(seq1new.begin(), seq1new.end(), std::back_inserter(seq1));
+  seq1new.clear();
+  std::copy(seq2new.begin(), seq2new.end(), std::back_inserter(seq2));
+  seq2new.clear();
+  std::copy(score1new.begin(), score1new.end(), std::back_inserter(score1));
+  score1new.clear();
+  std::copy(score2new.begin(), score2new.end(), std::back_inserter(score2));
+  score2new.clear();
+  std::copy(dist1new.begin(), dist1new.end(), std::back_inserter(dist1));
+  dist1new.clear();
+  std::copy(dist2new.begin(), dist2new.end(), std::back_inserter(dist2));
+  dist2new.clear();
   this->align_length.insert(this->align_length.end(), align_lengthnew.begin(), align_lengthnew.end());
   align_lengthnew.clear();
   this->n_insert.insert(this->n_insert.end(), n_insertnew.begin(), n_insertnew.end());
@@ -210,4 +235,5 @@ void SparseDistanceMatrixGapstats::append(
   max_insertnew.clear();
   this->max_delete.insert(this->max_delete.end(), max_deletenew.begin(), max_deletenew.end());
   max_deletenew.clear();
+  mutex.unlock();
 }

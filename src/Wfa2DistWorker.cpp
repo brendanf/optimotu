@@ -1,6 +1,7 @@
 #ifdef OPTIMOTU_R
 #include "Wfa2DistWorker.h"
 #include <bindings/cpp/WFAligner.hpp>
+#include <algorithm>
 #include "pairwise_alignment.h"
 #include "optimotu.h"
 
@@ -66,6 +67,8 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
     begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
   }
   size_t end_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
+  begin_i = std::min(begin_i, seq.size());
+  end_i = std::min(end_i, seq.size());
 
   OPTIMOTU_DEBUG(
     2,

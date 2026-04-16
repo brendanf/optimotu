@@ -26,6 +26,9 @@ void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::si
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
+    if (!hits[i]) {
+      hits[i] = std::make_unique<SearchHit>();
+    }
     SearchHit & hit = *hits[i];
     for (std::size_t j = 0; j < ref.size(); j++) {
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;

@@ -62,21 +62,28 @@ Rcpp::RObject seq_distmx_internal(
   } else {
     OPTIMOTU_STOP("details must be 0, 1, or 2");
   }
-  auto align_worker = create_dist_worker(
-    dist_config,
-    parallel_config,
-    seq_str,
-    threshold,
-    *sdm,
-    verbose,
-    span,
-    constrain
-  );
-  int threads = align_worker->n_threads();
-  if (threads == 1) {
-    (*align_worker)(0, 1);
-  } else {
-    RcppParallel::parallelFor(0, threads, *align_worker, 1, threads);
+  if (seq_str.size() >= 2) {
+    auto align_worker = create_dist_worker(
+      dist_config,
+      parallel_config,
+      seq_str,
+      threshold,
+      *sdm,
+      verbose,
+      span,
+      constrain
+    );
+    int threads = align_worker->n_threads();
+    if (threads == 1) {
+      (*align_worker)(0, 1);
+    } else {
+      RcppParallel::parallelFor(0, threads, *align_worker, 1, threads);
+    }
+
+    if (verbose >= 1) {
+      Rcpp::Rcerr << "Prealigned: " << align_worker->prealigned()
+                  << "\nAligned: " << align_worker->aligned() << std::endl;
+    }
   }
 
   // count size of output
@@ -138,11 +145,6 @@ Rcpp::RObject seq_distmx_internal(
       cigar_out[i] = sdm_cigar->cigar[i];
     }
     out["cigar"] = cigar_out;
-  }
-
-  if (verbose >= 1) {
-    Rcpp::Rcerr << "Prealigned: " << align_worker->prealigned()
-                << "\nAligned: " << align_worker->aligned() << std::endl;
   }
 
   // set attributes

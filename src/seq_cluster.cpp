@@ -40,23 +40,31 @@ Rcpp::RObject seq_cluster_single(
   Rcpp::IntegerMatrix im(dconv->m, seq.size());
   std::vector<std::string> cppseq = Rcpp::as<std::vector<std::string>>(seq);
   auto algo = create_cluster_algorithm(clust_config, dconv.get())->create(im);
-  if (verbose) {
-    OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
-  }
-  auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
-  if (verbose) {
-    OPTIMOTU_CERR << "done\nclustering..." << std::endl;
-  }
-  int threads = worker->n_threads();
-  if (threads == 1) {
-    (*worker)(0, 1);
-  } else {
-    RcppParallel::parallelFor(0, threads, *worker, 1, threads);
+  size_t n_prealigned = 0, n_aligned = 0;
+  if (cppseq.size() >= 2) {
+    if (verbose) {
+      OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
+    }
+    auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
+    if (verbose) {
+      OPTIMOTU_CERR << "done\nclustering..." << std::endl;
+    }
+    int threads = worker->n_threads();
+    if (threads == 1) {
+      (*worker)(0, 1);
+    } else {
+      RcppParallel::parallelFor(0, threads, *worker, 1, threads);
+    }
+    n_prealigned = worker->prealigned();
+    n_aligned = worker->aligned();
+  } else if (verbose) {
+    OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << cppseq.size()
+                  << " input sequence(s)\n";
   }
   if (verbose) {
     OPTIMOTU_CERR << "done\n"
-                  << worker->aligned() << " aligned / "
-                  << worker->prealigned() << " prealigned"
+                  << n_aligned << " aligned / "
+                  << n_prealigned << " prealigned"
                   << "\ncreating output..." << std::flush;
   }
   algo->finalize();
@@ -117,14 +125,19 @@ Rcpp::List seq_cluster_multi(
   auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seq.names(), which, verbose);
   if (verbose)
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
-  auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
-  if (verbose)
-    OPTIMOTU_CERR << "done\nclustering..." << std::endl;
+  if (cppseq.size() >= 2) {
+    auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
+    if (verbose)
+      OPTIMOTU_CERR << "done\nclustering..." << std::endl;
 
-  if (worker->n_threads() == 1) {
-    (*worker)(0, 1);
-  } else {
-    RcppParallel::parallelFor(0, worker->n_threads(), *worker, 1, worker->n_threads());
+    if (worker->n_threads() == 1) {
+      (*worker)(0, 1);
+    } else {
+      RcppParallel::parallelFor(0, worker->n_threads(), *worker, 1, worker->n_threads());
+    }
+  } else if (verbose) {
+    OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << cppseq.size()
+                  << " input sequence(s)" << std::endl;
   }
   if (verbose)
     OPTIMOTU_CERR << "done\nfinalizing worker..." << std::flush;
