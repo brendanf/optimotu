@@ -3,6 +3,11 @@
 * Implement a new method to divide distance + cluster calculations among
 threads.
 * Improve speed of cluster set verification in `optimize_thresholds()`.
+* Fix errors resulting from race conditions.
+* Fix handling of very small (size 0 ot 1) input data for `seq_cluster()`,
+`seq_distmx()`, and `seq_search()`.
+* Fix race conditions in parallel distance matrix calculations which return CIGAR
+or gap statistics.
 
 # optimotu 0.9.5
 
