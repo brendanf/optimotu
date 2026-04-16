@@ -6,6 +6,7 @@
 
 #include "ClusterAlgorithm.h"
 #include "MappedClusterAlgorithm.h"
+#include <memory>
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
 // [[Rcpp::depends(RcppParallel)]]
@@ -14,9 +15,9 @@
 
 // Matrix representation of a hierarchical clustering of n items at m different
 // thresholds.
-template <class ARRAY_T = std::vector<int>>
+template <class ARRAY_T = std::vector<int>, int verbose = 0>
 class ClusterIndexedMatrix : public SingleClusterAlgorithm {
-  template<typename> friend class ClusterIndexedMatrix;
+  template<typename, int> friend class ClusterIndexedMatrix;
 
 private:
   struct tip {
@@ -82,12 +83,24 @@ public:
 };
 
 template<>
-ClusterIndexedMatrix<>::ClusterIndexedMatrix(
+ClusterIndexedMatrix<std::vector<int>, 0>::ClusterIndexedMatrix(
   const DistanceConverter &dconv,
   init_matrix_t &im
 ) = delete;
 
-#define cim_internal ClusterIndexedMatrix<internal_matrix_ref_t>
+template<>
+ClusterIndexedMatrix<std::vector<int>, 1>::ClusterIndexedMatrix(
+  const DistanceConverter &dconv,
+  init_matrix_t &im
+) = delete;
+
+template<>
+ClusterIndexedMatrix<std::vector<int>, 2>::ClusterIndexedMatrix(
+  const DistanceConverter &dconv,
+  init_matrix_t &im
+) = delete;
+
+#define cim_internal ClusterIndexedMatrix<internal_matrix_ref_t, 0>
 
 template<>
 cim_internal::ClusterIndexedMatrix(
@@ -102,5 +115,10 @@ cim_internal::ClusterIndexedMatrix(
 ) = delete;
 
 #undef cim_internal
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_indexed_matrix(
+  const DistanceConverter & dconv, j_t n, int verbose = 0);
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_indexed_matrix(
+  const DistanceConverter & dconv, init_matrix_t & im);
 
 #endif //OPTIMOTU_CLUSTERINDEXEDMATRIX_H_INCLUDED

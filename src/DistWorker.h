@@ -26,12 +26,13 @@ public:
     const std::vector<std::string> &seq,
     const double dist_threshold,
     DivisiblePairGenerator::Builder & pair_generator_builder,
-    SparseDistanceMatrix &sdm
+    SparseDistanceMatrix &sdm,
+    int verbose = 0
   ) : seq(seq),
       dist_threshold(dist_threshold),
       sim_threshold(1.0 - dist_threshold),
       sim_threshold_plus_1(1.0 + sim_threshold),
-      pair_generators(pair_generator_builder.build()),
+      pair_generators(pair_generator_builder.build(verbose)),
       threads(pair_generators.size()),
       sdm(sdm) {}
 

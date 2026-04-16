@@ -16,7 +16,8 @@ public:
     SparseDistanceMatrix &sdm,
     int match, int mismatch,
     int gap_open, int gap_extend,
-    int gap_open2, int gap_extend2
+    int gap_open2, int gap_extend2,
+    int verbose = 0
   );
 };
 
@@ -33,7 +34,15 @@ class Wfa2DistWorkerImpl : public Wfa2DistWorker {
   using Wfa2DistWorker::gap_open2;
   using Wfa2DistWorker::gap_extend2;
 public:
-  using Wfa2DistWorker::Wfa2DistWorker;
+  Wfa2DistWorkerImpl(
+    const std::vector<std::string> &seq,
+    const double dist_threshold,
+    DivisiblePairGenerator::Builder & pgb,
+    SparseDistanceMatrix &sdm,
+    int match, int mismatch,
+    int gap_open, int gap_extend,
+    int gap_open2, int gap_extend2
+  ) : Wfa2DistWorker(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose) {};
 
   virtual void operator()(std::size_t begin, std::size_t end) override;
 };

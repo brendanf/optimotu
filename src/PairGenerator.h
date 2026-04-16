@@ -83,7 +83,7 @@ public:
     // The sub-generators should be disjoint and cover the entire range.
     // They should also be approximately equally sized, in the sense that each
     // generator returns approximately the same number of pairs.
-    virtual std::vector<std::unique_ptr<PairGenerator>> build() const = 0;
+    virtual std::vector<std::unique_ptr<PairGenerator>> build(int verbose = 0) const = 0;
 
     virtual ~Builder() = default;
   };

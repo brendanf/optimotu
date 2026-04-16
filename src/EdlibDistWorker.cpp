@@ -94,12 +94,12 @@ void EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType
       );
       my_prealigned++;
       if (alignResult.status == EDLIB_STATUS_ERROR) {
-        OPTIMOTU_DEBUG(3, << "edlibAlign error " << j << std::endl);
+        OPTIMOTU_DEBUG(4, << "edlibAlign error " << j << std::endl);
         edlibFreeAlignResult(alignResult);
         continue;
       }
       if (alignResult.editDistance == -1) {
-        OPTIMOTU_DEBUG(3, << "edlibAlign no alignment within band " << aligner.k << std::endl);
+        OPTIMOTU_DEBUG(4, << "edlibAlign no alignment within band " << aligner.k << std::endl);
         edlibFreeAlignResult(alignResult);
         continue;
       }
@@ -156,7 +156,7 @@ void EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType
           }
         }
       } else {
-        OPTIMOTU_DEBUG(3, << "edlibAlign distance " << d2 << " above threshold " << dist_threshold << std::endl);
+        OPTIMOTU_DEBUG(4, << "edlibAlign distance " << d2 << " above threshold " << dist_threshold << std::endl);
       }
       edlibFreeAlignResult(alignResult);
       RcppThread::checkUserInterrupt();
@@ -236,15 +236,19 @@ std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
   AlignmentSpan span,
   bool constrain
 ) {
-  switch (verbose) {
+  int v = (verbose > 4) ? 4 : verbose;
+  switch (v) {
     case 0:
       return create_edlib_dist_worker<0>(seq, dist_threshold, pgb, sdm, span, constrain);
     case 1:
       return create_edlib_dist_worker<1>(seq, dist_threshold, pgb, sdm, span, constrain);
     case 2:
       return create_edlib_dist_worker<2>(seq, dist_threshold, pgb, sdm, span, constrain);
-    default:
+    case 3:
       return create_edlib_dist_worker<3>(seq, dist_threshold, pgb, sdm, span, constrain);
+    case 4:
+    default:
+      return create_edlib_dist_worker<4>(seq, dist_threshold, pgb, sdm, span, constrain);
   }
 }
 
@@ -254,17 +258,21 @@ template class EdlibDistWorkerImpl<0, false, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<1, false, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<2, false, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<3, false, AlignmentSpan::GLOBAL>;
+template class EdlibDistWorkerImpl<4, false, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<0, true, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<1, true, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<2, true, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<3, true, AlignmentSpan::GLOBAL>;
+template class EdlibDistWorkerImpl<4, true, AlignmentSpan::GLOBAL>;
 template class EdlibDistWorkerImpl<0, false, AlignmentSpan::EXTEND>;
 template class EdlibDistWorkerImpl<1, false, AlignmentSpan::EXTEND>;
 template class EdlibDistWorkerImpl<2, false, AlignmentSpan::EXTEND>;
 template class EdlibDistWorkerImpl<3, false, AlignmentSpan::EXTEND>;
+template class EdlibDistWorkerImpl<4, false, AlignmentSpan::EXTEND>;
 template class EdlibDistWorkerImpl<0, true, AlignmentSpan::EXTEND>;
 template class EdlibDistWorkerImpl<1, true, AlignmentSpan::EXTEND>;
 template class EdlibDistWorkerImpl<2, true, AlignmentSpan::EXTEND>;
 template class EdlibDistWorkerImpl<3, true, AlignmentSpan::EXTEND>;
+template class EdlibDistWorkerImpl<4, true, AlignmentSpan::EXTEND>;
 
 #endif

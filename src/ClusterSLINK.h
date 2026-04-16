@@ -8,12 +8,15 @@
 #include "ClusterAlgorithm.h"
 #include "MappedClusterAlgorithm.h"
 #include "ClusterTree.h"
+#include <memory>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
 #endif
 
+template <int verbose = 0>
 class ClusterSLINK : public SingleClusterAlgorithm {
+  template<int> friend class ClusterSLINK;
   friend class MappedClusterAlgorithm;
 protected:
   std::vector<j_t> Pi; // first higher-numbered leaf which is joined
@@ -21,7 +24,7 @@ protected:
   std::vector<d_t> M;
   j_t slink_seq1 = 0;
   j_t slink_seq2 = 0;
-  ClusterTreeImpl<0,0> delegate;
+  ClusterTreeImpl<verbose, 0> delegate;
 
   void init_iter();
   void update();
@@ -29,13 +32,13 @@ protected:
 
   ClusterSLINK(ClusterAlgorithm * parent, j_t n);
 
-  ClusterSLINK * make_inner_child(ClusterAlgorithm * parent, const j_t n) override;
+  ClusterSLINK<verbose> * make_inner_child(ClusterAlgorithm * parent, const j_t n) override;
 
 public:
   ClusterSLINK(const DistanceConverter &dconv, const j_t n);
   ClusterSLINK(const DistanceConverter &dconv, init_matrix_t im);
 
-  ClusterSLINK * make_child() override;
+  ClusterSLINK<verbose> * make_child() override;
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
 
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
@@ -62,5 +65,10 @@ public:
   // cause an update
   virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
 };
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_slink(
+  const DistanceConverter & dconv, j_t n, int verbose = 0);
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_slink(
+  const DistanceConverter & dconv, init_matrix_t & im, int verbose = 0);
 
 #endif

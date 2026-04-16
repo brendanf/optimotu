@@ -128,8 +128,9 @@ public:
 
 };
 
+template<int verbose> class MappedClusterAlgorithmImpl;
 class SingleClusterAlgorithm : public ClusterAlgorithm {
-  friend class MappedClusterAlgorithm;
+  template<int verbose> friend class MappedClusterAlgorithmImpl;
 public:
   const j_t n;
 protected:

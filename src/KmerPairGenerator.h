@@ -66,7 +66,7 @@ public:
     void set_udist_threshold(const double udist_threshold) { this->udist_threshold = udist_threshold; }
     void set_offset(const std::size_t offset) { this->offset = offset; }
 
-    std::vector<std::unique_ptr<PairGenerator>> build() const override;
+    std::vector<std::unique_ptr<PairGenerator>> build(int verbose = 0) const override;
   };
 };
 

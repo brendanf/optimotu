@@ -8,7 +8,7 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
   std::size_t begin_i = (begin * query.size()) / threads;
   std::size_t end_i = (end * query.size()) / threads;
   OPTIMOTU_DEBUG(
-    1,
+    2,
     << "Wfa2SearchWorker thread " << begin
     << " entered; sequences [" << begin_i
     << ", "<< end_i << ")" << std::endl
@@ -31,7 +31,7 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
     for (std::size_t j = 0; j < ref.size(); j++) {
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << begin
         << ": seqs " << j
         << " and " << i
@@ -46,7 +46,7 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
 
       double l1 = s1.size(), l2 = s2.size();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << (is_query_longer ? "#### ref " : "#### query " )
         << (is_query_longer ? j : i)
         << " (l1=" << l1 << ") and "
@@ -81,7 +81,7 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
         d = distance_wfa2<span>(s1, s2, wfa_aligner);
       }
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << begin
         << ": distance=" << d
         << std::endl
@@ -90,7 +90,7 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
       ++my_aligned;
       if (d < hit.best_dist) {
         OPTIMOTU_DEBUG(
-          2,
+          4,
           << "Thread " << begin
           << ": new best distance=" << d
           << std::endl
@@ -104,7 +104,7 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
         }
       } else if (d == hit.best_dist) {
         OPTIMOTU_DEBUG(
-          2,
+          4,
           << "Thread " << begin
           << ": tied for best distance=" << d
           << std::endl
@@ -122,18 +122,26 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
     _prealigned += my_prealigned;
     _aligned += my_aligned;
   }
-  OPTIMOTU_DEBUG(1, << "Exiting thread " << begin << std::endl);
+  OPTIMOTU_DEBUG(2, << "Exiting thread " << begin << std::endl);
 }
 
 template class Wfa2SearchWorkerImpl<0, true, AlignmentSpan::GLOBAL>;
 template class Wfa2SearchWorkerImpl<1, true, AlignmentSpan::GLOBAL>;
 template class Wfa2SearchWorkerImpl<2, true, AlignmentSpan::GLOBAL>;
+template class Wfa2SearchWorkerImpl<3, true, AlignmentSpan::GLOBAL>;
+template class Wfa2SearchWorkerImpl<4, true, AlignmentSpan::GLOBAL>;
 template class Wfa2SearchWorkerImpl<0, false, AlignmentSpan::GLOBAL>;
 template class Wfa2SearchWorkerImpl<1, false, AlignmentSpan::GLOBAL>;
 template class Wfa2SearchWorkerImpl<2, false, AlignmentSpan::GLOBAL>;
+template class Wfa2SearchWorkerImpl<3, false, AlignmentSpan::GLOBAL>;
+template class Wfa2SearchWorkerImpl<4, false, AlignmentSpan::GLOBAL>;
 template class Wfa2SearchWorkerImpl<0, true, AlignmentSpan::EXTEND>;
 template class Wfa2SearchWorkerImpl<1, true, AlignmentSpan::EXTEND>;
 template class Wfa2SearchWorkerImpl<2, true, AlignmentSpan::EXTEND>;
+template class Wfa2SearchWorkerImpl<3, true, AlignmentSpan::EXTEND>;
+template class Wfa2SearchWorkerImpl<4, true, AlignmentSpan::EXTEND>;
 template class Wfa2SearchWorkerImpl<0, false, AlignmentSpan::EXTEND>;
 template class Wfa2SearchWorkerImpl<1, false, AlignmentSpan::EXTEND>;
 template class Wfa2SearchWorkerImpl<2, false, AlignmentSpan::EXTEND>;
+template class Wfa2SearchWorkerImpl<3, false, AlignmentSpan::EXTEND>;
+template class Wfa2SearchWorkerImpl<4, false, AlignmentSpan::EXTEND>;

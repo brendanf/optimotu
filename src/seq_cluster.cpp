@@ -114,7 +114,7 @@ Rcpp::List seq_cluster_multi(
   if (verbose) {
     OPTIMOTU_CERR << "done\ncreating MultipleClusterAlgorithm..." << std::flush;
   }
-  auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seq.names(), which);
+  auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seq.names(), which, verbose);
   if (verbose)
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
   auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);

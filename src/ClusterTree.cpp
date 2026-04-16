@@ -917,7 +917,7 @@ MappedClusterAlgorithm * ClusterTreeImpl<verbose, test>::make_child(
   PairGenerator * pg
 ) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new MappedClusterAlgorithm(this, pg);
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(this, pg);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -1104,15 +1104,49 @@ void ClusterTreeImpl<verbose, test>::validate_touched() const {
 
 }
 
-template class ClusterTreeImpl<0, 0>;
-template class ClusterTreeImpl<1, 0>;
-template class ClusterTreeImpl<2, 0>;
-template class ClusterTreeImpl<0, 1>;
-template class ClusterTreeImpl<1, 1>;
-template class ClusterTreeImpl<2, 1>;
-template class ClusterTreeImpl<0, 2>;
-template class ClusterTreeImpl<1, 2>;
-template class ClusterTreeImpl<2, 2>;
+template<int verbose>
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_tree(
+  const DistanceConverter & dconv, j_t n, int test)
+{
+  switch (test) {
+  case 0: return std::make_unique<ClusterTreeImpl<verbose, 0>>(dconv, n);
+  case 1: return std::make_unique<ClusterTreeImpl<verbose, 1>>(dconv, n);
+  default: return std::make_unique<ClusterTreeImpl<verbose, 2>>(dconv, n);
+  }
+}
+
+template<int verbose>
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_tree(
+  const DistanceConverter & dconv, init_matrix_t & im, int test)
+{
+  switch (test) {
+  case 0: return std::make_unique<ClusterTreeImpl<verbose, 0>>(dconv, im);
+  case 1: return std::make_unique<ClusterTreeImpl<verbose, 1>>(dconv, im);
+  default: return std::make_unique<ClusterTreeImpl<verbose, 2>>(dconv, im);
+  }
+}
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_tree(
+  const DistanceConverter & dconv, j_t n, int verbose, int test)
+{
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) return create_cluster_tree<0>(dconv, n, test);
+  if (v == 1) return create_cluster_tree<1>(dconv, n, test);
+  if (v == 2) return create_cluster_tree<2>(dconv, n, test);
+  if (v == 3) return create_cluster_tree<3>(dconv, n, test);
+  return create_cluster_tree<4>(dconv, n, test);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_tree(
+  const DistanceConverter & dconv, init_matrix_t & im, int verbose, int test)
+{
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) return create_cluster_tree<0>(dconv, im, test);
+  if (v == 1) return create_cluster_tree<1>(dconv, im, test);
+  if (v == 2) return create_cluster_tree<2>(dconv, im, test);
+  if (v == 3) return create_cluster_tree<3>(dconv, im, test);
+  return create_cluster_tree<4>(dconv, im, test);
+}
 
 inline std::ostream& operator<<(std::ostream &out, const ClusterTree::cluster_int &c) {
   out << "  -" << std::endl

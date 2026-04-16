@@ -24,7 +24,12 @@ struct EdlibDistWorkerImpl : public EdlibDistWorker {
   using DistWorker::_aligned;
   
   public:
-  using EdlibDistWorker::EdlibDistWorker;
+  EdlibDistWorkerImpl(
+    const std::vector<std::string> &seq,
+    const double dist_threshold,
+    DivisiblePairGenerator::Builder & pgb,
+    SparseDistanceMatrix &sdm
+  ) : EdlibDistWorker(seq, dist_threshold, pgb, sdm, verbose) {};
 
   void operator()(std::size_t begin, std::size_t end) override; 
 };

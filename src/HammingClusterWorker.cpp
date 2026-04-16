@@ -10,8 +10,9 @@ HammingClusterWorker::HammingClusterWorker(
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
-  const bool ignore_gaps
-) : DistClusterWorker(seq, clust_algo, pgb), pss(seq),
+  const bool ignore_gaps,
+  int verbose
+) : DistClusterWorker(seq, clust_algo, pgb, verbose), pss(seq),
 min_overlap(min_overlap), ignore_gaps(ignore_gaps) {};
 
 template<int verbose>
@@ -21,7 +22,8 @@ HammingSplitClusterWorker<verbose>::HammingSplitClusterWorker(
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
   const bool ignore_gaps
-) : HammingClusterWorker(seq, clust_algo, pgb, min_overlap, ignore_gaps) {};
+) : HammingClusterWorker(seq, clust_algo, pgb, min_overlap, ignore_gaps,
+   verbose) {};
 
 template<int verbose>
 void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
@@ -32,7 +34,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
     auto & pg = pair_generators[pg_index];
     ClusterAlgorithm * my_algo = clust_algo.make_child(pg.get());
     OPTIMOTU_DEBUG(
-      1,
+      2,
       << "HammingSplitClusterWorker thread " << pg_index
       << " entered" << std::endl
     );
@@ -43,7 +45,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
       size_t j0 = pg->j0();
       double threshold = my_algo->max_relevant(*pg);
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": seqs " << j << " (j0=" << j0 << ")"
         << " and " << i << " (i0=" << i0 << ")"
@@ -55,7 +57,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
       if (d < 1.0) ++my_aligned;
 
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << (d <= threshold ? "*" : " ")
         << " distance=" << d
         << std::endl;
@@ -64,12 +66,12 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
       RcppThread::checkUserInterrupt();
     }
     mutex.lock();
-    OPTIMOTU_DEBUG(1, << "thread " << pg_index << " ready to merge" << std::endl);
+    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
     _aligned += my_aligned;
     _prealigned += my_prealigned;
     mutex.unlock();
     my_algo->merge_into_parent();
-    OPTIMOTU_DEBUG(1, << "thread " << pg_index << " done" << std::endl);
+    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
   }
 }
 
@@ -80,7 +82,8 @@ HammingConcurrentClusterWorker<verbose>::HammingConcurrentClusterWorker(
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
   const bool ignore_gaps
-) : HammingClusterWorker(seq, clust_algo, pgb, min_overlap, ignore_gaps) {};
+) : HammingClusterWorker(seq, clust_algo, pgb, min_overlap, ignore_gaps,
+   verbose) {};
 
 template<int verbose>
 void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
@@ -90,7 +93,7 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
   for (size_t pg_index = begin; pg_index < end; pg_index++) {
     auto & pg = pair_generators[pg_index];
     OPTIMOTU_DEBUG(
-      1,
+      2,
       << "HammingConcurrentClusterWorker thread " << pg_index
       << " entered" << std::endl
     );
@@ -100,7 +103,7 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
       size_t i0 = pg->i0();
       size_t j0 = pg->j0();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": seqs " << j << " (j0=" << j0 << ")"
         << " and " << i << " (i0=" << i0 << ")"
@@ -116,7 +119,7 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
     mutex.lock();
     _aligned += my_aligned;
     _prealigned += my_prealigned;
-    OPTIMOTU_DEBUG(1, << "thread " << pg_index << " done" << std::endl);
+    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
     mutex.unlock();
   }
 }
@@ -124,6 +127,10 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
 template class HammingSplitClusterWorker<0>;
 template class HammingSplitClusterWorker<1>;
 template class HammingSplitClusterWorker<2>;
+template class HammingSplitClusterWorker<3>;
+template class HammingSplitClusterWorker<4>;
 template class HammingConcurrentClusterWorker<0>;
 template class HammingConcurrentClusterWorker<1>;
 template class HammingConcurrentClusterWorker<2>;
+template class HammingConcurrentClusterWorker<3>;
+template class HammingConcurrentClusterWorker<4>;

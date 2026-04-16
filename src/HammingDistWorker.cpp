@@ -8,8 +8,9 @@ HammingDistWorker::HammingDistWorker(
   DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   const int min_overlap,
-  const bool ignore_gap
-) : DistWorker(seq, dist_threshold, pgb, sdm),
+  const bool ignore_gap,
+  int verbose
+) : DistWorker(seq, dist_threshold, pgb, sdm, verbose),
 pss(seq),
 min_overlap(min_overlap),
 ignore_gap(ignore_gap) {}
@@ -27,7 +28,7 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(std::s
     begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
   }
   size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
-  OPTIMOTU_DEBUG(1,
+  OPTIMOTU_DEBUG(2,
     << "HammingDistWorker thread " << begin
     << " entered; sequences [" << begin_i
     << ", "<< end_i << ")" << std::endl
@@ -71,7 +72,7 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(std::s
   for (size_t i = begin_i; i < end_i; i++) {
     for (size_t j = 0; j < i; j++) {
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "considering " << i
         << " (seq: " << pss.packed_seq[i].size()
         << ", mask: " << pss.mask[i].size()
@@ -164,12 +165,17 @@ std::unique_ptr<HammingDistWorker> create_hamming_dist_worker(
   const bool ignore_gap,
   int verbose
 ) {
-  if (verbose == 0) {
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) {
     return create_hamming_dist_worker<0>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
-  } else if (verbose == 1) {
+  } else if (v == 1) {
     return create_hamming_dist_worker<1>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
-  } else {
+  } else if (v == 2) {
     return create_hamming_dist_worker<2>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
+  } else if (v == 3) {
+    return create_hamming_dist_worker<3>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
+  } else {
+    return create_hamming_dist_worker<4>(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap);
   }
 }
 

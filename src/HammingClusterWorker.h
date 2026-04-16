@@ -15,7 +15,8 @@ public :
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
-    const bool ignore_gaps = true
+    const bool ignore_gaps = true,
+    int verbose = 0
   );
 };
 

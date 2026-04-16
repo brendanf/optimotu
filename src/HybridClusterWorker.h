@@ -11,7 +11,8 @@ public :
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
-    const double breakpoint = 0.1
+    const double breakpoint = 0.1,
+    int verbose = 0
   );
 };
 
@@ -25,7 +26,12 @@ class HybridSplitClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::_aligned;
   using DistClusterWorker::pair_generators;
 public :
-  using HybridClusterWorker::HybridClusterWorker;
+  HybridSplitClusterWorker(
+    const std::vector<std::string> &seq,
+    ClusterAlgorithm &clust_algo,
+    DivisiblePairGenerator::Builder & pgb,
+    const double breakpoint = 0.1
+  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 
@@ -39,7 +45,12 @@ class HybridConcurrentClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::_aligned;
   using DistClusterWorker::pair_generators;
 public :
-  using HybridClusterWorker::HybridClusterWorker;
+  HybridConcurrentClusterWorker(
+    const std::vector<std::string> &seq,
+    ClusterAlgorithm &clust_algo,
+    DivisiblePairGenerator::Builder & pgb,
+    const double breakpoint = 0.1
+  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 

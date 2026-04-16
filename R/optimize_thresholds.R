@@ -323,11 +323,33 @@ optimize_thresholds <- function(
   }
 
   # Calculate which subsets to optimize
+  if (isTRUE(verbose) || verbose >= 1L) {
+    cat("Calculating subsets to optimize...")
+  }
   testset_select <- summarize_by_rank(taxonomy, ranks, id_col)
   testset_select <- testset_select[
     (testset_select$n_seq >= min_refseq & testset_select$n_taxa >= min_taxa) |
       testset_select$supertaxon %in% taxonomy[[ranks[1]]],
   ]
+  if (isTRUE(verbose) || verbose >= 1L) {
+    cat(" done\n  Found", nrow(testset_select),
+        "total thresholds to optimize.\n")
+    if (verbose >= 2L) {
+      dplyr::count(testset_select, rank, superrank) |>
+        dplyr::mutate(
+          dplyr::across(
+            c(rank, superrank),
+            \(x) rank2factor(x, ranks)
+          )
+        ) |>
+        dplyr::arrange(rank, superrank) |>
+        glue::glue_data(
+          "  - {rank} within {n} {superrank}-rank taxa\n",
+          .trim = FALSE
+        ) |>
+        cat(sep = "")
+    }
+  }
 
   # Do test clustering
   clust <- seq_cluster(

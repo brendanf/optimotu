@@ -38,6 +38,15 @@ protected:
   // remember which the last sequence pairs were
   mutable std::vector<std::pair<j_t, j_t>> ws_keys;
 
+  // Protected main constructor: initializer list only (no body).
+  // Used by MultipleClusterAlgorithmImpl to set up members before filling subsets.
+  MultipleClusterAlgorithm(
+    const ClusterAlgorithmFactory & factory,
+    const std::vector<std::string> &names,
+    const std::vector<std::vector<std::string>> &subset_names,
+    const int threads
+  );
+
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
 
   // Constructor for child objects
@@ -56,12 +65,10 @@ protected:
   );
 
 public:
-  MultipleClusterAlgorithm(
-    const ClusterAlgorithmFactory & factory,
-    const std::vector<std::string> &names,
-    const std::vector<std::vector<std::string>> &subset_names,
-    const int threads = 1
-  );
+  template<int verbose>
+  friend class MultipleClusterAlgorithmImpl;
+
+  MultipleClusterAlgorithm() = delete;
 
   void operator()(j_t seq1, j_t seq2, double dist, int thread) override;
 
@@ -96,6 +103,36 @@ public:
 
   Rcpp::List as_hclust() const;
 #endif //OPTIMOTU_R
+};
+
+template<int verbose>
+class MultipleClusterAlgorithmImpl : public MultipleClusterAlgorithm {
+protected:
+  MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm * parent);
+
+  MultipleClusterAlgorithmImpl(
+    MultipleClusterAlgorithm * parent,
+    const std::vector<std::string> names,
+    const std::vector<std::vector<j_t>> subset_indices,
+    const std::vector<std::vector<std::string>> subset_names,
+    const std::vector<std::vector<j_t>> subset_key,
+    const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
+    const std::vector<j_t> child_to_parent_map,
+    PairGenerator * pg,
+    const int threads = 1
+  );
+
+public:
+  MultipleClusterAlgorithmImpl(
+    const ClusterAlgorithmFactory & factory,
+    const std::vector<std::string> &names,
+    const std::vector<std::vector<std::string>> &subset_names,
+    const int threads,
+    int verbose_param
+  );
+
+  MultipleClusterAlgorithm * make_child() override;
+  MultipleClusterAlgorithm * make_child(PairGenerator * pg) override;
 };
 
 #endif //OPTIMOTU_MULTIPLECLUSTERALGORITHM_H_INCLUDED

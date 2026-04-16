@@ -9,7 +9,7 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
   std::size_t begin_i = (begin * query.size()) / threads;
   std::size_t end_i = (end * query.size()) / threads;
   OPTIMOTU_DEBUG(
-    1,
+    2,
     << "HybridSearchWorker thread " << begin
     << " entered; sequences [" << begin_i
     << ", "<< end_i << ")" << std::endl
@@ -27,7 +27,7 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
     for (std::size_t j = 0; j < ref.size(); j++) {
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << begin
         << ": seqs " << j
         << " and " << i
@@ -41,7 +41,7 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
 
       double l1 = s1.size(), l2 = s2.size();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << (is_query_longer ? "#### ref " : "#### query " )
         << (is_query_longer ? j : i)
         << " (l1=" << l1 << ") and "
@@ -68,7 +68,7 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
         d = distance_edlib(s1, s2, ed_aligner);
       }
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << begin
         << ": distance=" << d
         << std::endl
@@ -77,7 +77,7 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
       ++my_aligned;
       if (d < hit.best_dist) {
         OPTIMOTU_DEBUG(
-          2,
+          4,
           << "Thread " << begin
           << ": new best distance=" << d
           << std::endl
@@ -87,7 +87,7 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
         hit.best_ref.push_back(j);
       } else if (d == hit.best_dist) {
         OPTIMOTU_DEBUG(
-          2,
+          4,
           << "Thread " << begin
           << ": tied for best distance=" << d
           << std::endl
@@ -102,9 +102,11 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
     _prealigned += my_prealigned;
     _aligned += my_aligned;
   }
-  OPTIMOTU_DEBUG(1, << "Exiting thread " << begin << std::endl);
+  OPTIMOTU_DEBUG(2, << "Exiting thread " << begin << std::endl);
 }
 
 template class HybridSearchWorkerImpl<0>;
 template class HybridSearchWorkerImpl<1>;
 template class HybridSearchWorkerImpl<2>;
+template class HybridSearchWorkerImpl<3>;
+template class HybridSearchWorkerImpl<4>;

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include "MultipleClusterAlgorithm.h"
+#include "optimotu.h"
 
 using MCA = MultipleClusterAlgorithm;
 
@@ -32,6 +33,7 @@ std::vector<std::vector<j_t>> calculate_subset_indices(
   return out;
 }
 
+// Base protected main constructor: initializer list only.
 MCA::MultipleClusterAlgorithm(
   const ClusterAlgorithmFactory & factory,
   const std::vector<std::string> &names,
@@ -49,32 +51,93 @@ MCA::MultipleClusterAlgorithm(
   subsets(),
   whichsets(threads),
   ws_keys(threads)
+{}
+
+template<int verbose>
+MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm * parent) :
+  MultipleClusterAlgorithm(parent) {}
+
+template<int verbose>
+MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
+  MultipleClusterAlgorithm * parent,
+  const std::vector<std::string> names,
+  const std::vector<std::vector<j_t>> subset_indices,
+  const std::vector<std::vector<std::string>> subset_names,
+  const std::vector<std::vector<j_t>> subset_key,
+  const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
+  const std::vector<j_t> child_to_parent_map,
+  PairGenerator * pg,
+  const int threads
+) : MultipleClusterAlgorithm(parent, names, subset_indices, subset_names, subset_key, fwd_map, child_to_parent_map, pg, threads) {}
+
+template<int verbose>
+MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
+  const ClusterAlgorithmFactory & factory,
+  const std::vector<std::string> &names,
+  const std::vector<std::vector<std::string>> &subset_names,
+  const int threads,
+  int
+) :
+  MultipleClusterAlgorithm(factory, names, subset_names, threads)
 {
+  OPTIMOTU_DEBUG(
+    1,
+    << "  Allocating " << subset_names.size() << " subsets..." << std::flush;
+  );
   subsets.reserve(subset_names.size());
   for (auto & ws : whichsets)
     ws.reserve(subset_names.size());
+
+  OPTIMOTU_DEBUG(
+    1,
+    << "done\n  Generating sequence name key for " << names.size()
+    << " sequence names..." << std::flush;
+  );
   std::unordered_map<std::string, j_t> namekey;
   for (j_t i = 0; i < names.size(); i++) {
     namekey.emplace(names[i], i);
   }
+
+  OPTIMOTU_DEBUG(
+    1,
+    << "done\n  Mapping " << subset_names.size()
+    << " subsets..." << std::flush;
+  );
+
+  OPTIMOTU_DEBUG(
+    2,
+    << std::endl;
+  );
+
   for (j_t i = 0; i < subset_names.size(); ++i) {
-    owned_subsets.emplace_back(factory.create(subset_names[i].size()));
+    owned_subsets.emplace_back(factory.create(subset_names[i].size(), verbose));
     subsets.push_back(owned_subsets.back().get());
     fwd_map[i].reserve(subset_names[i].size());
+    OPTIMOTU_DEBUG(
+      4,
+      << "  Subset " << i << ":" << std::endl;
+    );
     for (j_t j = 0; j < subset_names[i].size(); ++j) {
       auto f = namekey.find(subset_names[i][j]);
       assert(f != namekey.end());
-      // OPTIMOTU_COUT << "adding seq " << f->second
-      //           << " (" << subset_names[i][j]
-      //           << ") to precluster " << i
-      //           << " at position " << fwd_map[i].size() << std::endl;
+      OPTIMOTU_DEBUG(
+        4,
+        << "    adding sequence " << f->second
+        << " (" << subset_names[i][j]
+        << ") to subset " << i
+        << " at position " << fwd_map[i].size()
+        << std::endl;
+      );
       subset_key[f->second].push_back(i);
       fwd_map[i].emplace(f->second, j);
-      // OPTIMOTU_COUT << "seq " << f->second
-      //           << " now found in " << subset_key[j].size()
-      //           << " preclusters \n precluster " << i
-      //           << " now has " << fwd_map[i].size()
-      //           << "sequences" << std::endl;
+      OPTIMOTU_DEBUG(
+        4,
+        << "    sequence " << f->second
+        << " now found in " << subset_key[j].size()
+        << " subsets\n   precluster " << i
+        << " now has " << fwd_map[i].size()
+        << " sequences" << std::endl;
+      );
     }
   }
 }
@@ -338,6 +401,17 @@ MultipleClusterAlgorithm * MCA::make_child() {
   return child_ptr;
 }
 
+template<int verbose>
+MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child() {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new MultipleClusterAlgorithmImpl<verbose>(this);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
 MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
 
@@ -405,6 +479,68 @@ MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
   );
   this->children.push_back(std::move(child));
   return child_ptr;
+}
+
+template<int verbose>
+MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(PairGenerator * pg) {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+
+  std::vector<bool> nonempty(subset_indices.size());
+  std::size_t n_nonempty = 0;
+  for (std::size_t i = 0; i < pg->max_value(); i++) {
+    std::size_t i0 = pg->forward_map(i);
+    for (const j_t j : subset_key[i0]) {
+      if (!nonempty[j]) {
+        nonempty[j] = true;
+        n_nonempty++;
+      }
+    }
+  }
+
+  std::unordered_map<j_t, j_t> parent_to_child_map;
+  parent_to_child_map.reserve(n_nonempty);
+  std::vector<j_t> child_to_parent_map;
+  child_to_parent_map.reserve(n_nonempty);
+  std::size_t child_index = 0;
+  for (std::size_t i = 0; i < nonempty.size(); i++) {
+    if (nonempty[i]) {
+      parent_to_child_map.emplace(i, child_index);
+      child_to_parent_map.push_back(i);
+      child_index++;
+    }
+  }
+
+  std::vector<std::vector<j_t>> child_subset_key(pg->max_value());
+  std::vector<std::vector<j_t>> child_subset_indices(n_nonempty);
+  std::vector<std::vector<std::string>> child_subset_names(n_nonempty);
+  std::vector<std::unordered_map<j_t, j_t>> child_fwd_map(n_nonempty);
+  for (std::size_t i = 0; i < pg->max_value(); i++) {
+    std::size_t i0 = pg->forward_map(i);
+    for (const j_t j0 : subset_key[i0]) {
+      j_t j = parent_to_child_map[j0];
+      child_subset_key[i].push_back(j);
+      child_subset_indices[j].push_back(i);
+      child_subset_names[j].push_back(names[i]);
+      child_fwd_map[j].emplace(i, i0);
+    }
+  }
+
+  auto child_ptr = new MultipleClusterAlgorithmImpl<verbose>(
+    this,
+    names,
+    child_subset_indices,
+    child_subset_names,
+    child_subset_key,
+    child_fwd_map,
+    child_to_parent_map,
+    pg,
+    threads
+  );
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
   // this->own_child = true;
   // for (std::size_t i = 0; i < subsets.size(); i++) {
   //   bool found_match = false;
@@ -446,3 +582,9 @@ Rcpp::List MCA::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   return this->as_hclust();
 }
 #endif //OPTIMOTU_R
+
+template class MultipleClusterAlgorithmImpl<0>;
+template class MultipleClusterAlgorithmImpl<1>;
+template class MultipleClusterAlgorithmImpl<2>;
+template class MultipleClusterAlgorithmImpl<3>;
+template class MultipleClusterAlgorithmImpl<4>;

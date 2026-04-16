@@ -4,24 +4,28 @@
 #include "ClusterSLINK.h"
 #include <cstdint>
 
-ClusterSLINK::ClusterSLINK(ClusterAlgorithm * parent, j_t n) :
+template<int verbose>
+ClusterSLINK<verbose>::ClusterSLINK(ClusterAlgorithm * parent, j_t n) :
   SingleClusterAlgorithm(parent, n), Pi(n), Lambda(n, m), M(n, m), delegate(dconv, n) {}
 
-ClusterSLINK::ClusterSLINK(const DistanceConverter &dconv, const j_t n) :
+template<int verbose>
+ClusterSLINK<verbose>::ClusterSLINK(const DistanceConverter &dconv, const j_t n) :
   SingleClusterAlgorithm(dconv, n),
   Pi(n),
   Lambda(n, m),
   M(n, m),
   delegate(dconv, n) {}
 
-ClusterSLINK::ClusterSLINK(const DistanceConverter &dconv, init_matrix_t im) :
+template<int verbose>
+ClusterSLINK<verbose>::ClusterSLINK(const DistanceConverter &dconv, init_matrix_t im) :
   SingleClusterAlgorithm(dconv, im),
   Pi(n),
   Lambda(n, m),
   M(n, m),
   delegate(dconv, im) {}
 
-void ClusterSLINK::init_iter() {
+template<int verbose>
+void ClusterSLINK<verbose>::init_iter() {
   // OPTIMOTU_CERR << "### Initializing SLINK iteration " << slink_seq1
   //               << std::endl;
   for (j_t k = 0; k < slink_seq1; k++) {
@@ -30,7 +34,8 @@ void ClusterSLINK::init_iter() {
   slink_seq2 = 0;
 }
 
-void ClusterSLINK::update() {
+template<int verbose>
+void ClusterSLINK<verbose>::update() {
   if (Lambda[slink_seq2] >= M[slink_seq2]) {
     // OPTIMOTU_CERR << "Found closer (or equal) match for sequences " << slink_seq1
     //               << " and " << slink_seq2
@@ -62,7 +67,8 @@ void ClusterSLINK::update() {
   }
 }
 
-void ClusterSLINK::finish_iter() {
+template<int verbose>
+void ClusterSLINK<verbose>::finish_iter() {
   // OPTIMOTU_CERR << "### Finishing SLINK iteration " << slink_seq1
   //               << std::endl;
   while (slink_seq2 < slink_seq1) {
@@ -74,14 +80,16 @@ void ClusterSLINK::finish_iter() {
   }
 }
 
-void ClusterSLINK::finalize() {
+template<int verbose>
+void ClusterSLINK<verbose>::finalize() {
   finish_iter();
 }
 
-ClusterSLINK * ClusterSLINK::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
+template<int verbose>
+ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
   // this is not locked, because it is called during the MappedClusterAlgorithm,
   // constructor, which is called by make_child(), which is already locked.
-  auto child_ptr = new ClusterSLINK(parent, n);
+  auto child_ptr = new ClusterSLINK<verbose>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -89,9 +97,10 @@ ClusterSLINK * ClusterSLINK::make_inner_child(ClusterAlgorithm * parent, const j
   return child_ptr;
 }
 
-ClusterSLINK * ClusterSLINK::make_child() {
+template<int verbose>
+ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_child() {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new ClusterSLINK(&delegate, n);
+  auto child_ptr = new ClusterSLINK<verbose>(&delegate, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -99,9 +108,10 @@ ClusterSLINK * ClusterSLINK::make_child() {
   return child_ptr;
 }
 
-MappedClusterAlgorithm * ClusterSLINK::make_child(PairGenerator * pg) {
+template<int verbose>
+MappedClusterAlgorithm * ClusterSLINK<verbose>::make_child(PairGenerator * pg) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new MappedClusterAlgorithm(this, &delegate, pg);
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(this, &delegate, pg);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -109,7 +119,8 @@ MappedClusterAlgorithm * ClusterSLINK::make_child(PairGenerator * pg) {
   return child_ptr;
 }
 
-void ClusterSLINK::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
+template<int verbose>
+void ClusterSLINK<verbose>::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
   if (seq2 < 0 || seq2 >= n) {
     OPTIMOTU_CERR << "Sequence index" << seq2 << " out of range." << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
@@ -158,7 +169,8 @@ void ClusterSLINK::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
   }
 }
 
-void ClusterSLINK::write_to_matrix(internal_matrix_t &out) {
+template<int verbose>
+void ClusterSLINK<verbose>::write_to_matrix(internal_matrix_t &out) {
   if (children.size() > 0) return delegate.write_to_matrix(out);
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   // OPTIMOTU_CERR << "preparing to write matrix" << std::endl
@@ -194,7 +206,8 @@ struct RevOrderElement {
   int i;
 };
 
-Rcpp::List ClusterSLINK::as_hclust(const Rcpp::CharacterVector &seqnames) const {
+template<int verbose>
+Rcpp::List ClusterSLINK<verbose>::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   if (children.size() > 0) return delegate.as_hclust(seqnames);
 
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
@@ -266,26 +279,30 @@ Rcpp::List ClusterSLINK::as_hclust(const Rcpp::CharacterVector &seqnames) const 
 }
 #endif // OPTIMOTU_R
 
-void ClusterSLINK::merge_into(DistanceConsumer &consumer) {
+template<int verbose>
+void ClusterSLINK<verbose>::merge_into(DistanceConsumer &consumer) {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 0; j < this->n; j++) {
     consumer(Pi[j], j, dconv.inverse(Lambda[j]));
   }
 }
 
-void ClusterSLINK::merge_into(ClusterAlgorithm &consumer) {
+template<int verbose>
+void ClusterSLINK<verbose>::merge_into(ClusterAlgorithm &consumer) {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 0; j < this->n; j++) {
     consumer(Pi[j], j, Lambda[j]);
   }
 }
 
-void ClusterSLINK::merge_into_parent() {
+template<int verbose>
+void ClusterSLINK<verbose>::merge_into_parent() {
   if (parent && children.size() == 0) this->merge_into(*parent);
   if (parent && children.size() > 0) this->delegate.merge_into(*parent);
 }
 
-double ClusterSLINK::max_relevant(j_t seq1, j_t seq2, int thread) const {
+template<int verbose>
+double ClusterSLINK<verbose>::max_relevant(j_t seq1, j_t seq2, int thread) const {
 
   if (seq1 <= seq2) {
     OPTIMOTU_CERR << "ClusterSLINK requires seq2 < seq1.  seq2=" << seq2
@@ -302,4 +319,40 @@ double ClusterSLINK::max_relevant(j_t seq1, j_t seq2, int thread) const {
     return dconv.inverse(this->m - 1);
   }
   return dconv.inverse(this->M[seq2] - 1);
+}
+
+template<int verbose>
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_slink(
+  const DistanceConverter & dconv, j_t n)
+{
+  return std::make_unique<ClusterSLINK<verbose>>(dconv, n);
+}
+
+template<int verbose>
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_slink(
+  const DistanceConverter & dconv, init_matrix_t & im)
+{
+  return std::make_unique<ClusterSLINK<verbose>>(dconv, im);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_slink(
+  const DistanceConverter & dconv, j_t n, int verbose)
+{
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) return create_cluster_slink<0>(dconv, n);
+  if (v == 1) return create_cluster_slink<1>(dconv, n);
+  if (v == 2) return create_cluster_slink<2>(dconv, n);
+  if (v == 3) return create_cluster_slink<3>(dconv, n);
+  return create_cluster_slink<4>(dconv, n);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_slink(
+  const DistanceConverter & dconv, init_matrix_t & im, int verbose)
+{
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) return create_cluster_slink<0>(dconv, im);
+  if (v == 1) return create_cluster_slink<1>(dconv, im);
+  if (v == 2) return create_cluster_slink<2>(dconv, im);
+  if (v == 3) return create_cluster_slink<3>(dconv, im);
+  return create_cluster_slink<4>(dconv, im);
 }

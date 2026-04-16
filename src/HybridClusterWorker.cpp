@@ -12,8 +12,9 @@ HybridClusterWorker::HybridClusterWorker(
   const std::vector<std::string> &seq,
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
-  const double breakpoint
-) : DistClusterWorker(seq, clust_algo, pgb), breakpoint(breakpoint) {};
+  const double breakpoint,
+  int verbose
+) : DistClusterWorker(seq, clust_algo, pgb, verbose), breakpoint(breakpoint) {};
 
 template<int verbose>
 void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
@@ -22,7 +23,7 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
   wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
   for (size_t pg_index = begin; pg_index < end; pg_index++) {
     OPTIMOTU_DEBUG(
-      1,
+      2,
       << "HybridSplitClusterWorker thread " << pg_index
       << " entered" << std::endl
     );
@@ -38,7 +39,7 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
       size_t j0 = pg->j0();
       double threshold = my_algo->max_relevant(*pg);
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": seqs " << j << " (j0=" << j0 << ")"
         << " and " << i << " (i0=" << i0 << ")"
@@ -50,7 +51,7 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
       size_t s2 = is_seqj_longer ? j0 : i0;
       double l1 = seq[s1].size(), l2 = seq[s2].size();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "#### seq " << s1 << " (l1=" << l1 << ") and "
         << s2 << " (l2=" << l2 <<")####" << std::endl
       );
@@ -112,7 +113,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
   for (size_t pg_index = begin; pg_index < end; pg_index++) {
     auto & pg = pair_generators[pg_index];
     OPTIMOTU_DEBUG(
-      1,
+      2,
       << "HybridConcurrentClusterWorker thread " << pg_index
       << " entered" << std::endl
     );
@@ -124,7 +125,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
       size_t i0 = pg->i0();
       size_t j0 = pg->j0();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << pg_index
         << ": seqs " << j << " (j0=" << j0 << ")"
         << " and " << i << " (i0=" << i0 << ")"
@@ -132,7 +133,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
       );
       double threshold = clust_algo.max_relevant(*pg);
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": max relevant=" << threshold
         << std::endl
@@ -142,7 +143,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
       size_t s2 = is_seqj_longer ? j0 : i0;
       double l1 = seq[s1].size(), l2 = seq[s2].size();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "#### seq " << s1
         << " (l1=" << l1
         << ") and "
@@ -165,7 +166,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
         wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
         wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
         OPTIMOTU_DEBUG(
-          2,
+          4,
           << "wfa_aligner min_k=" << min_k
           << " max_k=" << max_k
           << " max score=" << (int)maxd1 + 1
@@ -178,14 +179,14 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
       }
       if (d < 1.0) ++my_aligned;
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": distance=" << d
         << std::endl
       );
       if (d < threshold) clust_algo(*pg, d);
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": finished " << j << " (j0=" << j0 << ")"
         << " and " << i << " (i0=" << i0 << ")"
@@ -196,7 +197,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
     mutex.lock();
     _aligned += my_aligned;
     _prealigned += my_prealigned;
-    OPTIMOTU_DEBUG(1, << "thread" << pg_index << " done" << std::endl);
+    OPTIMOTU_DEBUG(2, << "thread" << pg_index << " done" << std::endl);
     mutex.unlock();
   }
 }
@@ -204,6 +205,10 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
 template class HybridSplitClusterWorker<0>;
 template class HybridSplitClusterWorker<1>;
 template class HybridSplitClusterWorker<2>;
+template class HybridSplitClusterWorker<3>;
+template class HybridSplitClusterWorker<4>;
 template class HybridConcurrentClusterWorker<0>;
 template class HybridConcurrentClusterWorker<1>;
 template class HybridConcurrentClusterWorker<2>;
+template class HybridConcurrentClusterWorker<3>;
+template class HybridConcurrentClusterWorker<4>;

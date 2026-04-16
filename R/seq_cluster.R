@@ -98,7 +98,9 @@ seq_cluster.character <- function(
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   checkmate::assert_character(seq_id)
   out <- if (!is.list(which)) {
-    seq <- seq[which]
+    if (!(length(seq) == 0L && isTRUE(which))) {
+      seq <- seq[which]
+    }
     seq_cluster_single(
       seq,
       dist_config,
@@ -120,7 +122,13 @@ seq_cluster.character <- function(
     if (is.list(which) && !is.character(which[[1]])) {
       which <- lapply(which, `[`, x = seq_id)
     }
+    if (isTRUE(verbose) || verbose >= 1L) {
+      cat("Verifying subsets...")
+    }
     verify_which(which, seq_id)
+    if (isTRUE(verbose) || verbose >= 1L) {
+      cat(" done\n")
+    }
     seq_cluster_multi(
       seq = seq,
       which = which,

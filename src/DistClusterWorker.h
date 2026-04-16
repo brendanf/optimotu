@@ -23,9 +23,10 @@ public :
   DistClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    DivisiblePairGenerator::Builder & pair_generator_builder
+    DivisiblePairGenerator::Builder & pair_generator_builder,
+    int verbose = 0
   ) : seq(seq), clust_algo(clust_algo),
-  pair_generators(pair_generator_builder.build()),
+  pair_generators(pair_generator_builder.build(verbose)),
   threads(pair_generators.size()) {};
 
   size_t prealigned();

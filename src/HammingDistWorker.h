@@ -21,7 +21,8 @@ public:
     DivisiblePairGenerator::Builder & pgb,
     SparseDistanceMatrix &sdm,
     const int min_overlap,
-    const bool ignore_gap
+    const bool ignore_gap,
+    int verbose = 0
   );
 };
 
@@ -37,7 +38,15 @@ class HammingDistWorkerImpl : public HammingDistWorker {
   using HammingDistWorker::ignore_gap;
 
 public:
-  using HammingDistWorker::HammingDistWorker;
+  HammingDistWorkerImpl(
+    const std::vector<std::string> &seq,
+    const double dist_threshold,
+    DivisiblePairGenerator::Builder & pgb,
+    SparseDistanceMatrix &sdm,
+    const int min_overlap,
+    const bool ignore_gap
+  ) : HammingDistWorker(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap,
+    verbose) {};
   void operator()(std::size_t begin, std::size_t end) override;
 };
 

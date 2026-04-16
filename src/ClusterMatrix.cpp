@@ -5,9 +5,10 @@
 #include <array>
 #include <cstring>
 #include "ClusterMatrix.h"
+#include "optimotu.h"
 
-template<bool BM, int F, typename A>
-ClusterMatrix<BM, F, A>::ClusterMatrix(ClusterAlgorithm * parent, const j_t n):
+template<bool BM, int F, typename A, int V>
+ClusterMatrix<BM, F, A, V>::ClusterMatrix(ClusterAlgorithm * parent, const j_t n):
   SingleClusterAlgorithm(parent, n),
   clust_array(m*n),
   ca(&clust_array[0]),
@@ -16,15 +17,15 @@ ClusterMatrix<BM, F, A>::ClusterMatrix(ClusterAlgorithm * parent, const j_t n):
   initialize();
 }
 
-template<bool BM, int F, typename A>
-ClusterMatrix<BM, F, A>::ClusterMatrix(const DistanceConverter &dconv, size_t n) :
+template<bool BM, int F, typename A, int V>
+ClusterMatrix<BM, F, A, V>::ClusterMatrix(const DistanceConverter &dconv, size_t n) :
   SingleClusterAlgorithm(dconv, n),
   clust_array(m*n), ca(&clust_array[0]), toclust(m, 0) {
   initialize();
 }
 
-template<bool BM, int F, typename A>
-ClusterMatrix<BM, F, A>::ClusterMatrix(
+template<bool BM, int F, typename A, int V>
+ClusterMatrix<BM, F, A, V>::ClusterMatrix(
     const DistanceConverter &dconv,
     init_matrix_t im
 ) :
@@ -33,8 +34,8 @@ ClusterMatrix<BM, F, A>::ClusterMatrix(
   initialize();
 }
 
-template<bool BM, int F, typename A>
-void ClusterMatrix<BM, F, A>::initialize() {
+template<bool BM, int F, typename A, int V>
+void ClusterMatrix<BM, F, A, V>::initialize() {
   auto ca = clust_array.begin();
   for (j_t j = 0; j < n; j++) {
     for (d_t i = 0; i < m; i++) {
@@ -44,8 +45,8 @@ void ClusterMatrix<BM, F, A>::initialize() {
   }
 }
 
-template<bool BM, int F, typename A>
-void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
+template<bool BM, int F, typename A, int V>
+void ClusterMatrix<BM, F, A, V>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (i >= m) return;
   if (seq1 == seq2) return;
 
@@ -209,8 +210,8 @@ void ClusterMatrix<BM, F, A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
   );
 }
 
-template<bool BM, int F, typename A>
-void ClusterMatrix<BM, F, A>::merge_into(DistanceConsumer &consumer) {
+template<bool BM, int F, typename A, int V>
+void ClusterMatrix<BM, F, A, V>::merge_into(DistanceConsumer &consumer) {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (size_t j = 1; j < n; ++j) {
     j_t i = j*m;
@@ -222,8 +223,8 @@ void ClusterMatrix<BM, F, A>::merge_into(DistanceConsumer &consumer) {
   }
 }
 
-template<bool BM, int F, typename A>
-void ClusterMatrix<BM, F, A>::merge_into(ClusterAlgorithm &consumer) {
+template<bool BM, int F, typename A, int V>
+void ClusterMatrix<BM, F, A, V>::merge_into(ClusterAlgorithm &consumer) {
   // TODO check that the distance converters are really compatible
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 1; j < n; ++j) {
@@ -236,10 +237,10 @@ void ClusterMatrix<BM, F, A>::merge_into(ClusterAlgorithm &consumer) {
   }
 }
 
-template<bool BM, int F, typename A>
-SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
+template<bool BM, int F, typename A, int V>
+SingleClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_child() {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new ClusterMatrix<>(this, n);
+  auto child_ptr = new ClusterMatrix<BM, F, A, V>(this, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -247,13 +248,36 @@ SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child() {
   return child_ptr;
 }
 
-template<bool BM, int F, typename A>
-MappedClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child(
+#define CIM_REF_SPEC(BM, F) \
+template<> SingleClusterAlgorithm * ClusterMatrix<BM, F, internal_matrix_ref_t, 0>::make_inner_child(ClusterAlgorithm * parent, const j_t n) { \
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex); \
+  auto child_ptr = new ClusterMatrix<BM, F, std::vector<int>, 0>(parent, n); \
+  auto child = std::unique_ptr<ClusterAlgorithm>( (ClusterAlgorithm*)child_ptr ); \
+  this->children.push_back(std::move(child)); \
+  return child_ptr; \
+} \
+template<> SingleClusterAlgorithm * ClusterMatrix<BM, F, internal_matrix_ref_t, 0>::make_child() { \
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex); \
+  auto child_ptr = new ClusterMatrix<BM, F, std::vector<int>, 0>(this, n); \
+  auto child = std::unique_ptr<ClusterAlgorithm>( (ClusterAlgorithm*)child_ptr ); \
+  this->children.push_back(std::move(child)); \
+  return child_ptr; \
+}
+CIM_REF_SPEC(true, LINEAR_FILL)
+CIM_REF_SPEC(true, BINARY_FILL)
+CIM_REF_SPEC(true, TOPDOWN_FILL)
+CIM_REF_SPEC(false, LINEAR_FILL)
+CIM_REF_SPEC(false, BINARY_FILL)
+CIM_REF_SPEC(false, TOPDOWN_FILL)
+#undef CIM_REF_SPEC
+
+template<bool BM, int F, typename A, int V>
+MappedClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_child(
   PairGenerator * pg
 ) {
   // std::lock_guard<std::mutex> lock(this->mutex);
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new MappedClusterAlgorithm(this, pg);
+  auto child_ptr = new MappedClusterAlgorithmImpl<V>(this, pg);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -261,10 +285,10 @@ MappedClusterAlgorithm * ClusterMatrix<BM, F, A>::make_child(
   return child_ptr;
 }
 
-template<bool BM, int F, typename A>
-SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
+template<bool BM, int F, typename A, int V>
+SingleClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new ClusterMatrix<>(parent, n);
+  auto child_ptr = new ClusterMatrix<BM, F, A, V>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -272,8 +296,8 @@ SingleClusterAlgorithm * ClusterMatrix<BM, F, A>::make_inner_child(ClusterAlgori
   return child_ptr;
 }
 
-template<bool BM, int F, typename A>
-double ClusterMatrix<BM, F, A>::max_relevant(j_t seq1, j_t seq2, int thread) const {
+template<bool BM, int F, typename A, int V>
+double ClusterMatrix<BM, F, A, V>::max_relevant(j_t seq1, j_t seq2, int thread) const {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   if (seq1 == seq2) return 0.0;
   j_t j1 = seq1*m, j2 = seq2*m;
@@ -307,8 +331,8 @@ double ClusterMatrix<BM, F, A>::max_relevant(j_t seq1, j_t seq2, int thread) con
   }
 }
 
-template<bool BM, int F, typename A>
-void ClusterMatrix<BM, F, A>::write_to_matrix(internal_matrix_t &out) {
+template<bool BM, int F, typename A, int V>
+void ClusterMatrix<BM, F, A, V>::write_to_matrix(internal_matrix_t &out) {
   // shortcut if this is already our data matrix
   if (intptr_t(&out[0]) == intptr_t(&clust_array[0])) return;
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
@@ -322,8 +346,8 @@ struct FwdOrderElement {
   int i;
 };
 
-template<bool BM, int F, typename A>
-Rcpp::List ClusterMatrix<BM, F, A>::as_hclust(
+template<bool BM, int F, typename A, int V>
+Rcpp::List ClusterMatrix<BM, F, A, V>::as_hclust(
     const Rcpp::CharacterVector &seqnames
 ) const {
   // output objects
@@ -434,41 +458,197 @@ ClusterMatrix<false, TOPDOWN_FILL>::ClusterMatrix(
     const DistanceConverter &dconv, init_matrix_t
 ) = delete;
 
+template<>
+ClusterMatrix<true, LINEAR_FILL, std::vector<int>, 1>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, BINARY_FILL, std::vector<int>, 1>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, TOPDOWN_FILL, std::vector<int>, 1>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, LINEAR_FILL, std::vector<int>, 1>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, BINARY_FILL, std::vector<int>, 1>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, TOPDOWN_FILL, std::vector<int>, 1>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+
+template<>
+ClusterMatrix<true, LINEAR_FILL, std::vector<int>, 2>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, BINARY_FILL, std::vector<int>, 2>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, TOPDOWN_FILL, std::vector<int>, 2>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, LINEAR_FILL, std::vector<int>, 2>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, BINARY_FILL, std::vector<int>, 2>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, TOPDOWN_FILL, std::vector<int>, 2>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+
+template<>
+ClusterMatrix<true, LINEAR_FILL, std::vector<int>, 3>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, BINARY_FILL, std::vector<int>, 3>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, TOPDOWN_FILL, std::vector<int>, 3>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, LINEAR_FILL, std::vector<int>, 3>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, BINARY_FILL, std::vector<int>, 3>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, TOPDOWN_FILL, std::vector<int>, 3>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+
+template<>
+ClusterMatrix<true, LINEAR_FILL, std::vector<int>, 4>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, BINARY_FILL, std::vector<int>, 4>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<true, TOPDOWN_FILL, std::vector<int>, 4>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, LINEAR_FILL, std::vector<int>, 4>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, BINARY_FILL, std::vector<int>, 4>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+template<>
+ClusterMatrix<false, TOPDOWN_FILL, std::vector<int>, 4>::ClusterMatrix(
+    const DistanceConverter &dconv, init_matrix_t
+) = delete;
+
 #define deleted_funcs template<>                                     \
 cm::ClusterMatrix(ClusterAlgorithm * parent, const j_t n) = delete;         \
 template<>                                                           \
 cm::ClusterMatrix(const DistanceConverter &dconv, size_t n) = delete
 
-#define cm ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t>
+#define cm ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t, 0>
 deleted_funcs;
 #undef cm
-#define cm ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t>
+#define cm ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t, 0>
 deleted_funcs;
 #undef cm
-#define cm ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t>
+#define cm ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t, 0>
 deleted_funcs;
 #undef cm
-#define cm ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t>
+#define cm ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t, 0>
 deleted_funcs;
 #undef cm
-#define cm ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t>
+#define cm ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t, 0>
 deleted_funcs;
 #undef cm
-#define cm ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t>
+#define cm ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t, 0>
 deleted_funcs;
 #undef cm
 #undef deleted_funcs
 
-template class ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t>;
-template class ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t>;
-template class ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t>;
-template class ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t>;
-template class ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t>;
-template class ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t>;
+template<int verbose>
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_matrix(
+  const DistanceConverter & dconv, j_t n, bool binary_search, int fill_type)
+{
+  if (binary_search) {
+    switch (fill_type) {
+    case LINEAR_FILL:
+      return std::make_unique<ClusterMatrix<true, LINEAR_FILL, std::vector<int>, verbose>>(dconv, n);
+    case BINARY_FILL:
+      return std::make_unique<ClusterMatrix<true, BINARY_FILL, std::vector<int>, verbose>>(dconv, n);
+    case TOPDOWN_FILL:
+      return std::make_unique<ClusterMatrix<true, TOPDOWN_FILL, std::vector<int>, verbose>>(dconv, n);
+    default:
+      OPTIMOTU_STOP("unknown fill type");
+    }
+  } else {
+    switch (fill_type) {
+    case LINEAR_FILL:
+      return std::make_unique<ClusterMatrix<false, LINEAR_FILL, std::vector<int>, verbose>>(dconv, n);
+    case BINARY_FILL:
+      return std::make_unique<ClusterMatrix<false, BINARY_FILL, std::vector<int>, verbose>>(dconv, n);
+    case TOPDOWN_FILL:
+      return std::make_unique<ClusterMatrix<false, TOPDOWN_FILL, std::vector<int>, verbose>>(dconv, n);
+    default:
+      OPTIMOTU_STOP("unknown fill type");
+    }
+  }
+}
 
-template class ClusterMatrix<true, LINEAR_FILL>;
-template class ClusterMatrix<true, BINARY_FILL>;
-template class ClusterMatrix<true, TOPDOWN_FILL>;
-template class ClusterMatrix<false, LINEAR_FILL>;
-template class ClusterMatrix<false, BINARY_FILL>;
-template class ClusterMatrix<false, TOPDOWN_FILL>;
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_matrix(
+  const DistanceConverter & dconv, j_t n,
+  bool binary_search, int fill_type, int verbose)
+{
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) return create_cluster_matrix<0>(dconv, n, binary_search, fill_type);
+  if (v == 1) return create_cluster_matrix<1>(dconv, n, binary_search, fill_type);
+  if (v == 2) return create_cluster_matrix<2>(dconv, n, binary_search, fill_type);
+  if (v == 3) return create_cluster_matrix<3>(dconv, n, binary_search, fill_type);
+  return create_cluster_matrix<4>(dconv, n, binary_search, fill_type);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_matrix(
+  const DistanceConverter & dconv, init_matrix_t & im,
+  bool binary_search, int fill_type)
+{
+  if (binary_search) {
+    switch (fill_type) {
+    case LINEAR_FILL:
+      return std::make_unique<ClusterMatrix<true, LINEAR_FILL, internal_matrix_ref_t, 0>>(dconv, im);
+    case BINARY_FILL:
+      return std::make_unique<ClusterMatrix<true, BINARY_FILL, internal_matrix_ref_t, 0>>(dconv, im);
+    case TOPDOWN_FILL:
+      return std::make_unique<ClusterMatrix<true, TOPDOWN_FILL, internal_matrix_ref_t, 0>>(dconv, im);
+    default:
+      OPTIMOTU_STOP("unknown fill type");
+    }
+  } else {
+    switch (fill_type) {
+    case LINEAR_FILL:
+      return std::make_unique<ClusterMatrix<false, LINEAR_FILL, internal_matrix_ref_t, 0>>(dconv, im);
+    case BINARY_FILL:
+      return std::make_unique<ClusterMatrix<false, BINARY_FILL, internal_matrix_ref_t, 0>>(dconv, im);
+    case TOPDOWN_FILL:
+      return std::make_unique<ClusterMatrix<false, TOPDOWN_FILL, internal_matrix_ref_t, 0>>(dconv, im);
+    default:
+      OPTIMOTU_STOP("unknown fill type");
+    }
+  }
+}

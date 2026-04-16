@@ -12,7 +12,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
 
   for (size_t pg_index = begin; pg_index < end; pg_index++) {
     OPTIMOTU_DEBUG(
-      1,
+      2,
       << "EdlibSplit thread " << pg_index
       << " entered" << std::endl
     );
@@ -36,7 +36,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
       size_t s2 = is_seqj_longer ? j0 : i0;
       double l1 = seq[s1].size(), l2 = seq[s2].size();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": seq " << i
         << " (i0=" << i0
@@ -60,7 +60,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
       if (d < 1.0) ++my_aligned;
 
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << pg_index
         << ": distance=" << d
         << std::endl
@@ -69,12 +69,12 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
       RcppThread::checkUserInterrupt();
     }
     mutex.lock();
-    OPTIMOTU_DEBUG(1, << "thread " << pg_index << " ready to merge" << std::endl);
+    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
     _aligned += my_aligned;
     _prealigned += my_prealigned;
     mutex.unlock();
     my_algo->merge_into_parent();
-    OPTIMOTU_DEBUG(1, << "thread " << pg_index << " done" << std::endl);
+    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
   }
 }
 
@@ -101,7 +101,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
   }
   size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
   OPTIMOTU_DEBUG(
-    1,
+    2,
     << "EdlibConcurrent thread " << begin
     << " entered; sequences [" << begin_i
     << ", "<< end_i << ")" << std::endl;
@@ -109,7 +109,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
   for (size_t i = begin_i; i < end_i; i++) {
     for (size_t j = 0; j < i; j++) {
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << begin
         << ": seqs " << j
         << " and " << i
@@ -117,7 +117,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
       );
       double threshold = clust_algo.max_relevant(i, j);
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << begin
         << ": max relevant=" << threshold
         << std::endl
@@ -127,7 +127,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
       size_t s2 = is_seqj_longer ? j : i;
       double l1 = seq[s1].size(), l2 = seq[s2].size();
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "#### seq " << i
         << " (l1=" << l1
         << ") and "<< j
@@ -144,14 +144,14 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
       double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
       if (d < 1.0) ++my_aligned;
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << begin
         << ": distance=" << d
         << std::endl
       );
       if (d < threshold) clust_algo(j, i, d);
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << begin
         << ": finished " << j
         << " and " << i
@@ -163,13 +163,17 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
   mutex.lock();
   _aligned += my_aligned;
   _prealigned += my_prealigned;
-  OPTIMOTU_DEBUG(1, << "Exiting thread " << begin << std::endl);
+  OPTIMOTU_DEBUG(2, << "Exiting thread " << begin << std::endl);
   mutex.unlock();
 }
 
 template class EdlibSplitClusterWorker<0>;
 template class EdlibSplitClusterWorker<1>;
 template class EdlibSplitClusterWorker<2>;
+template class EdlibSplitClusterWorker<3>;
+template class EdlibSplitClusterWorker<4>;
 template class EdlibConcurrentClusterWorker<0>;
 template class EdlibConcurrentClusterWorker<1>;
 template class EdlibConcurrentClusterWorker<2>;
+template class EdlibConcurrentClusterWorker<3>;
+template class EdlibConcurrentClusterWorker<4>;

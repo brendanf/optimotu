@@ -26,14 +26,14 @@ public:  // constructor for use in divide() which begins with i > 1
 
   class Builder : public DivisiblePairGenerator::Builder {
   protected:
-    std::size_t offset;
+    std::size_t offset = 0;
   public:
     Builder(const std::size_t n, const std::size_t min_n_subgenerators = 1) :
       DivisiblePairGenerator::Builder(n, min_n_subgenerators) {};
     
     void set_offset(const std::size_t offset) { this->offset = offset; }
 
-    std::vector<std::unique_ptr<PairGenerator>> build() const override;
+    std::vector<std::unique_ptr<PairGenerator>> build(int verbose = 0) const override;
   };
 };
 

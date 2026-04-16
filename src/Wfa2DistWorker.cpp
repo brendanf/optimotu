@@ -11,8 +11,9 @@ Wfa2DistWorker::Wfa2DistWorker(
   SparseDistanceMatrix &sdm,
   int match, int mismatch,
   int gap_open, int gap_extend,
-  int gap_open2, int gap_extend2
-) : DistWorker(seq, dist_threshold, pgb, sdm),
+  int gap_open2, int gap_extend2,
+  int verbose
+) : DistWorker(seq, dist_threshold, pgb, sdm, verbose),
 match(match), mismatch(mismatch),
 gap_open(gap_open), gap_extend(gap_extend),
 gap_open2(gap_open2), gap_extend2(gap_extend2) {}
@@ -67,7 +68,7 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
   size_t end_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
 
   OPTIMOTU_DEBUG(
-    1,
+    2,
     << "Wfa2DistWorker thread " << begin
     << " entered; sequences [" << begin_i
     << ", "<< end_i << ")" << std::endl
@@ -231,13 +232,19 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   AlignmentSpan span,
   bool constrain
 ) {
-  switch (verbose) {
+  int v = (verbose > 4) ? 4 : verbose;
+  switch (v) {
     case 0:
       return create_wfa2_dist_worker<0>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
     case 1:
       return create_wfa2_dist_worker<1>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
-    default:
+    case 2:
       return create_wfa2_dist_worker<2>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
+    case 3:
+      return create_wfa2_dist_worker<3>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
+    case 4:
+    default:
+      return create_wfa2_dist_worker<4>(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, span, constrain);
   }
 }
 

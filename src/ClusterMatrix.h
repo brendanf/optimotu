@@ -6,6 +6,7 @@
 
 #include "ClusterAlgorithm.h"
 #include "MappedClusterAlgorithm.h"
+#include <memory>
 #ifdef OPTIMOTU_R
 #include <RcppParallel.h>
 #endif // OPTIMOTU_R
@@ -18,9 +19,10 @@
 // thresholds.
 template <bool BINARY_SEARCH=true, //alt would be linear
           int FILL=2,
-          class ARRAY_T = std::vector<int>>
+          class ARRAY_T = std::vector<int>,
+          int verbose = 0>
 class ClusterMatrix : public SingleClusterAlgorithm {
-  template<bool, int, typename> friend class ClusterMatrix;
+  template<bool, int, typename, int> friend class ClusterMatrix;
   friend class MappedClusterAlgorithm;
 private:
   ARRAY_T clust_array;
@@ -61,5 +63,12 @@ public:
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 #endif // OPTIMOTU_R
 };
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_matrix(
+  const DistanceConverter & dconv, j_t n,
+  bool binary_search, int fill_type, int verbose = 0);
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_matrix(
+  const DistanceConverter & dconv, init_matrix_t & im,
+  bool binary_search, int fill_type);
 
 #endif //OPTIMOTU_CLUSTERMATRIX_H_INCLUDED

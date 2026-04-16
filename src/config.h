@@ -29,13 +29,16 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     const std::string &method,
     const bool do_binary_search,
     const int fill_type,
+    const int verbose,
+    const int test,
     DistanceConverter * dconv
 );
 std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     const int threads,
     ClusterAlgorithmFactory &factory,
     const std::vector<std::string> seqnames,
-    const std::vector<std::vector<std::string>> subset_names
+    const std::vector<std::vector<std::string>> subset_names,
+    int verbose = 0
 );
 
 template <typename distmx_t>
@@ -75,7 +78,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     Rcpp::List parallel_config,
     ClusterAlgorithmFactory &factory,
     Rcpp::CharacterVector seqnames,
-    Rcpp::ListOf<Rcpp::CharacterVector> subset_names
+    Rcpp::ListOf<Rcpp::CharacterVector> subset_names,
+    int verbose = 0
 );
 
 template <typename distmx_t>

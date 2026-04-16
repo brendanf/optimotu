@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2025 Brendan Furneaux <brendan.furneaux@gmail.com>
 // SPDX-License-Identifier: MIT
 
+#include "optimotu.h"
 #include "AllPairGenerator.h"
 #include <cmath>
 
@@ -23,7 +24,17 @@ std::size_t AllPairGenerator::reverse_map(const std::size_t value) const {
   return value - offset;
 }
 
-std::vector<std::unique_ptr<PairGenerator>> AllPairGenerator::Builder::build() const {
+std::vector<std::unique_ptr<PairGenerator>> AllPairGenerator::Builder::build(int verbose) const {
+  OPTIMOTU_VERBOSE(
+    1,
+    << "Building " << n_subgenerators
+    << " subgenerators for AllPairGenerator with offset " << offset
+    << std::endl;
+  );
+  OPTIMOTU_VERBOSE(
+    4,
+    << "  Main diagonal subgenerators:" << std::endl;
+  );
   std::vector<std::unique_ptr<PairGenerator>> generators;
   generators.reserve(n_subgenerators);
 
@@ -33,12 +44,24 @@ std::vector<std::unique_ptr<PairGenerator>> AllPairGenerator::Builder::build() c
     std::size_t begin_i = tile_i * range / n_tiles;
     std::size_t end_i = (tile_i + 1) * range / n_tiles;
     if (end_i > begin_i) {
+      OPTIMOTU_VERBOSE(
+        4,
+        << "    Subgenerator " << tile_i
+        << ": " << begin_i << " to " << end_i
+        << " (size = " << end_i - begin_i
+        << ", offset = " << offset + begin_i
+        << ")"
+        << std::endl;
+      );
       generators.push_back(
         std::make_unique<AllPairGenerator>(end_i - begin_i, offset + begin_i)
       );
     }
   }
-
+  OPTIMOTU_VERBOSE(
+    4,
+    << "  Subgenerators below the diagonal:" << std::endl;
+  );
   // Create the subgenerators below the diagonal
   for (std::size_t tile_i = 1; tile_i < n_tiles; tile_i++) {
     std::size_t begin_i = tile_i * range / n_tiles;
@@ -48,6 +71,17 @@ std::vector<std::unique_ptr<PairGenerator>> AllPairGenerator::Builder::build() c
       std::size_t begin_j = tile_j * range / n_tiles;
       std::size_t end_j = (tile_j + 1) * range / n_tiles;
       if (end_j == begin_j) continue;
+      OPTIMOTU_VERBOSE(
+        4,
+        << "    Subgenerator " << tile_i << "," << tile_j
+        << ": " << begin_i << " (" << offset + begin_i
+        << ") to " << end_i << " (" << offset + end_i
+        << ") and " << begin_j << " (" << offset + begin_j
+        << ") to " << end_j << " (" << offset + end_j
+        << "), sizes = " << end_i - begin_i
+        << ", " << end_j - begin_j
+        << std::endl;
+      );
       generators.push_back(
         std::make_unique<BipartitePairGenerator>(
           offset + begin_i,
@@ -130,7 +164,7 @@ context("AllPairGenerator") {
   test_that("AllPairGenerator::Builder(10) subgenerators cover 45 pairs") {
     AllPairGenerator::Builder b(10, 4);
     b.set_offset(0);
-    auto gens = b.build();
+    auto gens = b.build(0);
     std::set<std::pair<std::size_t, std::size_t>> all_pairs;
     for (auto& g : gens) {
       while (*g) {
@@ -152,9 +186,9 @@ context("DivisiblePairGenerator::Builder") {
   test_that("Builder respects min_n_subgenerators") {
     using B = AllPairGenerator::Builder;
     B b1(100, 1);
-    expect_true(b1.build().size() >= 1u);
+    expect_true(b1.build(0).size() >= 1u);
     B b5(100, 5);
-    expect_true(b5.build().size() >= 5u);
+    expect_true(b5.build(0).size() >= 5u);
   }
 }
 #endif

@@ -49,7 +49,7 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
   } else if (method == "index") {
     return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
   } else if (method == "tree") {
-    return std::make_unique<ClusterTreeFactory>(*dconv, verbose, test);
+    return std::make_unique<ClusterTreeFactory>(*dconv, test);
   } else if (method == "slink") {
     return std::make_unique<ClusterSLINKFactory>(*dconv);
   } else {
@@ -61,15 +61,27 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     const int threads,
     ClusterAlgorithmFactory &factory,
     const std::vector<std::string> seqnames,
-    const std::vector<std::vector<std::string>> subset_names
+    const std::vector<std::vector<std::string>> subset_names,
+    int verbose
 ) {
-  auto out = std::make_unique<MultipleClusterAlgorithm>(
-    factory,
-    seqnames,
-    subset_names,
-    threads
-  );
-  return out;
+  if (verbose == 0) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
+      factory, seqnames, subset_names, threads, 0);
+  }
+  if (verbose == 1) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
+      factory, seqnames, subset_names, threads, 0);
+  }
+  if (verbose == 2) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
+      factory, seqnames, subset_names, threads, 0);
+  }
+  if (verbose == 3) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
+      factory, seqnames, subset_names, threads, 0);
+  }
+  return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
+    factory, seqnames, subset_names, threads, 0);
 }
 
 template<typename distmx_t>
@@ -136,25 +148,30 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     int verbose
 ) {
   AllPairGenerator::Builder pgb(seq.size(), threads);
+  int v = (verbose > 4) ? 4 : verbose;
   if (type == "split") {
-    if (verbose == 0) {
+    if (v == 0) {
       return std::make_unique<HybridSplitClusterWorker<0>>(seq, cluster, pgb, breakpoint);
-    } else if (verbose == 1) {
+    } else if (v == 1) {
       return std::make_unique<HybridSplitClusterWorker<1>>(seq, cluster, pgb, breakpoint);
-    } else if (verbose >= 2) {
+    } else if (v == 2) {
       return std::make_unique<HybridSplitClusterWorker<2>>(seq, cluster, pgb, breakpoint);
+    } else if (v == 3) {
+      return std::make_unique<HybridSplitClusterWorker<3>>(seq, cluster, pgb, breakpoint);
     } else {
-      OPTIMOTU_STOP("invalid verbose level");
+      return std::make_unique<HybridSplitClusterWorker<4>>(seq, cluster, pgb, breakpoint);
     }
   } else if (type == "concurrent") {
-    if (verbose == 0) {
+    if (v == 0) {
       return std::make_unique<HybridConcurrentClusterWorker<0>>(seq, cluster, pgb, breakpoint);
-    } else if (verbose == 1) {
+    } else if (v == 1) {
       return std::make_unique<HybridConcurrentClusterWorker<1>>(seq, cluster, pgb, breakpoint);
-    } else if (verbose >= 2) {
+    } else if (v == 2) {
       return std::make_unique<HybridConcurrentClusterWorker<2>>(seq, cluster, pgb, breakpoint);
+    } else if (v == 3) {
+      return std::make_unique<HybridConcurrentClusterWorker<3>>(seq, cluster, pgb, breakpoint);
     } else {
-      OPTIMOTU_STOP("invalid verbose level");
+      return std::make_unique<HybridConcurrentClusterWorker<4>>(seq, cluster, pgb, breakpoint);
     }
   } else {
     Rcpp::stop("invalid parallel type");
@@ -325,9 +342,8 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
   } else if (method == "index") {
     return std::make_unique<ClusterIndexedMatrixFactory>(*dconv);
   } else if (method == "tree") {
-    int verbose = element_as_int(config, "verbose", "cluster_tree");
     int test = element_as_int(config, "test", "cluster_tree");
-    return std::make_unique<ClusterTreeFactory>(*dconv, verbose, test);
+    return std::make_unique<ClusterTreeFactory>(*dconv, test);
   } else if (method == "slink") {
     return std::make_unique<ClusterSLINKFactory>(*dconv);
   } else {
@@ -339,16 +355,31 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     Rcpp::List parallel_config,
     ClusterAlgorithmFactory &factory,
     Rcpp::CharacterVector seqnames,
-    Rcpp::ListOf<Rcpp::CharacterVector> subset_names
+    Rcpp::ListOf<Rcpp::CharacterVector> subset_names,
+    int verbose
 ) {
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
-  auto out = std::make_unique<MultipleClusterAlgorithm>(
-    factory,
-    Rcpp::as<std::vector<std::string>>(seqnames),
-    Rcpp::as<std::vector<std::vector<std::string>>>(subset_names),
-    threads
-  );
-  return out;
+  auto seqnames_vec = Rcpp::as<std::vector<std::string>>(seqnames);
+  auto subset_names_vec = Rcpp::as<std::vector<std::vector<std::string>>>(subset_names);
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
+      factory, seqnames_vec, subset_names_vec, threads, 0);
+  }
+  if (v == 1) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
+      factory, seqnames_vec, subset_names_vec, threads, 0);
+  }
+  if (v == 2) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
+      factory, seqnames_vec, subset_names_vec, threads, 0);
+  }
+  if (v == 3) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
+      factory, seqnames_vec, subset_names_vec, threads, 0);
+  }
+  return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
+    factory, seqnames_vec, subset_names_vec, threads, 0);
 }
 
 template<typename distmx_t>
@@ -437,6 +468,7 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
   std::string par_method = element_as_string(parallel_config, "method", "parallel_config");
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  int v = (verbose > 4) ? 4 : verbose;
   AllPairGenerator::Builder pgb(seq.size(), threads);
   if (dist_method == "wfa2") {
     int match = element_as_int(dist_config, "match", "dist_config");
@@ -446,90 +478,126 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
     if (par_method == "merge") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<Wfa2SplitClusterWorker<0>>(
           seq,
           cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<Wfa2SplitClusterWorker<1>>(
           seq,
           cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<Wfa2SplitClusterWorker<2>>(
           seq,
           cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
+      } else if (v == 3) {
+        return std::make_unique<Wfa2SplitClusterWorker<3>>(
+          seq,
+          cluster, pgb, -match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<Wfa2SplitClusterWorker<4>>(
+          seq,
+          cluster, pgb, -match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
       }
     } else if (par_method == "concurrent") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<0>>(
           seq,
           cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<1>>(
           seq,
           cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<2>>(
           seq,
           cluster, pgb, -match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2
         );
+      } else if (v == 3) {
+        return std::make_unique<Wfa2ConcurrentClusterWorker<3>>(
+          seq,
+          cluster, pgb, -match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<Wfa2ConcurrentClusterWorker<4>>(
+          seq,
+          cluster, pgb, -match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2
+        );
       }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
   } else if (dist_method == "edlib") {
     if (par_method == "merge") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<EdlibSplitClusterWorker<0>>(
           seq,
           cluster, pgb
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<EdlibSplitClusterWorker<1>>(
           seq,
           cluster, pgb
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<EdlibSplitClusterWorker<2>>(
           seq,
           cluster, pgb
         );
+      } else if (v == 3) {
+        return std::make_unique<EdlibSplitClusterWorker<3>>(
+          seq,
+          cluster, pgb
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<EdlibSplitClusterWorker<4>>(
+          seq,
+          cluster, pgb
+        );
       }
     } else if (par_method == "concurrent") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<EdlibConcurrentClusterWorker<0>>(
           seq,
           cluster, pgb
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<EdlibConcurrentClusterWorker<1>>(
           seq,
           cluster, pgb
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<EdlibConcurrentClusterWorker<2>>(
           seq,
           cluster, pgb
         );
+      } else if (v == 3) {
+        return std::make_unique<EdlibConcurrentClusterWorker<3>>(
+          seq,
+          cluster, pgb
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<EdlibConcurrentClusterWorker<4>>(
+          seq,
+          cluster, pgb
+        );
       }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
@@ -537,42 +605,58 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
   } else if (dist_method == "hybrid") {
     double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
     if (par_method == "merge") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<HybridSplitClusterWorker<0>>(
           seq,
           cluster, pgb, breakpoint
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<HybridSplitClusterWorker<1>>(
           seq,
           cluster, pgb, breakpoint
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<HybridSplitClusterWorker<2>>(
           seq,
           cluster, pgb, breakpoint
         );
+      } else if (v == 3) {
+        return std::make_unique<HybridSplitClusterWorker<3>>(
+          seq,
+          cluster, pgb, breakpoint
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<HybridSplitClusterWorker<4>>(
+          seq,
+          cluster, pgb, breakpoint
+        );
       }
     } else if (par_method == "concurrent") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<HybridConcurrentClusterWorker<0>>(
           seq,
           cluster, pgb, breakpoint
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<HybridConcurrentClusterWorker<1>>(
           seq,
           cluster, pgb, breakpoint
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<HybridConcurrentClusterWorker<2>>(
           seq,
           cluster, pgb, breakpoint
         );
+      } else if (v == 3) {
+        return std::make_unique<HybridConcurrentClusterWorker<3>>(
+          seq,
+          cluster, pgb, breakpoint
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<HybridConcurrentClusterWorker<4>>(
+          seq,
+          cluster, pgb, breakpoint
+        );
       }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
@@ -581,42 +665,58 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
     if (par_method == "merge") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<HammingSplitClusterWorker<0>>(
           seq,
           cluster, pgb, min_overlap, ignore_gaps
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<HammingSplitClusterWorker<1>>(
           seq,
           cluster, pgb, min_overlap, ignore_gaps
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<HammingSplitClusterWorker<2>>(
           seq,
           cluster, pgb, min_overlap, ignore_gaps
         );
+      } else if (v == 3) {
+        return std::make_unique<HammingSplitClusterWorker<3>>(
+          seq,
+          cluster, pgb, min_overlap, ignore_gaps
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<HammingSplitClusterWorker<4>>(
+          seq,
+          cluster, pgb, min_overlap, ignore_gaps
+        );
       }
     } else if (par_method == "concurrent") {
-      if (verbose == 0) {
+      if (v == 0) {
         return std::make_unique<HammingConcurrentClusterWorker<0>>(
           seq,
           cluster, pgb, min_overlap, ignore_gaps
         );
-      } else if (verbose == 1) {
+      } else if (v == 1) {
         return std::make_unique<HammingConcurrentClusterWorker<1>>(
           seq,
           cluster, pgb, min_overlap, ignore_gaps
         );
-      } else if (verbose >= 2) {
+      } else if (v == 2) {
         return std::make_unique<HammingConcurrentClusterWorker<2>>(
           seq,
           cluster, pgb, min_overlap, ignore_gaps
         );
+      } else if (v == 3) {
+        return std::make_unique<HammingConcurrentClusterWorker<3>>(
+          seq,
+          cluster, pgb, min_overlap, ignore_gaps
+        );
       } else {
-        OPTIMOTU_STOP("invalid verbose level");
+        return std::make_unique<HammingConcurrentClusterWorker<4>>(
+          seq,
+          cluster, pgb, min_overlap, ignore_gaps
+        );
       }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
@@ -648,6 +748,7 @@ std::unique_ptr<SearchWorker> create_search_worker(
   }
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  int v = (verbose > 4) ? 4 : verbose;
   if (dist_method == "wfa2") {
     int match = element_as_int(dist_config, "match", "dist_config");
     int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
@@ -655,7 +756,7 @@ std::unique_ptr<SearchWorker> create_search_worker(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
-    switch (verbose) {
+    switch (v) {
     case 0:
       if (return_cigar) {
         switch (span) {
@@ -728,7 +829,7 @@ std::unique_ptr<SearchWorker> create_search_worker(
           OPTIMOTU_STOP("span must be 0 or 1");
         }
       }
-    default:
+    case 2:
       if (return_cigar) {
         switch (span) {
         case 0:
@@ -736,13 +837,11 @@ std::unique_ptr<SearchWorker> create_search_worker(
             query, ref, threshold, threads, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2
           );
-          break;
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<2, true, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2
           );
-          break;
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
         }
@@ -753,17 +852,83 @@ std::unique_ptr<SearchWorker> create_search_worker(
             query, ref, threshold, threads, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2
           );
-          break;
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<2, false, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2
           );
-          break;
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
         }
       }
+      break;
+    case 3:
+      if (return_cigar) {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<3, true>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<3, true, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      } else {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<3, false>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<3, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      }
+      break;
+    case 4:
+    default:
+      if (return_cigar) {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<4, true>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<4, true, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      } else {
+        switch (span) {
+        case 0:
+          return std::make_unique<Wfa2SearchWorkerImpl<4, false>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        case 1:
+          return std::make_unique<Wfa2SearchWorkerImpl<4, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+          );
+        default:
+          OPTIMOTU_STOP("span must be 0 or 1");
+        }
+      }
+      break;
     }
   } else if (dist_method == "edlib") {
     if (span > 0) {
@@ -772,15 +937,22 @@ std::unique_ptr<SearchWorker> create_search_worker(
     if (return_cigar) {
       OPTIMOTU_STOP("cigar is not implemented for edlib distance");
     }
-    switch (verbose) {
+    switch (v) {
     case 0:
       return std::make_unique<EdlibSearchWorkerImpl<0>>(query, ref, threshold,
                                                         threads);
     case 1:
       return std::make_unique<EdlibSearchWorkerImpl<1>>(query, ref, threshold,
                                                         threads);
-    default:
+    case 2:
       return std::make_unique<EdlibSearchWorkerImpl<2>>(query, ref, threshold,
+                                                        threads);
+    case 3:
+      return std::make_unique<EdlibSearchWorkerImpl<3>>(query, ref, threshold,
+                                                        threads);
+    case 4:
+    default:
+      return std::make_unique<EdlibSearchWorkerImpl<4>>(query, ref, threshold,
                                                         threads);
     }
   } else if (dist_method == "hybrid") {
@@ -791,15 +963,22 @@ std::unique_ptr<SearchWorker> create_search_worker(
       OPTIMOTU_STOP("cigar is not implemented for hybrid distance");
     }
     double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
-    switch (verbose) {
+    switch (v) {
     case 0:
       return std::make_unique<HybridSearchWorkerImpl<0>>(query, ref, threshold,
                                                          threads, breakpoint);
     case 1:
       return std::make_unique<HybridSearchWorkerImpl<1>>(query, ref, threshold,
                                                          threads, breakpoint);
-    default:
+    case 2:
       return std::make_unique<HybridSearchWorkerImpl<2>>(query, ref, threshold,
+                                                         threads, breakpoint);
+    case 3:
+      return std::make_unique<HybridSearchWorkerImpl<3>>(query, ref, threshold,
+                                                         threads, breakpoint);
+    case 4:
+    default:
+      return std::make_unique<HybridSearchWorkerImpl<4>>(query, ref, threshold,
                                                          threads, breakpoint);
     }
   } else if (dist_method == "hamming") {
@@ -811,7 +990,7 @@ std::unique_ptr<SearchWorker> create_search_worker(
     if (return_cigar) {
       OPTIMOTU_STOP("cigar is not implemented for hamming distance");
     }
-    switch (verbose) {
+    switch (v) {
     case 0:
       return std::make_unique<HammingSearchWorkerImpl<0>>(query, ref, threshold,
                                                           threads, min_overlap,
@@ -820,8 +999,17 @@ std::unique_ptr<SearchWorker> create_search_worker(
       return std::make_unique<HammingSearchWorkerImpl<1>>(query, ref, threshold,
                                                           threads, min_overlap,
                                                           ignore_gaps);
-    default:
+    case 2:
       return std::make_unique<HammingSearchWorkerImpl<2>>(query, ref, threshold,
+                                                          threads, min_overlap,
+                                                          ignore_gaps);
+    case 3:
+      return std::make_unique<HammingSearchWorkerImpl<3>>(query, ref, threshold,
+                                                          threads, min_overlap,
+                                                          ignore_gaps);
+    case 4:
+    default:
+      return std::make_unique<HammingSearchWorkerImpl<4>>(query, ref, threshold,
                                                           threads, min_overlap,
                                                           ignore_gaps);
     }

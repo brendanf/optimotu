@@ -5,9 +5,10 @@
 #include <array>
 #include <cstring>
 #include "ClusterIndexedMatrix.h"
+#include "optimotu.h"
 
-template <class A>
-void ClusterIndexedMatrix<A>::initialize() {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::initialize() {
   auto c = ca;
   index = new tip[n];
   buffer = new int[m];
@@ -34,7 +35,7 @@ void ClusterIndexedMatrix<A>::initialize() {
 }
 
 template <>
-ClusterIndexedMatrix<>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n) :
+ClusterIndexedMatrix<std::vector<int>, 0>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n) :
   SingleClusterAlgorithm(parent, n),
   clust_array(m*n),
   ca(&clust_array[0])
@@ -42,8 +43,44 @@ ClusterIndexedMatrix<>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_
   initialize();
 }
 
-template<class A>
-ClusterIndexedMatrix<A>::ClusterIndexedMatrix(
+template<>
+ClusterIndexedMatrix<std::vector<int>, 1>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n) :
+  SingleClusterAlgorithm(parent, n),
+  clust_array(m*n),
+  ca(&clust_array[0])
+{
+  initialize();
+}
+
+template<>
+ClusterIndexedMatrix<std::vector<int>, 2>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n) :
+  SingleClusterAlgorithm(parent, n),
+  clust_array(m*n),
+  ca(&clust_array[0])
+{
+  initialize();
+}
+
+template<>
+ClusterIndexedMatrix<std::vector<int>, 3>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n) :
+  SingleClusterAlgorithm(parent, n),
+  clust_array(m*n),
+  ca(&clust_array[0])
+{
+  initialize();
+}
+
+template<>
+ClusterIndexedMatrix<std::vector<int>, 4>::ClusterIndexedMatrix(ClusterAlgorithm * parent, const j_t n) :
+  SingleClusterAlgorithm(parent, n),
+  clust_array(m*n),
+  ca(&clust_array[0])
+{
+  initialize();
+}
+
+template<class A, int V>
+ClusterIndexedMatrix<A, V>::ClusterIndexedMatrix(
     const DistanceConverter &dconv,
     size_t n
 ) : SingleClusterAlgorithm(dconv, n),
@@ -53,22 +90,22 @@ ca(&clust_array[0])
   initialize();
 }
 
-template<class A>
-ClusterIndexedMatrix<A>::ClusterIndexedMatrix(
+template<class A, int V>
+ClusterIndexedMatrix<A, V>::ClusterIndexedMatrix(
   const DistanceConverter &dconv,
   init_matrix_t &im
 ) : SingleClusterAlgorithm(dconv, im), clust_array(im), ca(&clust_array[0]) {
   initialize();
 }
 
-template <class A>
-ClusterIndexedMatrix<A>::~ClusterIndexedMatrix() {
+template <class A, int V>
+ClusterIndexedMatrix<A, V>::~ClusterIndexedMatrix() {
   delete[] index;
   delete[] buffer;
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::dump_index() {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::dump_index() {
   OPTIMOTU_CERR << std::endl << "index dump:" << std::endl;
   for (j_t i = 0; i < n; i++) {
     OPTIMOTU_CERR << "tip=" << i << " prev=";
@@ -97,8 +134,8 @@ void ClusterIndexedMatrix<A>::dump_index() {
   }
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::print_index() {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::print_index() {
   auto t = index;
   OPTIMOTU_COUT << t->j;
   do {
@@ -112,8 +149,8 @@ void ClusterIndexedMatrix<A>::print_index() {
   OPTIMOTU_COUT << std::endl;
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::verify_index() {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::verify_index() {
   auto t = index;
   j_t i = 0;
   while (t->next) {
@@ -130,8 +167,8 @@ void ClusterIndexedMatrix<A>::verify_index() {
   }
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::heal_splice() {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::heal_splice() {
   d_t join_d = std::max(trev.prev_d, tfwd.next_d);
   if (trev.prev) {
     trev.prev->next = tfwd.next;
@@ -143,8 +180,8 @@ void ClusterIndexedMatrix<A>::heal_splice() {
   }
 }
 
-template <class A>
-bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max, d_t i) {
+template <class A, int V>
+bool ClusterIndexedMatrix<A, V>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max, d_t i) {
   // OPTIMOTU_COUT << "splicing t1max=" << t1max
   //           << " t2min=" << t2min
   //           << " t2max=" << t2max
@@ -319,8 +356,8 @@ bool ClusterIndexedMatrix<A>::index_splice(tip *&t1max, tip *&t2min, tip *&t2max
   return false;
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (seq2 < 0 || seq2 >= n) {
     OPTIMOTU_CERR << "Sequence index" << seq2 << " out of range." << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
@@ -494,8 +531,8 @@ void ClusterIndexedMatrix<A>::operator()(j_t seq1, j_t seq2, d_t i, int thread) 
   // print_index();
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::merge_into(DistanceConsumer &consumer) {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::merge_into(DistanceConsumer &consumer) {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   tip * t = index;
   while (t->next != nullptr) {
@@ -504,8 +541,8 @@ void ClusterIndexedMatrix<A>::merge_into(DistanceConsumer &consumer) {
   }
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::merge_into(ClusterAlgorithm &consumer) {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   // TODO check that the distance converters are really compatible
   tip * t = index;
@@ -515,10 +552,10 @@ void ClusterIndexedMatrix<A>::merge_into(ClusterAlgorithm &consumer) {
   }
 }
 
-template <class A>
-SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
+template <class A, int V>
+SingleClusterAlgorithm * ClusterIndexedMatrix<A, V>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new ClusterIndexedMatrix<>(parent, n);
+  auto child_ptr = new ClusterIndexedMatrix<A, V>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -526,10 +563,10 @@ SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_inner_child(ClusterAlgori
   return child_ptr;
 }
 
-template <class A>
-SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child() {
+template <class A, int V>
+SingleClusterAlgorithm * ClusterIndexedMatrix<A, V>::make_child() {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new ClusterIndexedMatrix<>(this, n);
+  auto child_ptr = new ClusterIndexedMatrix<A, V>(this, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -537,10 +574,11 @@ SingleClusterAlgorithm * ClusterIndexedMatrix<A>::make_child() {
   return child_ptr;
 }
 
-template <class A>
-MappedClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(PairGenerator * pg){
+template <>
+SingleClusterAlgorithm * ClusterIndexedMatrix<internal_matrix_ref_t, 0>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new MappedClusterAlgorithm(this, pg);
+  // internal_matrix_ref_t cannot be copied; create child with owned storage
+  auto child_ptr = new ClusterIndexedMatrix<std::vector<int>, 0>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -548,8 +586,31 @@ MappedClusterAlgorithm * ClusterIndexedMatrix<A>::make_child(PairGenerator * pg)
   return child_ptr;
 }
 
-template <class A>
-double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2, int thread) const {
+template <>
+SingleClusterAlgorithm * ClusterIndexedMatrix<internal_matrix_ref_t, 0>::make_child() {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  // internal_matrix_ref_t cannot be copied; create child with owned storage
+  auto child_ptr = new ClusterIndexedMatrix<std::vector<int>, 0>(this, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <class A, int V>
+MappedClusterAlgorithm * ClusterIndexedMatrix<A, V>::make_child(PairGenerator * pg){
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new MappedClusterAlgorithmImpl<V>(this, pg);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <class A, int V>
+double ClusterIndexedMatrix<A, V>::max_relevant(j_t seq1, j_t seq2, int thread) const {
   if (seq1 == seq2) return 0.0;
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   j_t j1 = seq1*m, j2 = seq2*m;
@@ -568,8 +629,8 @@ double ClusterIndexedMatrix<A>::max_relevant(j_t seq1, j_t seq2, int thread) con
   return dconv.inverse(c1 - ca - j1 - 1);
 }
 
-template <class A>
-void ClusterIndexedMatrix<A>::write_to_matrix(internal_matrix_t &out) {
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::write_to_matrix(internal_matrix_t &out) {
   if (intptr_t(&out[0]) == intptr_t(&clust_array[0])) return;
   std::copy(clust_array.begin(), clust_array.end(), out.begin());
 }
@@ -583,8 +644,8 @@ struct FwdOrderElement {
 
 // This implementation is copied from ClusterMatrix;
 // It would probably be possible to do something faster using the
-template <class A>
-Rcpp::List ClusterIndexedMatrix<A>::as_hclust(
+template <class A, int V>
+Rcpp::List ClusterIndexedMatrix<A, V>::as_hclust(
     const Rcpp::CharacterVector &seqnames
 ) const {
   // output objects
@@ -663,5 +724,26 @@ Rcpp::List ClusterIndexedMatrix<A>::as_hclust(
 }
 #endif // OPTIMOTU_R
 
-template class ClusterIndexedMatrix<>;
-template class ClusterIndexedMatrix<internal_matrix_ref_t>;
+template<int verbose>
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_indexed_matrix(
+  const DistanceConverter & dconv, j_t n)
+{
+  return std::make_unique<ClusterIndexedMatrix<std::vector<int>, verbose>>(dconv, n);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_indexed_matrix(
+  const DistanceConverter & dconv, j_t n, int verbose)
+{
+  int v = (verbose > 4) ? 4 : verbose;
+  if (v == 0) return create_cluster_indexed_matrix<0>(dconv, n);
+  if (v == 1) return create_cluster_indexed_matrix<1>(dconv, n);
+  if (v == 2) return create_cluster_indexed_matrix<2>(dconv, n);
+  if (v == 3) return create_cluster_indexed_matrix<3>(dconv, n);
+  return create_cluster_indexed_matrix<4>(dconv, n);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_indexed_matrix(
+  const DistanceConverter & dconv, init_matrix_t & im)
+{
+  return std::make_unique<ClusterIndexedMatrix<internal_matrix_ref_t, 0>>(dconv, im);
+}

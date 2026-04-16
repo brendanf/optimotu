@@ -9,6 +9,7 @@
 #include "MappedClusterAlgorithm.h"
 #include <deque>
 #include <cstdint>
+#include <memory>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -166,5 +167,10 @@ public:
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 #endif // OPTIMOTU_R
 };
+
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_tree(
+  const DistanceConverter & dconv, j_t n, int verbose, int test);
+std::unique_ptr<SingleClusterAlgorithm> create_cluster_tree(
+  const DistanceConverter & dconv, init_matrix_t & im, int verbose, int test);
 
 #endif //OPTIMOTU_CLUSTERTREE_H_INCLUDED

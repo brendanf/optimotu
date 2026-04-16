@@ -9,7 +9,7 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
   std::size_t begin_i = (begin * query.size()) / threads;
   std::size_t end_i = (end * query.size()) / threads;
   OPTIMOTU_DEBUG(
-    1,
+    2,
     << "HammingSearchWorker thread " << begin
     << " entered; sequences [" << begin_i
     << ", "<< end_i << ")" << std::endl
@@ -24,7 +24,7 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
     for (std::size_t j = 0; j < ref.size(); j++) {
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "thread" << begin
         << ": seqs " << j
         << " and " << i
@@ -35,7 +35,7 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
       double d = pss.dist(i, j + query.size(), min_overlap, ignore_gaps);
 
       OPTIMOTU_DEBUG(
-        2,
+        4,
         << "Thread " << begin
         << ": distance=" << d
         << std::endl
@@ -44,7 +44,7 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
       ++my_aligned;
       if (d < max_dist) {
         OPTIMOTU_DEBUG(
-          2,
+          4,
           << "Thread " << begin
           << ": new best distance=" << d
           << std::endl
@@ -54,7 +54,7 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
         hit.best_ref.push_back(j);
       } else if (d == hit.best_dist) {
         OPTIMOTU_DEBUG(
-          2,
+          4,
           << "Thread " << begin
           << ": tied for best distance=" << d
           << std::endl
@@ -69,9 +69,11 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
     _prealigned += my_prealigned;
     _aligned += my_aligned;
   }
-  OPTIMOTU_DEBUG(1, << "Exiting thread " << begin << std::endl);
+  OPTIMOTU_DEBUG(2, << "Exiting thread " << begin << std::endl);
 }
 
 template class HammingSearchWorkerImpl<0>;
 template class HammingSearchWorkerImpl<1>;
 template class HammingSearchWorkerImpl<2>;
+template class HammingSearchWorkerImpl<3>;
+template class HammingSearchWorkerImpl<4>;

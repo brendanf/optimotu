@@ -1,6 +1,7 @@
 #include <unordered_set>
 #include <algorithm>
 
+#include "optimotu.h"
 #include "KmerPairGenerator.h"
 #include "kmer.h"
 
@@ -136,9 +137,15 @@ std::size_t KmerPairGenerator::j0() const {
   return this->_j + this->offset;
 }
 
-std::vector<std::unique_ptr<PairGenerator>> KmerPairGenerator::Builder::build() const {
+std::vector<std::unique_ptr<PairGenerator>> KmerPairGenerator::Builder::build(int verbose) const {
 
   // First initialize the kmer and sequence indices for each tile.
+  OPTIMOTU_VERBOSE(
+    1,
+    << "Building " << n_subgenerators
+    << " subgenerators for KmerPairGenerator with offset " << offset
+    << std::endl;
+  );
   std::vector<std::shared_ptr<kmer_seq_index_t>> kmer_seq_index;
   std::vector<std::shared_ptr<seq_kmer_index_t>> seq_kmer_index;
   double range = n;
@@ -157,11 +164,24 @@ std::vector<std::unique_ptr<PairGenerator>> KmerPairGenerator::Builder::build() 
   }
   std::vector<std::unique_ptr<PairGenerator>> generators;
   generators.reserve(n_subgenerators);
+  OPTIMOTU_VERBOSE(
+    4,
+    << "  Main diagonal subgenerators:" << std::endl;
+  );
   // create the subgenerators along the main diagonal
   for (std::size_t tile_i = 0; tile_i < n_tiles; tile_i++) {
     std::size_t begin_i = tile_i * range / n_tiles;
     std::size_t end_i = (tile_i + 1) * range / n_tiles;
     if (begin_i == end_i) continue;
+    OPTIMOTU_VERBOSE(
+      4,
+      << "    Subgenerator " << tile_i
+      << ": " << begin_i << " to " << end_i
+      << " (size = " << end_i - begin_i
+      << ", offset = " << offset + begin_i
+      << ")"
+      << std::endl;
+    );
     generators.push_back(std::make_unique<KmerPairGenerator>(
       kmer_seq_index[tile_i],
       seq_kmer_index[tile_i],
@@ -169,6 +189,10 @@ std::vector<std::unique_ptr<PairGenerator>> KmerPairGenerator::Builder::build() 
       offset + begin_i
     ));
   }
+  OPTIMOTU_VERBOSE(
+    4,
+    << "  Subgenerators below the diagonal:" << std::endl;
+  );
   // create the subgenerators below the diagonal
   for (std::size_t tile_i = 1; tile_i < n_tiles; tile_i++) {
     std::size_t begin_i = tile_i * range / n_tiles;
@@ -178,6 +202,16 @@ std::vector<std::unique_ptr<PairGenerator>> KmerPairGenerator::Builder::build() 
       std::size_t begin_j = tile_j * range / n_tiles;
       std::size_t end_j = (tile_j + 1) * range / n_tiles;
       if (begin_j == end_j) continue;
+      OPTIMOTU_VERBOSE(
+        4,
+        << "    Subgenerator " << tile_i << "," << tile_j
+        << ": " << begin_i << " to " << end_i
+        << " and " << begin_j << " to " << end_j
+        << " (size = " << end_i - begin_i
+        << ", " << end_j - begin_j
+        << ")"
+        << std::endl;
+      );
       generators.push_back(std::make_unique<BipartiteKmerPairGenerator>(
         begin_i, end_i, begin_j, end_j,
         udist_threshold,
