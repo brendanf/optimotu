@@ -669,6 +669,11 @@ void ClusterTree::merge_into(DistanceConsumer &consumer) {
 }
 
 void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
+  if (!consumer.accepts_unordered_pairs()) {
+    OPTIMOTU_STOP(
+      "ClusterTree::merge_into requires a consumer that accepts unordered pairs"
+    );
+  }
   this->assign_ids();
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (auto c = this->node0; c < this->nodeend; ++c) {

@@ -543,6 +543,11 @@ void ClusterIndexedMatrix<A, V>::merge_into(DistanceConsumer &consumer) {
 
 template <class A, int V>
 void ClusterIndexedMatrix<A, V>::merge_into(ClusterAlgorithm &consumer) {
+  if (!consumer.accepts_unordered_pairs()) {
+    OPTIMOTU_STOP(
+      "ClusterIndexedMatrix::merge_into requires a consumer that accepts unordered pairs"
+    );
+  }
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   // TODO check that the distance converters are really compatible
   tip * t = index;

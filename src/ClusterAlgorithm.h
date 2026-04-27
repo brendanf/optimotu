@@ -121,6 +121,13 @@ public:
     this->operator()(pg, dconv.convert(dist), thread);
   }
 
+  // Whether this algorithm can safely consume pair updates in arbitrary order.
+  // Algorithms that require strict within-pair or across-pairs ordering (such as
+  // SLINK) should override and return false.
+  virtual bool accepts_unordered_pairs() const {
+    return true;
+  }
+
 #ifdef OPTIMOTU_R
   // convert the clustering results to an hclust object
   virtual Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const =0;

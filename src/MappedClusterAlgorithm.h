@@ -38,6 +38,7 @@ public:
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override = 0;
   double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override = 0;
   double max_relevant(PairGenerator & pg, int thread = 0) const override = 0;
+  bool accepts_unordered_pairs() const override;
   void write_to_matrix(internal_matrix_t &out) override;
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 };
@@ -79,6 +80,7 @@ protected:
     ClusterAlgorithm * make_child() override;
     ClusterAlgorithm * make_child(PairGenerator * pg) override;
     double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
+    bool accepts_unordered_pairs() const override;
     #ifdef OPTIMOTU_R
       Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
     #endif // OPTIMOTU_R
@@ -113,6 +115,7 @@ protected:
     ClusterAlgorithm * make_child() override;
     ClusterAlgorithm * make_child(PairGenerator * pg) override;
     double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
+    bool accepts_unordered_pairs() const override;
     #ifdef OPTIMOTU_R
       Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
     #endif // OPTIMOTU_R

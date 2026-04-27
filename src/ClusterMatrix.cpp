@@ -225,6 +225,11 @@ void ClusterMatrix<BM, F, A, V>::merge_into(DistanceConsumer &consumer) {
 
 template<bool BM, int F, typename A, int V>
 void ClusterMatrix<BM, F, A, V>::merge_into(ClusterAlgorithm &consumer) {
+  if (!consumer.accepts_unordered_pairs()) {
+    OPTIMOTU_STOP(
+      "ClusterMatrix::merge_into requires a consumer that accepts unordered pairs"
+    );
+  }
   // TODO check that the distance converters are really compatible
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 1; j < n; ++j) {

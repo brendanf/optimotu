@@ -111,7 +111,7 @@ ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_child() {
 template<int verbose>
 MappedClusterAlgorithm * ClusterSLINK<verbose>::make_child(PairGenerator * pg) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(this, &delegate, pg);
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(&delegate, pg);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
@@ -120,7 +120,7 @@ MappedClusterAlgorithm * ClusterSLINK<verbose>::make_child(PairGenerator * pg) {
 }
 
 template<int verbose>
-void ClusterSLINK<verbose>::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
+void ClusterSLINK<verbose>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
   if (seq2 < 0 || seq2 >= n) {
     OPTIMOTU_CERR << "Sequence index" << seq2 << " out of range." << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
@@ -167,6 +167,11 @@ void ClusterSLINK<verbose>::operator()(j_t seq2, j_t seq1, d_t i, int thread) {
     update();
     slink_seq2++;
   }
+}
+
+template<int verbose>
+void ClusterSLINK<verbose>::operator()(PairGenerator & pg, d_t i, int thread) {
+  if (pg) this->operator()(pg.i0(), pg.j0(), i, thread);
 }
 
 template<int verbose>
@@ -283,15 +288,20 @@ template<int verbose>
 void ClusterSLINK<verbose>::merge_into(DistanceConsumer &consumer) {
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 0; j < this->n; j++) {
-    consumer(Pi[j], j, dconv.inverse(Lambda[j]));
+    if (Pi[j] != j) consumer(Pi[j], j, dconv.inverse(Lambda[j]));
   }
 }
 
 template<int verbose>
 void ClusterSLINK<verbose>::merge_into(ClusterAlgorithm &consumer) {
+  if (!consumer.accepts_unordered_pairs()) {
+    OPTIMOTU_STOP(
+      "ClusterSLINK::merge_into requires a consumer that accepts unordered pairs"
+    );
+  }
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 0; j < this->n; j++) {
-    consumer(Pi[j], j, Lambda[j]);
+    if (Pi[j] != j) consumer(Pi[j], j, Lambda[j]);
   }
 }
 
@@ -303,7 +313,6 @@ void ClusterSLINK<verbose>::merge_into_parent() {
 
 template<int verbose>
 double ClusterSLINK<verbose>::max_relevant(j_t seq1, j_t seq2, int thread) const {
-
   if (seq1 <= seq2) {
     OPTIMOTU_CERR << "ClusterSLINK requires seq2 < seq1.  seq2=" << seq2
                   << ", seq1=" << seq1 << std::endl;
@@ -319,6 +328,12 @@ double ClusterSLINK<verbose>::max_relevant(j_t seq1, j_t seq2, int thread) const
     return dconv.inverse(this->m - 1);
   }
   return dconv.inverse(this->M[seq2] - 1);
+}
+
+template<int verbose>
+double ClusterSLINK<verbose>::max_relevant(PairGenerator & pg, int thread) const {
+  if (!pg) return dconv.inverse(this->m - 1);
+  return this->max_relevant(pg.i0(), pg.j0(), thread);
 }
 
 template<int verbose>

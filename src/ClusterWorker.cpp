@@ -1,4 +1,13 @@
 #include "ClusterWorker.h"
+#include <utility>
+
+namespace {
+inline void normalize_pair_orientation(DistanceElement &d) {
+  if (d.seq1 < d.seq2) {
+    std::swap(d.seq1, d.seq2);
+  }
+}
+}  // namespace
 
 ClusterWorker::ClusterWorker(
   ClusterAlgorithm * algo,
@@ -165,6 +174,7 @@ void MergeClusterWorker<distmx_t, id_type>::operator()(size_t begin, size_t end)
   DistanceElement d;
   // OPTIMOTU_COUT << "Starting MergeClusterWorker thread " << begin << std::endl;
   while (next_line(d)) {
+    normalize_pair_orientation(d);
     algo_list[begin]->operator()(d, begin);
   }
   algo_list[begin]->finalize();
@@ -183,6 +193,7 @@ void ConcurrentClusterWorker<distmx_t, id_type>::operator()(size_t begin, size_t
   DistanceElement d;
   // OPTIMOTU_COUT << "Starting ConcurrentClusterWorker thread " << begin << std::endl;
   while (next_line(d)) {
+    normalize_pair_orientation(d);
     algo->operator()(d, begin);
   }
 
@@ -240,6 +251,7 @@ void HierarchicalClusterWorker<distmx_t, id_type>::operator()(size_t begin, size
   //           << std::endl;
   // mutex.unlock();
   while (next_line(d)) {
+    normalize_pair_orientation(d);
     algo_list[i]->operator()(d, begin);
   }
   if (--thread_count[i] == 0) {

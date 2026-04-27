@@ -39,6 +39,10 @@ void MCA::write_to_matrix(internal_matrix_t &out) {
   get_inner().write_to_matrix(out);
 }
 
+bool MCA::accepts_unordered_pairs() const {
+  return get_inner().accepts_unordered_pairs();
+}
+
 #ifdef OPTIMOTU_R
 Rcpp::List MCA::as_hclust(const Rcpp::CharacterVector &seqnames) const {
   return get_inner().as_hclust(seqnames);
@@ -89,6 +93,10 @@ ClusterAlgorithm* MappedClusterAlgorithmImpl<verbose>::Surrogate::make_child(Pai
 template<int verbose>
 double MappedClusterAlgorithmImpl<verbose>::Surrogate::max_relevant(j_t seq1, j_t seq2, int thread) const {
   OPTIMOTU_STOP("MappedClusterAlgorithm::Surrogate::max_relevant() is not implemented");
+}
+template<int verbose>
+bool MappedClusterAlgorithmImpl<verbose>::Surrogate::accepts_unordered_pairs() const {
+  return parent->accepts_unordered_pairs();
 }
 #ifdef OPTIMOTU_R
 template<int verbose>
@@ -171,6 +179,10 @@ ClusterAlgorithm* MappedClusterAlgorithmImpl<verbose>::IndexForwarder::make_chil
 template<int verbose>
 double MappedClusterAlgorithmImpl<verbose>::IndexForwarder::max_relevant(j_t seq1, j_t seq2, int thread) const {
   OPTIMOTU_STOP("MappedClusterAlgorithm::IndexForwarder::max_relevant() is not implemented");
+}
+template<int verbose>
+bool MappedClusterAlgorithmImpl<verbose>::IndexForwarder::accepts_unordered_pairs() const {
+  return target->accepts_unordered_pairs();
 }
 #ifdef OPTIMOTU_R
 template<int verbose>
@@ -281,6 +293,12 @@ void MappedClusterAlgorithmImpl<verbose>::merge_into(DistanceConsumer& consumer)
 }
 template<int verbose>
 void MappedClusterAlgorithmImpl<verbose>::merge_into(ClusterAlgorithm& consumer) {
+  if (inner->accepts_unordered_pairs() && !consumer.accepts_unordered_pairs()) {
+    OPTIMOTU_STOP(
+      "MappedClusterAlgorithm::merge_into requires an unordered-pair consumer "
+      "for unordered inner algorithms"
+    );
+  }
   IndexForwarder index_forwarder(fwd_map, &consumer);
   inner->merge_into(index_forwarder);
 }

@@ -42,6 +42,7 @@ public:
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
 
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
+  virtual void operator()(PairGenerator & pg, d_t i, int thread = 0) override;
 
   virtual void finalize() override;
 
@@ -64,6 +65,11 @@ public:
   // calculate the maximum distance between seq1 and seq2 which would actually
   // cause an update
   virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
+  virtual double max_relevant(PairGenerator & pg, int thread = 0) const override;
+
+  bool accepts_unordered_pairs() const override {
+    return false;
+  }
 };
 
 std::unique_ptr<SingleClusterAlgorithm> create_cluster_slink(

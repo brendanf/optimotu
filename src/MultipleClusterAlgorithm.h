@@ -96,6 +96,8 @@ public:
 
   MultipleClusterAlgorithm * make_child(PairGenerator * pg) override;
 
+  bool accepts_unordered_pairs() const override;
+
   void write_to_matrix(std::vector<internal_matrix_t> &matrix_list);
 
 #ifdef OPTIMOTU_R

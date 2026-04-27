@@ -372,6 +372,11 @@ void MCA::merge_into(DistanceConsumer &consumer) {
 }
 
 void MCA::merge_into(ClusterAlgorithm &consumer) {
+  if (!consumer.accepts_unordered_pairs()) {
+    OPTIMOTU_STOP(
+      "MultipleClusterAlgorithm::merge_into requires an unordered-pair consumer"
+    );
+  }
   for (auto & ss : this->subsets) {
     ss->merge_into(consumer);
   }
@@ -555,6 +560,15 @@ MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(Pai
   //   }
   //     ss->make_child();
   // return this;
+}
+
+bool MCA::accepts_unordered_pairs() const {
+  for (const auto * subset : subsets) {
+    if (!subset->accepts_unordered_pairs()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void MCA::write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {

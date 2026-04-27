@@ -3,6 +3,9 @@
 * Fix incorrect behavior in `seq_cluster()` and `distmx_cluster()` when
 clustering filtered subsets (for example via `which`), which could otherwise
 produce out-of-bounds errors or deadlocks.
+* Improve error handling in `seq_cluster()` and `distmx_cluster()` by rejecting
+unsupported merge paths for ordering-sensitive clustering methods (including
+`clust_slink()`), instead of allowing incorrect merge behavior.
 * Implement a new method to divide distance + cluster calculations among
 threads.
 * Improve speed of cluster set verification in `optimize_thresholds()`.
