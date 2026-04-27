@@ -66,8 +66,8 @@ public:
       // along the main diagonal, and n(n-1)/2 submatrices below the diagonal; for
       // a total of (n^2 + n)/2 submatrices.
       // Then, since we are targeting n_subgenerators generators,
-      // n_tiles ~= 0.5*(sqrt(1 + 8 * n_subgenerators) + 1)
-      return std::ceil(0.5*(std::sqrt(1.0 + 8.0*min_n_subgenerators) + 1.0));
+      // n_tiles ~= 0.5*(sqrt(1 + 8 * n_subgenerators) - 1)
+      return std::ceil(0.5*(std::sqrt(1.0 + 8.0*min_n_subgenerators) - 1.0));
     }
 
     static std::size_t calculate_n_subgenerators(std::size_t n_tiles) {

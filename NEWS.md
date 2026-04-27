@@ -14,6 +14,8 @@ threads.
 `seq_distmx()`, and `seq_search()`.
 * Fix race conditions in parallel distance matrix calculations which return CIGAR
 or gap statistics.
+* Fix tile-count calculation used for parallel pair-generation planning, which
+improves workload partitioning in large `seq_cluster()` and `seq_distmx()` runs.
 * Fix `seq_cluster()` hangs in some parallel workflows.
 * Improve interrupt handling during long clustering runs.
 
