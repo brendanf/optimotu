@@ -14,6 +14,8 @@ threads.
 `seq_distmx()`, and `seq_search()`.
 * Fix race conditions in parallel distance matrix calculations which return CIGAR
 or gap statistics.
+* Fix `seq_cluster()` hangs in some parallel workflows.
+* Improve interrupt handling during long clustering runs.
 
 # optimotu 0.9.5
 

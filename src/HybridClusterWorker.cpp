@@ -57,7 +57,11 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
+      if (l1/l2 < sim_threshold) {
+        RcppThread::checkUserInterrupt();
+        ++(*pg);
+        continue;
+      }
       ++my_prealigned;
       double sim_threshold_plus_1 = 2.0 - threshold;
       double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
@@ -89,6 +93,7 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
         << "\n" << std::endl
       );
       RcppThread::checkUserInterrupt();
+      ++(*pg);
     }
     mutex.lock();
     OPTIMOTU_DEBUG(1, << "thread" << pg_index << " ready to merge" << std::endl);
@@ -154,7 +159,11 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
+      if (l1/l2 < sim_threshold) {
+        RcppThread::checkUserInterrupt();
+        ++(*pg);
+        continue;
+      }
       ++my_prealigned;
       double sim_threshold_plus_1 = 2.0 - threshold;
       double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
@@ -193,6 +202,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
         << "\n" << std::endl
       );
       RcppThread::checkUserInterrupt();
+      ++(*pg);
     }
     mutex.lock();
     _aligned += my_aligned;

@@ -13,6 +13,7 @@
 
 template<int verbose, int test>
 void ClusterTreeImpl<verbose, test>::operator()(j_t seq1, j_t seq2, d_t i, int thread) {
+  RcppThread::checkUserInterrupt();
   if constexpr (test > 0) ++step_count;
 
   if (seq1 >= this->n) {
@@ -58,7 +59,6 @@ void ClusterTreeImpl<verbose, test>::operator()(j_t seq1, j_t seq2, d_t i, int t
   }
   int j = 0;
   while (c1 != c2 && (max_d1 <= i || max_d2 <= i)) {
-    RcppThread::checkUserInterrupt();
     // shift to the parent of whichever cluster has the nearer parent
     if (max_d1 <= max_d2) {
       shift_to_parent(c1, c1p);
@@ -703,6 +703,7 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
 }
 
 double ClusterTree::max_relevant(j_t seq1, j_t seq2, int thread) const {
+  RcppThread::checkUserInterrupt();
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   cluster* c1 = this->get_cluster(seq1);
   cluster* c1p = c1->parent;
@@ -715,7 +716,6 @@ double ClusterTree::max_relevant(j_t seq1, j_t seq2, int thread) const {
   d_t max_d2 = c2->max_d();
   if (c1p == c2p && max_d1 == 0) return -1.0;
   while (c1 != c2) {
-    RcppThread::checkUserInterrupt();
     // shift to the parent of whichever cluster has the nearer parent
     if (max_d1 <= max_d2 && c1p) {
       this->shift_to_parent(c1, c1p);

@@ -52,7 +52,11 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
+      if (l1/l2 < sim_threshold) {
+        RcppThread::checkUserInterrupt();
+        ++(*pg);
+        continue;
+      }
       ++my_prealigned;
       double sim_threshold_plus_1 = 2.0 - threshold;
       double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
@@ -68,6 +72,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
       );
       if (d < threshold) (*my_algo)(*pg, d);
       RcppThread::checkUserInterrupt();
+      ++(*pg);
     }
     mutex.lock();
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
@@ -152,7 +157,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
         << ": distance=" << d
         << std::endl
       );
-      if (d < threshold) clust_algo(j, i, d);
+      if (d < threshold) clust_algo(i, j, d);
       OPTIMOTU_DEBUG(
         4,
         << "Thread " << begin

@@ -50,7 +50,11 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
+      if (l1/l2 < sim_threshold) {
+        RcppThread::checkUserInterrupt();
+        ++(*pg);
+        continue;
+      }
       ++my_prealigned;
       double sim_threshold_plus_1 = 2.0 - threshold;
       double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
@@ -68,6 +72,7 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
       );
       if (d < threshold) (*my_algo)(*pg, d);
       RcppThread::checkUserInterrupt();
+      ++(*pg);
     }
     mutex.lock();
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
@@ -118,7 +123,11 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
+      if (l1/l2 < sim_threshold) {
+        RcppThread::checkUserInterrupt();
+        ++(*pg);
+        continue;
+      }
       ++my_prealigned;
       double sim_threshold_plus_1 = 2.0 - threshold;
       double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
@@ -150,6 +159,7 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
         << "\n" << std::endl
       );
       RcppThread::checkUserInterrupt();
+      ++(*pg);
     }
     mutex.lock();
     _aligned += my_aligned;

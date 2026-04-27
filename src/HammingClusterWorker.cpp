@@ -64,6 +64,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
       );
       if (d <= threshold) (*my_algo)(*pg, d);
       RcppThread::checkUserInterrupt();
+      ++(*pg);
     }
     mutex.lock();
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
@@ -115,6 +116,7 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
       if (d < 1.0) ++my_aligned;
       if (d < threshold) clust_algo(*pg, d);
       RcppThread::checkUserInterrupt();
+      ++(*pg);
     }
     mutex.lock();
     _aligned += my_aligned;
