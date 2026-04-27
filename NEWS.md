@@ -1,4 +1,4 @@
-# optimotu (development version)
+# optimotu 0.9.6
 
 * Fix incorrect behavior in `seq_cluster()` and `distmx_cluster()` when
 clustering filtered subsets (for example via `which`), which could otherwise
