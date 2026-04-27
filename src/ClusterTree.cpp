@@ -930,7 +930,8 @@ ClusterTreeImpl<verbose, test> * ClusterTreeImpl<verbose, test>::make_inner_chil
   ClusterAlgorithm * parent,
   const j_t n
 ) {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  // This is called from MappedClusterAlgorithm construction while make_child()
+  // already holds this object's mutex. Locking again here can deadlock.
   auto child_ptr = new ClusterTreeImpl<verbose, test>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr

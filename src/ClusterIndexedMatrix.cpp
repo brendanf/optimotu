@@ -554,7 +554,8 @@ void ClusterIndexedMatrix<A, V>::merge_into(ClusterAlgorithm &consumer) {
 
 template <class A, int V>
 SingleClusterAlgorithm * ClusterIndexedMatrix<A, V>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  // This is called from MappedClusterAlgorithm construction while make_child()
+  // already holds this object's mutex. Locking again here can deadlock.
   auto child_ptr = new ClusterIndexedMatrix<A, V>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
@@ -576,7 +577,8 @@ SingleClusterAlgorithm * ClusterIndexedMatrix<A, V>::make_child() {
 
 template <>
 SingleClusterAlgorithm * ClusterIndexedMatrix<internal_matrix_ref_t, 0>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  // This is called from MappedClusterAlgorithm construction while make_child()
+  // already holds this object's mutex. Locking again here can deadlock.
   // internal_matrix_ref_t cannot be copied; create child with owned storage
   auto child_ptr = new ClusterIndexedMatrix<std::vector<int>, 0>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(

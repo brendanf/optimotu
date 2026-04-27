@@ -2,7 +2,7 @@
 
 * Fix incorrect behavior in `seq_cluster()` and `distmx_cluster()` when
 clustering filtered subsets (for example via `which`), which could otherwise
-produce out-of-bounds errors.
+produce out-of-bounds errors or deadlocks.
 * Implement a new method to divide distance + cluster calculations among
 threads.
 * Improve speed of cluster set verification in `optimize_thresholds()`.

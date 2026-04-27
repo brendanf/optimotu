@@ -250,7 +250,7 @@ SingleClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_child() {
 
 #define CIM_REF_SPEC(BM, F) \
 template<> SingleClusterAlgorithm * ClusterMatrix<BM, F, internal_matrix_ref_t, 0>::make_inner_child(ClusterAlgorithm * parent, const j_t n) { \
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex); \
+  /* Called while make_child() already holds this mutex. */ \
   auto child_ptr = new ClusterMatrix<BM, F, std::vector<int>, 0>(parent, n); \
   auto child = std::unique_ptr<ClusterAlgorithm>( (ClusterAlgorithm*)child_ptr ); \
   this->children.push_back(std::move(child)); \
@@ -287,7 +287,8 @@ MappedClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_child(
 
 template<bool BM, int F, typename A, int V>
 SingleClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  // This is called from MappedClusterAlgorithm construction while make_child()
+  // already holds this object's mutex. Locking again here can deadlock.
   auto child_ptr = new ClusterMatrix<BM, F, A, V>(parent, n);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
