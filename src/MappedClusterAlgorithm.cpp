@@ -4,8 +4,8 @@
 using MCA = MappedClusterAlgorithm;
 
 std::vector<std::size_t> map_from_pair_generator(const PairGenerator & pg) {
-  std::vector<std::size_t> fwd_map(pg.max_value());
-  for (std::size_t i = 0; i < pg.max_value(); i++) {
+  std::vector<std::size_t> fwd_map(pg.max_value() + 1);
+  for (std::size_t i = 0; i <= pg.max_value(); i++) {
     fwd_map[i] = pg.forward_map(i);
   }
   return fwd_map;
@@ -194,11 +194,11 @@ SingleClusterAlgorithm* MappedClusterAlgorithmImpl<verbose>::make_inner_child(Cl
 
 template<int verbose>
 MappedClusterAlgorithmImpl<verbose>::MappedClusterAlgorithmImpl(SingleClusterAlgorithm* parent, PairGenerator* pg) :
-  MappedClusterAlgorithm(parent, pg->max_value()),
+  MappedClusterAlgorithm(parent, pg->max_value() + 1),
   fwd_map(map_from_pair_generator(*pg)),
   rev_map(invert_map(fwd_map)),
   surrogate(std::make_unique<Surrogate>(parent, fwd_map)),
-  inner(parent->make_inner_child(surrogate.get(), pg->max_value())),
+  inner(parent->make_inner_child(surrogate.get(), pg->max_value() + 1)),
   pair_generator(pg)
 {}
 
@@ -208,11 +208,11 @@ MappedClusterAlgorithmImpl<verbose>::MappedClusterAlgorithmImpl(
   SingleClusterAlgorithm* delegate,
   PairGenerator* pg
 ) :
-  MappedClusterAlgorithm(parent, pg->max_value()),
+  MappedClusterAlgorithm(parent, pg->max_value() + 1),
   fwd_map(map_from_pair_generator(*pg)),
   rev_map(invert_map(fwd_map)),
   surrogate(std::make_unique<Surrogate>(delegate, fwd_map)),
-  inner(parent->make_inner_child(surrogate.get(), pg->max_value())),
+  inner(parent->make_inner_child(surrogate.get(), pg->max_value() + 1)),
   pair_generator(pg)
 {}
 
@@ -300,7 +300,7 @@ template<int verbose>
 MappedClusterAlgorithm* MappedClusterAlgorithmImpl<verbose>::make_child(PairGenerator* pg) {
   std::vector<std::size_t> new_fwd_map;
   std::size_t i = 0, j = 0;
-  while (i < pg->max_value() && j < fwd_map.size()) {
+  while (i <= pg->max_value() && j < fwd_map.size()) {
     if (pg->forward_map(i) == fwd_map[j]) {
       new_fwd_map.push_back(fwd_map[j]);
       ++i;

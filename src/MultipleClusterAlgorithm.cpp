@@ -419,7 +419,7 @@ MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
   // can produce
   std::vector<bool> nonempty(subset_indices.size());
   std::size_t n_nonempty = 0;
-  for (std::size_t i = 0; i < pg->max_value(); i++) {
+  for (std::size_t i = 0; i <= pg->max_value(); i++) {
     std::size_t i0 = pg->forward_map(i);
     for (const j_t j : subset_key[i0]) {
       if (!nonempty[j]) {
@@ -446,12 +446,12 @@ MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
 
   // Now calculate the child's subset_key, subset_indices, subset_names,
   // and fwd_map
-  std::vector<std::vector<j_t>> child_subset_key(pg->max_value());
+  std::vector<std::vector<j_t>> child_subset_key(pg->max_value() + 1);
   std::vector<std::vector<j_t>> child_subset_indices(n_nonempty);
   std::vector<std::vector<std::string>> child_subset_names(n_nonempty);
   std::vector<std::unordered_map<j_t, j_t>> child_fwd_map(n_nonempty);
   // Loop over each sequence that the PairGenerator can produce.
-  for (std::size_t i = 0; i < pg->max_value(); i++) {
+  for (std::size_t i = 0; i <= pg->max_value(); i++) {
     std::size_t i0 = pg->forward_map(i);
     // Loop over the subsets that the sequence belongs to in the parent.
     for (const j_t j0 : subset_key[i0]) {
@@ -459,7 +459,7 @@ MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
       child_subset_key[i].push_back(j);
       child_subset_indices[j].push_back(i);
       child_subset_names[j].push_back(names[i]);
-      child_fwd_map[j].emplace(i, i0);
+      child_fwd_map[j].emplace(i0, i);
     }
   }
 
@@ -487,7 +487,7 @@ MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(Pai
 
   std::vector<bool> nonempty(subset_indices.size());
   std::size_t n_nonempty = 0;
-  for (std::size_t i = 0; i < pg->max_value(); i++) {
+  for (std::size_t i = 0; i <= pg->max_value(); i++) {
     std::size_t i0 = pg->forward_map(i);
     for (const j_t j : subset_key[i0]) {
       if (!nonempty[j]) {
@@ -510,18 +510,18 @@ MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(Pai
     }
   }
 
-  std::vector<std::vector<j_t>> child_subset_key(pg->max_value());
+  std::vector<std::vector<j_t>> child_subset_key(pg->max_value() + 1);
   std::vector<std::vector<j_t>> child_subset_indices(n_nonempty);
   std::vector<std::vector<std::string>> child_subset_names(n_nonempty);
   std::vector<std::unordered_map<j_t, j_t>> child_fwd_map(n_nonempty);
-  for (std::size_t i = 0; i < pg->max_value(); i++) {
+  for (std::size_t i = 0; i <= pg->max_value(); i++) {
     std::size_t i0 = pg->forward_map(i);
     for (const j_t j0 : subset_key[i0]) {
       j_t j = parent_to_child_map[j0];
       child_subset_key[i].push_back(j);
       child_subset_indices[j].push_back(i);
       child_subset_names[j].push_back(names[i]);
-      child_fwd_map[j].emplace(i, i0);
+      child_fwd_map[j].emplace(i0, i);
     }
   }
 
