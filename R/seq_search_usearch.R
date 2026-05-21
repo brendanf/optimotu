@@ -22,15 +22,15 @@
 #'
 #' @export
 seq_search_usearch <- function(
-    query,
-    ref,
-    threshold,
-    query_id = NULL,
-    ref_id = NULL,
-    parallel_config = parallel_concurrent(1),
-    usearch = find_usearch(),
-    verbose = FALSE,
-    ...
+  query,
+  ref,
+  threshold,
+  query_id = NULL,
+  ref_id = NULL,
+  parallel_config = parallel_concurrent(1),
+  usearch = find_usearch(),
+  verbose = FALSE,
+  ...
 ) {
   if (is.character(query) && length(query) == 1 && file.exists(query)) {
     tquery <- query
@@ -39,7 +39,7 @@ seq_search_usearch <- function(
       checkmate::assert_character(query_id, len = length(query), unique = TRUE)
       seq_names(query) <- query_id
     }
-    tquery <-tempfile(pattern = "query", fileext = ".fasta")
+    tquery <- tempfile(pattern = "query", fileext = ".fasta")
     write_sequence(query, tquery)
     on.exit(unlink(tquery))
   }
@@ -58,17 +58,27 @@ seq_search_usearch <- function(
   file.create(tout)
   on.exit(unlink(tout), add = TRUE)
   args <- c(
-    "-usearch_global", tquery,
-    "-db", tref,
-    "-id", 1 - threshold,
-    "-strand", "plus",
-    "-lopen", 0,
-    "-lext", 1,
-    "-maxaccepts", 100,
+    "-usearch_global",
+    tquery,
+    "-db",
+    tref,
+    "-id",
+    1 - threshold,
+    "-strand",
+    "plus",
+    "-lopen",
+    0,
+    "-lext",
+    1,
+    "-maxaccepts",
+    100,
     "-top_hits_only",
-    "-threads", parallel_config$threads,
-    "-userout", tout,
-    "-userfields", "query+target+id"
+    "-threads",
+    parallel_config$threads,
+    "-userout",
+    tout,
+    "-userfields",
+    "query+target+id"
   )
   extra_args <- list(...)
   if (length(extra_args) > 0) {
@@ -92,7 +102,7 @@ seq_search_usearch <- function(
     col.names = c("seq_id", "ref_id", "dist"),
     colClasses = c("character", "character", "numeric")
   )
-  out$dist <- 1 - out$dist/100
+  out$dist <- 1 - out$dist / 100
   attr(out, "class") <- c("tbl_df", "tbl", "data.frame")
   out
 }

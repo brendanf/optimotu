@@ -1,12 +1,24 @@
 verify_threshold_steps <- function(thresh_min, thresh_max, thresh_step) {
   if (is.null(thresh_min) || is.null(thresh_max) || is.null(thresh_step)) {
-    stop("either 'thresholds' or 'thresh_min', 'thresh_max', and 'thresh_step' must be given")
+    stop(
+      "either 'thresholds' or 'thresh_min', 'thresh_max', and 'thresh_step' must be given"
+    )
   }
-  if (!is.numeric(thresh_min) || !is.numeric(thresh_max) || !is.numeric(thresh_step)) {
+  if (
+    !is.numeric(thresh_min) ||
+      !is.numeric(thresh_max) ||
+      !is.numeric(thresh_step)
+  ) {
     stop("'thresh_min', 'thresh_max', and 'thresh_step' must all be numbers.")
   }
-  if (length(thresh_min) != 1L || length(thresh_max) != 1L || length(thresh_step) != 1L) {
-    stop("'thresh_min', 'thresh_max', and 'thresh_step' must all be of length 1.")
+  if (
+    length(thresh_min) != 1L ||
+      length(thresh_max) != 1L ||
+      length(thresh_step) != 1L
+  ) {
+    stop(
+      "'thresh_min', 'thresh_max', and 'thresh_step' must all be of length 1."
+    )
   }
   if (is.na(thresh_min) || is.na(thresh_max) || is.na(thresh_step)) {
     stop("'thresh_min', 'thresh_max', and 'thresh_step' may not be NA.")
@@ -66,10 +78,12 @@ reduplicate_thresholds.matrix <- function(out, thresholds) {
   checkmate::assert_class(thresholds, "optimotu_threshold_config")
   if (thresholds$type == "uniform") {
     out
-  } else if (isTRUE(all.equal(thresholds$threshold_order, seq_len(nrow(out))))) {
+  } else if (
+    isTRUE(all.equal(thresholds$threshold_order, seq_len(nrow(out))))
+  ) {
     out
   } else {
-    out[thresholds$threshold_order,]
+    out[thresholds$threshold_order, ]
   }
 }
 
@@ -217,8 +231,8 @@ clust_tree <- function(verbose = FALSE, test = FALSE) {
 #' @export
 #' @describeIn clust_config helper function for method `"matrix"`
 clust_matrix <- function(
-    binary_search = TRUE,
-    fill_method = c("binary", "linear", "topdown")
+  binary_search = TRUE,
+  fill_method = c("binary", "linear", "topdown")
 ) {
   fill_method = match.arg(fill_method)
   structure(
@@ -288,7 +302,8 @@ threshold_uniform <- function(from, to, by, thresh_names = NULL) {
     list(
       type = "uniform",
       from = from,
-      to = to, by = by,
+      to = to,
+      by = by,
       thresh_names = thresh_names,
       call = match.call()
     ),
@@ -351,7 +366,11 @@ threshold_set <- function(thresholds, thresh_names = names(thresholds)) {
 #' generate a look-up table for distances to the smallest encompassing threshold.
 #' @export
 #' @describeIn threshold_config helper function for method `"lookup"`
-threshold_lookup <- function(thresholds, precision, thresh_names = names(thresholds)) {
+threshold_lookup <- function(
+  thresholds,
+  precision,
+  thresh_names = names(thresholds)
+) {
   verify_thresholds(thresholds)
   verify_precision(precision)
   structure(
@@ -406,7 +425,10 @@ threshold_lookup <- function(thresholds, precision, thresh_names = names(thresho
 #'
 #' @return an object representing the thresholds
 #' @export
-parallel_config <- function(method = c("merge", "concurrent", "hierarchical"), ...) {
+parallel_config <- function(
+  method = c("merge", "concurrent", "hierarchical"),
+  ...
+) {
   method = match.arg(method)
   pc <- switch(
     method,
@@ -489,8 +511,8 @@ parallel_hierarchical <- function(threads, shards) {
 #'   https://doi.org/10.1093/bioinformatics/btw753
 
 dist_config <- function(
-    method = c("wfa2", "edlib", "hybrid", "hamming", "file", "usearch"),
-    ...
+  method = c("wfa2", "edlib", "hybrid", "hamming", "file", "usearch"),
+  ...
 ) {
   method = match.arg(method)
   dc <- switch(
@@ -518,9 +540,12 @@ dist_config <- function(
 #' @export
 #' @describeIn dist_config helper function for method `"wfa2"`
 dist_wfa2 <- function(
-    match = 0L, mismatch = 1L,
-    gap_open = 0L, gap_extend = 1L,
-    gap_open2 = gap_open, gap_extend2 = gap_extend
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
+  gap_open2 = gap_open,
+  gap_extend2 = gap_extend
 ) {
   checkmate::assert_count(match)
   checkmate::assert_count(mismatch, positive = TRUE)
@@ -656,8 +681,8 @@ dist_file <- function(filename, by_name = TRUE) {
 #' @return an object representing the prealignment method
 #' @export
 prealign_config <- function(
-    method = c("kmer", "wfa2", "edlib", "sneakysnake"),
-    ...
+  method = c("kmer", "wfa2", "edlib", "sneakysnake"),
+  ...
 ) {
   method = match.arg(method)
   pc <- switch(

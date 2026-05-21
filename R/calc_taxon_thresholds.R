@@ -59,14 +59,22 @@ superrank_thresholds <- function(supertaxa, superrank, rank, optima) {
 #' the parent rank is also unknown are in the item named `"_NA_"`.
 #' @export
 calc_taxon_thresholds <- function(
-    rank,
-    taxon_table,
-    optima,
-    ranks = c("kingdom", "phylum", "class", "order", "family", "genus", "species"),
-    conf_level = NULL,
-    measure = NULL,
-    default = unique(taxon_table[[ranks[1]]]),
-    metric = NULL
+  rank,
+  taxon_table,
+  optima,
+  ranks = c(
+    "kingdom",
+    "phylum",
+    "class",
+    "order",
+    "family",
+    "genus",
+    "species"
+  ),
+  conf_level = NULL,
+  measure = NULL,
+  default = unique(taxon_table[[ranks[1]]]),
+  metric = NULL
 ) {
   # check arguments
   checkmate::assert_string(rank)
@@ -77,7 +85,12 @@ calc_taxon_thresholds <- function(
   checkmate::assert_data_frame(taxon_table)
   checkmate::assert_names(
     names(taxon_table),
-    must.include = c("seq_id", superranks(rank, ranks), rank, subranks(rank, ranks)[1])
+    must.include = c(
+      "seq_id",
+      superranks(rank, ranks),
+      rank,
+      subranks(rank, ranks)[1]
+    )
   )
 
   if (nrow(taxon_table) == 0 || all(is.na(taxon_table$seq_id))) {
@@ -97,8 +110,10 @@ calc_taxon_thresholds <- function(
 
   checkmate::assert_string(measure, null.ok = TRUE)
   checkmate::assert_string(metric, null.ok = TRUE)
-  checkmate::assert(checkmate::test_null(metric) || checkmate::test_null(measure),
-                    "Only one of 'measure' and 'metric' should be given")
+  checkmate::assert(
+    checkmate::test_null(metric) || checkmate::test_null(measure),
+    "Only one of 'measure' and 'metric' should be given"
+  )
   if (is.null(measure)) {
     measure <- metric
   }
@@ -109,7 +124,7 @@ calc_taxon_thresholds <- function(
       optima <- optima[optima$metric == measure, ]
     } else {
       checkmate::assert_subset(measure, optima$measure)
-    optima <- optima[optima$measure == measure, ]
+      optima <- optima[optima$measure == measure, ]
     }
   }
   # ensure the thresholds are represented as fractional (not percent) distances
@@ -119,7 +134,11 @@ calc_taxon_thresholds <- function(
   checkmate::assert_string(default)
 
   # we only need unique rows, for cases where the taxon is known
-  taxon_table <- taxon_table[!is.na(taxon_table[[rank]]), c(superranks(rank, ranks), rank), drop = FALSE]
+  taxon_table <- taxon_table[
+    !is.na(taxon_table[[rank]]),
+    c(superranks(rank, ranks), rank),
+    drop = FALSE
+  ]
   taxon_table <- unique(taxon_table)
 
   # rank is also being used as a superrank (we are clustering inside it)

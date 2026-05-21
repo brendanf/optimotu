@@ -28,7 +28,9 @@ seq_distmx_usearch <- function(
   id_is_int = FALSE,
   ...
 ) {
-  if (!missing(details)) checkmate::assert_string(details)
+  if (!missing(details)) {
+    checkmate::assert_string(details)
+  }
   details <- match.arg(details, several.ok = FALSE)
   checkmate::assert_flag(id_is_int)
 
@@ -39,7 +41,6 @@ seq_distmx_usearch <- function(
     seq_id1 <- "seq_idx1"
     seq_id2 <- "seq_idx2"
     id_type <- "integer"
-
   }
   colnames <- if (details == "none") {
     c(seq_id1, seq_id2, "score2", "dist2")
@@ -51,7 +52,8 @@ seq_distmx_usearch <- function(
   } else {
     c(id_type, id_type, "numeric", "numeric", "character")
   }
-  userfields <- switch(details,
+  userfields <- switch(
+    details,
     "none" = "query+target+raw+id",
     "gapstats" = "query+target+raw+id+caln",
     "cigar" = "query+target+raw+id+caln"
@@ -71,14 +73,22 @@ seq_distmx_usearch <- function(
   file.create(tout)
   on.exit(unlink(tout), add = TRUE)
   args <- c(
-    "-allpairs_global", tseq,
-    "-id", 1 - threshold,
-    "-termdist", min(1, 2 * threshold),
-    "-lopen", 0,
-    "-lext", 1,
-    "-threads", parallel_config$threads,
-    "-userout", tout,
-    "-userfields", userfields
+    "-allpairs_global",
+    tseq,
+    "-id",
+    1 - threshold,
+    "-termdist",
+    min(1, 2 * threshold),
+    "-lopen",
+    0,
+    "-lext",
+    1,
+    "-threads",
+    parallel_config$threads,
+    "-userout",
+    tout,
+    "-userfields",
+    userfields
   )
   extra_args <- list(...)
   if (length(extra_args) > 0) {
@@ -112,12 +122,29 @@ seq_distmx_usearch <- function(
   if (details == "none") {
     out <- out[c(seq_id1, seq_id2, "score1", "dist1", "score2", "dist2")]
   } else if (details == "gapstats") {
-    out <- out[c(seq_id1, seq_id2, "score1", "dist1", "score2", "dist2",
-                 "align_length", "n_insert", "n_delete", "max_insert",
-                 "max_delete")]
+    out <- out[c(
+      seq_id1,
+      seq_id2,
+      "score1",
+      "dist1",
+      "score2",
+      "dist2",
+      "align_length",
+      "n_insert",
+      "n_delete",
+      "max_insert",
+      "max_delete"
+    )]
   } else if (details == "cigar") {
-    out <- out[c(seq_id1, seq_id2, "score1", "dist1", "score2", "dist2",
-                 "cigar")]
+    out <- out[c(
+      seq_id1,
+      seq_id2,
+      "score1",
+      "dist1",
+      "score2",
+      "dist2",
+      "cigar"
+    )]
   }
   attr(out, "class") <- c("tbl_df", "tbl", "data.frame")
   out

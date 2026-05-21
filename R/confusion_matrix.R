@@ -40,7 +40,10 @@ adjusted_rand_index.matrix <- function(x, c, threads = 1, ...) {
 #' @rdname confusion_matrix
 #' @method adjusted_rand_index data.frame
 adjusted_rand_index.data.frame <- function(x, ...) {
-  with(x, 2*(TP*TN - FP*FN) / ((TP + FP)*(FP + TN) + (TP + FN)*(FN + TN)))
+  with(
+    x,
+    2 * (TP * TN - FP * FN) / ((TP + FP) * (FP + TN) + (TP + FN) * (FN + TN))
+  )
 }
 
 #' @export
@@ -60,7 +63,14 @@ matthews_correlation_coefficient.matrix <- function(x, c, threads = 1, ...) {
 #' @rdname confusion_matrix
 #' @method matthews_correlation_coefficient data.frame
 matthews_correlation_coefficient.data.frame <- function(x, ...) {
-  with(x, (TP*TN - FP*FN) / sqrt(TP + FP) / sqrt(TP + FN) / sqrt(FN + TN) / sqrt(FP + TN))
+  with(
+    x,
+    (TP * TN - FP * FN) /
+      sqrt(TP + FP) /
+      sqrt(TP + FN) /
+      sqrt(FN + TN) /
+      sqrt(FP + TN)
+  )
 }
 
 #' @export
@@ -80,5 +90,5 @@ fowlkes_mallow_index.matrix <- function(x, c, threads = 1, ...) {
 #' @rdname confusion_matrix
 #' @method fowlkes_mallow_index data.frame
 fowlkes_mallow_index.data.frame <- function(x, ...) {
-  with(x, TP / sqrt(TP + FP) / sqrt(TP + FN) )
+  with(x, TP / sqrt(TP + FP) / sqrt(TP + FN))
 }

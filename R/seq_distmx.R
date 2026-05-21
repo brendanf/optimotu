@@ -49,14 +49,22 @@ seq_distmx <- function(
   id_is_int = is.data.frame(seq) && "seq_idx" %in% names(seq),
   ...
 ) {
-  checkmate::assert_character(seq_id, null.ok = TRUE, len = length(seq),
-                              unique = TRUE)
+  checkmate::assert_character(
+    seq_id,
+    null.ok = TRUE,
+    len = length(seq),
+    unique = TRUE
+  )
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
-  if (!missing(details)) checkmate::assert_string(details)
+  if (!missing(details)) {
+    checkmate::assert_string(details)
+  }
   details <- match.arg(details, several.ok = FALSE)
   details <- match(details, c("none", "gapstats", "cigar")) - 1L
-  if (!missing(span)) checkmate::assert_string(span)
+  if (!missing(span)) {
+    checkmate::assert_string(span)
+  }
   span <- match.arg(span, several.ok = FALSE)
   span <- match(span, c("global", "extension")) - 1L
   checkmate::assert_flag(id_is_int)
@@ -78,8 +86,10 @@ seq_distmx <- function(
 
     if (identical(dist_config$method, "file")) {
       checkmate::assert_file(dist_config$filename)
-      warning("seq_distmx called with external distance matrix --",
-              " ignoring 'details' and 'span'")
+      warning(
+        "seq_distmx called with external distance matrix --",
+        " ignoring 'details' and 'span'"
+      )
       if (dist_config$by_name == TRUE) {
         out <- utils::read.table(
           file = dist_config$filename,

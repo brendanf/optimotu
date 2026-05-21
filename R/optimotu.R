@@ -22,7 +22,11 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
   while (sequence_size(ref) > 0 && sequence_size(query) > 0) {
     result <- seq_search(query = query, ref = ref, threshold = threshold, ...)
     if (nrow(result) > 0) {
-      result <- result[result$dist <= threshold, c("seq_id", "ref_id"), drop = FALSE]
+      result <- result[
+        result$dist <= threshold,
+        c("seq_id", "ref_id"),
+        drop = FALSE
+      ]
       if (nrow(result) > 0) {
         result <- split(result, result$seq_id)
         result <- lapply(result, function(x) {
@@ -91,16 +95,24 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
 #' and the taxonomic assignments at each rank in `ranks`
 #' @export
 optimotu <- function(
-    seqs,
-    tax_prob,
-    threshold_optima,
-    ranks = c("kingdom", "phylum", "class", "order", "family", "genus", "species"),
-    measure = NULL,
-    prob_thresh = NULL,
-    dist_config = dist_wfa2(),
-    clust_config = clust_slink(),
-    parallel_config = parallel_concurrent(1),
-    verbose = FALSE
+  seqs,
+  tax_prob,
+  threshold_optima,
+  ranks = c(
+    "kingdom",
+    "phylum",
+    "class",
+    "order",
+    "family",
+    "genus",
+    "species"
+  ),
+  measure = NULL,
+  prob_thresh = NULL,
+  dist_config = dist_wfa2(),
+  clust_config = clust_slink(),
+  parallel_config = parallel_concurrent(1),
+  verbose = FALSE
 ) {
   # check inputs
   checkmate::assert(
@@ -134,7 +146,10 @@ optimotu <- function(
   checkmate::assert_character(seqs$seq, any.missing = FALSE)
 
   checkmate::assert_data_frame(tax_prob)
-  checkmate::assert_names(names(tax_prob), must.include = c("seq_id", "rank", "taxon"))
+  checkmate::assert_names(
+    names(tax_prob),
+    must.include = c("seq_id", "rank", "taxon")
+  )
   checkmate::assert_character(tax_prob$seq_id, any.missing = FALSE)
   checkmate::assert_set_equal(tax_prob$seq_id, seqs$seq_id, )
   checkmate::assert_character(tax_prob$rank, any.missing = FALSE)
@@ -161,9 +176,11 @@ optimotu <- function(
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   if (identical(dist_config$method, "file")) {
     if (isFALSE(dist_config$by_name)) {
-      stop("File-based distance matrices indexed by integer are not supported ",
-           "in optimotu(). If your file has sequence names, use ",
-           "dist_file({your_file}, by_name = TRUE) instead.")
+      stop(
+        "File-based distance matrices indexed by integer are not supported ",
+        "in optimotu(). If your file has sequence names, use ",
+        "dist_file({your_file}, by_name = TRUE) instead."
+      )
     }
   }
 
@@ -198,7 +215,8 @@ optimotu <- function(
     if (is.null(prob_thresh)) {
       known_taxa <- tax_prob$rank == .rank & !is.na(tax_prob$taxon)
     } else {
-      known_taxa <- tax_prob$rank == .rank & !is.na(tax_prob$taxon) &
+      known_taxa <- tax_prob$rank == .rank &
+        !is.na(tax_prob$taxon) &
         tax_prob$prob >= prob_thresh
     }
     known_taxon_table <- tax_prob[known_taxa, c("seq_id", "taxon")]
@@ -211,10 +229,15 @@ optimotu <- function(
     )
 
     # Find groups that need to be closed-reference clustered
-    preclosed_taxon_table <- split(known_taxon_table, known_taxon_table[[.parent_rank]])
+    preclosed_taxon_table <- split(
+      known_taxon_table,
+      known_taxon_table[[.parent_rank]]
+    )
     to_closedref_cluster <- vapply(
       preclosed_taxon_table,
-      function(x) {any(is.na(x[[.rank]])) & !all(is.na(x[[.rank]]))},
+      function(x) {
+        any(is.na(x[[.rank]])) & !all(is.na(x[[.rank]]))
+      },
       logical(1)
     )
     preclosed_taxon_table <- preclosed_taxon_table[to_closedref_cluster]
@@ -229,45 +252,54 @@ optimotu <- function(
     )
 
     # closed-reference clustering
-    clusters_closed_ref <-lapply(
-        preclosed_taxon_table,
-        function(parent_group) {
-          if (verbose) {
-            cat("Closed reference clustering within", .parent_rank,
-                parent_group[[.parent_rank]], "\n")
-          }
-          unknowns <- is.na(parent_group[[.rank]])
-
-          taxon <- parent_group[[.parent_rank]][1]
-
-          clusters <- closed_ref_cluster(
-            query = select_sequence(seqs, parent_group$seq_id[unknowns]),
-            ref = select_sequence(seqs, parent_group$seq_id[!unknowns]),
-            threshold = threshold_as_dist(thresholds[taxon]),
-            dist_config = dist_config,
-            parallel_config = parallel_config,
-            verbose = max(verbose - 1L, 0L)
+    clusters_closed_ref <- lapply(
+      preclosed_taxon_table,
+      function(parent_group) {
+        if (verbose) {
+          cat(
+            "Closed reference clustering within",
+            .parent_rank,
+            parent_group[[.parent_rank]],
+            "\n"
           )
-
-          # take taxonomy from the reference sequence
-          new_taxa <- merge(
-            clusters,
-            parent_group[, c("seq_id", .rank)],
-            by.x = "ref_id",
-            by.y = "seq_id"
-          )
-
-          new_taxa[, c("seq_id", .rank)]
         }
-      )
+        unknowns <- is.na(parent_group[[.rank]])
+
+        taxon <- parent_group[[.parent_rank]][1]
+
+        clusters <- closed_ref_cluster(
+          query = select_sequence(seqs, parent_group$seq_id[unknowns]),
+          ref = select_sequence(seqs, parent_group$seq_id[!unknowns]),
+          threshold = threshold_as_dist(thresholds[taxon]),
+          dist_config = dist_config,
+          parallel_config = parallel_config,
+          verbose = max(verbose - 1L, 0L)
+        )
+
+        # take taxonomy from the reference sequence
+        new_taxa <- merge(
+          clusters,
+          parent_group[, c("seq_id", .rank)],
+          by.x = "ref_id",
+          by.y = "seq_id"
+        )
+
+        new_taxa[, c("seq_id", .rank)]
+      }
+    )
     clusters_closed_ref <- do.call(rbind, clusters_closed_ref)
 
     # add the clustering results to the taxon table
-    known_taxon_table[match(clusters_closed_ref$seq_id, known_taxon_table$seq_id), .rank] <-
+    known_taxon_table[
+      match(clusters_closed_ref$seq_id, known_taxon_table$seq_id),
+      .rank
+    ] <-
       clusters_closed_ref[[.rank]]
 
     # make a taxonomy table for use in denovo clustering
-    predenovo_taxon_table <- known_taxon_table[is.na(known_taxon_table[[.rank]]),]
+    predenovo_taxon_table <- known_taxon_table[
+      is.na(known_taxon_table[[.rank]]),
+    ]
 
     # calculate the thresholds for denovo clustering ####
     denovo_thresholds <- calc_subtaxon_thresholds(
@@ -279,7 +311,10 @@ optimotu <- function(
     )
 
     # split the pre-denovo taxon table by the parent rank
-    predenovo_taxon_table <- split(predenovo_taxon_table, predenovo_taxon_table[[.parent_rank]])
+    predenovo_taxon_table <- split(
+      predenovo_taxon_table,
+      predenovo_taxon_table[[.parent_rank]]
+    )
 
     # denovo clustering
     clusters_denovo <- lapply(
@@ -320,7 +355,7 @@ optimotu <- function(
     )
     clusters_denovo <- do.call(rbind, clusters_denovo)
 
-    if (is.null (clusters_denovo) || nrow(clusters_denovo) == 0) {
+    if (is.null(clusters_denovo) || nrow(clusters_denovo) == 0) {
       clusters_denovo <- data.frame(seq_id = character(0))
       for (new_rank in superranks(.rank, ranks)) {
         clusters_denovo[[new_rank]] <- character(0)
@@ -331,11 +366,15 @@ optimotu <- function(
     }
 
     #### Step: make a taxonomy table to all assigned ranks ####
-    taxon_table <- known_taxon_table[!is.na(known_taxon_table[[.rank]]),,drop = FALSE]
+    taxon_table <- known_taxon_table[
+      !is.na(known_taxon_table[[.rank]]),
+      ,
+      drop = FALSE
+    ]
 
     #### Step: add the pseudotaxon names to the de novo clustered ASVs at current rank ####
     pseudotaxon_table <- rbind(clusters_denovo, .parent_pseudotaxa)
-    pseudotaxon_table <- sort_by(pseudotaxon_table, ~ seq_id)
+    pseudotaxon_table <- sort_by(pseudotaxon_table, ~seq_id)
     pseudotaxon_table[[.rank]] <- paste(
       pseudotaxon_table[[.parent_rank]],
       pseudotaxon_table[[.rank]]
@@ -347,12 +386,13 @@ optimotu <- function(
         n = length(unique(pseudotaxon_table[[.rank]])),
         prefix = paste0("pseudo", .rank, "_")
       )
-    ) |> as.character()
+    ) |>
+      as.character()
   }
   # export the outputs to a final table
   out <- sort_by(
     rbind(taxon_table, pseudotaxon_table),
-    ~ seq_id
+    ~seq_id
   )
   rownames(out) <- NULL
   class(out) <- c("tbl_df", "tbl", "data.frame")

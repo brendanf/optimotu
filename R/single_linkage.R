@@ -77,15 +77,15 @@ is_list_of_character <- function(x) {
 #' `output_type=="hclust"`, or a list of one of these when `which` is a list.
 #' @export
 distmx_cluster = function(
-   distmx,
-   names,
-   threshold_config,
-   clust_config = clust_index(),
-   parallel_config = parallel_concurrent(1),
-   output_type = c("matrix", "hclust"),
-   which = NULL,
-   verbose = FALSE,
-   by_name = FALSE
+  distmx,
+  names,
+  threshold_config,
+  clust_config = clust_index(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = NULL,
+  verbose = FALSE,
+  by_name = FALSE
 ) {
   output_type = match.arg(output_type)
   out <- if (!is.null(which) && !isTRUE(which)) {

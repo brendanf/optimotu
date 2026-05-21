@@ -9,7 +9,11 @@
 is_placeholder <- function(taxon) {
   checkmate::assert_character(taxon)
   is.na(taxon) |
-  grepl("^(dummy|unclassified|unknown|uncultured|environmental|unassigned|none)", taxon, ignore.case = TRUE) |
+    grepl(
+      "^(dummy|unclassified|unknown|uncultured|environmental|unassigned|none)",
+      taxon,
+      ignore.case = TRUE
+    ) |
     grepl("[_ ][Ss]p(\\b|_|[A-Z0-9])", taxon) |
     grepl("incertae[_ ]sedis", taxon, ignore.case = TRUE)
 }
@@ -20,8 +24,8 @@ is_placeholder <- function(taxon) {
 #' @return a cleaned taxonomy
 #' @export
 clean_taxonomy <- function(
-    taxonomy,
-    ranks = c("kingdom", "phylum", "class", "order", "family", "genus", "species")
+  taxonomy,
+  ranks = c("kingdom", "phylum", "class", "order", "family", "genus", "species")
 ) {
   checkmate::assert_data_frame(taxonomy)
   checkmate::assert_character(ranks)
@@ -89,18 +93,26 @@ strict_median <- function(x) {
 #' guaranteed to be in the same order as the input.
 #' @export
 calculate_cluster_measures <- function(
-    k,
-    c,
-    threads = 1L,
-    measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
+  k,
+  c,
+  threads = 1L,
+  measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
 ) {
-  checkmate::assert_matrix(k, mode = "integer", row.names = "unique", any.missing = FALSE)
+  checkmate::assert_matrix(
+    k,
+    mode = "integer",
+    row.names = "unique",
+    any.missing = FALSE
+  )
   checkmate::assert_numeric(as.integer(row.names(k)), any.missing = FALSE)
   thresholds <- as.numeric(row.names(k))
   checkmate::assert_integer(c, any.missing = FALSE)
   checkmate::assert_count(threads, positive = TRUE)
   checkmate::assert_character(measures)
-  checkmate::assert_subset(measures, c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"))
+  checkmate::assert_subset(
+    measures,
+    c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
+  )
 
   # measures which are based on the confusion matrix
   confusion_measures <- list(
@@ -109,7 +121,10 @@ calculate_cluster_measures <- function(
     ARI = adjusted_rand_index,
     FMI = fowlkes_mallow_index
   )
-  confusion_measures <- confusion_measures[intersect(measures, names(confusion_measures))]
+  confusion_measures <- confusion_measures[intersect(
+    measures,
+    names(confusion_measures)
+  )]
 
   # information theoretic measures
   information_measures <- intersect(c("MI", "AMI"), measures)
@@ -119,7 +134,11 @@ calculate_cluster_measures <- function(
   other_measures <- other_measures[intersect(names(other_measures), measures)]
 
   # the measures in the order they will be calculated
-  sorted_measures <- c(names(confusion_measures), information_measures, names(other_measures))
+  sorted_measures <- c(
+    names(confusion_measures),
+    information_measures,
+    names(other_measures)
+  )
 
   # allocate output
   n <- nrow(k) * length(measures)
@@ -168,18 +187,26 @@ calculate_cluster_measures <- function(
 #' - `value` (`numeric`) the value of the measure at the threshold
 #' @export
 find_best_threshold <- function(
-    k,
-    c,
-    threads = 1L,
-    measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
+  k,
+  c,
+  threads = 1L,
+  measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
 ) {
-  checkmate::assert_matrix(k, mode = "integer", row.names = "unique", any.missing = FALSE)
+  checkmate::assert_matrix(
+    k,
+    mode = "integer",
+    row.names = "unique",
+    any.missing = FALSE
+  )
   checkmate::assert_numeric(as.integer(row.names(k)), any.missing = FALSE)
   thresholds <- as.numeric(row.names(k))
   checkmate::assert_integer(c, any.missing = FALSE)
   checkmate::assert_count(threads, positive = TRUE)
   checkmate::assert_character(measures)
-  checkmate::assert_subset(measures, c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"))
+  checkmate::assert_subset(
+    measures,
+    c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
+  )
 
   # measures which are based on the confusion matrix
   confusion_measures <- list(
@@ -188,7 +215,10 @@ find_best_threshold <- function(
     ARI = adjusted_rand_index,
     FMI = fowlkes_mallow_index
   )
-  confusion_measures <- confusion_measures[intersect(measures, names(confusion_measures))]
+  confusion_measures <- confusion_measures[intersect(
+    measures,
+    names(confusion_measures)
+  )]
 
   # information theoretic measures
   information_measures <- intersect(c("MI", "AMI"), measures)
@@ -198,7 +228,11 @@ find_best_threshold <- function(
   other_measures <- other_measures[intersect(names(other_measures), measures)]
 
   # the measures in the order they will be calculated
-  sorted_measures <- c(names(confusion_measures), information_measures, names(other_measures))
+  sorted_measures <- c(
+    names(confusion_measures),
+    information_measures,
+    names(other_measures)
+  )
 
   # allocate output
   out <- data.frame(
@@ -283,8 +317,15 @@ find_best_threshold <- function(
 optimize_thresholds <- function(
   taxonomy,
   refseq,
-  ranks = c("kingdom", "phylum", "class", "order", "family", "genus",
-            "species"),
+  ranks = c(
+    "kingdom",
+    "phylum",
+    "class",
+    "order",
+    "family",
+    "genus",
+    "species"
+  ),
   dist_config = dist_wfa2(),
   threshold_config = threshold_uniform(0.0, 0.4, 0.001),
   clust_config = clust_tree(),
@@ -295,7 +336,6 @@ optimize_thresholds <- function(
   measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
   verbose = FALSE
 ) {
-
   # Check input
   checkmate::assert_character(ranks)
   checkmate::assert_string(id_col)
@@ -309,8 +349,10 @@ optimize_thresholds <- function(
   checkmate::assert_integerish(min_refseq, lower = 1L)
   checkmate::assert_integerish(min_taxa, lower = 1L)
   checkmate::assert_character(measures)
-  checkmate::assert_subset(measures, c("MCC", "RI", "ARI", "FMI", "MI", "AMI",
-                                       "FM"))
+  checkmate::assert_subset(
+    measures,
+    c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
+  )
   checkmate::assert(
     checkmate::check_flag(verbose),
     checkmate::check_integerish(verbose, lower = 0L)
@@ -332,8 +374,11 @@ optimize_thresholds <- function(
       testset_select$supertaxon %in% taxonomy[[ranks[1]]],
   ]
   if (isTRUE(verbose) || verbose >= 1L) {
-    cat(" done\n  Found", nrow(testset_select),
-        "total thresholds to optimize.\n")
+    cat(
+      " done\n  Found",
+      nrow(testset_select),
+      "total thresholds to optimize.\n"
+    )
     if (verbose >= 2L) {
       dplyr::count(testset_select, rank, superrank) |>
         dplyr::mutate(

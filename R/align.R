@@ -41,9 +41,18 @@
 #' end gaps in the *first* sequence are penalized.
 #' @export
 #' @rdname pairwise_alignment
-align <- function(a, b, match = 0, mismatch = 1, gap_open = 0, gap_extend = 1,
-                  gap_open2 = 0, gap_extend2 = 0, method = c("wfa2", "edlib"),
-                  span = c("global", "extend")) {
+align <- function(
+  a,
+  b,
+  match = 0,
+  mismatch = 1,
+  gap_open = 0,
+  gap_extend = 1,
+  gap_open2 = 0,
+  gap_extend2 = 0,
+  method = c("wfa2", "edlib"),
+  span = c("global", "extend")
+) {
   # Check that the inputs are valid
   checkmate::assert_string(a)
   checkmate::assert_string(b)
@@ -60,9 +69,17 @@ align <- function(a, b, match = 0, mismatch = 1, gap_open = 0, gap_extend = 1,
   checkmate::assert_character(method)
   method <- match.arg(method)
   if (method == "edlib") {
-    if (match != 0 || mismatch != 1 || gap_open != 0 || gap_extend != 1 ||
-        gap_open2 != 0 || gap_extend2 != 0) {
-      warning("Edlib only supports match = 0, mismatch = 1, open = 0, extend = 1, open2 = 0, extend2 = 0")
+    if (
+      match != 0 ||
+        mismatch != 1 ||
+        gap_open != 0 ||
+        gap_extend != 1 ||
+        gap_open2 != 0 ||
+        gap_extend2 != 0
+    ) {
+      warning(
+        "Edlib only supports match = 0, mismatch = 1, open = 0, extend = 1, open2 = 0, extend2 = 0"
+      )
     }
     switch(
       span,
@@ -72,8 +89,26 @@ align <- function(a, b, match = 0, mismatch = 1, gap_open = 0, gap_extend = 1,
   } else {
     switch(
       span,
-      global = align_wfa2_global(a, b, -match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2),
-      extend = align_wfa2_extend(a, b, -match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+      global = align_wfa2_global(
+        a,
+        b,
+        -match,
+        mismatch,
+        gap_open,
+        gap_extend,
+        gap_open2,
+        gap_extend2
+      ),
+      extend = align_wfa2_extend(
+        a,
+        b,
+        -match,
+        mismatch,
+        gap_open,
+        gap_extend,
+        gap_open2,
+        gap_extend2
+      )
     )
   }
 }
@@ -82,9 +117,17 @@ align <- function(a, b, match = 0, mismatch = 1, gap_open = 0, gap_extend = 1,
 #' @export
 #' @keywords internal
 #' @describeIn pairwise_alignment Generate alignment CIGAR with WFA2
-cigar_wfa2 <- function(a, b, match = 0, mismatch = 1, gap_open = 0,
-                                  gap_extend = 1, gap_open2 = 0, gap_extend2 = 0,
-                       span = c("global", "extend")) {
+cigar_wfa2 <- function(
+  a,
+  b,
+  match = 0,
+  mismatch = 1,
+  gap_open = 0,
+  gap_extend = 1,
+  gap_open2 = 0,
+  gap_extend2 = 0,
+  span = c("global", "extend")
+) {
   # Check that the inputs are valid
   checkmate::assert_string(a)
   checkmate::assert_string(b)
@@ -100,10 +143,26 @@ cigar_wfa2 <- function(a, b, match = 0, mismatch = 1, gap_open = 0,
 
   switch(
     span,
-    global = cigar_wfa2_global(a, b, -match, mismatch, gap_open,
-                               gap_extend, gap_open2, gap_extend2),
-    extend = cigar_wfa2_extend(a, b, -match, mismatch, gap_open,
-                               gap_extend, gap_open2, gap_extend2)
+    global = cigar_wfa2_global(
+      a,
+      b,
+      -match,
+      mismatch,
+      gap_open,
+      gap_extend,
+      gap_open2,
+      gap_extend2
+    ),
+    extend = cigar_wfa2_extend(
+      a,
+      b,
+      -match,
+      mismatch,
+      gap_open,
+      gap_extend,
+      gap_open2,
+      gap_extend2
+    )
   )
 }
 

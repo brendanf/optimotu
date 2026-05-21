@@ -25,16 +25,16 @@
 #'
 #' @export
 seq_cluster_usearch <- function(
-    seq,
-    seq_id = names(seq),
-    threshold_config,
-    clust_config = clust_tree(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    usearch_ncpu = NULL,
-    usearch = Sys.which("usearch"),
-    ...
+  seq,
+  seq_id = names(seq),
+  threshold_config,
+  clust_config = clust_tree(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  usearch_ncpu = NULL,
+  usearch = Sys.which("usearch"),
+  ...
 ) {
   UseMethod("seq_cluster_usearch", seq)
 }
@@ -42,16 +42,16 @@ seq_cluster_usearch <- function(
 #' @method seq_cluster_usearch data.frame
 #' @export
 seq_cluster_usearch.data.frame <- function(
-    seq,
-    seq_id = seq$seq_id,
-    threshold_config,
-    clust_config = clust_tree(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    usearch_ncpu = NULL,
-    usearch = Sys.which("usearch"),
-    ...
+  seq,
+  seq_id = seq$seq_id,
+  threshold_config,
+  clust_config = clust_tree(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  usearch_ncpu = NULL,
+  usearch = Sys.which("usearch"),
+  ...
 ) {
   mycall <- match.call()
   mycall[[1]] <- seq_cluster_usearch.DNAStringSet
@@ -68,22 +68,23 @@ seq_cluster_usearch.data.frame <- function(
 
 #' @export
 seq_cluster_usearch.character <- function(
-    seq,
-    seq_id = names(seq),
-    threshold_config,
-    clust_config = clust_index(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    usearch_ncpu = NULL,
-    usearch = Sys.which("usearch"),
-    ...
+  seq,
+  seq_id = names(seq),
+  threshold_config,
+  clust_config = clust_index(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  usearch_ncpu = NULL,
+  usearch = Sys.which("usearch"),
+  ...
 ) {
   output_type = match.arg(output_type)
   if (length(seq) == 1 && file.exists(seq)) {
     index <- Biostrings::fasta.seqlengths(seq)
-    if (!missing(seq_id))
+    if (!missing(seq_id)) {
       warning("'seq_id' has no effect when 'seq' is a file.")
+    }
     if (!all(names(index) == as.character(seq_along(index)))) {
       # write a temp version of the file which has headers as integer indices
       tf <- tempfile(pattern = "clust", fileext = ".fasta")
@@ -92,7 +93,7 @@ seq_cluster_usearch.character <- function(
       sc <- file(seq, open = "r")
       on.exit(close(sc), add = TRUE)
       nseq <- 0L
-      while(length(lines <- readLines(sc, n = 10000)) > 0L) {
+      while (length(lines <- readLines(sc, n = 10000)) > 0L) {
         headers <- grep("^>", lines)
         lines[headers] <- sprintf(">%d", seq_along(headers) + nseq - 1L)
         writeLines(lines, tc)
@@ -127,20 +128,22 @@ seq_cluster_usearch.character <- function(
 
 #' @export
 seq_cluster_usearch.DNAStringSet <- function(
-    seq,
-    seq_id = names(seq),
-    threshold_config,
-    clust_config = clust_index(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    usearch_ncpu = NULL,
-    usearch = Sys.which("usearch"),
-    ...
+  seq,
+  seq_id = names(seq),
+  threshold_config,
+  clust_config = clust_index(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  usearch_ncpu = NULL,
+  usearch = Sys.which("usearch"),
+  ...
 ) {
   output_type = match.arg(output_type)
   # rename the sequences if necessary
-  if (!isTRUE(all.equal(names(seq), seq_id))) names(seq) <- seq_id
+  if (!isTRUE(all.equal(names(seq), seq_id))) {
+    names(seq) <- seq_id
+  }
   if (is.list(which)) {
     if (all(vapply(which, is.logical, TRUE))) {
       seq <- seq[Reduce(`|`, which)]
@@ -149,14 +152,18 @@ seq_cluster_usearch.DNAStringSet <- function(
     } else if (is_list_of_character(which)) {
       seq <- seq[sort(unique(unlist(which)))]
     } else {
-      stop("'which' must be a character, integer, or logical vector, or a",
-           " list of one of these.")
+      stop(
+        "'which' must be a character, integer, or logical vector, or a",
+        " list of one of these."
+      )
     }
   } else {
     seq <- seq[which]
   }
   # shortcut if only one sequence
-  if (length(seq) == 1) return(names(seq))
+  if (length(seq) == 1) {
+    return(names(seq))
+  }
   tf <- tempfile(pattern = "clust", fileext = ".fasta")
   Biostrings::writeXStringSet(`names<-`(seq, seq_along(seq) - 1L), tf)
   on.exit(unlink(tf))
@@ -174,31 +181,54 @@ seq_cluster_usearch.DNAStringSet <- function(
 }
 
 do_usearch_singlelink <- function(
-    seq_file,
-    seq_id,
-    threshold_config,
-    clust_config,
-    parallel_config,
-    output_type,
-    which,
-    usearch_ncpu,
-    usearch
+  seq_file,
+  seq_id,
+  threshold_config,
+  clust_config,
+  parallel_config,
+  output_type,
+  which,
+  usearch_ncpu,
+  usearch
 ) {
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
-  usearch_thresh_max <- if (threshold_config$type == "uniform") threshold_config$to else
+  usearch_thresh_max <- if (threshold_config$type == "uniform") {
+    threshold_config$to
+  } else {
     threshold_config$thresholds[length(threshold_config$thresholds)]
+  }
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   if (is.list(which)) {
     verify_which(which, seq_id)
   }
   checkmate::assert(
-    checkmate::check_integer(which, lower = 1, upper = length(seq_id), any.missing = FALSE),
+    checkmate::check_integer(
+      which,
+      lower = 1,
+      upper = length(seq_id),
+      any.missing = FALSE
+    ),
     checkmate::check_subset(which, seq_id),
     checkmate::check_logical(which, any.missing = FALSE),
-    checkmate::check_list(which, types = "logical", any.missing = FALSE, min.len = 1),
-    checkmate::check_list(which, types = "integerish", any.missing = FALSE, min.len = 1),
-    checkmate::check_list(which, types = "character", any.missing = FALSE, min.len = 1)
+    checkmate::check_list(
+      which,
+      types = "logical",
+      any.missing = FALSE,
+      min.len = 1
+    ),
+    checkmate::check_list(
+      which,
+      types = "integerish",
+      any.missing = FALSE,
+      min.len = 1
+    ),
+    checkmate::check_list(
+      which,
+      types = "character",
+      any.missing = FALSE,
+      min.len = 1
+    )
   )
   if (is.list(which) && !is.character(which[[1]])) {
     which <- lapply(which, `[`, x = seq_id)
@@ -207,12 +237,18 @@ do_usearch_singlelink <- function(
   stopifnot(system2("mkfifo", fifoname) == 0)
   on.exit(unlink(fifoname), TRUE)
   args <- c(
-    "-calc_distmx", seq_file, # input file
-    "-tabbedout", fifoname, # output fifo
-    "-maxdist", usearch_thresh_max, # similarity threshold
-    "-termdist", min(1, 2*usearch_thresh_max), # threshold for udist
-    "-lopen", "0", # gap opening
-    "-lext", "1" # gap extend
+    "-calc_distmx",
+    seq_file, # input file
+    "-tabbedout",
+    fifoname, # output fifo
+    "-maxdist",
+    usearch_thresh_max, # similarity threshold
+    "-termdist",
+    min(1, 2 * usearch_thresh_max), # threshold for udist
+    "-lopen",
+    "0", # gap opening
+    "-lext",
+    "1" # gap extend
   )
   if (!is.null(usearch_ncpu)) {
     checkmate::assert_count(usearch_ncpu, positive = TRUE)

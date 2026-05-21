@@ -25,20 +25,30 @@
 #' @export
 
 seq_search <- function(
-    query,
-    ref,
-    threshold,
-    query_id = NULL,
-    ref_id = NULL,
-    dist_config = dist_wfa2(),
-    parallel_config = parallel_concurrent(1),
-    verbose = FALSE,
-    return_cigar = FALSE,
-    span = c("global", "extension"),
-    ...
+  query,
+  ref,
+  threshold,
+  query_id = NULL,
+  ref_id = NULL,
+  dist_config = dist_wfa2(),
+  parallel_config = parallel_concurrent(1),
+  verbose = FALSE,
+  return_cigar = FALSE,
+  span = c("global", "extension"),
+  ...
 ) {
-  checkmate::assert_character(query_id, null.ok = TRUE, len = length(query), unique = TRUE)
-  checkmate::assert_character(ref_id, null.ok = TRUE, len = length(ref), unique = TRUE)
+  checkmate::assert_character(
+    query_id,
+    null.ok = TRUE,
+    len = length(query),
+    unique = TRUE
+  )
+  checkmate::assert_character(
+    ref_id,
+    null.ok = TRUE,
+    len = length(ref),
+    unique = TRUE
+  )
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   checkmate::assert_flag(return_cigar)
@@ -82,7 +92,9 @@ seq_search <- function(
         # An external distance matrix may not have queries and references
         # distinguished, so search for pairs in both directions
         fwd_matches <- out$seq_id %in% names(query) & out$ref_id %in% names(ref)
-        swap_matches <- out$seq_id %in% names(ref) & out$ref_id %in% names(query)
+        swap_matches <- out$seq_id %in%
+          names(ref) &
+          out$ref_id %in% names(query)
         data.frame(
           seq_id = c(out$seq_id[fwd_matches], out$ref_id[swap_matches]),
           ref_id = c(out$ref_id[fwd_matches], out$seq_id[swap_matches]),

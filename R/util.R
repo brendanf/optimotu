@@ -17,13 +17,25 @@ fastq_regex <- "\\.f(ast)?q(\\.gz)?$"
 #' @return (`character`) name of the column
 find_name_col <- function(d) {
   stopifnot(is.data.frame(d))
-  if ("seq_id" %in% names(d)) return("seq_id")
-  if ("name" %in% names(d)) return("name")
-  if ("ASV" %in% names(d)) return("ASV")
-  if ("OTU" %in% names(d)) return("OTU")
+  if ("seq_id" %in% names(d)) {
+    return("seq_id")
+  }
+  if ("name" %in% names(d)) {
+    return("name")
+  }
+  if ("ASV" %in% names(d)) {
+    return("ASV")
+  }
+  if ("OTU" %in% names(d)) {
+    return("OTU")
+  }
   if (ncol(d) == 2) {
-    if ("seq" %in% names(d)) return(names(d)[names(d) != "seq"])
-    if ("sequence" %in% names(d)) return(names(d)[names(d) != "sequence"])
+    if ("seq" %in% names(d)) {
+      return(names(d)[names(d) != "seq"])
+    }
+    if ("sequence" %in% names(d)) {
+      return(names(d)[names(d) != "sequence"])
+    }
     return(names(d)[1])
   }
   stop("unable to determine sequence name column:", names(d))
@@ -34,13 +46,25 @@ find_name_col <- function(d) {
 #' @return (`character`) name of the column
 find_seq_col <- function(d) {
   stopifnot(is.data.frame(d))
-  if ("seq" %in% names(d)) return("seq")
-  if ("sequence" %in% names(d)) return("sequence")
+  if ("seq" %in% names(d)) {
+    return("seq")
+  }
+  if ("sequence" %in% names(d)) {
+    return("sequence")
+  }
   if (ncol(d) == 2) {
-    if ("seq_id" %in% names(d)) return(names(d)[names(d) != "seq_id"])
-    if ("name" %in% names(d)) return(names(d)[names(d) != "name"])
-    if ("ASV" %in% names(d)) return(names(d)[names(d) != "ASV"])
-    if ("OTU" %in% names(d)) return(names(d)[names(d) != "OTU"])
+    if ("seq_id" %in% names(d)) {
+      return(names(d)[names(d) != "seq_id"])
+    }
+    if ("name" %in% names(d)) {
+      return(names(d)[names(d) != "name"])
+    }
+    if ("ASV" %in% names(d)) {
+      return(names(d)[names(d) != "ASV"])
+    }
+    if ("OTU" %in% names(d)) {
+      return(names(d)[names(d) != "OTU"])
+    }
     return(names(d)[2])
   }
   stop("unable to determine sequence column:", names(d))
@@ -99,7 +123,7 @@ select_sequence <- function(sequence, which, negate = FALSE, name_col = NULL) {
   checkmate::assert_string(name_col, null.ok = TRUE)
 
   if (isTRUE(negate)) {
-    if (is.numeric(which)){
+    if (is.numeric(which)) {
       which <- -which
     } else if (is.logical(which)) {
       which <- !which
@@ -108,7 +132,9 @@ select_sequence <- function(sequence, which, negate = FALSE, name_col = NULL) {
     }
   }
 
-  if (is.character(sequence) && length(sequence) == 1 && file.exists(sequence)) {
+  if (
+    is.character(sequence) && length(sequence) == 1 && file.exists(sequence)
+  ) {
     if (grepl(fasta_regex, sequence)) {
       sequence <- Biostrings::readBStringSet(sequence)
     } else if (grepl(fastq_regex, sequence)) {
@@ -121,8 +147,12 @@ select_sequence <- function(sequence, which, negate = FALSE, name_col = NULL) {
     if (is.null(name_col)) {
       name_col <- find_name_col(sequence)
     }
-    if (is.numeric(which)) return(sequence[which,])
-    if (is.logical(which)) return(sequence[which,])
+    if (is.numeric(which)) {
+      return(sequence[which, ])
+    }
+    if (is.logical(which)) {
+      return(sequence[which, ])
+    }
     if (is.character(which)) {
       out <- data.frame(which)
       names(out) <- name_col
@@ -139,11 +169,10 @@ sequence_size <- function(seq) {
     if (grepl(fasta_regex, seq)) {
       return(length(Biostrings::fasta.seqlengths(seq)))
     } else if (grepl(fastq_regex, seq)) {
-      return(length(Biostrings::fastq.seqlengths(seq))
-      )
+      return(length(Biostrings::fastq.seqlengths(seq)))
     } else {
       stop("unknown file type: ", seq)
-  }
+    }
   } else if (is.data.frame(seq)) {
     return(nrow(seq))
   } else {
@@ -263,8 +292,12 @@ find_executable <- function(executable) {
     out <- Sys.which(executable)
   }
   if (nchar(out) == 0 || !file.exists(out)) {
-    out <- list.files(path = "bin", pattern = executable, recursive = TRUE,
-                      full.names = TRUE)
+    out <- list.files(
+      path = "bin",
+      pattern = executable,
+      recursive = TRUE,
+      full.names = TRUE
+    )
   }
   checkmate::assert_file_exists(out, access = "x", .var.name = executable)
   out

@@ -9,15 +9,15 @@
 #' values greater than 1 (or TRUE) print more
 #' @export
 seq_cluster <- function(
-    seq,
-    seq_id = names(seq),
-    dist_config,
-    threshold_config,
-    clust_config = clust_tree(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    verbose = FALSE
+  seq,
+  seq_id = names(seq),
+  dist_config,
+  threshold_config,
+  clust_config = clust_tree(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  verbose = FALSE
 ) {
   UseMethod("seq_cluster", seq)
 }
@@ -25,15 +25,15 @@ seq_cluster <- function(
 #' @method seq_cluster data.frame
 #' @export
 seq_cluster.data.frame <- function(
-    seq,
-    seq_id = seq$seq_id,
-    dist_config,
-    threshold_config,
-    clust_config = clust_tree(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    verbose = FALSE
+  seq,
+  seq_id = seq$seq_id,
+  dist_config,
+  threshold_config,
+  clust_config = clust_tree(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  verbose = FALSE
 ) {
   mycall <- match.call()
   if (missing(seq_id)) {
@@ -59,15 +59,15 @@ seq_cluster.data.frame <- function(
 
 #' @export
 seq_cluster.character <- function(
-    seq,
-    seq_id = names(seq),
-    dist_config,
-    threshold_config,
-    clust_config = clust_tree(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    verbose = FALSE
+  seq,
+  seq_id = names(seq),
+  dist_config,
+  threshold_config,
+  clust_config = clust_tree(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  verbose = FALSE
 ) {
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   if (identical(dist_config$method, "usearch")) {
@@ -92,7 +92,9 @@ seq_cluster.character <- function(
   if (length(seq) == 1 && file.exists(seq)) {
     seq <- as.character(Biostrings::readBStringSet(seq))
   }
-  if (!missing(seq_id)) names(seq) <- seq_id
+  if (!missing(seq_id)) {
+    names(seq) <- seq_id
+  }
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
@@ -112,12 +114,24 @@ seq_cluster.character <- function(
     )
   } else {
     checkmate::assert(
-      checkmate::check_list(which, types = "logical", any.missing = FALSE,
-                            min.len = 1),
-      checkmate::check_list(which, types = "integerish", any.missing = FALSE,
-                            min.len = 1),
-      checkmate::check_list(which, types = "character", any.missing = FALSE,
-                            min.len = 1),
+      checkmate::check_list(
+        which,
+        types = "logical",
+        any.missing = FALSE,
+        min.len = 1
+      ),
+      checkmate::check_list(
+        which,
+        types = "integerish",
+        any.missing = FALSE,
+        min.len = 1
+      ),
+      checkmate::check_list(
+        which,
+        types = "character",
+        any.missing = FALSE,
+        min.len = 1
+      ),
     )
     if (is.list(which) && !is.character(which[[1]])) {
       which <- lapply(which, `[`, x = seq_id)
@@ -147,15 +161,15 @@ seq_cluster.character <- function(
 
 #' @export
 seq_cluster.DNAStringSet <- function(
-    seq,
-    seq_id = names(seq),
-    dist_config,
-    threshold_config,
-    clust_config = clust_index(),
-    parallel_config = parallel_concurrent(1),
-    output_type = c("matrix", "hclust"),
-    which = TRUE,
-    verbose = FALSE
+  seq,
+  seq_id = names(seq),
+  dist_config,
+  threshold_config,
+  clust_config = clust_index(),
+  parallel_config = parallel_concurrent(1),
+  output_type = c("matrix", "hclust"),
+  which = TRUE,
+  verbose = FALSE
 ) {
   mycall <- match.call()
   if (identical(dist_config$method, "usearch")) {
