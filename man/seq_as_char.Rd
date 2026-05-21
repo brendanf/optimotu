@@ -2,19 +2,54 @@
 % Please edit documentation in R/util.R
 \name{seq_as_char}
 \alias{seq_as_char}
-\title{get sequences as a character vector}
+\title{Harmonize sequence inputs to character, paths, or Biostrings objects}
 \usage{
-seq_as_char(seq, seq_col = NULL, name_col = NULL)
+seq_as_char(
+  seq,
+  seq_idx = NULL,
+  seq_file = NULL,
+  seq_col = NULL,
+  name_col = NULL,
+  as = c("character", "dna_string_set", "fasta_path", "data.frame")
+)
 }
 \arguments{
-\item{seq}{(\code{data.frame}, \code{character}, or \code{XStringSet}) sequences to get}
+\item{seq}{(\code{character}, \code{data.frame}, \code{XStringSet}, single FASTA/FASTQ path,
+\code{fastqindexr_index}, or character vector of \code{.fqi} paths).}
 
-\item{seq_col}{(\code{character}) name of the column in a data frame which
-contains the sequences}
+\item{seq_idx}{optional integerish vector of 1-based indices (\code{NULL} = all).}
 
-\item{name_col}{(\code{character}) name of the column in a data frame which
-contains the sequence names}
+\item{seq_file}{optional character vector of path overrides for index-backed
+inputs only.}
+
+\item{seq_col, name_col}{optional column names for \code{data.frame} inputs.}
+
+\item{as}{desired output: \code{"character"} (named character vector),
+\code{"dna_string_set"}, \code{"fasta_path"} (single FASTA path; attribute
+\code{optimotu_unlink} is \code{TRUE} when the caller should \code{\link[=unlink]{unlink()}} the file),
+or \code{"data.frame"} with columns \code{seq_id} and \code{seq}.}
+}
+\value{
+Depends on \code{as}; see parameter description.
 }
 \description{
-get sequences as a character vector
+Supports named \code{character} vectors (literal sequences), \code{data.frame} and
+\code{\link[Biostrings:XStringSet-class]{XStringSet}} objects, single FASTA/FASTQ file
+paths, and (when suggested package \code{fastqindexr} is installed) a
+\code{fastqindexr_index} object or a character vector of existing \code{.fqi} paths.
+}
+\details{
+Optional \code{seq_idx} selects 1-based records (for files and index-backed
+inputs) or rows / elements (for \code{data.frame}, \code{XStringSet}, and multi-element
+\code{character} literals). \code{NULL} means all records in order.
+
+\code{seq_file} may be supplied only for \code{fastqindexr_index} or \code{.fqi} path inputs;
+it overrides the indexed FASTA/FASTQ paths passed to \code{fastqindexr}.
+
+For index-backed inputs or \code{.fqi} files, \code{fastqindexr} (>= 0.1) is required.
+For plain FASTA files with \code{seq_idx} not \code{NULL}, random access uses
+\code{fastqindexr} when installed; otherwise the file is read with
+\code{\link[Biostrings:XStringSet-io]{Biostrings::readBStringSet()}} and subset in memory (avoid for very large
+inputs). Plain FASTQ subsetting without \code{fastqindexr} reads the entire file,
+then subsets (avoid for very large inputs).
 }

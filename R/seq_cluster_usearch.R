@@ -7,6 +7,9 @@
 #' license for most users at https://www.drive5.com/usearch/.
 #'
 #' @inheritParams distmx_cluster
+#' @param seq_idx optional 1-based subset indices; see [seq_as_char()].
+#' @param seq_file optional path overrides for index-backed `seq` only; see
+#'   [seq_as_char()].
 #' @param seq (`character` vector, filename,
 #' [DNAStringSet][Biostrings::DNAStringSet()], or `data.frame` with columns
 #' "seq_id" (`character`) and "seq" (`character`)) sequences to cluster
@@ -34,6 +37,8 @@ seq_cluster_usearch <- function(
   which = TRUE,
   usearch_ncpu = NULL,
   usearch = Sys.which("usearch"),
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 ) {
   UseMethod("seq_cluster_usearch", seq)
@@ -51,9 +56,27 @@ seq_cluster_usearch.data.frame <- function(
   which = TRUE,
   usearch_ncpu = NULL,
   usearch = Sys.which("usearch"),
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 ) {
+  if (!is.null(seq_file)) {
+    stop(
+      "`seq_file` is not supported for `data.frame` `seq` inputs.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(seq_idx)) {
+    ii <- seq_resolve_linear_seq_idx(nrow(seq), seq_idx)
+    seq <- if (length(ii) < 1L) {
+      seq[integer(), , drop = FALSE]
+    } else {
+      seq[ii, , drop = FALSE]
+    }
+  }
   mycall <- match.call()
+  mycall$seq_idx <- NULL
+  mycall$seq_file <- NULL
   mycall[[1]] <- seq_cluster_usearch.DNAStringSet
   if (missing(seq_id)) {
     newseq_id <- quote(seq$seq_id)
@@ -77,23 +100,25 @@ seq_cluster_usearch.character <- function(
   which = TRUE,
   usearch_ncpu = NULL,
   usearch = Sys.which("usearch"),
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 ) {
-  output_type = match.arg(output_type)
+  output_type <- match.arg(output_type)
   if (length(seq) == 1 && file.exists(seq)) {
-    index <- Biostrings::fasta.seqlengths(seq)
+    u <- seq_usearch_fasta_file(seq, NULL, seq_idx, seq_file)
+    tf <- u$path
+    need_unlink <- u$unlink
+    index <- Biostrings::fasta.seqlengths(tf)
     if (!missing(seq_id)) {
-      warning("'seq_id' has no effect when 'seq' is a file.")
+      warning("'seq_id' has no effect when 'seq' is a file.", call. = FALSE)
     }
     if (!all(names(index) == as.character(seq_along(index)))) {
-      # write a temp version of the file which has headers as integer indices
-      tf <- tempfile(pattern = "clust", fileext = ".fasta")
-      tc <- file(tf, open = "w")
-      on.exit(close(tc))
-      sc <- file(seq, open = "r")
-      on.exit(close(sc), add = TRUE)
+      tf2 <- tempfile(pattern = "clust", fileext = ".fasta")
+      sc <- file(tf, open = "r")
+      tc <- file(tf2, open = "w")
       nseq <- 0L
-      while (length(lines <- readLines(sc, n = 10000)) > 0L) {
+      while (length(lines <- readLines(sc, n = 10000L)) > 0L) {
         headers <- grep("^>", lines)
         lines[headers] <- sprintf(">%d", seq_along(headers) + nseq - 1L)
         writeLines(lines, tc)
@@ -101,9 +126,15 @@ seq_cluster_usearch.character <- function(
       }
       close(sc)
       close(tc)
-      on.exit()
-    } else {
-      tf <- seq
+      if (need_unlink) {
+        unlink(tf)
+      }
+      tf <- tf2
+      need_unlink <- TRUE
+      index <- Biostrings::fasta.seqlengths(tf)
+    }
+    if (need_unlink) {
+      on.exit(unlink(tf), add = TRUE)
     }
     do_usearch_singlelink(
       seq_file = tf,
@@ -118,7 +149,9 @@ seq_cluster_usearch.character <- function(
     )
   } else {
     mycall <- match.call()
-    mycall[[1]] <- seq_cluster_usearch.DNAStringSet
+    mycall$seq_idx <- NULL
+    mycall$seq_file <- NULL
+    mycall[[1]] <- quote(seq_cluster_usearch.DNAStringSet)
     newseq <- quote(Biostrings::DNAStringSet(seq))
     newseq[[2]] <- mycall$seq
     mycall$seq <- newseq
@@ -137,9 +170,25 @@ seq_cluster_usearch.DNAStringSet <- function(
   which = TRUE,
   usearch_ncpu = NULL,
   usearch = Sys.which("usearch"),
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 ) {
-  output_type = match.arg(output_type)
+  if (!is.null(seq_file)) {
+    stop(
+      "`seq_file` is not supported for `DNAStringSet` `seq` inputs.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(seq_idx)) {
+    ii <- seq_resolve_linear_seq_idx(length(seq), seq_idx)
+    seq <- if (length(ii) < 1L) {
+      seq[integer()]
+    } else {
+      seq[ii]
+    }
+  }
+  output_type <- match.arg(output_type)
   # rename the sequences if necessary
   if (!isTRUE(all.equal(names(seq), seq_id))) {
     names(seq) <- seq_id

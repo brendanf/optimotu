@@ -25,6 +25,11 @@
 #' @param id_is_int (`logical` scalar) if `TRUE`, the sequence IDs are
 #' parsed as integers, and the returned IDs are integers.
 #' The default is `FALSE`.
+#' @param seq_idx optional 1-based indices into records (files, index-backed
+#'   inputs) or rows / elements for tabular and in-memory inputs; see
+#'   [seq_as_char()].
+#' @param seq_file optional path override for `fastqindexr_index` or `.fqi`
+#'   inputs only; see [seq_as_char()].
 #' @param ... passed to methods
 #' @return (`data.frame`) with columns "seq_id1" and "seq_id2" (`character`),
 #' or "seq_idx1" and "seq_idx2" (`integer`) if `id_is_integer` is `TRUE`,
@@ -47,14 +52,14 @@ seq_distmx <- function(
   span = c("global", "extension"),
   constrain = TRUE,
   id_is_int = is.data.frame(seq) && "seq_idx" %in% names(seq),
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 ) {
-  checkmate::assert_character(
-    seq_id,
-    null.ok = TRUE,
-    len = length(seq),
-    unique = TRUE
-  )
+  n_seq <- seq_input_n_records(seq, seq_file)
+  if (!is.null(seq_id)) {
+    checkmate::assert_character(seq_id, len = n_seq, unique = TRUE)
+  }
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   if (!missing(details)) {
@@ -77,9 +82,16 @@ seq_distmx <- function(
     mycall$span <- NULL
     mycall$constrain <- NULL
     mycall$usearch <- dist_config$usearch
+    mycall$seq_idx <- seq_idx
+    mycall$seq_file <- seq_file
     eval(mycall, envir = parent.frame())
   } else {
-    seq <- seq_as_char(seq)
+    seq <- seq_as_char(
+      seq,
+      seq_idx = seq_idx,
+      seq_file = seq_file,
+      as = "character"
+    )
     if (!is.null(seq_id)) {
       names(seq) <- seq_id
     }
@@ -100,9 +112,11 @@ seq_distmx <- function(
         out <- out[out$seq_id1 %in% names(seq), ]
         out <- out[out$seq_id2 %in% names(seq), ]
         out <- out[out$dist <= threshold, ]
+        class(out) <- "data.frame"
+        attr(out, "row.names") <- seq_len(nrow(out))
         out
       } else {
-        utils::read.table(
+        out <- utils::read.table(
           file = dist_config$filename,
           header = FALSE,
           col.names = c("seq_idx1", "seq_idx2", "dist"),
@@ -120,6 +134,8 @@ seq_distmx <- function(
           out$seq_idx2 <- NULL
         }
         out <- out[out$dist <= threshold, ]
+        class(out) <- "data.frame"
+        attr(out, "row.names") <- seq_len(nrow(out))
         out
       }
     } else {
@@ -138,6 +154,8 @@ seq_distmx <- function(
         out$seq_idx2 <- names(seq)[out$seq_idx2 + 1]
         names(out)[1:2] <- c("seq_id1", "seq_id2")
       }
+      class(out) <- "data.frame"
+      attr(out, "row.names") <- seq_len(nrow(out))
       out
     }
   }

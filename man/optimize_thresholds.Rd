@@ -16,7 +16,9 @@ optimize_thresholds(
   min_refseq = 2L * min_taxa,
   id_col = "seq_id",
   measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 )
 }
 \arguments{
@@ -25,7 +27,8 @@ sequences.  Must include a column for each rank in \code{ranks} and a column for
 sequence identifiers, defined by \code{id_col}. Any additional columns are ignored.}
 
 \item{refseq}{(named \code{character}, file name,
-\code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, or \code{data.frame}) the
+\code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{data.frame},
+\code{fastqindexr_index}, or character vector of \code{.fqi} paths) the
 reference sequences}
 
 \item{ranks}{(\code{character} vector) the taxonomic ranks in \code{taxonomy}}
@@ -59,6 +62,11 @@ thresholds for}
 
 \item{verbose}{(\code{logical(1)} or \code{integer(1)}) whether to print progress
 messages; values greater than 1 (or TRUE) print more}
+
+\item{seq_idx}{optional 1-based subset indices for \code{refseq}; see \code{\link[=seq_as_char]{seq_as_char()}}.}
+
+\item{seq_file}{optional path overrides for index-backed \code{refseq} only; see
+\code{\link[=seq_as_char]{seq_as_char()}}. Taxonomy rows must match the selected sequence IDs.}
 }
 \value{
 (\code{data.frame}) a data frame with the following columns:

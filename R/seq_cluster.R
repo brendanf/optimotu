@@ -1,6 +1,9 @@
 #' Single-linkage clustering of nucleotide sequences
 #'
 #' @inheritParams seq_cluster_usearch
+#' @param seq_idx optional 1-based subset indices; see [seq_as_char()].
+#' @param seq_file optional path overrides for index-backed `seq` only; see
+#'   [seq_as_char()]. Not used with `dist_file()`.
 #' @param dist_config (`optimotu_dist_config` object returned by
 #' [dist_config()] or one of its helpers) Configuration of the method to
 #' calculate distances. If `dist_usearch()`, then this function dispatches to
@@ -17,7 +20,9 @@ seq_cluster <- function(
   parallel_config = parallel_concurrent(1),
   output_type = c("matrix", "hclust"),
   which = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 ) {
   UseMethod("seq_cluster", seq)
 }
@@ -33,9 +38,27 @@ seq_cluster.data.frame <- function(
   parallel_config = parallel_concurrent(1),
   output_type = c("matrix", "hclust"),
   which = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 ) {
+  if (!is.null(seq_file)) {
+    stop(
+      "`seq_file` is not supported for `data.frame` `seq` inputs.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(seq_idx)) {
+    ii <- seq_resolve_linear_seq_idx(nrow(seq), seq_idx)
+    seq <- if (length(ii) < 1L) {
+      seq[integer(), , drop = FALSE]
+    } else {
+      seq[ii, , drop = FALSE]
+    }
+  }
   mycall <- match.call()
+  mycall$seq_idx <- NULL
+  mycall$seq_file <- NULL
   if (missing(seq_id)) {
     newseq_id <- quote(seq$seq_id)
     newseq_id[[2]] <- mycall$seq
@@ -67,7 +90,9 @@ seq_cluster.character <- function(
   parallel_config = parallel_concurrent(1),
   output_type = c("matrix", "hclust"),
   which = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 ) {
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   if (identical(dist_config$method, "usearch")) {
@@ -79,19 +104,33 @@ seq_cluster.character <- function(
     return(eval(mycall, envir = parent.frame()))
   }
   if (identical(dist_config$method, "file")) {
+    if (!is.null(seq_file)) {
+      stop("`seq_file` is not supported with `dist_file()`.", call. = FALSE)
+    }
+    names_vec <- if (missing(seq_id)) {
+      seq_input_seq_ids(seq, seq_idx, NULL)
+    } else {
+      ii <- seq_resolve_linear_seq_idx(length(seq_id), seq_idx)
+      seq_id[ii]
+    }
     mycall <- match.call()
     mycall$dist_config <- NULL
     mycall$seq <- NULL
-    mycall$names <- mycall$seq_id
+    mycall$names <- names_vec
     mycall$seq_id <- NULL
+    mycall$seq_idx <- NULL
+    mycall$seq_file <- NULL
     mycall$by_names <- dist_config$by_names
     mycall[[1]] <- quote(optimotu::distmx_cluster)
     return(eval(mycall, envir = parent.frame()))
   }
   output_type = match.arg(output_type)
-  if (length(seq) == 1 && file.exists(seq)) {
-    seq <- as.character(Biostrings::readBStringSet(seq))
-  }
+  seq <- seq_as_char(
+    seq,
+    seq_idx = seq_idx,
+    seq_file = seq_file,
+    as = "character"
+  )
   if (!missing(seq_id)) {
     names(seq) <- seq_id
   }
@@ -169,9 +208,27 @@ seq_cluster.DNAStringSet <- function(
   parallel_config = parallel_concurrent(1),
   output_type = c("matrix", "hclust"),
   which = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 ) {
+  if (!is.null(seq_file)) {
+    stop(
+      "`seq_file` is not supported for `DNAStringSet` `seq` inputs.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(seq_idx)) {
+    ii <- seq_resolve_linear_seq_idx(length(seq), seq_idx)
+    seq <- if (length(ii) < 1L) {
+      seq[integer()]
+    } else {
+      seq[ii]
+    }
+  }
   mycall <- match.call()
+  mycall$seq_idx <- NULL
+  mycall$seq_file <- NULL
   if (identical(dist_config$method, "usearch")) {
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch

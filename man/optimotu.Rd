@@ -16,12 +16,15 @@ optimotu(
   dist_config = dist_wfa2(),
   clust_config = clust_slink(),
   parallel_config = parallel_concurrent(1),
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 )
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, file name,
-\code{character} vector, or \code{data.frame}) input sequences}
+\code{character} vector, \code{data.frame}, \code{fastqindexr_index}, or character vector of
+\code{.fqi} paths) input sequences}
 
 \item{tax_prob}{(\code{data.frame}) taxonomic probabilities for each sequence,
 with columns \code{seq_id} giving unique sequence identifiers, \code{rank} giving the
@@ -59,6 +62,11 @@ as returned by \code{clust_config()} or its helpers.}
 processing, as returned by \code{parallel_config()} or its helpers.}
 
 \item{verbose}{(\code{logical} or \code{integer}) print progress messages.}
+
+\item{seq_idx}{optional 1-based subset indices for \code{seqs}; see \code{\link[=seq_as_char]{seq_as_char()}}.}
+
+\item{seq_file}{optional path overrides for index-backed \code{seqs} only; see
+\code{\link[=seq_as_char]{seq_as_char()}}.}
 }
 \value{
 (\code{data.frame}) with columns \code{seq_id} giving the sequence identifiers

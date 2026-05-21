@@ -26,6 +26,8 @@ seq_distmx_usearch <- function(
   verbose = FALSE,
   details = c("none", "gapstats", "cigar"),
   id_is_int = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 ) {
   if (!missing(details)) {
@@ -58,16 +60,10 @@ seq_distmx_usearch <- function(
     "gapstats" = "query+target+raw+id+caln",
     "cigar" = "query+target+raw+id+caln"
   )
-  if (is.character(seq) && length(seq) == 1 && file.exists(seq)) {
-    tseq <- seq
-  } else {
-    if (!is.null(seq_id)) {
-      checkmate::assert_character(seq_id, len = length(seq), unique = TRUE)
-      seq_names(seq) <- seq_id
-    }
-    tseq <- tempfile(pattern = "seq", fileext = ".fasta")
-    write_sequence(seq, tseq)
-    on.exit(unlink(tseq))
+  sp <- seq_usearch_fasta_file(seq, seq_id, seq_idx, seq_file)
+  tseq <- sp$path
+  if (sp$unlink) {
+    on.exit(unlink(tseq), add = TRUE)
   }
   tout <- tempfile(fileext = ".dat")
   file.create(tout)

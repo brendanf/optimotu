@@ -14,6 +14,10 @@ seq_search_usearch(
   parallel_config = parallel_concurrent(1),
   usearch = find_usearch(),
   verbose = FALSE,
+  query_seq_idx = NULL,
+  query_seq_file = NULL,
+  ref_seq_idx = NULL,
+  ref_seq_file = NULL,
   ...
 )
 }
@@ -40,6 +44,12 @@ processing, as returned by \code{parallel_config()} or its helpers.}
 \item{usearch}{(\code{character} scalar) path to USEARCH executable}
 
 \item{verbose}{(\code{logical} or \code{integer} scalar) print progress messages.}
+
+\item{query_seq_idx, query_seq_file}{optional subsetting for \code{query}; see
+\code{\link[=seq_as_char]{seq_as_char()}}.}
+
+\item{ref_seq_idx, ref_seq_file}{optional subsetting for \code{ref}; see
+\code{\link[=seq_as_char]{seq_as_char()}}.}
 
 \item{...}{passed to methods (currently inactive)}
 }

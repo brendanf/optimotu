@@ -1,3 +1,9 @@
+# optimotu 0.9.7
+
+* Top-level functions `seq_search()`, `seq_cluster()` and `seq_distmx()` now
+support `fastqindexr` index objects as sequence inputs, along with optional `file`
+and `seq_idx` arguments.
+
 # optimotu 0.9.6
 
 * Fix incorrect behavior in `seq_cluster()` and `distmx_cluster()` when

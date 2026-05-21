@@ -20,7 +20,9 @@ normalize_distmx <- function(df) {
     return(df)
   }
   ord <- order(df$seq_idx1, df$seq_idx2)
-  df[ord, , drop = FALSE]
+  df <- df[ord, , drop = FALSE]
+  rownames(df) <- NULL
+  as.data.frame(df, stringsAsFactors = FALSE)
 }
 
 testthat::test_that("seq_distmx handles one-sequence inputs across methods", {

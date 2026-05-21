@@ -15,6 +15,8 @@ seq_cluster_usearch(
   which = TRUE,
   usearch_ncpu = NULL,
   usearch = Sys.which("usearch"),
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 )
 }
@@ -61,6 +63,11 @@ calculating the distance matrix.  The number of threads for clustering is
 specified in the "parallel_config" argument.}
 
 \item{usearch}{(\code{character} scalar) path to usearch executable}
+
+\item{seq_idx}{optional 1-based subset indices; see \code{\link[=seq_as_char]{seq_as_char()}}.}
+
+\item{seq_file}{optional path overrides for index-backed \code{seq} only; see
+\code{\link[=seq_as_char]{seq_as_char()}}.}
 
 \item{...}{passed to methods (currently inactive)}
 }

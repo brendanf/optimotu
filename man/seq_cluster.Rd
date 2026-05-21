@@ -13,7 +13,9 @@ seq_cluster(
   parallel_config = parallel_concurrent(1),
   output_type = c("matrix", "hclust"),
   which = TRUE,
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 )
 }
 \arguments{
@@ -61,6 +63,11 @@ distance matrices separately.)}
 
 \item{verbose}{(\code{logical(1)} or \code{integer(1)}) whether to print progress;
 values greater than 1 (or TRUE) print more}
+
+\item{seq_idx}{optional 1-based subset indices; see \code{\link[=seq_as_char]{seq_as_char()}}.}
+
+\item{seq_file}{optional path overrides for index-backed \code{seq} only; see
+\code{\link[=seq_as_char]{seq_as_char()}}. Not used with \code{dist_file()}.}
 }
 \description{
 Single-linkage clustering of nucleotide sequences

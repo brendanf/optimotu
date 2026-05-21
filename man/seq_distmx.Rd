@@ -47,6 +47,8 @@ seq_distmx(
   span = c("global", "extension"),
   constrain = TRUE,
   id_is_int = is.data.frame(seq) && "seq_idx" \%in\% names(seq),
+  seq_idx = NULL,
+  seq_file = NULL,
   ...
 )
 
@@ -146,6 +148,13 @@ accepted values are "global" and "extension".  The default is "global".}
 \item{id_is_int}{(\code{logical} scalar) if \code{TRUE}, the sequence IDs are
 parsed as integers, and the returned IDs are integers.
 The default is \code{FALSE}.}
+
+\item{seq_idx}{optional 1-based indices into records (files, index-backed
+inputs) or rows / elements for tabular and in-memory inputs; see
+\code{\link[=seq_as_char]{seq_as_char()}}.}
+
+\item{seq_file}{optional path override for \code{fastqindexr_index} or \code{.fqi}
+inputs only; see \code{\link[=seq_as_char]{seq_as_char()}}.}
 
 \item{...}{passed to methods}
 

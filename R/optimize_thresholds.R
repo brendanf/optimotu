@@ -282,8 +282,12 @@ find_best_threshold <- function(
 #' sequences.  Must include a column for each rank in `ranks` and a column for
 #' sequence identifiers, defined by `id_col`. Any additional columns are ignored.
 #' @param refseq (named `character`, file name,
-#' [`DNAStringSet`][Biostrings::XStringSet-class], or `data.frame`) the
+#' [`DNAStringSet`][Biostrings::XStringSet-class], `data.frame`,
+#' `fastqindexr_index`, or character vector of `.fqi` paths) the
 #' reference sequences
+#' @param seq_idx optional 1-based subset indices for `refseq`; see [seq_as_char()].
+#' @param seq_file optional path overrides for index-backed `refseq` only; see
+#'   [seq_as_char()]. Taxonomy rows must match the selected sequence IDs.
 #' @param ranks (`character` vector) the taxonomic ranks in `taxonomy`
 #' @param dist_config (`op timotu_dist_config`) specification of the pairwise
 #' distance algorithm to use, as created by `dist_config()` or its helpers
@@ -334,14 +338,16 @@ optimize_thresholds <- function(
   min_refseq = 2L * min_taxa,
   id_col = "seq_id",
   measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 ) {
   # Check input
   checkmate::assert_character(ranks)
   checkmate::assert_string(id_col)
   checkmate::assert_data_frame(taxonomy)
   checkmate::assert_names(names(taxonomy), must.include = c(id_col, ranks))
-  refseq_names <- seq_names(refseq)
+  refseq_names <- seq_input_seq_ids(refseq, seq_idx, seq_file)
   checkmate::assert_set_equal(taxonomy[[id_col]], refseq_names)
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(dist_config, "optimotu_dist_config")
@@ -405,7 +411,9 @@ optimize_thresholds <- function(
     parallel_config = parallel_config,
     output_type = "matrix",
     which = testset_select$seq_id,
-    verbose = verbose
+    verbose = verbose,
+    seq_idx = seq_idx,
+    seq_file = seq_file
   )
 
   # calculate clustering quality measures

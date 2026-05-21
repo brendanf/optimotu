@@ -61,7 +61,11 @@ closed_ref_cluster <- function(query, ref, threshold, ...) {
 #' Taxonomically guided OTU clustering using optimized thresholds
 #'
 #' @param seqs ([`DNAStringSet`][Biostrings::XStringSet-class], file name,
-#' `character` vector, or `data.frame`) input sequences
+#' `character` vector, `data.frame`, `fastqindexr_index`, or character vector of
+#' `.fqi` paths) input sequences
+#' @param seq_idx optional 1-based subset indices for `seqs`; see [seq_as_char()].
+#' @param seq_file optional path overrides for index-backed `seqs` only; see
+#'   [seq_as_char()].
 #' @param tax_prob (`data.frame`) taxonomic probabilities for each sequence,
 #' with columns `seq_id` giving unique sequence identifiers, `rank` giving the
 #' taxonomic rank, `taxon` giving the identified taxon name, and, optionally,
@@ -112,32 +116,32 @@ optimotu <- function(
   dist_config = dist_wfa2(),
   clust_config = clust_slink(),
   parallel_config = parallel_concurrent(1),
-  verbose = FALSE
+  verbose = FALSE,
+  seq_idx = NULL,
+  seq_file = NULL
 ) {
   # check inputs
-  checkmate::assert(
-    checkmate::test_character(seqs, any.missing = FALSE),
-    checkmate::test_data_frame(seqs),
-    checkmate::test_class(seqs, "XStringSet")
+  if (
+    !(is.character(seqs) ||
+      is.data.frame(seqs) ||
+      methods::is(seqs, "XStringSet") ||
+      inherits(seqs, "fastqindexr_index") ||
+      seq_is_fqi_path_set(seqs))
+  ) {
+    stop(
+      "`seqs` must be a character vector, data.frame, XStringSet, ",
+      "fastqindexr_index, or a character vector of existing .fqi paths.",
+      call. = FALSE
+    )
+  }
+  seqs <- seq_as_char(
+    seqs,
+    seq_idx = seq_idx,
+    seq_file = seq_file,
+    as = "data.frame"
   )
-  # convert seqs to a data.frame if it isn't already
-  if (is.character(seqs)) {
-    if (length(seqs) == 1 && file.exists(seqs)) {
-      if (grepl(fasta_regex, seqs)) {
-        seqs <- Biostrings::readDNAStringSet(seqs)
-      } else if (grepl(fastq_regex, seqs)) {
-        seqs <- Biostrings::readDNAStringSet(seqs, format = "fastq")
-      } else {
-        stop("Input file must be in FASTA or FASTQ format")
-      }
-      seqs <- data.frame(seq_id = names(seqs), seq = as.character(seqs))
-    } else {
-      checkmate::assert_named(seqs, type = "unique")
-      seqs <- data.frame(seq_id = names(seqs), seq = as.character(seqs))
-    }
-  } else if (methods::is(seq, "XStringSet")) {
-    checkmate::assert_named(seqs, type = "unique")
-    seqs <- data.frame(seq_id = names(seqs), seq = as.character(seqs))
+  if ("qual" %in% names(seqs)) {
+    seqs$qual <- NULL
   }
 
   checkmate::assert_data_frame(seqs)

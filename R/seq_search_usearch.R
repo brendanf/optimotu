@@ -30,28 +30,20 @@ seq_search_usearch <- function(
   parallel_config = parallel_concurrent(1),
   usearch = find_usearch(),
   verbose = FALSE,
+  query_seq_idx = NULL,
+  query_seq_file = NULL,
+  ref_seq_idx = NULL,
+  ref_seq_file = NULL,
   ...
 ) {
-  if (is.character(query) && length(query) == 1 && file.exists(query)) {
-    tquery <- query
-  } else {
-    if (!is.null(query_id)) {
-      checkmate::assert_character(query_id, len = length(query), unique = TRUE)
-      seq_names(query) <- query_id
-    }
-    tquery <- tempfile(pattern = "query", fileext = ".fasta")
-    write_sequence(query, tquery)
-    on.exit(unlink(tquery))
+  tq <- seq_usearch_fasta_file(query, query_id, query_seq_idx, query_seq_file)
+  tquery <- tq$path
+  if (tq$unlink) {
+    on.exit(unlink(tquery), add = TRUE)
   }
-  if (is.character(ref) && length(ref) == 1 && file.exists(ref)) {
-    tref <- ref
-  } else {
-    if (!is.null(ref_id)) {
-      checkmate::assert_character(ref_id, len = length(ref), unique = TRUE)
-      seq_names(ref) <- ref_id
-    }
-    tref <- tempfile(pattern = "ref", fileext = ".fasta")
-    write_sequence(ref, tref)
+  tr <- seq_usearch_fasta_file(ref, ref_id, ref_seq_idx, ref_seq_file)
+  tref <- tr$path
+  if (tr$unlink) {
     on.exit(unlink(tref), add = TRUE)
   }
   tout <- tempfile(fileext = ".dat")

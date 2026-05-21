@@ -7,6 +7,10 @@
 #' search against
 #' @param ref_id (`character` vector) names for the reference sequences.  If they
 #' are already named, this will replace the names.
+#' @param query_seq_idx,query_seq_file optional subsetting for `query`; see
+#'   [seq_as_char()].
+#' @param ref_seq_idx,ref_seq_file optional subsetting for `ref`; see
+#'   [seq_as_char()].
 #' @param threshold (`numeric` scalar) maximum distance to consider a match, in
 #' \[0, 1\] where 0 is identical.
 #' @param dist_config (`optimotu_dist_config`) configuration for calculating
@@ -35,20 +39,20 @@ seq_search <- function(
   verbose = FALSE,
   return_cigar = FALSE,
   span = c("global", "extension"),
+  query_seq_idx = NULL,
+  query_seq_file = NULL,
+  ref_seq_idx = NULL,
+  ref_seq_file = NULL,
   ...
 ) {
-  checkmate::assert_character(
-    query_id,
-    null.ok = TRUE,
-    len = length(query),
-    unique = TRUE
-  )
-  checkmate::assert_character(
-    ref_id,
-    null.ok = TRUE,
-    len = length(ref),
-    unique = TRUE
-  )
+  nq <- seq_input_n_records(query, query_seq_file)
+  nr <- seq_input_n_records(ref, ref_seq_file)
+  if (!is.null(query_id)) {
+    checkmate::assert_character(query_id, len = nq, unique = TRUE)
+  }
+  if (!is.null(ref_id)) {
+    checkmate::assert_character(ref_id, len = nr, unique = TRUE)
+  }
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   checkmate::assert_flag(return_cigar)
@@ -63,13 +67,27 @@ seq_search <- function(
     mycall[[1]] <- quote(optimotu::seq_search_usearch)
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
+    mycall$query_seq_idx <- query_seq_idx
+    mycall$query_seq_file <- query_seq_file
+    mycall$ref_seq_idx <- ref_seq_idx
+    mycall$ref_seq_file <- ref_seq_file
     eval(mycall, envir = parent.frame())
   } else {
-    query <- seq_as_char(query)
+    query <- seq_as_char(
+      query,
+      seq_idx = query_seq_idx,
+      seq_file = query_seq_file,
+      as = "character"
+    )
     if (!is.null(query_id)) {
       names(query) <- query_id
     }
-    ref <- seq_as_char(ref)
+    ref <- seq_as_char(
+      ref,
+      seq_idx = ref_seq_idx,
+      seq_file = ref_seq_file,
+      as = "character"
+    )
     if (!is.null(ref_id)) {
       names(ref) <- ref_id
     }
@@ -109,7 +127,7 @@ seq_search <- function(
           colClasses = c("integer", "integer", "numeric")
         )
         out$seq_id <- names(query)[out$seq_id + 1]
-        out$query_id <- names(ref)[out$ref_id + 1]
+        out$ref_id <- names(ref)[out$ref_id + 1]
         out
       }
     } else {
