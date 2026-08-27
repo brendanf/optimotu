@@ -32,13 +32,10 @@ protected:
   // owned subsets are subsets that are owned by this MultipleClusterAlgorithm
   std::vector<std::unique_ptr<SingleClusterAlgorithm>> owned_subsets;
 
-  // temp, declare once (per thread) and reuse
-  mutable std::vector<std::vector<j_t>> whichsets;
-
-  // remember which the last sequence pairs were
-  mutable std::vector<std::pair<j_t, j_t>> ws_keys;
-
-  void ensure_whichsets(j_t seq1, j_t seq2, int thread) const;
+  // Last-pair overlap cache is thread_local inside ensure_whichsets so
+  // concurrent workers do not share a slot. Returns the subsets that
+  // contain both sequences.
+  const std::vector<j_t> & ensure_whichsets(j_t seq1, j_t seq2) const;
   void apply_pair(
     j_t seq1,
     j_t seq2,

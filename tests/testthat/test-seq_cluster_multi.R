@@ -95,6 +95,11 @@ testthat::test_that("multi-subset clustering matches independent subset clusteri
       par = parallel_concurrent(1L)
     ),
     list(
+      dist = dist_hamming(),
+      clust = clust_tree(),
+      par = parallel_concurrent(4L)
+    ),
+    list(
       dist = dist_edlib(),
       clust = clust_tree(),
       par = parallel_concurrent(1L)
@@ -157,9 +162,10 @@ testthat::test_that("crossing subsets do not change clustering of the full set",
   configs <- list(
     list(dist = dist_hamming(), par = parallel_concurrent(1L)),
     list(dist = dist_hamming(), par = parallel_concurrent(2L)),
+    list(dist = dist_hamming(), par = parallel_concurrent(4L)),
     list(dist = dist_hamming(), par = parallel_merge(1L)),
     list(dist = dist_edlib(), par = parallel_concurrent(1L)),
-    list(dist = dist_edlib(), par = parallel_merge(1L))
+    list(dist = dist_edlib(), par = parallel_concurrent(4L))
   )
   for (cfg in configs) {
     multi <- cluster_as_matrix(

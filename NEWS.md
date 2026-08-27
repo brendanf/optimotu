@@ -2,6 +2,7 @@
 
 * Fix `seq_cluster()` with multiple overlapping `which` subsets so each subset
 matches clustering that subset on its own.
+* Fix a crash with parallel concurrency for multiple subset clustering with Hamming distance.
 
 # optimotu 0.9.7
 
