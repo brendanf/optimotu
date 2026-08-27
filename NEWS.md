@@ -1,3 +1,8 @@
+# optimotu (development version)
+
+* Fix `seq_cluster()` with multiple overlapping `which` subsets so each subset
+matches clustering that subset on its own.
+
 # optimotu 0.9.7
 
 * Top-level functions `seq_search()`, `seq_cluster()` and `seq_distmx()` now

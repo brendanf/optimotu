@@ -38,6 +38,16 @@ protected:
   // remember which the last sequence pairs were
   mutable std::vector<std::pair<j_t, j_t>> ws_keys;
 
+  void ensure_whichsets(j_t seq1, j_t seq2, int thread) const;
+  void apply_pair(
+    j_t seq1,
+    j_t seq2,
+    d_t i,
+    double dist,
+    int thread,
+    bool filter_irrelevant
+  );
+
   // Protected main constructor: initializer list only (no body).
   // Used by MultipleClusterAlgorithmImpl to set up members before filling subsets.
   MultipleClusterAlgorithm(
@@ -73,6 +83,11 @@ public:
   void operator()(j_t seq1, j_t seq2, double dist, int thread) override;
 
   void operator()(j_t seq1, j_t seq2, int i, int thread) override;
+
+  void operator()(PairGenerator & pg, double dist, int thread = 0) override;
+
+  // Distance-matrix workers send every pair; do not per-subset-filter.
+  void operator()(DistanceElement d, int thread = 0) override;
 
   virtual void finalize() override;
 

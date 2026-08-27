@@ -258,84 +258,85 @@ MCA::MultipleClusterAlgorithm(
       ws.reserve(fwd_map.size());
 }
 
-// does not anything directly!
-// relies on locks inside subset algorithms for thread safety.
-void MCA::operator()(j_t seq1, j_t seq2, double dist, int thread) {
-  if (seq1 == seq2) return;
-  d_t i = dconv.convert(dist);
-  (*this)(seq1, seq2, i, thread);
-}
-
-// does not lock anything directly!
-// relies on locks inside subset algorithms for thread safety.
-void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
-  // in practice, we should always be able to rely on the 'whichsets'
-  // which was calculated in "max_relevant", if it was called.
-
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  // OPTIMOTU_COUT << "in operator() for MultipleClusterAlgorithm thread " << thread
-  //           << std::endl << "length of whichsets is " << whichsets.size()
-  //           << std::endl << "length of ws_keys is " << ws_keys.size()
-  //           << std::endl << "finding overlap sets for item " << seq1
-  //           << " in sets:";
-  // for (auto pc : subset_key[seq1]){
-  //   OPTIMOTU_COUT << " " << pc;
-  // }
-  // OPTIMOTU_COUT << std::endl
-  //           << "and item " << seq2 << " in sets:";
-  // for (auto pc : subset_key[seq2]) OPTIMOTU_COUT << " " << pc;
-  // OPTIMOTU_COUT << std::endl
-  //           << "cached overlaps are for pair " << ws_keys[thread].first
-  //           << ", " << ws_keys[thread].second
-  //           << std::endl;
-  if (seq1 == seq2) return;
+// Fill whichsets[thread] with subset indices that contain both seq1 and seq2.
+void MCA::ensure_whichsets(j_t seq1, j_t seq2, int thread) const {
   if (seq1 >= subset_key.size() || seq2 >= subset_key.size()) {
     OPTIMOTU_STOP("MultipleClusterAlgorithm: sequence index out of range (seq1="
       + std::to_string(seq1) + ", seq2=" + std::to_string(seq2)
       + ", names.size()=" + std::to_string(subset_key.size()) + ")");
   }
-
-  if (ws_keys[thread] != std::pair<j_t, j_t>{seq1, seq2}) {
-    // OPTIMOTU_COUT << "calculating..." << std::flush;
-    whichsets[thread].clear();
-    std::set_intersection(
-      subset_key[seq1].begin(),
-      subset_key[seq1].end(),
-      subset_key[seq2].begin(),
-      subset_key[seq2].end(),
-      std::back_inserter(whichsets[thread])
-    );
-    ws_keys[thread] = {seq1, seq2};
-  } else {
-    // OPTIMOTU_COUT << "using cached values..." << std::flush;
+  if (ws_keys[thread] == std::pair<j_t, j_t>{seq1, seq2}) {
+    return;
   }
+  whichsets[thread].clear();
+  std::set_intersection(
+    subset_key[seq1].begin(),
+    subset_key[seq1].end(),
+    subset_key[seq2].begin(),
+    subset_key[seq2].end(),
+    std::back_inserter(whichsets[thread])
+  );
+  ws_keys[thread] = {seq1, seq2};
+}
 
+// Forward a pair only to subsets for which it is still relevant. The worker
+// threshold is max_relevant across all overlapping subsets, so without this
+// filter a pair that is only needed by one subset is also applied to others
+// whose own max_relevant is already below the distance. That changes
+// single-linkage updates via convert/inverse rounding at cluster heights.
+void MCA::apply_pair(
+  j_t seq1,
+  j_t seq2,
+  d_t i,
+  double dist,
+  int thread,
+  bool filter_irrelevant
+) {
+  if (seq1 == seq2) return;
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  ensure_whichsets(seq1, seq2, thread);
   for (j_t j : whichsets[thread]) {
-    // if (j == 0) {OPTIMOTU_COUT << "in operator() for MultipleClusterAlgorithm thread " << thread
-    //   // << std::endl << "length of whichsets is " << whichsets.size()
-    //   // << std::endl << "length of ws_keys is " << ws_keys.size()
-    //      << std::endl << "finding overlap sets for item " << seq1
-    //      << " in sets:";
-    //   for (auto pc : subset_key[seq1]) OPTIMOTU_COUT << " " << pc;
-    //   OPTIMOTU_COUT << std::endl
-    //             << "and seq " << seq2 << " in sets:";
-    //   for (auto pc : subset_key[seq2]) OPTIMOTU_COUT << " " << pc;
-    //   OPTIMOTU_COUT << std::endl
-    //             << "cached overlaps are for pair " << ws_keys[thread].first
-    //             << ", " << ws_keys[thread].second
-    //             << std::endl;
-    //   OPTIMOTU_COUT << "found " << whichsets[thread].size()
-    //             << " overlaps:";
-    //   for (auto pc : whichsets[thread]) OPTIMOTU_COUT << " " << pc;
-    //   OPTIMOTU_COUT << std::endl;
-    // }
-    // OPTIMOTU_COUT << "sending seq1=" << fwd_map[j][seq1]
-    //               << " seq2=" << fwd_map[j][seq2]
-    //               << " i=" << i
-    //               << " to subset " << j
-    //               << std::endl;
-    (*subsets[j])(fwd_map[j].at(seq1), fwd_map[j].at(seq2), i, thread);
+    j_t s1 = fwd_map[j].at(seq1);
+    j_t s2 = fwd_map[j].at(seq2);
+    if (
+      filter_irrelevant &&
+      !(dist < subsets[j]->max_relevant(s1, s2, thread))
+    ) {
+      continue;
+    }
+    (*subsets[j])(s1, s2, i, thread);
   }
+}
+
+void MCA::operator()(j_t seq1, j_t seq2, double dist, int thread) {
+  // Sequence workers (including Edlib concurrent, which does not use a
+  // PairGenerator) gate on max_relevant across overlapping subsets.
+  apply_pair(seq1, seq2, dconv.convert(dist), dist, thread, true);
+}
+
+void MCA::operator()(j_t seq1, j_t seq2, int i, int thread) {
+  apply_pair(seq1, seq2, i, dconv.inverse(i), thread, false);
+}
+
+void MCA::operator()(PairGenerator & pg, double dist, int thread) {
+  if (!pg) return;
+  // Sequence workers gate on max_relevant across all overlapping subsets.
+  // Re-check each subset so a pair needed by one is not applied to others.
+  apply_pair(
+    pg.i0(),
+    pg.j0(),
+    dconv.convert(dist),
+    dist,
+    thread,
+    true
+  );
+}
+
+void MCA::operator()(DistanceElement d, int thread) {
+  // Distance-matrix clustering sends every pair; ClusterTree decides what
+  // is redundant. Independent distmx_cluster() of a subset also sees every
+  // pair, so filtering here would make multi-subset results too sparse.
+  apply_pair(d.seq1, d.seq2, dconv.convert(d.dist), d.dist, thread, false);
 }
 
 void MCA::finalize() {
@@ -349,17 +350,12 @@ double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
     OPTIMOTU_STOP("MultipleClusterAlgorithm::max_relevant: sequence index out of range");
   }
   double max = -1.0;
-  whichsets[thread].clear();
-  std::set_intersection(
-    subset_key[seq1].begin(),
-    subset_key[seq1].end(),
-    subset_key[seq2].begin(),
-    subset_key[seq2].end(),
-    std::back_inserter(whichsets[thread])
-  );
-  ws_keys[thread] = {seq1, seq2};
+  ensure_whichsets(seq1, seq2, thread);
   for (j_t j : whichsets[thread]) {
-    double maxj = subsets[j]->max_relevant(fwd_map[j].at(seq1), fwd_map[j].at(seq2));
+    double maxj = subsets[j]->max_relevant(
+      fwd_map[j].at(seq1),
+      fwd_map[j].at(seq2)
+    );
     max = std::max(max, maxj);
   }
   return max;
@@ -418,148 +414,21 @@ MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child() {
 }
 
 MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-
-  // calculate which subsets have members that the PairGenerator
-  // can produce
-  std::vector<bool> nonempty(subset_indices.size());
-  std::size_t n_nonempty = 0;
-  for (std::size_t i = 0; i <= pg->max_value(); i++) {
-    std::size_t i0 = pg->forward_map(i);
-    for (const j_t j : subset_key[i0]) {
-      if (!nonempty[j]) {
-        nonempty[j] = true;
-        n_nonempty++;
-      }
-    }
-  }
-
-  // map from our subset to the child's subsets
-  std::unordered_map<j_t, j_t> parent_to_child_map;
-  parent_to_child_map.reserve(n_nonempty);
-  // map from the child's subsets to our subsets
-  std::vector<j_t> child_to_parent_map;
-  child_to_parent_map.reserve(n_nonempty);
-  std::size_t child_index = 0;
-  for (std::size_t i = 0; i < nonempty.size(); i++) {
-    if (nonempty[i]) {
-      parent_to_child_map.emplace(i, child_index);
-      child_to_parent_map.push_back(i);
-      child_index++;
-    }
-  }
-
-  // Now calculate the child's subset_key, subset_indices, subset_names,
-  // and fwd_map
-  std::vector<std::vector<j_t>> child_subset_key(pg->max_value() + 1);
-  std::vector<std::vector<j_t>> child_subset_indices(n_nonempty);
-  std::vector<std::vector<std::string>> child_subset_names(n_nonempty);
-  std::vector<std::unordered_map<j_t, j_t>> child_fwd_map(n_nonempty);
-  // Loop over each sequence that the PairGenerator can produce.
-  for (std::size_t i = 0; i <= pg->max_value(); i++) {
-    std::size_t i0 = pg->forward_map(i);
-    // Loop over the subsets that the sequence belongs to in the parent.
-    for (const j_t j0 : subset_key[i0]) {
-      j_t j = parent_to_child_map[j0];
-      child_subset_key[i].push_back(j);
-      child_subset_indices[j].push_back(i);
-      child_subset_names[j].push_back(names[i]);
-      child_fwd_map[j].emplace(i0, i);
-    }
-  }
-
-  auto child_ptr = new MultipleClusterAlgorithm(
-    this,
-    names,
-    child_subset_indices,
-    child_subset_names,
-    child_subset_key,
-    child_fwd_map,
-    child_to_parent_map,
-    pg,
-    threads
-  );
-  auto child = std::unique_ptr<ClusterAlgorithm>(
-    (ClusterAlgorithm*)child_ptr
-  );
-  this->children.push_back(std::move(child));
-  return child_ptr;
+  // Split workers pass a tile PairGenerator whose indices are in the full
+  // sequence space. Subset algorithms are already indexed in subset-local
+  // space, so wrapping them with that generator maps global ids into a
+  // smaller algorithm and crashes. A full-size child still receives global
+  // i0/j0 from the worker and translates through fwd_map.
+  (void)pg;
+  return make_child();
 }
 
 template<int verbose>
-MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(PairGenerator * pg) {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-
-  std::vector<bool> nonempty(subset_indices.size());
-  std::size_t n_nonempty = 0;
-  for (std::size_t i = 0; i <= pg->max_value(); i++) {
-    std::size_t i0 = pg->forward_map(i);
-    for (const j_t j : subset_key[i0]) {
-      if (!nonempty[j]) {
-        nonempty[j] = true;
-        n_nonempty++;
-      }
-    }
-  }
-
-  std::unordered_map<j_t, j_t> parent_to_child_map;
-  parent_to_child_map.reserve(n_nonempty);
-  std::vector<j_t> child_to_parent_map;
-  child_to_parent_map.reserve(n_nonempty);
-  std::size_t child_index = 0;
-  for (std::size_t i = 0; i < nonempty.size(); i++) {
-    if (nonempty[i]) {
-      parent_to_child_map.emplace(i, child_index);
-      child_to_parent_map.push_back(i);
-      child_index++;
-    }
-  }
-
-  std::vector<std::vector<j_t>> child_subset_key(pg->max_value() + 1);
-  std::vector<std::vector<j_t>> child_subset_indices(n_nonempty);
-  std::vector<std::vector<std::string>> child_subset_names(n_nonempty);
-  std::vector<std::unordered_map<j_t, j_t>> child_fwd_map(n_nonempty);
-  for (std::size_t i = 0; i <= pg->max_value(); i++) {
-    std::size_t i0 = pg->forward_map(i);
-    for (const j_t j0 : subset_key[i0]) {
-      j_t j = parent_to_child_map[j0];
-      child_subset_key[i].push_back(j);
-      child_subset_indices[j].push_back(i);
-      child_subset_names[j].push_back(names[i]);
-      child_fwd_map[j].emplace(i0, i);
-    }
-  }
-
-  auto child_ptr = new MultipleClusterAlgorithmImpl<verbose>(
-    this,
-    names,
-    child_subset_indices,
-    child_subset_names,
-    child_subset_key,
-    child_fwd_map,
-    child_to_parent_map,
-    pg,
-    threads
-  );
-  auto child = std::unique_ptr<ClusterAlgorithm>(
-    (ClusterAlgorithm*)child_ptr
-  );
-  this->children.push_back(std::move(child));
-  return child_ptr;
-  // this->own_child = true;
-  // for (std::size_t i = 0; i < subsets.size(); i++) {
-  //   bool found_match = false;
-  //   for (std::size_t j = 0; j < pg->max_value(); j++) {
-  //     if (fwd_map[i].count(pg->forward_map(j)) > 0) {
-  //       found_match = true;
-  //       break;
-  //     }
-  //   }
-  //   if (found_match) {
-  //     subsets[i]->make_child();
-  //   }
-  //     ss->make_child();
-  // return this;
+MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(
+  PairGenerator * pg
+) {
+  (void)pg;
+  return make_child();
 }
 
 bool MCA::accepts_unordered_pairs() const {
