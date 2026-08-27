@@ -13,6 +13,7 @@
 #include <iostream>
 #include <deque>
 #include <memory>
+#include <algorithm>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -88,6 +89,25 @@ public:
   // send parent pairwise distances to ensure it is up-to-date
   virtual void merge_into_parent() {
     if (parent) this->merge_into(*parent);
+  }
+
+  // Release a specific child algorithm previously created by make_child().
+  // Safe to call when the child has finished merging into this parent.
+  virtual void release_child(const ClusterAlgorithm * child_ptr) {
+    std::unique_lock<std::shared_timed_mutex> lock(this->mutex, std::try_to_lock);
+    if (!lock.owns_lock()) {
+      return;
+    }
+    auto it = std::find_if(
+      children.begin(),
+      children.end(),
+      [child_ptr](const std::unique_ptr<ClusterAlgorithm> &child) {
+        return child.get() == child_ptr;
+      }
+    );
+    if (it != children.end()) {
+      children.erase(it);
+    }
   }
 
   // create a copy of this algorithm, which will merge its results into this one

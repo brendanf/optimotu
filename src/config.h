@@ -11,6 +11,7 @@
 #include "DistClusterWorker.h"
 #include "DistWorker.h"
 #include "alignment_enums.h"
+#include <cstddef>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -38,7 +39,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     ClusterAlgorithmFactory &factory,
     const std::vector<std::string> seqnames,
     const std::vector<std::vector<std::string>> subset_names,
-    int verbose = 0
+    int verbose = 0,
+    std::size_t clustering_memory_budget_bytes = 0
 );
 
 template <typename distmx_t>
@@ -79,7 +81,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     ClusterAlgorithmFactory &factory,
     Rcpp::CharacterVector seqnames,
     Rcpp::ListOf<Rcpp::CharacterVector> subset_names,
-    int verbose = 0
+    int verbose = 0,
+    std::size_t clustering_memory_budget_bytes = 0
 );
 
 template <typename distmx_t>

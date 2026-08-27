@@ -16,7 +16,8 @@ public :
     DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
     const bool ignore_gaps = true,
-    int verbose = 0
+    int verbose = 0,
+    std::size_t worker_threads = 0
   );
 };
 
@@ -38,7 +39,8 @@ public :
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
-    const bool ignore_gaps = TRUE
+    const bool ignore_gaps = TRUE,
+    std::size_t worker_threads = 0
   );
   void operator()(std::size_t begin, std::size_t end);
 };
@@ -60,7 +62,8 @@ public :
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
-    const bool ignore_gaps = true
+    const bool ignore_gaps = true,
+    std::size_t worker_threads = 0
   );
   void operator()(std::size_t begin, std::size_t end) override;
 };

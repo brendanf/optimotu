@@ -379,8 +379,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_cluster_multi
-Rcpp::List seq_cluster_multi(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const std::string output_type, const int verbose);
-RcppExport SEXP _optimotu_seq_cluster_multi(SEXP seqSEXP, SEXP whichSEXP, SEXP dist_configSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP, SEXP verboseSEXP) {
+Rcpp::List seq_cluster_multi(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const std::string output_type, const int verbose, const double clustering_memory_budget_mb);
+RcppExport SEXP _optimotu_seq_cluster_multi(SEXP seqSEXP, SEXP whichSEXP, SEXP dist_configSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP output_typeSEXP, SEXP verboseSEXP, SEXP clustering_memory_budget_mbSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -392,7 +392,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::List >::type parallel_config(parallel_configSEXP);
     Rcpp::traits::input_parameter< const std::string >::type output_type(output_typeSEXP);
     Rcpp::traits::input_parameter< const int >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_cluster_multi(seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose));
+    Rcpp::traits::input_parameter< const double >::type clustering_memory_budget_mb(clustering_memory_budget_mbSEXP);
+    rcpp_result_gen = Rcpp::wrap(seq_cluster_multi(seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose, clustering_memory_budget_mb));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -485,7 +486,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_add_gapstats", (DL_FUNC) &_optimotu_add_gapstats, 2},
     {"_optimotu_seq_distmx_prealign", (DL_FUNC) &_optimotu_seq_distmx_prealign, 11},
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},
-    {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 8},
+    {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 9},
     {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
     {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 3},

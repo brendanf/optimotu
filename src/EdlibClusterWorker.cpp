@@ -11,7 +11,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
 
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
 
-  for (size_t pg_index = begin; pg_index < end; pg_index++) {
+  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
     OPTIMOTU_DEBUG(
       2,
       << "EdlibSplit thread " << pg_index
@@ -19,7 +19,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
     );
 
     auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm * my_algo = clust_algo.make_child(pg.get());
+    ClusterAlgorithm * my_algo = clust_algo.make_child();
     // iterate over all pairs in the pair generator
     while (*pg) {
       // i, j are the indices of the pair in the cluster algorithm
@@ -52,27 +52,24 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) {
-        RcppThread::checkUserInterrupt();
-        ++(*pg);
-        continue;
-      }
-      ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - threshold;
-      double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-      ed_aligner.k = (int)maxd1 + 1;
-      double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
-      if (d < 1.0) ++my_aligned;
+      if (l1/l2 >= sim_threshold) {
+        ++my_prealigned;
+        double sim_threshold_plus_1 = 2.0 - threshold;
+        double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+        ed_aligner.k = (int)maxd1 + 1;
+        double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
+        if (d < 1.0) ++my_aligned;
 
-      OPTIMOTU_DEBUG(
-        4,
-        << "thread" << pg_index
-        << ": distance=" << d
-        << std::endl
-      );
-      if (d < threshold) (*my_algo)(*pg, d);
-      RcppThread::checkUserInterrupt();
+        OPTIMOTU_DEBUG(
+          4,
+          << "thread" << pg_index
+          << ": distance=" << d
+          << std::endl
+        );
+        if (d < threshold) (*my_algo)(*pg, d);
+      }
       ++(*pg);
+      RcppThread::checkUserInterrupt();
     }
     mutex.lock();
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
@@ -80,17 +77,15 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
     _prealigned += my_prealigned;
     mutex.unlock();
     my_algo->merge_into_parent();
+    clust_algo.release_child(my_algo);
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
   }
 }
 
 template<int verbose>
 void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
-  double n = seq.size();
-  double m = (n*n - 3.0*n + 2.0)/2.0;
   size_t my_prealigned = 0;
   size_t my_aligned = 0;
-  size_t begin_i;
 
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
     -1,
@@ -100,22 +95,16 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
     0
   );
 
-  if (begin == 0) {
-    begin_i = 1;
-  } else {
-    begin_i = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*begin)/threads - 1.0)));
-  }
-  size_t end_i   = round(1.5 + 0.5*sqrt(9.0 + 8.0*((m*end)/threads - 1.0)));
-  begin_i = std::min(begin_i, seq.size());
-  end_i = std::min(end_i, seq.size());
-  OPTIMOTU_DEBUG(
-    2,
-    << "EdlibConcurrent thread " << begin
-    << " entered; sequences [" << begin_i
-    << ", "<< end_i << ")" << std::endl;
-  );
-  for (size_t i = begin_i; i < end_i; i++) {
-    for (size_t j = 0; j < i; j++) {
+  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
+    OPTIMOTU_DEBUG(
+      2,
+      << "EdlibConcurrent thread " << pg_index
+      << " entered" << std::endl
+    );
+    auto & pg = pair_generators[pg_index];
+    while (*pg) {
+      size_t i = pg->i0();
+      size_t j = pg->j0();
       OPTIMOTU_DEBUG(
         4,
         << "Thread " << begin
@@ -123,7 +112,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
         << " and " << i
         << std::endl
       );
-      double threshold = clust_algo.max_relevant(i, j);
+      double threshold = clust_algo.max_relevant(*pg);
       OPTIMOTU_DEBUG(
         4,
         << "Thread " << begin
@@ -144,20 +133,21 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
-      ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - threshold;
-      double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-      ed_aligner.k = (int)maxd1 + 1;
-      double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
-      if (d < 1.0) ++my_aligned;
-      OPTIMOTU_DEBUG(
-        4,
-        << "Thread " << begin
-        << ": distance=" << d
-        << std::endl
-      );
-      if (d < threshold) clust_algo(i, j, d);
+      if (l1/l2 >= sim_threshold) {
+        ++my_prealigned;
+        double sim_threshold_plus_1 = 2.0 - threshold;
+        double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+        ed_aligner.k = (int)maxd1 + 1;
+        double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
+        if (d < 1.0) ++my_aligned;
+        OPTIMOTU_DEBUG(
+          4,
+          << "Thread " << begin
+          << ": distance=" << d
+          << std::endl
+        );
+        if (d < threshold) clust_algo(*pg, d);
+      }
       OPTIMOTU_DEBUG(
         4,
         << "Thread " << begin
@@ -165,6 +155,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
         << " and " << i
         << "\n" << std::endl
       );
+      ++(*pg);
       RcppThread::checkUserInterrupt();
     }
   }

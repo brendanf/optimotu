@@ -18,7 +18,14 @@ optimize_thresholds(
   measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
   verbose = FALSE,
   seq_idx = NULL,
-  seq_file = NULL
+  seq_file = NULL,
+  clustering_memory_budget_mb = NULL,
+  retry_on_memory_exhaustion = TRUE,
+  retry_split_strategy = c("overlap", "balanced"),
+  retry_reduce_threads = TRUE,
+  retry_min_threads = 1L,
+  retry_overpartition = TRUE,
+  retry_subproblem_factor = 2L
 )
 }
 \arguments{
@@ -67,6 +74,29 @@ messages; values greater than 1 (or TRUE) print more}
 
 \item{seq_file}{optional path overrides for index-backed \code{refseq} only; see
 \code{\link[=seq_as_char]{seq_as_char()}}. Taxonomy rows must match the selected sequence IDs.}
+
+\item{clustering_memory_budget_mb}{(\code{numeric(1)} or \code{NULL}) Best-effort
+memory budget for clustering-owned native structures, in MB. This is not a
+hard process-memory cap; set below machine limits for safer behavior.}
+
+\item{retry_on_memory_exhaustion}{(\code{logical(1)}) Retry clustering batches if
+the clustering memory budget is exceeded.}
+
+\item{retry_split_strategy}{(\code{character(1)}) Strategy used to split failed
+batches. \code{"overlap"} prefers keeping related subsets together and
+\code{"balanced"} splits by size.}
+
+\item{retry_reduce_threads}{(\code{logical(1)}) Whether to reduce thread count
+before splitting on budget failure.}
+
+\item{retry_min_threads}{(\code{integer(1)}) Lower bound for thread-reduction
+retries.}
+
+\item{retry_overpartition}{(\code{logical(1)}) Whether to retry with more pair
+subproblems than threads to reduce per-subproblem mapped state.}
+
+\item{retry_subproblem_factor}{(\code{integer(1)}) Multiplicative growth factor
+for subproblem count during overpartition retries.}
 }
 \value{
 (\code{data.frame}) a data frame with the following columns:

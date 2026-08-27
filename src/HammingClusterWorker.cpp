@@ -11,8 +11,9 @@ HammingClusterWorker::HammingClusterWorker(
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
   const bool ignore_gaps,
-  int verbose
-) : DistClusterWorker(seq, clust_algo, pgb, verbose), pss(seq),
+  int verbose,
+  std::size_t worker_threads
+) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads), pss(seq),
 min_overlap(min_overlap), ignore_gaps(ignore_gaps) {};
 
 template<int verbose>
@@ -21,18 +22,19 @@ HammingSplitClusterWorker<verbose>::HammingSplitClusterWorker(
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
-  const bool ignore_gaps
+  const bool ignore_gaps,
+  std::size_t worker_threads
 ) : HammingClusterWorker(seq, clust_algo, pgb, min_overlap, ignore_gaps,
-   verbose) {};
+   verbose, worker_threads) {};
 
 template<int verbose>
 void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
   size_t my_prealigned = 0;
   size_t my_aligned = 0;
 
-  for (size_t pg_index = begin; pg_index < end; pg_index++) {
+  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
     auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm * my_algo = clust_algo.make_child(pg.get());
+    ClusterAlgorithm * my_algo = clust_algo.make_child();
     OPTIMOTU_DEBUG(
       2,
       << "HammingSplitClusterWorker thread " << pg_index
@@ -63,8 +65,8 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
         << std::endl;
       );
       if (d <= threshold) (*my_algo)(*pg, d);
-      RcppThread::checkUserInterrupt();
       ++(*pg);
+      RcppThread::checkUserInterrupt();
     }
     mutex.lock();
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
@@ -72,6 +74,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
     _prealigned += my_prealigned;
     mutex.unlock();
     my_algo->merge_into_parent();
+    clust_algo.release_child(my_algo);
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
   }
 }
@@ -82,16 +85,17 @@ HammingConcurrentClusterWorker<verbose>::HammingConcurrentClusterWorker(
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
-  const bool ignore_gaps
+  const bool ignore_gaps,
+  std::size_t worker_threads
 ) : HammingClusterWorker(seq, clust_algo, pgb, min_overlap, ignore_gaps,
-   verbose) {};
+   verbose, worker_threads) {};
 
 template<int verbose>
 void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
   size_t my_prealigned = 0;
   size_t my_aligned = 0;
 
-  for (size_t pg_index = begin; pg_index < end; pg_index++) {
+  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
     auto & pg = pair_generators[pg_index];
     OPTIMOTU_DEBUG(
       2,
@@ -115,8 +119,8 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
       double d = pss.dist(i0, j0, min_overlap, ignore_gaps);
       if (d < 1.0) ++my_aligned;
       if (d < threshold) clust_algo(*pg, d);
-      RcppThread::checkUserInterrupt();
       ++(*pg);
+      RcppThread::checkUserInterrupt();
     }
     mutex.lock();
     _aligned += my_aligned;

@@ -6,10 +6,17 @@
 #include "ClusterIndexedMatrix.h"
 #include "ClusterTree.h"
 #include "ClusterSLINK.h"
+#include <cstdint>
 
 using CAF = ClusterAlgorithmFactory;
 CAF::ClusterAlgorithmFactory(const DistanceConverter & dconv) :
   dconv{dconv} {}
+
+std::size_t CAF::estimate_bytes(j_t n) const {
+  const std::size_t ns = static_cast<std::size_t>(n);
+  const std::size_t ms = static_cast<std::size_t>(dconv.m);
+  return ns * ms * sizeof(int);
+}
 
 using CMF = ClusterMatrixFactory;
 CMF::ClusterMatrixFactory(
@@ -30,6 +37,13 @@ std::unique_ptr<SingleClusterAlgorithm> CMF::create(init_matrix_t & im, int) con
   return create_cluster_matrix(this->dconv, im, this->binary_search, this->fill_type);
 }
 
+std::size_t CMF::estimate_bytes(j_t n) const {
+  const std::size_t ns = static_cast<std::size_t>(n);
+  const std::size_t ms = static_cast<std::size_t>(dconv.m);
+  // Matrix plus helper vectors and some allocator overhead.
+  return ns * ms * sizeof(int) + ns * sizeof(int) * 8;
+}
+
 using CIMF = ClusterIndexedMatrixFactory;
 
 CIMF::ClusterIndexedMatrixFactory(const DistanceConverter & dconv) : CAF{dconv} {}
@@ -40,6 +54,13 @@ std::unique_ptr<SingleClusterAlgorithm> CIMF::create(j_t n, int verbose) const {
 
 std::unique_ptr<SingleClusterAlgorithm> CIMF::create(init_matrix_t & im, int) const {
   return create_cluster_indexed_matrix(this->dconv, im);
+}
+
+std::size_t CIMF::estimate_bytes(j_t n) const {
+  const std::size_t ns = static_cast<std::size_t>(n);
+  const std::size_t ms = static_cast<std::size_t>(dconv.m);
+  // Indexed matrix stores matrix + index list + buffers.
+  return ns * ms * sizeof(int) + ns * sizeof(int) * 12;
 }
 
 using CTF = ClusterTreeFactory;
@@ -55,6 +76,12 @@ std::unique_ptr<SingleClusterAlgorithm> CTF::create(init_matrix_t & im, int verb
   return create_cluster_tree(this->dconv, im, verbose, test);
 }
 
+std::size_t CTF::estimate_bytes(j_t n) const {
+  const std::size_t ns = static_cast<std::size_t>(n);
+  // ClusterTree uses roughly 2*n nodes and free-list structures.
+  return ns * sizeof(std::uint64_t) * 32;
+}
+
 using CSF = ClusterSLINKFactory;
 
 CSF::ClusterSLINKFactory(const DistanceConverter & dconv) : CAF{dconv} {}
@@ -65,5 +92,11 @@ std::unique_ptr<SingleClusterAlgorithm> CSF::create(j_t n, int verbose) const {
 
 std::unique_ptr<SingleClusterAlgorithm> CSF::create(init_matrix_t & im, int verbose) const {
   return create_cluster_slink(this->dconv, im, verbose);
+}
+
+std::size_t CSF::estimate_bytes(j_t n) const {
+  const std::size_t ns = static_cast<std::size_t>(n);
+  // SLINK vectors + delegate tree storage.
+  return ns * sizeof(std::uint64_t) * 24;
 }
 

@@ -15,7 +15,8 @@ seq_cluster(
   which = TRUE,
   verbose = FALSE,
   seq_idx = NULL,
-  seq_file = NULL
+  seq_file = NULL,
+  clustering_memory_budget_mb = NULL
 )
 }
 \arguments{
@@ -68,6 +69,10 @@ values greater than 1 (or TRUE) print more}
 
 \item{seq_file}{optional path overrides for index-backed \code{seq} only; see
 \code{\link[=seq_as_char]{seq_as_char()}}. Not used with \code{dist_file()}.}
+
+\item{clustering_memory_budget_mb}{(\code{numeric(1)} or \code{NULL}) Optional
+best-effort memory budget in MB for native clustering structures in
+multi-subset mode.}
 }
 \description{
 Single-linkage clustering of nucleotide sequences

@@ -20,8 +20,9 @@ public:
   EdlibSplitClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    DivisiblePairGenerator::Builder & pgb
-  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose) {};
+    DivisiblePairGenerator::Builder & pgb,
+    std::size_t worker_threads = 0
+  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose, worker_threads) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 
@@ -37,8 +38,9 @@ class EdlibConcurrentClusterWorker : public EdlibClusterWorker {
   EdlibConcurrentClusterWorker(
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
-    DivisiblePairGenerator::Builder & pgb
-  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose) {};
+    DivisiblePairGenerator::Builder & pgb,
+    std::size_t worker_threads = 0
+  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose, worker_threads) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 

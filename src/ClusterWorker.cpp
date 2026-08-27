@@ -182,6 +182,7 @@ void MergeClusterWorker<distmx_t, id_type>::operator()(size_t begin, size_t end)
   // OPTIMOTU_COUT << "ClusterWorker thread " << begin << " merging..." << std::endl;
   // mutex.unlock();
   algo_list[begin]->merge_into_parent();
+  algo->release_child(algo_list[begin]);
 
   // mutex.lock();
   // OPTIMOTU_COUT << "ClusterWorker thread " << begin << " exiting" << std::endl;
@@ -232,7 +233,7 @@ thread_count(shards), shards(shards) {
   algo_list.reserve(shards);
   for (int i = 0; i < shards; ++i) {
     thread_count[i] = 0;
-    algo_list[i] = algo->make_child();
+    algo_list.push_back(algo->make_child());
   }
   // OPTIMOTU_COUT << "done" << std::endl;
 }
@@ -262,6 +263,8 @@ void HierarchicalClusterWorker<distmx_t, id_type>::operator()(size_t begin, size
     // mutex.unlock();
     algo_list[i]->finalize();
     algo_list[i]->merge_into_parent();
+    algo->release_child(algo_list[i]);
+    algo_list[i] = nullptr;
   }
 
     // mutex.lock();

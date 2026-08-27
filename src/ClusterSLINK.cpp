@@ -94,6 +94,7 @@ ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_inner_child(ClusterAlgorithm
     (ClusterAlgorithm*)child_ptr
   );
   this->children.push_back(std::move(child));
+  this->uses_delegate = true;
   return child_ptr;
 }
 
@@ -105,6 +106,7 @@ ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_child() {
     (ClusterAlgorithm*)child_ptr
   );
   this->children.push_back(std::move(child));
+  this->uses_delegate = true;
   return child_ptr;
 }
 
@@ -116,6 +118,7 @@ MappedClusterAlgorithm * ClusterSLINK<verbose>::make_child(PairGenerator * pg) {
     (ClusterAlgorithm*)child_ptr
   );
   this->children.push_back(std::move(child));
+  this->uses_delegate = true;
   return child_ptr;
 }
 
@@ -176,7 +179,7 @@ void ClusterSLINK<verbose>::operator()(PairGenerator & pg, d_t i, int thread) {
 
 template<int verbose>
 void ClusterSLINK<verbose>::write_to_matrix(internal_matrix_t &out) {
-  if (children.size() > 0) return delegate.write_to_matrix(out);
+  if (uses_delegate) return delegate.write_to_matrix(out);
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   // OPTIMOTU_CERR << "preparing to write matrix" << std::endl
   //               << " i Pi Lambda" << std::endl;
@@ -213,7 +216,7 @@ struct RevOrderElement {
 
 template<int verbose>
 Rcpp::List ClusterSLINK<verbose>::as_hclust(const Rcpp::CharacterVector &seqnames) const {
-  if (children.size() > 0) return delegate.as_hclust(seqnames);
+  if (uses_delegate) return delegate.as_hclust(seqnames);
 
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   Rcpp::IntegerMatrix merge(this->n - 1, 2);
@@ -307,8 +310,12 @@ void ClusterSLINK<verbose>::merge_into(ClusterAlgorithm &consumer) {
 
 template<int verbose>
 void ClusterSLINK<verbose>::merge_into_parent() {
-  if (parent && children.size() == 0) this->merge_into(*parent);
-  if (parent && children.size() > 0) this->delegate.merge_into(*parent);
+  if (!parent) return;
+  if (uses_delegate) {
+    this->delegate.merge_into(*parent);
+  } else {
+    this->merge_into(*parent);
+  }
 }
 
 template<int verbose>

@@ -6,6 +6,7 @@
 #include "ClusterAlgorithm.h"
 #include "ClusterAlgorithmFactory.h"
 #include "ClusterTree.h"
+#include "MemoryBudget.h"
 #include <unordered_map>
 
 class MultipleClusterAlgorithm : public ClusterAlgorithm {
@@ -19,6 +20,7 @@ protected:
   const std::vector<std::vector<std::string>> subset_names;
   // the number of threads
   const int threads;
+  std::shared_ptr<MemoryBudgetTracker> memory_budget;
 
   // for each element, which subsets does it belong to? sorted
   std::vector<std::vector<j_t>> subset_key;
@@ -31,6 +33,9 @@ protected:
 
   // owned subsets are subsets that are owned by this MultipleClusterAlgorithm
   std::vector<std::unique_ptr<SingleClusterAlgorithm>> owned_subsets;
+  std::vector<std::pair<SingleClusterAlgorithm*, ClusterAlgorithm*>> borrowed_subsets;
+  std::vector<std::size_t> tracked_allocations;
+  std::size_t tracked_base_allocation = 0;
 
   // Last-pair overlap cache is thread_local inside ensure_whichsets so
   // concurrent workers do not share a slot. Returns the subsets that
@@ -51,7 +56,8 @@ protected:
     const ClusterAlgorithmFactory & factory,
     const std::vector<std::string> &names,
     const std::vector<std::vector<std::string>> &subset_names,
-    const int threads
+    const int threads,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
   );
 
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
@@ -68,7 +74,8 @@ protected:
     const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
     const std::vector<j_t> child_to_parent_map,
     PairGenerator * pg,
-    const int threads = 1
+    const int threads = 1,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
   );
 
 public:
@@ -76,6 +83,7 @@ public:
   friend class MultipleClusterAlgorithmImpl;
 
   MultipleClusterAlgorithm() = delete;
+  ~MultipleClusterAlgorithm() override;
 
   void operator()(j_t seq1, j_t seq2, double dist, int thread) override;
 
@@ -133,7 +141,8 @@ protected:
     const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
     const std::vector<j_t> child_to_parent_map,
     PairGenerator * pg,
-    const int threads = 1
+    const int threads = 1,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
   );
 
 public:
@@ -142,7 +151,8 @@ public:
     const std::vector<std::string> &names,
     const std::vector<std::vector<std::string>> &subset_names,
     const int threads,
-    int verbose_param
+    int verbose_param,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
   );
 
   MultipleClusterAlgorithm * make_child() override;

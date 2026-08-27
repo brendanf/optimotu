@@ -11,6 +11,6 @@ size_t DistClusterWorker::aligned() {
   return _aligned;
 }
 
-std::uint8_t DistClusterWorker::n_threads() {
+std::size_t DistClusterWorker::n_threads() {
   return threads;
 }

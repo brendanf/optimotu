@@ -58,6 +58,160 @@ strict_median <- function(x) {
   }
 }
 
+is_memory_budget_error <- function(e) {
+  grepl("clustering memory budget exceeded", conditionMessage(e), fixed = TRUE)
+}
+
+estimate_subset_memory_mb <- function(
+  n_seq,
+  n_thresholds,
+  clust_method,
+  parallel_method,
+  threads
+) {
+  base_factor <- switch(
+    clust_method,
+    tree = 0.06,
+    slink = 0.05,
+    matrix = 0.22,
+    index = 0.30,
+    0.10
+  )
+  method_scale <- switch(
+    parallel_method,
+    merge = threads,
+    concurrent = 1.1,
+    hierarchical = max(1, threads / 2),
+    1
+  )
+  max(1, n_seq * (n_thresholds + 1) * base_factor * method_scale / 1024)
+}
+
+estimate_batch_memory_mb <- function(
+  batch_idx,
+  testset_select,
+  threshold_config,
+  clust_config,
+  parallel_config
+) {
+  n_thresholds <- if (threshold_config$type == "uniform") {
+    floor((threshold_config$to - threshold_config$from) / threshold_config$by) +
+      1L
+  } else {
+    length(threshold_config$thresholds)
+  }
+  clust_method <- clust_config$method
+  parallel_method <- parallel_config$method
+  threads <- parallel_config$threads
+
+  per_subset <- vapply(
+    testset_select$n_seq[batch_idx],
+    estimate_subset_memory_mb,
+    numeric(1),
+    n_thresholds = n_thresholds,
+    clust_method = clust_method,
+    parallel_method = parallel_method,
+    threads = threads
+  )
+  sum(per_subset)
+}
+
+make_initial_batches <- function(
+  ordered_idx,
+  testset_select,
+  threshold_config,
+  clust_config,
+  parallel_config,
+  budget_mb
+) {
+  if (length(ordered_idx) == 0L) {
+    return(list())
+  }
+  if (is.null(budget_mb) || !is.finite(budget_mb) || budget_mb <= 0) {
+    return(list(ordered_idx))
+  }
+
+  batches <- list()
+  current <- integer(0)
+  for (idx in ordered_idx) {
+    candidate <- c(current, idx)
+    est <- estimate_batch_memory_mb(
+      candidate,
+      testset_select,
+      threshold_config,
+      clust_config,
+      parallel_config
+    )
+    if (length(current) > 0L && est > budget_mb) {
+      batches[[length(batches) + 1L]] <- current
+      current <- idx
+    } else {
+      current <- candidate
+    }
+  }
+  batches[[length(batches) + 1L]] <- current
+  batches
+}
+
+split_batch_indices <- function(
+  batch_idx,
+  testset_select,
+  strategy = "overlap"
+) {
+  if (length(batch_idx) <= 1L) {
+    return(list(left = batch_idx, right = integer(0)))
+  }
+  if (identical(strategy, "overlap")) {
+    groups <- split(
+      batch_idx,
+      testset_select$supertaxon[batch_idx],
+      drop = TRUE
+    )
+    if (length(groups) > 1L) {
+      group_sizes <- vapply(
+        groups,
+        function(g) sum(testset_select$n_seq[g]),
+        numeric(1)
+      )
+      group_order <- names(sort(group_sizes, decreasing = TRUE))
+      left <- integer(0)
+      right <- integer(0)
+      left_size <- 0
+      right_size <- 0
+      for (gname in group_order) {
+        grp <- groups[[gname]]
+        grp_size <- sum(testset_select$n_seq[grp])
+        if (left_size <= right_size) {
+          left <- c(left, grp)
+          left_size <- left_size + grp_size
+        } else {
+          right <- c(right, grp)
+          right_size <- right_size + grp_size
+        }
+      }
+      if (length(left) > 0L && length(right) > 0L) {
+        return(list(left = left, right = right))
+      }
+    }
+  }
+  o <- order(testset_select$n_seq[batch_idx], decreasing = TRUE, batch_idx)
+  sorted <- batch_idx[o]
+  mid <- length(sorted) %/% 2L
+  list(left = sorted[seq_len(mid)], right = sorted[-seq_len(mid)])
+}
+
+set_parallel_threads <- function(parallel_config, threads) {
+  out <- parallel_config
+  out$threads <- as.integer(threads)
+  out
+}
+
+set_parallel_subproblems <- function(parallel_config, subproblems) {
+  out <- parallel_config
+  out$subproblems <- as.integer(subproblems)
+  out
+}
+
 #' Calculate clustering quality measures
 #'
 #' This function is primarily intended for use in plotting the clustering
@@ -308,6 +462,22 @@ find_best_threshold <- function(
 #' contains sequence identifiers
 #' @param measures (`character`) one or more measures to calculate optimum
 #' thresholds for
+#' @param clustering_memory_budget_mb (`numeric(1)` or `NULL`) Best-effort
+#' memory budget for clustering-owned native structures, in MB. This is not a
+#' hard process-memory cap; set below machine limits for safer behavior.
+#' @param retry_on_memory_exhaustion (`logical(1)`) Retry clustering batches if
+#' the clustering memory budget is exceeded.
+#' @param retry_split_strategy (`character(1)`) Strategy used to split failed
+#' batches. `"overlap"` prefers keeping related subsets together and
+#' `"balanced"` splits by size.
+#' @param retry_reduce_threads (`logical(1)`) Whether to reduce thread count
+#' before splitting on budget failure.
+#' @param retry_min_threads (`integer(1)`) Lower bound for thread-reduction
+#' retries.
+#' @param retry_overpartition (`logical(1)`) Whether to retry with more pair
+#' subproblems than threads to reduce per-subproblem mapped state.
+#' @param retry_subproblem_factor (`integer(1)`) Multiplicative growth factor
+#' for subproblem count during overpartition retries.
 #' @param verbose (`logical(1)` or `integer(1)`) whether to print progress
 #' messages; values greater than 1 (or TRUE) print more
 #' @return (`data.frame`) a data frame with the following columns:
@@ -340,7 +510,14 @@ optimize_thresholds <- function(
   measures = c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM"),
   verbose = FALSE,
   seq_idx = NULL,
-  seq_file = NULL
+  seq_file = NULL,
+  clustering_memory_budget_mb = NULL,
+  retry_on_memory_exhaustion = TRUE,
+  retry_split_strategy = c("overlap", "balanced"),
+  retry_reduce_threads = TRUE,
+  retry_min_threads = 1L,
+  retry_overpartition = TRUE,
+  retry_subproblem_factor = 2L
 ) {
   # Check input
   checkmate::assert_character(ranks)
@@ -359,6 +536,18 @@ optimize_thresholds <- function(
     measures,
     c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
   )
+  checkmate::assert_number(
+    clustering_memory_budget_mb,
+    lower = 1,
+    null.ok = TRUE,
+    finite = TRUE
+  )
+  checkmate::assert_flag(retry_on_memory_exhaustion)
+  retry_split_strategy <- match.arg(retry_split_strategy)
+  checkmate::assert_flag(retry_reduce_threads)
+  checkmate::assert_count(retry_min_threads, positive = TRUE)
+  checkmate::assert_flag(retry_overpartition)
+  checkmate::assert_integerish(retry_subproblem_factor, lower = 2L, len = 1L)
   checkmate::assert(
     checkmate::check_flag(verbose),
     checkmate::check_integerish(verbose, lower = 0L)
@@ -386,6 +575,8 @@ optimize_thresholds <- function(
       "total thresholds to optimize.\n"
     )
     if (verbose >= 2L) {
+      rank <- NULL
+      superrank <- NULL
       dplyr::count(testset_select, rank, superrank) |>
         dplyr::mutate(
           dplyr::across(
@@ -402,36 +593,211 @@ optimize_thresholds <- function(
     }
   }
 
-  # Do test clustering
-  clust <- seq_cluster(
-    refseq,
-    dist_config = dist_config,
-    threshold_config = threshold_config,
-    clust_config = clust_config,
-    parallel_config = parallel_config,
-    output_type = "matrix",
-    which = testset_select$seq_id,
-    verbose = verbose,
-    seq_idx = seq_idx,
-    seq_file = seq_file
+  row_order <- order(
+    testset_select$rank,
+    testset_select$superrank,
+    testset_select$supertaxon,
+    testset_select$n_seq,
+    decreasing = TRUE
   )
+  ordered_idx <- seq_len(nrow(testset_select))[row_order]
 
-  # calculate clustering quality measures
-  out <- mapply(
-    find_best_threshold,
-    c = testset_select$true_partition,
-    k = clust,
-    MoreArgs = list(
-      threads = parallel_config$threads,
-      measures = measures
-    ),
-    SIMPLIFY = FALSE
+  initial_batches <- make_initial_batches(
+    ordered_idx,
+    testset_select,
+    threshold_config,
+    clust_config,
+    parallel_config,
+    clustering_memory_budget_mb
   )
-  out <- do.call(rbind, out)
-  cbind(
-    rank = rep(testset_select$rank, each = length(measures)),
-    superrank = rep(testset_select$superrank, each = length(measures)),
-    supertaxon = rep(testset_select$supertaxon, each = length(measures)),
-    out
+  if (
+    (isTRUE(verbose) || verbose >= 1L) && !is.null(clustering_memory_budget_mb)
+  ) {
+    cat(
+      "Planning memory-aware batches:",
+      length(initial_batches),
+      "batch(es) for",
+      length(ordered_idx),
+      "subset problems.\n"
+    )
+  }
+
+  run_batch <- function(batch_idx, local_parallel_config, depth = 0L) {
+    if (length(batch_idx) == 0L) {
+      return(NULL)
+    }
+    if (isTRUE(verbose) || verbose >= 2L) {
+      cat(
+        sprintf(
+          "Running batch depth=%d n_subsets=%d threads=%d%s\n",
+          depth,
+          length(batch_idx),
+          local_parallel_config$threads,
+          if (!is.null(local_parallel_config$subproblems)) {
+            paste0(" subproblems=", local_parallel_config$subproblems)
+          } else {
+            ""
+          }
+        )
+      )
+    }
+    result <- tryCatch(
+      {
+        clust_args <- list(
+          seq = refseq,
+          dist_config = dist_config,
+          threshold_config = threshold_config,
+          clust_config = clust_config,
+          parallel_config = local_parallel_config,
+          output_type = "matrix",
+          which = testset_select$seq_id[batch_idx],
+          verbose = verbose,
+          seq_idx = seq_idx,
+          seq_file = seq_file
+        )
+        if (!is.null(clustering_memory_budget_mb)) {
+          clust_args$clustering_memory_budget_mb <- clustering_memory_budget_mb
+        }
+        clust <- do.call(seq_cluster, clust_args)
+        out <- mapply(
+          find_best_threshold,
+          c = testset_select$true_partition[batch_idx],
+          k = clust,
+          MoreArgs = list(
+            threads = local_parallel_config$threads,
+            measures = measures
+          ),
+          SIMPLIFY = FALSE
+        )
+        out <- do.call(rbind, out)
+        cbind(
+          row_index = rep(batch_idx, each = length(measures)),
+          rank = rep(testset_select$rank[batch_idx], each = length(measures)),
+          superrank = rep(
+            testset_select$superrank[batch_idx],
+            each = length(measures)
+          ),
+          supertaxon = rep(
+            testset_select$supertaxon[batch_idx],
+            each = length(measures)
+          ),
+          out
+        )
+      },
+      error = identity
+    )
+    if (!inherits(result, "error")) {
+      return(result)
+    }
+    if (!retry_on_memory_exhaustion || !is_memory_budget_error(result)) {
+      stop(result)
+    }
+    if (
+      retry_reduce_threads && local_parallel_config$threads > retry_min_threads
+    ) {
+      next_threads <- max(
+        retry_min_threads,
+        local_parallel_config$threads %/% 2L
+      )
+      if (next_threads < local_parallel_config$threads) {
+        if (isTRUE(verbose) || verbose >= 1L) {
+          cat(
+            "Retrying batch with reduced threads:",
+            local_parallel_config$threads,
+            "->",
+            next_threads,
+            "\n"
+          )
+        }
+        next_parallel <- set_parallel_threads(
+          local_parallel_config,
+          next_threads
+        )
+        return(run_batch(batch_idx, next_parallel, depth))
+      }
+    }
+    if (
+      retry_overpartition &&
+        local_parallel_config$method %in% c("merge", "concurrent")
+    ) {
+      current_subproblems <- if (is.null(local_parallel_config$subproblems)) {
+        local_parallel_config$threads
+      } else {
+        local_parallel_config$subproblems
+      }
+      next_subproblems <- max(
+        current_subproblems * retry_subproblem_factor,
+        length(batch_idx)
+      )
+      if (next_subproblems > current_subproblems) {
+        if (isTRUE(verbose) || verbose >= 1L) {
+          cat(
+            "Retrying batch with more subproblems:",
+            current_subproblems,
+            "->",
+            next_subproblems,
+            "\n"
+          )
+        }
+        next_parallel <- set_parallel_subproblems(
+          local_parallel_config,
+          next_subproblems
+        )
+        retry_result <- tryCatch(
+          run_batch(batch_idx, next_parallel, depth),
+          error = identity
+        )
+        if (!inherits(retry_result, "error")) {
+          return(retry_result)
+        }
+        result <- retry_result
+      }
+    }
+    if (length(batch_idx) == 1L) {
+      stop(
+        "Single subset still exceeds memory budget. Increase ",
+        "`clustering_memory_budget_mb` or use lower-memory settings."
+      )
+    }
+    split <- split_batch_indices(
+      batch_idx,
+      testset_select,
+      strategy = retry_split_strategy
+    )
+    if (length(split$left) == 0L || length(split$right) == 0L) {
+      split <- split_batch_indices(
+        batch_idx,
+        testset_select,
+        strategy = "balanced"
+      )
+    }
+    left_size <- sum(testset_select$n_seq[split$left])
+    right_size <- sum(testset_select$n_seq[split$right])
+    first <- if (left_size >= right_size) split$left else split$right
+    second <- if (left_size >= right_size) split$right else split$left
+    if (isTRUE(verbose) || verbose >= 1L) {
+      cat(
+        "Splitting batch at depth",
+        depth,
+        "into sizes",
+        length(first),
+        "and",
+        length(second),
+        "\n"
+      )
+    }
+    out_first <- run_batch(first, local_parallel_config, depth + 1L)
+    out_second <- run_batch(second, local_parallel_config, depth + 1L)
+    rbind(out_first, out_second)
+  }
+
+  outputs <- lapply(
+    initial_batches,
+    run_batch,
+    local_parallel_config = parallel_config
   )
+  out <- do.call(rbind, outputs)
+  out <- out[order(out$row_index), , drop = FALSE]
+  out$row_index <- NULL
+  out
 }

@@ -25,6 +25,11 @@ protected:
   j_t slink_seq1 = 0;
   j_t slink_seq2 = 0;
   ClusterTreeImpl<verbose, 0> delegate;
+  // Set when any child has been created, and never cleared. Results then live
+  // in `delegate` rather than in this object's own Pi/Lambda. This cannot be
+  // derived from `children`, because children are erased by release_child()
+  // once they have merged.
+  bool uses_delegate = false;
 
   void init_iter();
   void update();

@@ -3,6 +3,23 @@
 * Fix `seq_cluster()` with multiple overlapping `which` subsets so each subset
 matches clustering that subset on its own.
 * Fix a crash with parallel concurrency for multiple subset clustering with Hamming distance.
+* Add argument `clustering_memory_budget_mb` to `seq_cluster()` and
+`optimize_thresholds()`, which places a best-effort budget on the memory used by
+clustering-owned native structures in multi-subset mode. This bounds clustering
+allocations only, not total process memory. The default (`NULL`) leaves behavior
+unchanged.
+* `optimize_thresholds()` now recovers from clustering memory exhaustion instead
+of failing outright. When a budget is set, it plans memory-aware batches of
+subsets, and on budget overflow retries with fewer threads, then with more pair
+subproblems, then by splitting the batch, controlled by the new arguments
+`retry_on_memory_exhaustion`, `retry_split_strategy`, `retry_reduce_threads`,
+`retry_min_threads`, `retry_overpartition`, and `retry_subproblem_factor`.
+* Cluster algorithms now release per-thread child algorithms as soon as they have
+merged into their parent, rather than holding them until the whole clustering
+finishes, which reduces peak memory use in parallel runs.
+* Fix `seq_cluster()` failing with `invalid sequence index` when clustering
+multiple subsets via `which` with `parallel_merge()`, for subsets whose sequences
+are not a prefix of the full input.
 
 # optimotu 0.9.7
 

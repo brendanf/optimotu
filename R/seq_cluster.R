@@ -10,6 +10,9 @@
 #' `seq_cluster_usearch()`.
 #' @param verbose (`logical(1)` or `integer(1)`) whether to print progress;
 #' values greater than 1 (or TRUE) print more
+#' @param clustering_memory_budget_mb (`numeric(1)` or `NULL`) Optional
+#' best-effort memory budget in MB for native clustering structures in
+#' multi-subset mode.
 #' @export
 seq_cluster <- function(
   seq,
@@ -22,7 +25,8 @@ seq_cluster <- function(
   which = TRUE,
   verbose = FALSE,
   seq_idx = NULL,
-  seq_file = NULL
+  seq_file = NULL,
+  clustering_memory_budget_mb = NULL
 ) {
   UseMethod("seq_cluster", seq)
 }
@@ -40,7 +44,8 @@ seq_cluster.data.frame <- function(
   which = TRUE,
   verbose = FALSE,
   seq_idx = NULL,
-  seq_file = NULL
+  seq_file = NULL,
+  clustering_memory_budget_mb = NULL
 ) {
   if (!is.null(seq_file)) {
     stop(
@@ -65,12 +70,19 @@ seq_cluster.data.frame <- function(
     mycall$seq_id <- newseq_id
   }
   if (identical(dist_config$method, "usearch")) {
+    if (!is.null(clustering_memory_budget_mb)) {
+      stop(
+        "`clustering_memory_budget_mb` is not supported with `dist_usearch()`.",
+        call. = FALSE
+      )
+    }
     mycall[[1]] <- quote(seq_cluster_usearch.DNAStringSet)
     newseq <- quote(Biostrings::DNAStringSet(seq$seq))
     newseq[[2]][[2]] <- mycall$seq
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
     mycall$dist_config <- NULL
+    mycall$clustering_memory_budget_mb <- NULL
   } else {
     mycall[[1]] <- quote(seq_cluster.character)
     newseq <- quote(seq$seq)
@@ -92,12 +104,20 @@ seq_cluster.character <- function(
   which = TRUE,
   verbose = FALSE,
   seq_idx = NULL,
-  seq_file = NULL
+  seq_file = NULL,
+  clustering_memory_budget_mb = NULL
 ) {
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   if (identical(dist_config$method, "usearch")) {
+    if (!is.null(clustering_memory_budget_mb)) {
+      stop(
+        "`clustering_memory_budget_mb` is not supported with `dist_usearch()`.",
+        call. = FALSE
+      )
+    }
     mycall <- match.call()
     mycall$dist_config <- NULL
+    mycall$clustering_memory_budget_mb <- NULL
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
     mycall[[1]] <- quote(optimotu::seq_cluster_usearch)
@@ -106,6 +126,12 @@ seq_cluster.character <- function(
   if (identical(dist_config$method, "file")) {
     if (!is.null(seq_file)) {
       stop("`seq_file` is not supported with `dist_file()`.", call. = FALSE)
+    }
+    if (!is.null(clustering_memory_budget_mb)) {
+      stop(
+        "`clustering_memory_budget_mb` is not supported with `dist_file()`.",
+        call. = FALSE
+      )
     }
     names_vec <- if (missing(seq_id)) {
       seq_input_seq_ids(seq, seq_idx, NULL)
@@ -120,6 +146,7 @@ seq_cluster.character <- function(
     mycall$seq_id <- NULL
     mycall$seq_idx <- NULL
     mycall$seq_file <- NULL
+    mycall$clustering_memory_budget_mb <- NULL
     mycall$by_names <- dist_config$by_names
     mycall[[1]] <- quote(optimotu::distmx_cluster)
     return(eval(mycall, envir = parent.frame()))
@@ -138,6 +165,12 @@ seq_cluster.character <- function(
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   checkmate::assert_character(seq_id)
+  checkmate::assert_number(
+    clustering_memory_budget_mb,
+    lower = 0,
+    null.ok = TRUE,
+    finite = TRUE
+  )
   out <- if (!is.list(which)) {
     if (!(length(seq) == 0L && isTRUE(which))) {
       seq <- seq[which]
@@ -190,7 +223,12 @@ seq_cluster.character <- function(
       clust_config = clust_config,
       parallel_config = parallel_config,
       output_type = output_type,
-      verbose = as.integer(verbose)
+      verbose = as.integer(verbose),
+      clustering_memory_budget_mb = if (is.null(clustering_memory_budget_mb)) {
+        -1
+      } else {
+        clustering_memory_budget_mb
+      }
     )
   }
   out <- reduplicate_thresholds(out, threshold_config)
@@ -210,7 +248,8 @@ seq_cluster.DNAStringSet <- function(
   which = TRUE,
   verbose = FALSE,
   seq_idx = NULL,
-  seq_file = NULL
+  seq_file = NULL,
+  clustering_memory_budget_mb = NULL
 ) {
   if (!is.null(seq_file)) {
     stop(
@@ -230,7 +269,14 @@ seq_cluster.DNAStringSet <- function(
   mycall$seq_idx <- NULL
   mycall$seq_file <- NULL
   if (identical(dist_config$method, "usearch")) {
+    if (!is.null(clustering_memory_budget_mb)) {
+      stop(
+        "`clustering_memory_budget_mb` is not supported with `dist_usearch()`.",
+        call. = FALSE
+      )
+    }
     mycall$dist_config <- NULL
+    mycall$clustering_memory_budget_mb <- NULL
     mycall$usearch <- dist_config$usearch
     mycall$usearch_ncpu <- dist_config$usearch_ncpu
     mycall[[1]] <- quote(seq_cluster_usearch.DNAStringSet)

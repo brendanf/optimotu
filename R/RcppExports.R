@@ -208,8 +208,8 @@ seq_cluster_single <- function(seq, dist_config, threshold_config, clust_config,
     .Call(`_optimotu_seq_cluster_single`, seq, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
 }
 
-seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = 0L) {
-    .Call(`_optimotu_seq_cluster_multi`, seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose)
+seq_cluster_multi <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = 0L, clustering_memory_budget_mb = -1.0) {
+    .Call(`_optimotu_seq_cluster_multi`, seq, which, dist_config, threshold_config, clust_config, parallel_config, output_type, verbose, clustering_memory_budget_mb)
 }
 
 #' Search for best match(es) of query sequences in reference sequences

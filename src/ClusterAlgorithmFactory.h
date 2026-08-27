@@ -6,6 +6,7 @@
 
 #include "ClusterAlgorithm.h"
 #include <memory>
+#include <cstddef>
 
 class ClusterAlgorithmFactory {
 protected:
@@ -17,6 +18,7 @@ public:
 
   virtual std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const = 0;
   virtual std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const = 0;
+  virtual std::size_t estimate_bytes(j_t n) const;
 };
 
 class ClusterMatrixFactory : public ClusterAlgorithmFactory{
@@ -32,6 +34,7 @@ public:
 
   std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const override;
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
+  std::size_t estimate_bytes(j_t n) const override;
 };
 
 class ClusterIndexedMatrixFactory : public ClusterAlgorithmFactory{
@@ -40,6 +43,7 @@ public:
 
   std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const override;
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
+  std::size_t estimate_bytes(j_t n) const override;
 };
 
 class ClusterTreeFactory : public ClusterAlgorithmFactory{
@@ -49,6 +53,7 @@ public:
 
   std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const override;
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
+  std::size_t estimate_bytes(j_t n) const override;
 };
 
 class ClusterSLINKFactory : public ClusterAlgorithmFactory{
@@ -57,6 +62,7 @@ public:
 
   std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const override;
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
+  std::size_t estimate_bytes(j_t n) const override;
 };
 
 #endif //OPTIMOTU_CLUSTERALGORITHMFACTORY_H_INCLUDED

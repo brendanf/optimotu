@@ -12,7 +12,8 @@ public :
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1,
-    int verbose = 0
+    int verbose = 0,
+    std::size_t worker_threads = 0
   );
 };
 
@@ -30,8 +31,9 @@ public :
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
-    const double breakpoint = 0.1
-  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose) {};
+    const double breakpoint = 0.1,
+    std::size_t worker_threads = 0
+  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose, worker_threads) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 
@@ -49,8 +51,9 @@ public :
     const std::vector<std::string> &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
-    const double breakpoint = 0.1
-  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose) {};
+    const double breakpoint = 0.1,
+    std::size_t worker_threads = 0
+  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose, worker_threads) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 

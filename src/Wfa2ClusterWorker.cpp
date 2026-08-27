@@ -9,8 +9,9 @@ Wfa2ClusterWorker::Wfa2ClusterWorker(
   const int match, const int mismatch,
   const int gap_open, const int gap_extend,
   const int gap_open2, const int gap_extend2,
-  int verbose
-) : DistClusterWorker(seq, clust_algo, pgb, verbose),
+  int verbose,
+  std::size_t worker_threads
+) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads),
 match(match), mismatch(mismatch), gap_open(gap_open), gap_extend(gap_extend),
 gap_open2(gap_open2), gap_extend2(gap_extend2) {};
 
@@ -18,9 +19,9 @@ template<int verbose>
 void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
   wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
                                    gap_open2, gap_extend2, wfa::WFAligner::Alignment};
-  for (size_t pg_index = begin; pg_index < end; pg_index++) {
+  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
     auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm * my_algo = clust_algo.make_child(pg.get());
+    ClusterAlgorithm * my_algo = clust_algo.make_child();
     OPTIMOTU_DEBUG(2, << "Wfa2SplitClusterWorker thread " << pg_index << " entered" << std::endl);
     size_t my_prealigned = 0;
     size_t my_aligned = 0;
@@ -50,29 +51,26 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) {
-        RcppThread::checkUserInterrupt();
-        ++(*pg);
-        continue;
-      }
-      ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - threshold;
-      double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-      int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-      int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-      wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-      wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
-      double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
-      if (d < 1.0) ++my_aligned;
+      if (l1/l2 >= sim_threshold) {
+        ++my_prealigned;
+        double sim_threshold_plus_1 = 2.0 - threshold;
+        double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+        int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
+        wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
+        wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
+        double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
+        if (d < 1.0) ++my_aligned;
 
-      OPTIMOTU_DEBUG(
-        4,
-        << " distance=" << d
-        << std::endl
-      );
-      if (d < threshold) (*my_algo)(*pg, d);
-      RcppThread::checkUserInterrupt();
+        OPTIMOTU_DEBUG(
+          4,
+          << " distance=" << d
+          << std::endl
+        );
+        if (d < threshold) (*my_algo)(*pg, d);
+      }
       ++(*pg);
+      RcppThread::checkUserInterrupt();
     }
     mutex.lock();
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
@@ -80,6 +78,7 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
     _prealigned += my_prealigned;
     mutex.unlock();
     my_algo->merge_into_parent();
+    clust_algo.release_child(my_algo);
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
   }
 }
@@ -91,7 +90,7 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
 
   wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
                                    gap_open2, gap_extend2, wfa::WFAligner::Alignment};
-  for (size_t pg_index = begin; pg_index < end; pg_index++) {
+  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
     auto & pg = pair_generators[pg_index];
     OPTIMOTU_DEBUG(
       2,
@@ -123,34 +122,31 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
       );
 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) {
-        RcppThread::checkUserInterrupt();
-        ++(*pg);
-        continue;
+      if (l1/l2 >= sim_threshold) {
+        ++my_prealigned;
+        double sim_threshold_plus_1 = 2.0 - threshold;
+        double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
+        int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
+        wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
+        wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
+        OPTIMOTU_DEBUG(
+          4,
+          << "wfa_aligner min_k=" << min_k
+          << " max_k=" << max_k
+          << " max score=" << (int)maxd1 + 1
+          << std::endl
+        );
+        double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
+        if (d < 1.0) ++my_aligned;
+        OPTIMOTU_DEBUG(
+          4,
+          << "Thread " << begin
+          << " distance=" << d
+          << std::endl
+        );
+        if (d < threshold) clust_algo(*pg, d);
       }
-      ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - threshold;
-      double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-      int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-      int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-      wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-      wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
-      OPTIMOTU_DEBUG(
-        4,
-        << "wfa_aligner min_k=" << min_k
-        << " max_k=" << max_k
-        << " max score=" << (int)maxd1 + 1
-        << std::endl
-      );
-      double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
-      if (d < 1.0) ++my_aligned;
-      OPTIMOTU_DEBUG(
-        4,
-        << "Thread " << begin
-        << " distance=" << d
-        << std::endl
-      );
-      if (d < threshold) clust_algo(*pg, d);
       OPTIMOTU_DEBUG(
         4,
         << "Thread " << pg_index
@@ -158,8 +154,8 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
         << " and " << i << " (i0=" << i0 << ")"
         << "\n" << std::endl
       );
-      RcppThread::checkUserInterrupt();
       ++(*pg);
+      RcppThread::checkUserInterrupt();
     }
     mutex.lock();
     _aligned += my_aligned;

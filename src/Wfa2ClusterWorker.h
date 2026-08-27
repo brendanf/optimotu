@@ -16,7 +16,8 @@ public :
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
     const int gap_open2 = 0, const int gap_extend2 = 1,
-    int verbose = 0
+    int verbose = 0,
+    std::size_t worker_threads = 0
   );
 };
 
@@ -42,8 +43,9 @@ public:
     DivisiblePairGenerator::Builder & pgb,
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
-    const int gap_open2 = 0, const int gap_extend2 = 1
-  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose) {};
+    const int gap_open2 = 0, const int gap_extend2 = 1,
+    std::size_t worker_threads = 0
+  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, worker_threads) {};
   void operator()(std::size_t begin, std::size_t end) override;
 };
 
@@ -69,8 +71,9 @@ class Wfa2ConcurrentClusterWorker : public Wfa2ClusterWorker {
     DivisiblePairGenerator::Builder & pgb,
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
-    const int gap_open2 = 0, const int gap_extend2 = 1
-  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose) {};
+    const int gap_open2 = 0, const int gap_extend2 = 1,
+    std::size_t worker_threads = 0
+  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, worker_threads) {};
   void operator()(std::size_t begin, std::size_t end) override;
 };
 

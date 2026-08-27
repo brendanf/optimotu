@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <limits>
 #include <string>
+#include <numeric>
 #include "MultipleClusterAlgorithm.h"
 #include "optimotu.h"
 
@@ -34,12 +35,60 @@ std::vector<std::vector<j_t>> calculate_subset_indices(
   return out;
 }
 
+namespace {
+
+std::size_t estimate_base_allocation(
+  const std::vector<std::string> &names,
+  const std::vector<std::vector<std::string>> &subset_names,
+  int threads
+) {
+  std::size_t total = sizeof(MultipleClusterAlgorithm);
+  total += names.size() * sizeof(std::string);
+  for (const auto &name : names) {
+    total += name.size();
+  }
+  total += subset_names.size() * sizeof(std::vector<std::string>);
+  for (const auto &subset : subset_names) {
+    total += subset.size() * sizeof(std::string);
+    for (const auto &name : subset) {
+      total += name.size();
+    }
+  }
+  total += names.size() * sizeof(std::vector<j_t>);
+  total += subset_names.size() * sizeof(std::unordered_map<j_t, j_t>);
+  total += static_cast<std::size_t>(threads) * sizeof(std::vector<j_t>);
+  total += static_cast<std::size_t>(threads) * sizeof(std::pair<j_t, j_t>);
+  return total;
+}
+
+void budget_acquire(
+  const std::shared_ptr<MemoryBudgetTracker> &budget,
+  std::size_t bytes,
+  const std::string &context
+) {
+  if (budget) {
+    budget->acquire(bytes, context);
+  }
+}
+
+void budget_release(
+  const std::shared_ptr<MemoryBudgetTracker> &budget,
+  std::size_t bytes
+) {
+  if (budget) {
+    budget->release(bytes);
+  }
+}
+
+} // namespace
+
 // Base protected main constructor: initializer list only.
 MCA::MultipleClusterAlgorithm(
   const ClusterAlgorithmFactory & factory,
   const std::vector<std::string> &names,
   const std::vector<std::vector<std::string>> &subset_names,
-  const int threads
+  const int threads,
+  std::shared_ptr<MemoryBudgetTracker> memory_budget
 ) :
   ClusterAlgorithm(factory.dconv),
   factory(factory),
@@ -47,10 +96,16 @@ MCA::MultipleClusterAlgorithm(
   subset_indices(calculate_subset_indices(names, subset_names)),
   subset_names(subset_names),
   threads(threads),
+  memory_budget(memory_budget),
   subset_key(names.size()),
   fwd_map(subset_names.size()),
-  subsets()
-{}
+  subsets(),
+  borrowed_subsets(),
+  tracked_allocations()
+{
+  tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
+  budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm base");
+}
 
 template<int verbose>
 MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm * parent) :
@@ -66,8 +121,9 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
   const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
   const std::vector<j_t> child_to_parent_map,
   PairGenerator * pg,
-  const int threads
-) : MultipleClusterAlgorithm(parent, names, subset_indices, subset_names, subset_key, fwd_map, child_to_parent_map, pg, threads) {}
+  const int threads,
+  std::shared_ptr<MemoryBudgetTracker> memory_budget
+) : MultipleClusterAlgorithm(parent, names, subset_indices, subset_names, subset_key, fwd_map, child_to_parent_map, pg, threads, memory_budget) {}
 
 template<int verbose>
 MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
@@ -75,9 +131,10 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
   const std::vector<std::string> &names,
   const std::vector<std::vector<std::string>> &subset_names,
   const int threads,
-  int
+  int,
+  std::shared_ptr<MemoryBudgetTracker> memory_budget
 ) :
-  MultipleClusterAlgorithm(factory, names, subset_names, threads)
+  MultipleClusterAlgorithm(factory, names, subset_names, threads, memory_budget)
 {
   OPTIMOTU_DEBUG(
     1,
@@ -107,7 +164,10 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
   );
 
   for (j_t i = 0; i < subset_names.size(); ++i) {
+    const std::size_t subset_bytes = factory.estimate_bytes(subset_names[i].size());
+    budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm subset init");
     owned_subsets.emplace_back(factory.create(subset_names[i].size(), verbose));
+    tracked_allocations.push_back(subset_bytes);
     subsets.push_back(owned_subsets.back().get());
     fwd_map[i].reserve(subset_names[i].size());
     OPTIMOTU_DEBUG(
@@ -210,12 +270,22 @@ MCA::MultipleClusterAlgorithm(MCA * parent) :
   subset_indices(parent->subset_indices),
   subset_names(parent->subset_names),
   threads(parent->threads),
+  memory_budget(parent->memory_budget),
   subset_key(parent->subset_key),
-  fwd_map(parent->fwd_map)
+  fwd_map(parent->fwd_map),
+  borrowed_subsets(),
+  tracked_allocations()
 {
+  tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
+  budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm child base");
   subsets.reserve(subset_names.size());
   for (auto & subset : parent->subsets) {
-    subsets.push_back(subset->make_child());
+    const std::size_t subset_bytes = factory.estimate_bytes(subset->n);
+    budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm child subset");
+    auto child_subset = subset->make_child();
+    subsets.push_back(child_subset);
+    borrowed_subsets.emplace_back(subset, child_subset);
+    tracked_allocations.push_back(subset_bytes);
   }
 }
 
@@ -230,7 +300,8 @@ MCA::MultipleClusterAlgorithm(
   const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
   const std::vector<j_t> child_to_parent_map,
   PairGenerator * pg,
-  const int threads
+  const int threads,
+  std::shared_ptr<MemoryBudgetTracker> memory_budget
 ) :
   ClusterAlgorithm{parent},
   factory{parent->factory},
@@ -238,13 +309,30 @@ MCA::MultipleClusterAlgorithm(
   subset_indices{subset_indices},
   subset_names{subset_names},
   threads{threads},
+  memory_budget{memory_budget ? memory_budget : parent->memory_budget},
   subset_key{subset_key},
-  fwd_map{fwd_map}
+  fwd_map{fwd_map},
+  borrowed_subsets(),
+  tracked_allocations()
   {
+    tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
+    budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm mapped child base");
     subsets.reserve(child_to_parent_map.size());
     for (const j_t j0 : child_to_parent_map) {
-      subsets.push_back(parent->subsets[j0]->make_child(pg));
+      const std::size_t subset_bytes = factory.estimate_bytes(subset_indices[subsets.size()].size());
+      budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm mapped child subset");
+      auto child_subset = parent->subsets[j0]->make_child(pg);
+      subsets.push_back(child_subset);
+      borrowed_subsets.emplace_back(parent->subsets[j0], child_subset);
+      tracked_allocations.push_back(subset_bytes);
     }
+}
+
+MCA::~MultipleClusterAlgorithm() {
+  for (std::size_t bytes : tracked_allocations) {
+    budget_release(memory_budget, bytes);
+  }
+  budget_release(memory_budget, tracked_base_allocation);
 }
 
 // Overlapping subsets for (seq1, seq2), cached per OS thread and MCA

@@ -1,6 +1,7 @@
 #ifdef OPTIMOTU_R
 
 #include "config.h"
+#include "MemoryBudget.h"
 
 // [[Rcpp::export]]
 Rcpp::RObject seq_cluster_single(
@@ -103,7 +104,8 @@ Rcpp::List seq_cluster_multi(
     const Rcpp::List clust_config,
     const Rcpp::List parallel_config,
     const std::string output_type = "matrix",
-    const int verbose = 0
+    const int verbose = 0,
+    const double clustering_memory_budget_mb = -1.0
 ) {
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
@@ -122,22 +124,44 @@ Rcpp::List seq_cluster_multi(
   if (verbose) {
     OPTIMOTU_CERR << "done\ncreating MultipleClusterAlgorithm..." << std::flush;
   }
-  auto algo = create_multiple_cluster_algorithm(parallel_config, *factory, seq.names(), which, verbose);
+  std::size_t clustering_memory_budget_bytes = 0;
+  if (clustering_memory_budget_mb > 0.0) {
+    clustering_memory_budget_bytes = static_cast<std::size_t>(clustering_memory_budget_mb * 1024.0 * 1024.0);
+  }
+  auto algo = create_multiple_cluster_algorithm(
+    parallel_config,
+    *factory,
+    seq.names(),
+    which,
+    verbose,
+    clustering_memory_budget_bytes
+  );
   if (verbose)
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
-  if (cppseq.size() >= 2) {
-    auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
-    if (verbose)
-      OPTIMOTU_CERR << "done\nclustering..." << std::endl;
+  try {
+    if (cppseq.size() >= 2) {
+      auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
+      if (verbose)
+        OPTIMOTU_CERR << "done\nclustering..." << std::endl;
 
-    if (worker->n_threads() == 1) {
-      (*worker)(0, 1);
-    } else {
-      RcppParallel::parallelFor(0, worker->n_threads(), *worker, 1, worker->n_threads());
+      if (worker->n_threads() == 1) {
+        (*worker)(0, 1);
+      } else {
+        RcppParallel::parallelFor(0, worker->n_threads(), *worker, 1, worker->n_threads());
+      }
+    } else if (verbose) {
+      OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << cppseq.size()
+                    << " input sequence(s)" << std::endl;
     }
-  } else if (verbose) {
-    OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << cppseq.size()
-                  << " input sequence(s)" << std::endl;
+  } catch (const MemoryBudgetExceeded &e) {
+    const double budget_mb = static_cast<double>(e.budget_bytes) / (1024.0 * 1024.0);
+    const double current_mb = static_cast<double>(e.current_bytes) / (1024.0 * 1024.0);
+    const double requested_mb = static_cast<double>(e.requested_bytes) / (1024.0 * 1024.0);
+    OPTIMOTU_STOP(
+      "clustering memory budget exceeded (budget=%.2f MB, current=%.2f MB, "
+      "requested=%.2f MB, context=%s)",
+      budget_mb, current_mb, requested_mb, e.context.c_str()
+    );
   }
   if (verbose)
     OPTIMOTU_CERR << "done\nfinalizing worker..." << std::flush;

@@ -62,26 +62,30 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     ClusterAlgorithmFactory &factory,
     const std::vector<std::string> seqnames,
     const std::vector<std::vector<std::string>> subset_names,
-    int verbose
+    int verbose,
+    std::size_t clustering_memory_budget_bytes
 ) {
+  auto memory_budget = clustering_memory_budget_bytes > 0
+    ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
+    : nullptr;
   if (verbose == 0) {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
-      factory, seqnames, subset_names, threads, 0);
+      factory, seqnames, subset_names, threads, 0, memory_budget);
   }
   if (verbose == 1) {
     return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
-      factory, seqnames, subset_names, threads, 0);
+      factory, seqnames, subset_names, threads, 0, memory_budget);
   }
   if (verbose == 2) {
     return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
-      factory, seqnames, subset_names, threads, 0);
+      factory, seqnames, subset_names, threads, 0, memory_budget);
   }
   if (verbose == 3) {
     return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
-      factory, seqnames, subset_names, threads, 0);
+      factory, seqnames, subset_names, threads, 0, memory_budget);
   }
   return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
-    factory, seqnames, subset_names, threads, 0);
+    factory, seqnames, subset_names, threads, 0, memory_budget);
 }
 
 template<typename distmx_t>
@@ -148,30 +152,31 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     int verbose
 ) {
   AllPairGenerator::Builder pgb(seq.size(), threads);
+  std::size_t worker_threads = threads;
   int v = (verbose > 4) ? 4 : verbose;
   if (type == "split") {
     if (v == 0) {
-      return std::make_unique<HybridSplitClusterWorker<0>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<0>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else if (v == 1) {
-      return std::make_unique<HybridSplitClusterWorker<1>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<1>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else if (v == 2) {
-      return std::make_unique<HybridSplitClusterWorker<2>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<2>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else if (v == 3) {
-      return std::make_unique<HybridSplitClusterWorker<3>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<3>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else {
-      return std::make_unique<HybridSplitClusterWorker<4>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridSplitClusterWorker<4>>(seq, cluster, pgb, breakpoint, worker_threads);
     }
   } else if (type == "concurrent") {
     if (v == 0) {
-      return std::make_unique<HybridConcurrentClusterWorker<0>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<0>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else if (v == 1) {
-      return std::make_unique<HybridConcurrentClusterWorker<1>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<1>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else if (v == 2) {
-      return std::make_unique<HybridConcurrentClusterWorker<2>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<2>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else if (v == 3) {
-      return std::make_unique<HybridConcurrentClusterWorker<3>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<3>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else {
-      return std::make_unique<HybridConcurrentClusterWorker<4>>(seq, cluster, pgb, breakpoint);
+      return std::make_unique<HybridConcurrentClusterWorker<4>>(seq, cluster, pgb, breakpoint, worker_threads);
     }
   } else {
     Rcpp::stop("invalid parallel type");
@@ -356,30 +361,34 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     ClusterAlgorithmFactory &factory,
     Rcpp::CharacterVector seqnames,
     Rcpp::ListOf<Rcpp::CharacterVector> subset_names,
-    int verbose
+    int verbose,
+    std::size_t clustering_memory_budget_bytes
 ) {
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
   auto seqnames_vec = Rcpp::as<std::vector<std::string>>(seqnames);
   auto subset_names_vec = Rcpp::as<std::vector<std::vector<std::string>>>(subset_names);
   int v = (verbose > 4) ? 4 : verbose;
+  auto memory_budget = clustering_memory_budget_bytes > 0
+    ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
+    : nullptr;
   if (v == 0) {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0);
+      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
   }
   if (v == 1) {
     return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0);
+      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
   }
   if (v == 2) {
     return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0);
+      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
   }
   if (v == 3) {
     return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0);
+      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
   }
   return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
-    factory, seqnames_vec, subset_names_vec, threads, 0);
+    factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
 }
 
 template<typename distmx_t>
@@ -468,8 +477,21 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
   std::string par_method = element_as_string(parallel_config, "method", "parallel_config");
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  int subproblems = threads;
+  if (parallel_config.containsElementNamed("subproblems")) {
+    Rcpp::RObject item = parallel_config["subproblems"];
+    if (!Rcpp::is<Rcpp::IntegerVector>(item)) {
+      OPTIMOTU_STOP("invalid `parallel_config`: member `subproblems` is not an integer");
+    }
+    auto subproblem_int = Rcpp::as<Rcpp::IntegerVector>(item);
+    if (subproblem_int.length() != 1 || subproblem_int[0] < 1) {
+      OPTIMOTU_STOP("invalid `parallel_config`: `subproblems` must be a positive integer scalar");
+    }
+    subproblems = std::max(subproblems, subproblem_int[0]);
+  }
+  int worker_threads = threads;
   int v = (verbose > 4) ? 4 : verbose;
-  AllPairGenerator::Builder pgb(seq.size(), threads);
+  AllPairGenerator::Builder pgb(seq.size(), subproblems);
   if (dist_method == "wfa2") {
     int match = element_as_int(dist_config, "match", "dist_config");
     int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
@@ -482,31 +504,36 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
         return std::make_unique<Wfa2SplitClusterWorker<0>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<Wfa2SplitClusterWorker<1>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<Wfa2SplitClusterWorker<2>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<Wfa2SplitClusterWorker<3>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else {
         return std::make_unique<Wfa2SplitClusterWorker<4>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       }
     } else if (par_method == "concurrent") {
@@ -514,31 +541,36 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
         return std::make_unique<Wfa2ConcurrentClusterWorker<0>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<1>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<2>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<3>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       } else {
         return std::make_unique<Wfa2ConcurrentClusterWorker<4>>(
           seq,
           cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          worker_threads
         );
       }
     } else {
@@ -549,54 +581,54 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (v == 0) {
         return std::make_unique<EdlibSplitClusterWorker<0>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<EdlibSplitClusterWorker<1>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<EdlibSplitClusterWorker<2>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<EdlibSplitClusterWorker<3>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else {
         return std::make_unique<EdlibSplitClusterWorker<4>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
         return std::make_unique<EdlibConcurrentClusterWorker<0>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<EdlibConcurrentClusterWorker<1>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<EdlibConcurrentClusterWorker<2>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<EdlibConcurrentClusterWorker<3>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       } else {
         return std::make_unique<EdlibConcurrentClusterWorker<4>>(
           seq,
-          cluster, pgb
+          cluster, pgb, worker_threads
         );
       }
     } else {
@@ -608,54 +640,54 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (v == 0) {
         return std::make_unique<HybridSplitClusterWorker<0>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<HybridSplitClusterWorker<1>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<HybridSplitClusterWorker<2>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<HybridSplitClusterWorker<3>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else {
         return std::make_unique<HybridSplitClusterWorker<4>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
         return std::make_unique<HybridConcurrentClusterWorker<0>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<HybridConcurrentClusterWorker<1>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<HybridConcurrentClusterWorker<2>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<HybridConcurrentClusterWorker<3>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       } else {
         return std::make_unique<HybridConcurrentClusterWorker<4>>(
           seq,
-          cluster, pgb, breakpoint
+          cluster, pgb, breakpoint, worker_threads
         );
       }
     } else {
@@ -668,54 +700,54 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (v == 0) {
         return std::make_unique<HammingSplitClusterWorker<0>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<HammingSplitClusterWorker<1>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<HammingSplitClusterWorker<2>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<HammingSplitClusterWorker<3>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else {
         return std::make_unique<HammingSplitClusterWorker<4>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
         return std::make_unique<HammingConcurrentClusterWorker<0>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else if (v == 1) {
         return std::make_unique<HammingConcurrentClusterWorker<1>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else if (v == 2) {
         return std::make_unique<HammingConcurrentClusterWorker<2>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else if (v == 3) {
         return std::make_unique<HammingConcurrentClusterWorker<3>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       } else {
         return std::make_unique<HammingConcurrentClusterWorker<4>>(
           seq,
-          cluster, pgb, min_overlap, ignore_gaps
+          cluster, pgb, min_overlap, ignore_gaps, worker_threads
         );
       }
     } else {
