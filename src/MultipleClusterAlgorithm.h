@@ -27,7 +27,11 @@ protected:
   std::vector<std::vector<j_t>> subset_key;
 
   // for each subset, map from universal index to index in the subset
+  // (rank among subset members in global sequence order)
   std::vector<std::unordered_map<j_t, j_t>> fwd_map;
+
+  // sorted-local index -> original which index, per subset
+  std::vector<std::vector<j_t>> sorted_to_which;
 
   // clustering algorithms which handle subsets
   std::vector<SingleClusterAlgorithm*> subsets;
@@ -41,9 +45,15 @@ protected:
   // When set, routing tables and names come from the parent (tile merge child).
   const MultipleClusterAlgorithm *tile_routing_parent = nullptr;
 
+  // Parent-subset-local indices present in each tile shard (empty if none).
+  std::vector<std::unordered_set<j_t>> tile_subset_locals;
+
   const std::vector<std::vector<j_t>> &routing_subset_key() const;
   const std::vector<std::unordered_map<j_t, j_t>> &routing_fwd_map() const;
   const std::vector<std::vector<std::string>> &routing_subset_names() const;
+  const std::vector<std::string> &routing_names() const;
+  const std::vector<std::vector<j_t>> &routing_subset_indices() const;
+  const std::vector<std::vector<j_t>> &routing_sorted_to_which() const;
 
   // Last-pair overlap cache is thread_local inside ensure_whichsets so
   // concurrent workers do not share a slot. Returns the subsets that
@@ -72,22 +82,6 @@ protected:
 
   // Tile-local merge child: shares parent routing tables.
   MultipleClusterAlgorithm(MultipleClusterAlgorithm *parent, PairGenerator *pg);
-
-  // Constructor for child objects
-  // It makes sense to calculate many const members all together,
-  // rather than serially, so these are calculated in make_child().
-  MultipleClusterAlgorithm(
-    MultipleClusterAlgorithm * parent,
-    const std::vector<std::string> names,
-    const std::vector<std::vector<j_t>> subset_indices,
-    const std::vector<std::vector<std::string>> subset_names,
-    const std::vector<std::vector<j_t>> subset_key,
-    const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
-    const std::vector<j_t> child_to_parent_map,
-    PairGenerator * pg,
-    const int threads = 1,
-    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
-  );
 
 public:
   template<int verbose>
@@ -144,19 +138,6 @@ protected:
   MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm * parent);
 
   MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm *parent, PairGenerator *pg);
-
-  MultipleClusterAlgorithmImpl(
-    MultipleClusterAlgorithm * parent,
-    const std::vector<std::string> names,
-    const std::vector<std::vector<j_t>> subset_indices,
-    const std::vector<std::vector<std::string>> subset_names,
-    const std::vector<std::vector<j_t>> subset_key,
-    const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
-    const std::vector<j_t> child_to_parent_map,
-    PairGenerator * pg,
-    const int threads = 1,
-    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
-  );
 
 public:
   MultipleClusterAlgorithmImpl(

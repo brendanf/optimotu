@@ -1,0 +1,151 @@
+# optimotu: Agent Onboarding
+
+This document is for agents working inside the `optimotu` package repository.
+It focuses on package-level architecture and maintenance conventions.
+
+## 1) What `optimotu` is responsible for
+
+`optimotu` is the algorithmic core for clustering and threshold optimization.
+It provides:
+
+- distance computation backends (`wfa2`, `edlib`, `hamming`, `usearch`, etc.)
+- single-linkage clustering across many thresholds
+- threshold optimization against known taxonomy
+- clustering quality metrics (MCC, ARI, AMI, FMI, FM, etc.)
+
+This package is intentionally lower-level than `optimotu.pipeline`.
+
+## 2) Key module layout
+
+- `R/config.R`
+  - user-facing config objects for distance, clustering, thresholds, and
+    parallel behavior
+- `R/seq_distmx.R`
+  - distance matrix/search entry points and backend dispatch
+- `R/seq_cluster.R`
+  - sequence clustering entry points and method dispatch
+- `R/optimize_thresholds.R`
+  - threshold optimization and measure-based selection
+- `R/confusion_matrix.R`, `R/fmeasure.R`, `R/util.R`
+  - metric internals and shared utilities
+
+Native code:
+
+- `src/`
+  - performance-critical C/C++ implementations
+  - distance workers, clustering algorithms, generators, and glue via Rcpp
+  - `src/MemoryBudget.h` provides best-effort accounting for clustering-owned
+    allocations, plumbed through `config.*`, `MultipleClusterAlgorithm.*`,
+    `seq_cluster.cpp`, and the cluster workers. Exceeding the budget raises
+    `MemoryBudgetExceeded`, which surfaces in R as an error whose message
+    begins `clustering memory budget exceeded`.
+
+## 3) Public API surface (high-impact functions)
+
+Core exported API families include:
+
+- config helpers:
+  - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_hamming()`,
+    `dist_usearch()`, `dist_file()`, `dist_hybrid()`
+  - `clust_config()` + `clust_tree()`, `clust_matrix()`, `clust_index()`,
+    `clust_slink()`
+  - `threshold_config()` + `threshold_uniform()`, `threshold_set()`,
+    `threshold_lookup()`
+  - `parallel_config()` + `parallel_concurrent()`, `parallel_merge()`,
+    `parallel_hierarchical()`
+- execution:
+  - `seq_distmx()`, `seq_cluster()`, `closed_ref_cluster()`, `distmx_cluster()`
+- optimization and scoring:
+  - `optimize_thresholds()`, `calc_taxon_thresholds()`,
+    `calc_subtaxon_thresholds()`, `find_best_threshold()`,
+    `calculate_cluster_measures()`
+
+When changing behavior, prioritize preserving these interfaces unless the user
+explicitly requests API changes.
+
+## 4) Typical edit zones
+
+- tune backend behavior or defaults:
+  - `R/config.R`
+- adjust clustering or distance dispatch:
+  - `R/seq_cluster.R`, `R/seq_distmx.R`
+- change optimization logic:
+  - `R/optimize_thresholds.R`
+- change native algorithm behavior/performance:
+  - `src/*.cpp`, `src/*.h`
+
+## 5) Testing workflow
+
+- Unit tests are in `tests/testthat/`.
+- Native code changes should be validated with relevant tests touching altered
+  paths (distance, clustering, thresholding, metrics).
+- `test-seq_cluster_parallel.R` now includes larger (~25 sequence) synthetic
+  correctness coverage (including `clust_tree`, `clust_slink`, and parallel
+  modes), plus backend distance consistency checks for close pairs.
+- `test-seq_cluster_multi.R` checks that clustering several overlapping
+  subsets in one `seq_cluster()` call matches clustering each subset on its
+  own, including crossing (non-nested) subsets, `parallel_merge()`, and
+  `parallel_concurrent()` with multiple threads.
+  `test-seq_cluster_parallel.R` builds overlapping subsets in a fixture but
+  only calls `seq_cluster(..., which = TRUE)`, so it does not cover this.
+- Multi-subset `parallel_merge()` tile children share parent routing via
+  `tile_routing_parent`. Subset shards (tree/matrix/index/SLINK) use
+  `subset_tile_fwd_map()` intersection children sized to `|subset ∩ tile|`.
+  Parent-subset-local ids are the rank of each sequence in global input
+  order; `write_to_matrix()` / `as_hclust()` permute back to the original
+  `which` order. Tree/matrix and SLINK merge intersection shards are
+  covered in `test-seq_cluster_multi.R`, including shuffled `which` and
+  crossing subsets with `parallel_merge(2)`.
+- `MappedClusterAlgorithm` intersection constructors bind `Surrogate` to
+  `this->fwd_map` (not the ctor parameter) so merge forwards stable parent
+  indices.
+- `estimate_subset_memory_mb()` scales `parallel_merge` by
+  `1 + threads * (2 / n_tiles)` rather than `threads`.
+- `test-optimize_thresholds_memory.R` checks the merge memory scale helper.
+- Interrupt regression coverage for `seq_cluster()` lives in
+  `test-seq_cluster_interrupt.R` and is environment-guarded (opt-in) to avoid
+  flaky default CI runs.
+- Header changes do not trigger recompiles, because `R CMD INSTALL` tracks only
+  `.cpp` timestamps. After editing anything in `src/*.h`, remove the package's
+  own objects (`rm -f src/*.o src/optimotu.so`, keeping the `WFA2-lib/` and
+  `edlib/` submodule objects) before rebuilding, or you can get link errors or
+  silently stale code.
+- Prefer running tests in the project container/environment used by the wider
+  OptimOTU ecosystem, not only ad hoc local setups.
+
+## 6) Documentation and style conventions
+
+- Package docs use roxygen2 markdown style.
+- Do not hand-edit `NAMESPACE` or `.Rd`; generate via roxygen2.
+- Keep comments concise and technical; use them for intent and assumptions.
+- For non-trivial behavior changes, add/adjust tests with the same patch set.
+
+## 7) Relationship to sister repos
+
+- `optimotu_targets` orchestrates project-specific `targets` pipelines.
+- `optimotu.pipeline` provides workflow glue and wrappers around this package.
+- Changes in `optimotu` can propagate into both repos, especially when
+  exported APIs or config semantics change.
+
+## 8) Keep this file current
+
+If changes alter architecture, API expectations, or testing conventions in this
+document, update this file in the same task.
+
+Common triggers:
+
+- exported function additions/removals/renames
+- config object semantic changes
+- native backend behavior changes
+- major test strategy changes
+- shifts in repo responsibilities across the three-project ecosystem
+
+## 9) Suggested reading order
+
+1. `DESCRIPTION`
+2. `R/config.R`
+3. `R/seq_cluster.R`
+4. `R/seq_distmx.R`
+5. `R/optimize_thresholds.R`
+6. `src/` files relevant to your task
+7. matching `tests/testthat/` files

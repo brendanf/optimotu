@@ -93,6 +93,9 @@ public:
     return pool0 + j;
   };
 
+  // Leftmost tip index in the subtree rooted at c. Stops if none.
+  j_t tip_index(const cluster *c) const;
+
   // send consumer() pairwise distances to ensure it is up-to-date with this
   // clustering
   virtual void merge_into(DistanceConsumer &consumer) override;

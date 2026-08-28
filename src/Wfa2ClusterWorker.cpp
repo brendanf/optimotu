@@ -81,6 +81,7 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
     _aligned += my_aligned;
     _prealigned += my_prealigned;
     mutex.unlock();
+    my_algo->finalize();
     my_algo->merge_into_parent();
     clust_algo.release_child(my_algo);
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);

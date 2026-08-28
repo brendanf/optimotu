@@ -4,6 +4,7 @@
 #include <string>
 #include <numeric>
 #include "MultipleClusterAlgorithm.h"
+#include "MappedClusterAlgorithm.h"
 #include "optimotu.h"
 
 using MCA = MultipleClusterAlgorithm;
@@ -80,6 +81,52 @@ void budget_release(
   }
 }
 
+bool is_identity_perm(const std::vector<j_t> &perm)
+{
+  for (std::size_t i = 0; i < perm.size(); ++i)
+  {
+    if (perm[i] != static_cast<j_t>(i))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+#ifdef OPTIMOTU_R
+void remap_hclust_tips(
+    Rcpp::List hc,
+    const std::vector<j_t> &sorted_to_which,
+    const std::vector<std::string> &which_names)
+{
+  if (!is_identity_perm(sorted_to_which))
+  {
+    Rcpp::IntegerMatrix merge = hc["merge"];
+    Rcpp::IntegerVector order = hc["order"];
+    for (int i = 0; i < merge.nrow(); ++i)
+    {
+      for (int col = 0; col < 2; ++col)
+      {
+        int v = merge(i, col);
+        if (v < 0)
+        {
+          const j_t sorted = static_cast<j_t>(-v - 1);
+          merge(i, col) = -static_cast<int>(sorted_to_which[sorted]) - 1;
+        }
+      }
+    }
+    for (int i = 0; i < order.size(); ++i)
+    {
+      const j_t sorted = static_cast<j_t>(order[i] - 1);
+      order[i] = static_cast<int>(sorted_to_which[sorted]) + 1;
+    }
+    hc["merge"] = merge;
+    hc["order"] = order;
+  }
+  hc["labels"] = Rcpp::wrap(which_names);
+}
+#endif // OPTIMOTU_R
+
 } // namespace
 
 const std::vector<std::vector<j_t>> &MCA::routing_subset_key() const
@@ -97,124 +144,120 @@ const std::vector<std::vector<std::string>> &MCA::routing_subset_names() const
   return tile_routing_parent ? tile_routing_parent->subset_names : subset_names;
 }
 
+const std::vector<std::string> &MCA::routing_names() const
+{
+  return tile_routing_parent ? tile_routing_parent->names : names;
+}
+
+const std::vector<std::vector<j_t>> &MCA::routing_subset_indices() const
+{
+  return tile_routing_parent ? tile_routing_parent->subset_indices
+                             : subset_indices;
+}
+
+const std::vector<std::vector<j_t>> &MCA::routing_sorted_to_which() const
+{
+  return tile_routing_parent ? tile_routing_parent->sorted_to_which
+                             : sorted_to_which;
+}
+
 // Base protected main constructor: initializer list only.
 MCA::MultipleClusterAlgorithm(
-  const ClusterAlgorithmFactory & factory,
-  const std::vector<std::string> &names,
-  const std::vector<std::vector<std::string>> &subset_names,
-  const int threads,
-  std::shared_ptr<MemoryBudgetTracker> memory_budget
-) :
-  ClusterAlgorithm(factory.dconv),
-  factory(factory),
-  names(names),
-  subset_indices(calculate_subset_indices(names, subset_names)),
-  subset_names(subset_names),
-  threads(threads),
-  memory_budget(memory_budget),
-  subset_key(names.size()),
-  fwd_map(subset_names.size()),
-  subsets(),
-  borrowed_subsets(),
-  tracked_allocations()
+    const ClusterAlgorithmFactory &factory,
+    const std::vector<std::string> &names,
+    const std::vector<std::vector<std::string>> &subset_names,
+    const int threads,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget) : ClusterAlgorithm(factory.dconv),
+                                                          factory(factory),
+                                                          names(names),
+                                                          subset_indices(calculate_subset_indices(names, subset_names)),
+                                                          subset_names(subset_names),
+                                                          threads(threads),
+                                                          memory_budget(memory_budget),
+                                                          subset_key(names.size()),
+                                                          fwd_map(subset_names.size()),
+                                                          sorted_to_which(subset_names.size()),
+                                                          subsets(),
+                                                          borrowed_subsets(),
+                                                          tracked_allocations()
 {
   tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
   budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm base");
 }
 
-template<int verbose>
-MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm * parent) :
-  MultipleClusterAlgorithm(parent) {}
+template <int verbose>
+MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm *parent) : MultipleClusterAlgorithm(parent) {}
 
 template <int verbose>
 MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
     MultipleClusterAlgorithm *parent,
     PairGenerator *pg) : MultipleClusterAlgorithm(parent, pg) {}
 
-template<int verbose>
+template <int verbose>
 MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
-  MultipleClusterAlgorithm * parent,
-  const std::vector<std::string> names,
-  const std::vector<std::vector<j_t>> subset_indices,
-  const std::vector<std::vector<std::string>> subset_names,
-  const std::vector<std::vector<j_t>> subset_key,
-  const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
-  const std::vector<j_t> child_to_parent_map,
-  PairGenerator * pg,
-  const int threads,
-  std::shared_ptr<MemoryBudgetTracker> memory_budget
-) : MultipleClusterAlgorithm(parent, names, subset_indices, subset_names, subset_key, fwd_map, child_to_parent_map, pg, threads, memory_budget) {}
-
-template<int verbose>
-MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
-  const ClusterAlgorithmFactory & factory,
-  const std::vector<std::string> &names,
-  const std::vector<std::vector<std::string>> &subset_names,
-  const int threads,
-  int,
-  std::shared_ptr<MemoryBudgetTracker> memory_budget
-) :
-  MultipleClusterAlgorithm(factory, names, subset_names, threads, memory_budget)
+    const ClusterAlgorithmFactory &factory,
+    const std::vector<std::string> &names,
+    const std::vector<std::vector<std::string>> &subset_names,
+    const int threads,
+    int,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget) : MultipleClusterAlgorithm(factory, names, subset_names, threads, memory_budget)
 {
   OPTIMOTU_DEBUG(
-    1,
-    << "  Allocating " << subset_names.size() << " subsets..." << std::flush;
-  );
+      1,
+      << "  Allocating " << subset_names.size() << " subsets..." << std::flush;);
   subsets.reserve(subset_names.size());
 
   OPTIMOTU_DEBUG(
-    1,
-    << "done\n  Generating sequence name key for " << names.size()
-    << " sequence names..." << std::flush;
-  );
+      1,
+      << "done\n  Generating sequence name key for " << names.size()
+      << " sequence names..." << std::flush;);
   std::unordered_map<std::string, j_t> namekey;
-  for (j_t i = 0; i < names.size(); i++) {
+  for (j_t i = 0; i < names.size(); i++)
+  {
     namekey.emplace(names[i], i);
   }
 
   OPTIMOTU_DEBUG(
-    1,
-    << "done\n  Mapping " << subset_names.size()
-    << " subsets..." << std::flush;
-  );
+      1,
+      << "done\n  Mapping " << subset_names.size()
+      << " subsets..." << std::flush;);
 
   OPTIMOTU_DEBUG(
-    2,
-    << std::endl;
-  );
+      2,
+      << std::endl;);
 
-  for (j_t i = 0; i < subset_names.size(); ++i) {
+  for (j_t i = 0; i < subset_names.size(); ++i)
+  {
     const std::size_t subset_bytes = factory.estimate_bytes(subset_names[i].size());
     budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm subset init");
     owned_subsets.emplace_back(factory.create(subset_names[i].size(), verbose));
     tracked_allocations.push_back(subset_bytes);
     subsets.push_back(owned_subsets.back().get());
-    fwd_map[i].reserve(subset_names[i].size());
+    fwd_map[i].reserve(subset_indices[i].size());
+    sorted_to_which[i].assign(subset_names[i].size(), NO_CLUST);
     OPTIMOTU_DEBUG(
-      4,
-      << "  Subset " << i << ":" << std::endl;
-    );
-    for (j_t j = 0; j < subset_names[i].size(); ++j) {
-      auto f = namekey.find(subset_names[i][j]);
+        4,
+        << "  Subset " << i << ":" << std::endl;);
+    for (j_t rank = 0; rank < subset_indices[i].size(); ++rank)
+    {
+      const j_t global = subset_indices[i][rank];
+      OPTIMOTU_DEBUG(
+          4,
+          << "    adding sequence " << global
+          << " (" << names[global]
+          << ") to subset " << i
+          << " at sorted position " << rank
+          << std::endl;);
+      subset_key[global].push_back(i);
+      fwd_map[i].emplace(global, rank);
+    }
+    for (j_t which_pos = 0; which_pos < subset_names[i].size(); ++which_pos)
+    {
+      auto f = namekey.find(subset_names[i][which_pos]);
       assert(f != namekey.end());
-      OPTIMOTU_DEBUG(
-        4,
-        << "    adding sequence " << f->second
-        << " (" << subset_names[i][j]
-        << ") to subset " << i
-        << " at position " << fwd_map[i].size()
-        << std::endl;
-      );
-      subset_key[f->second].push_back(i);
-      fwd_map[i].emplace(f->second, j);
-      OPTIMOTU_DEBUG(
-        4,
-        << "    sequence " << f->second
-        << " now found in " << subset_key[j].size()
-        << " subsets\n   precluster " << i
-        << " now has " << fwd_map[i].size()
-        << " sequences" << std::endl;
-      );
+      auto rank_it = fwd_map[i].find(f->second);
+      assert(rank_it != fwd_map[i].end());
+      sorted_to_which[i][rank_it->second] = which_pos;
     }
   }
 }
@@ -283,18 +326,18 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
 //   return out;
 // }
 
-MCA::MultipleClusterAlgorithm(MCA * parent) :
-  ClusterAlgorithm(parent),
-  factory(parent->factory),
-  names(parent->names),
-  subset_indices(parent->subset_indices),
-  subset_names(parent->subset_names),
-  threads(parent->threads),
-  memory_budget(parent->memory_budget),
-  subset_key(parent->subset_key),
-  fwd_map(parent->fwd_map),
-  borrowed_subsets(),
-  tracked_allocations()
+MCA::MultipleClusterAlgorithm(MCA *parent) : ClusterAlgorithm(parent),
+                                             factory(parent->factory),
+                                             names(parent->names),
+                                             subset_indices(parent->subset_indices),
+                                             subset_names(parent->subset_names),
+                                             threads(parent->threads),
+                                             memory_budget(parent->memory_budget),
+                                             subset_key(parent->subset_key),
+                                             fwd_map(parent->fwd_map),
+                                             sorted_to_which(parent->sorted_to_which),
+                                             borrowed_subsets(),
+                                             tracked_allocations()
 {
   tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
   budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm child base");
@@ -318,40 +361,34 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
                                                                 memory_budget(parent->memory_budget),
                                                                 subset_key(),
                                                                 fwd_map(),
+                                                                sorted_to_which(),
                                                                 borrowed_subsets(),
                                                                 tracked_allocations(),
                                                                 tile_routing_parent(parent)
 {
   subsets.resize(parent->subsets.size(), nullptr);
-
-  std::unordered_set<std::size_t> tile_globals;
-  tile_globals.reserve(pg->max_value() + 1);
-  for (std::size_t i = 0; i <= pg->max_value(); ++i)
-  {
-    tile_globals.insert(pg->forward_map(i));
-  }
+  tile_subset_locals.resize(parent->subsets.size());
 
   for (j_t j = 0; j < static_cast<j_t>(parent->subsets.size()); ++j)
   {
-    std::vector<j_t> locals;
-    locals.reserve(parent->fwd_map[j].size());
-    for (const auto &kv : parent->fwd_map[j])
-    {
-      if (tile_globals.count(kv.first))
-      {
-        locals.push_back(kv.second);
-      }
-    }
-    if (locals.size() < 2)
+    auto intersection_fwd = subset_tile_fwd_map(parent->fwd_map[j], *pg);
+    if (intersection_fwd.size() < 2)
     {
       continue;
     }
-    const std::size_t subset_bytes = factory.estimate_bytes(parent->subsets[j]->n);
+    for (std::size_t local : intersection_fwd)
+    {
+      tile_subset_locals[j].insert(static_cast<j_t>(local));
+    }
+    const std::size_t subset_bytes =
+        factory.estimate_bytes(intersection_fwd.size());
     budget_acquire(
         memory_budget,
         subset_bytes,
         "MultipleClusterAlgorithm tile child subset");
-    auto child_subset = parent->subsets[j]->make_child();
+    ClusterAlgorithm *child_subset = static_cast<ClusterAlgorithm *>(
+                                         parent->subsets[j])
+                                         ->make_child(intersection_fwd);
     if (!child_subset)
     {
       budget_release(memory_budget, subset_bytes);
@@ -361,45 +398,6 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
     borrowed_subsets.emplace_back(parent->subsets[j], child_subset);
     tracked_allocations.push_back(subset_bytes);
   }
-}
-
-// This constructor is used to create a child algorithm for a
-// MultipleClusterAlgorithm.
-MCA::MultipleClusterAlgorithm(
-  MCA * parent,
-  const std::vector<std::string> names,
-  const std::vector<std::vector<j_t>> subset_indices,
-  const std::vector<std::vector<std::string>> subset_names,
-  const std::vector<std::vector<j_t>> subset_key,
-  const std::vector<std::unordered_map<j_t, j_t>> fwd_map,
-  const std::vector<j_t> child_to_parent_map,
-  PairGenerator * pg,
-  const int threads,
-  std::shared_ptr<MemoryBudgetTracker> memory_budget
-) :
-  ClusterAlgorithm{parent},
-  factory{parent->factory},
-  names{names},
-  subset_indices{subset_indices},
-  subset_names{subset_names},
-  threads{threads},
-  memory_budget{memory_budget ? memory_budget : parent->memory_budget},
-  subset_key{subset_key},
-  fwd_map{fwd_map},
-  borrowed_subsets(),
-  tracked_allocations()
-  {
-    tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
-    budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm mapped child base");
-    subsets.reserve(child_to_parent_map.size());
-    for (const j_t j0 : child_to_parent_map) {
-      const std::size_t subset_bytes = factory.estimate_bytes(subset_indices[subsets.size()].size());
-      budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm mapped child subset");
-      auto child_subset = parent->subsets[j0]->make_child(pg);
-      subsets.push_back(child_subset);
-      borrowed_subsets.emplace_back(parent->subsets[j0], child_subset);
-      tracked_allocations.push_back(subset_bytes);
-    }
 }
 
 MCA::~MultipleClusterAlgorithm() {
@@ -479,9 +477,21 @@ void MCA::apply_pair(
     j_t s1 = it1->second;
     j_t s2 = it2->second;
     if (
-      filter_irrelevant &&
-      !(dist < subsets[j]->max_relevant(s1, s2, thread))
-    ) {
+        tile_routing_parent &&
+        subsets[j]->n < tile_routing_parent->subsets[j]->n)
+    {
+      if (
+          j >= static_cast<j_t>(tile_subset_locals.size()) ||
+          !tile_subset_locals[j].count(s1) ||
+          !tile_subset_locals[j].count(s2))
+      {
+        continue;
+      }
+    }
+    if (
+        filter_irrelevant &&
+        !(dist < subsets[j]->max_relevant(s1, s2, thread)))
+    {
       continue;
     }
     (*subsets[j])(s1, s2, i, thread);
@@ -551,9 +561,23 @@ double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
     {
       continue;
     }
+    j_t s1 = it1->second;
+    j_t s2 = it2->second;
+    if (
+        tile_routing_parent &&
+        subsets[j]->n < tile_routing_parent->subsets[j]->n)
+    {
+      if (
+          j >= static_cast<j_t>(tile_subset_locals.size()) ||
+          !tile_subset_locals[j].count(s1) ||
+          !tile_subset_locals[j].count(s2))
+      {
+        continue;
+      }
+    }
     double maxj = subsets[j]->max_relevant(
-        it1->second,
-        it2->second,
+        s1,
+        s2,
         thread);
     max = std::max(max, maxj);
   }
@@ -692,11 +716,35 @@ bool MCA::accepts_unordered_pairs() const {
 }
 
 void MCA::write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {
+  const auto &perm_all = routing_sorted_to_which();
   for (size_t i = 0; i < this->subsets.size(); i++) {
-    if (this->subsets[i])
+    if (!this->subsets[i])
+    {
+      continue;
+    }
+    const auto &perm = perm_all[i];
+    if (is_identity_perm(perm))
     {
       this->subsets[i]->write_to_matrix(matrix_list[i]);
+      continue;
     }
+#ifdef OPTIMOTU_R
+    Rcpp::IntegerMatrix tmp(matrix_list[i].nrow(), matrix_list[i].ncol());
+    internal_matrix_t tmp_wrap(tmp);
+    this->subsets[i]->write_to_matrix(tmp_wrap);
+    const std::size_t m = matrix_list[i].nrow();
+    const std::size_t n = matrix_list[i].ncol();
+    for (std::size_t j = 0; j < n; ++j)
+    {
+      const std::size_t dest = perm[j];
+      for (std::size_t r = 0; r < m; ++r)
+      {
+        matrix_list[i][dest * m + r] = tmp_wrap[j * m + r];
+      }
+    }
+#else
+    this->subsets[i]->write_to_matrix(matrix_list[i]);
+#endif
   }
 }
 
@@ -704,11 +752,21 @@ void MCA::write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {
 Rcpp::List MCA::as_hclust() const {
   std::vector<Rcpp::List> out;
   const auto &subset_name_list = routing_subset_names();
+  const auto &all_names = routing_names();
+  const auto &idx = routing_subset_indices();
+  const auto &perm_all = routing_sorted_to_which();
   for (size_t i = 0; i < this->subsets.size(); i++) {
     if (this->subsets[i])
     {
-      out.push_back(
-          this->subsets[i]->as_hclust(Rcpp::wrap(subset_name_list[i])));
+      std::vector<std::string> sorted_labels;
+      sorted_labels.reserve(idx[i].size());
+      for (j_t global : idx[i])
+      {
+        sorted_labels.push_back(all_names[global]);
+      }
+      Rcpp::List hc = this->subsets[i]->as_hclust(Rcpp::wrap(sorted_labels));
+      remap_hclust_tips(hc, perm_all[i], subset_name_list[i]);
+      out.push_back(hc);
     }
   }
   return Rcpp::wrap(out);
@@ -723,3 +781,59 @@ template class MultipleClusterAlgorithmImpl<1>;
 template class MultipleClusterAlgorithmImpl<2>;
 template class MultipleClusterAlgorithmImpl<3>;
 template class MultipleClusterAlgorithmImpl<4>;
+
+#include <testthat.h>
+#ifdef TESTTHAT_ENABLED
+#include "ClusterAlgorithmFactory.h"
+
+context("MCA subset routing")
+{
+
+  test_that("shuffled which maps to global ranks")
+  {
+    std::vector<std::string> names;
+    for (int i = 0; i < 10; ++i)
+    {
+      names.push_back(std::to_string(i));
+    }
+    std::vector<std::vector<std::string>> subset{{"8", "0", "6", "2", "4"}};
+    auto indices = calculate_subset_indices(names, subset);
+    expect_true(indices.size() == 1u);
+    expect_true(indices[0].size() == 5u);
+    expect_true(indices[0][0] == 0);
+    expect_true(indices[0][1] == 2);
+    expect_true(indices[0][2] == 4);
+    expect_true(indices[0][3] == 6);
+    expect_true(indices[0][4] == 8);
+
+    UniformDistanceConverter dconv(0.0, 0.4, 0.01);
+    ClusterTreeFactory factory(dconv, 0);
+    struct MCAPeek : public MultipleClusterAlgorithmImpl<0>
+    {
+      using MultipleClusterAlgorithmImpl<0>::MultipleClusterAlgorithmImpl;
+      const std::vector<std::unordered_map<j_t, j_t>> &fwd() const
+      {
+        return fwd_map;
+      }
+      const std::vector<std::vector<j_t>> &perm() const
+      {
+        return sorted_to_which;
+      }
+    };
+    MCAPeek algo(factory, names, subset, 1, 0);
+    expect_true(algo.fwd().size() == 1u);
+    expect_true(algo.fwd()[0].at(0) == 0);
+    expect_true(algo.fwd()[0].at(2) == 1);
+    expect_true(algo.fwd()[0].at(4) == 2);
+    expect_true(algo.fwd()[0].at(6) == 3);
+    expect_true(algo.fwd()[0].at(8) == 4);
+    // which = {8, 0, 6, 2, 4}; sorted-local -> original which index
+    expect_true(algo.perm()[0].size() == 5u);
+    expect_true(algo.perm()[0][0] == 1);
+    expect_true(algo.perm()[0][1] == 3);
+    expect_true(algo.perm()[0][2] == 4);
+    expect_true(algo.perm()[0][3] == 2);
+    expect_true(algo.perm()[0][4] == 0);
+  }
+}
+#endif

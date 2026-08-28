@@ -15,10 +15,14 @@ subproblems, then by splitting the batch, controlled by the new arguments
 `retry_on_memory_exhaustion`, `retry_split_strategy`, `retry_reduce_threads`,
 `retry_min_threads`, `retry_overpartition`, and `retry_subproblem_factor`.
 * `parallel_merge()` split workers now create tile-local clustering shards via
-  `make_child(pair_generator)`, reducing peak memory for single-subset runs.
-  Multi-subset (`MultipleClusterAlgorithm`) tile children share parent routing
-  tables and still use full-size per-subset merge copies; subset-by-tile
-  intersection shards remain future work.
+  `make_child(pair_generator)`, reducing peak memory. Multi-subset
+  (`MultipleClusterAlgorithm`) tile children share parent routing tables and
+  size each subset shard to `|subset ∩ tile|` for tree, matrix, index, and
+  SLINK. Sequences are clustered in global-among-subset order so SLINK sees
+  increasing indices from tile pair generators; returned matrices and `hclust`
+  labels follow the original `which` order. Split workers finalize each tile
+  shard before merging so SLINK can finish its last iteration. The parent
+  algorithm remains full-size.
 * The clustering memory estimator for `parallel_merge()` now accounts for
   tile-local shard size (`1 + threads * (2 / n_tiles)`) rather than assuming
   each thread holds a full-size copy.

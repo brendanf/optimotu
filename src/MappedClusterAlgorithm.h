@@ -7,6 +7,11 @@
 std::unordered_map<std::size_t, std::size_t> invert_map(
     const std::vector<std::size_t> &fwd_map);
 
+// child_local -> parent_subset_local for sequences in subset intersect tile.
+std::vector<std::size_t> subset_tile_fwd_map(
+    const std::unordered_map<j_t, j_t> &global_to_subset,
+    const PairGenerator &pg);
+
 // A MappedClusterAlgorithm is a ClusterAlgorithm that wraps another
 // ClusterAlgorithm and maps the indices of the inner algorithm to external
 // indices. This is typically used when the inner algorithm only accepts a
@@ -37,6 +42,7 @@ public:
   void merge_into(DistanceConsumer &consumer) override = 0;
   void merge_into(ClusterAlgorithm &consumer) override = 0;
   void merge_into_parent() override;
+  void finalize() override;
   SingleClusterAlgorithm * make_child() override = 0;
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override = 0;
   double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override = 0;

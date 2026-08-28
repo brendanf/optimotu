@@ -11,20 +11,14 @@
 class BipartitePairGenerator : public PairGenerator {
   const std::size_t begin_i, end_i, begin_j, end_j, ni, nj;
 public:
+  // Requires end_j <= begin_i when both blocks are nonempty so every
+  // pair has j0 < i0. Empty generators are allowed.
   BipartitePairGenerator(
     const std::size_t begin_i,
     const std::size_t end_i,
     const std::size_t begin_j,
     const std::size_t end_j
-  ) :
-    PairGenerator(end_i - begin_i + end_j - begin_j),
-    begin_i(begin_i), end_i(end_i),
-    begin_j(begin_j), end_j(end_j),
-    ni(end_i - begin_i), nj(end_j - begin_j) {
-    // Internal _i runs from nj to ni+nj-1 (rows); _j from 0 to nj-1 (cols)
-    _i = nj;
-    has_more = (ni > 0 && nj > 0);
-  };
+  );
 
   BipartitePairGenerator& operator++() override;
 

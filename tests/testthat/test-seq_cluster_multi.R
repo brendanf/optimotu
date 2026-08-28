@@ -118,6 +118,11 @@ testthat::test_that("multi-subset clustering matches independent subset clusteri
       dist = dist_hamming(),
       clust = clust_tree(),
       par = parallel_merge(2L)
+    ),
+    list(
+      dist = dist_hamming(),
+      clust = clust_slink(),
+      par = parallel_merge(2L)
     )
   )
 
@@ -164,6 +169,12 @@ testthat::test_that("crossing subsets do not change clustering of the full set",
     list(dist = dist_hamming(), par = parallel_concurrent(2L)),
     list(dist = dist_hamming(), par = parallel_concurrent(4L)),
     list(dist = dist_hamming(), par = parallel_merge(1L)),
+    list(dist = dist_hamming(), par = parallel_merge(2L)),
+    list(
+      dist = dist_hamming(),
+      clust = clust_slink(),
+      par = parallel_merge(2L)
+    ),
     list(dist = dist_edlib(), par = parallel_concurrent(1L)),
     list(dist = dist_edlib(), par = parallel_concurrent(4L))
   )
@@ -172,14 +183,41 @@ testthat::test_that("crossing subsets do not change clustering of the full set",
       fx$seq,
       which = which_sets,
       dist_config = cfg$dist,
+      clust_config = if (!is.null(cfg$clust)) cfg$clust else clust_tree(),
       parallel_config = cfg$par
     )
     for (nm in names(which_sets)) {
       independent <- cluster_as_matrix(
         fx$seq[which_sets[[nm]]],
-        dist_config = cfg$dist
+        dist_config = cfg$dist,
+        clust_config = if (!is.null(cfg$clust)) {
+          cfg$clust
+        } else {
+          clust_tree()
+        }
       )
       same_cluster_partition(multi[[nm]], independent)
     }
   }
+})
+
+testthat::test_that("shuffled which order is preserved in colnames", {
+  fx <- make_nested_seq_fixture()
+  reversed <- rev(names(fx$seq))
+  which_sets <- list(reversed = reversed)
+  multi <- cluster_as_matrix(
+    fx$seq,
+    which = which_sets,
+    dist_config = dist_hamming(),
+    clust_config = clust_slink(),
+    parallel_config = parallel_merge(2L)
+  )
+  testthat::expect_equal(colnames(multi$reversed), reversed)
+  independent <- cluster_as_matrix(
+    fx$seq[reversed],
+    dist_config = dist_hamming(),
+    clust_config = clust_slink()
+  )
+  testthat::expect_equal(colnames(independent), reversed)
+  same_cluster_partition(multi$reversed, independent)
 })

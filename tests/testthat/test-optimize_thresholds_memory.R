@@ -1,23 +1,46 @@
-testthat::test_that("merge memory scale reflects tile-local shards", {
-  n_seq <- 1000L
-  n_thresholds <- 401L
-  merge8 <- optimotu:::estimate_subset_memory_mb(
+testthat::test_that("estimate_subset_memory_mb scales merge by tile shards", {
+  n_seq <- 10000L
+  n_thresholds <- 40L
+  threads <- 2L
+  n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
+  method_scale <- 1 + threads * (2 / n_tiles)
+  expected <- max(
+    1,
+    n_seq * (n_thresholds + 1) * 0.06 * method_scale / 1024
+  )
+  got <- optimotu:::estimate_subset_memory_mb(
+    n_seq = n_seq,
+    n_thresholds = n_thresholds,
+    clust_method = "tree",
+    parallel_method = "merge",
+    threads = threads
+  )
+  testthat::expect_equal(got, expected)
+})
+
+testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", {
+  n_seq <- 10000L
+  n_thresholds <- 40L
+  # threads=1 and threads=2 both use n_tiles such that the scale is 3.
+  two <- optimotu:::estimate_subset_memory_mb(
     n_seq,
     n_thresholds,
     "tree",
     "merge",
-    8L
+    2L
   )
-  concurrent1 <- optimotu:::estimate_subset_memory_mb(
+  four <- optimotu:::estimate_subset_memory_mb(
     n_seq,
     n_thresholds,
     "tree",
-    "concurrent",
-    1L
+    "merge",
+    4L
   )
-  # merge(8): parent + 8 * (2/4) tile copies ~= 5x one subset copy
-  one_copy <- n_seq * (n_thresholds + 1) * 0.06 / 1024
-  testthat::expect_equal(merge8, one_copy * (1 + 8 * (2 / 4)), tolerance = 0.01)
-  testthat::expect_lt(merge8, one_copy * 8)
-  testthat::expect_gt(merge8, concurrent1)
+  testthat::expect_gt(four, two)
+  n_tiles_four <- ceiling(0.5 * (sqrt(1 + 8 * 4) - 1))
+  expected_four <- max(
+    1,
+    n_seq * (n_thresholds + 1) * 0.06 * (1 + 4 * (2 / n_tiles_four)) / 1024
+  )
+  testthat::expect_equal(four, expected_four)
 })

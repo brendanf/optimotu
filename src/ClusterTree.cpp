@@ -3,10 +3,12 @@
 
 #include "ClusterTree.h"
 #include "MultipleClusterAlgorithm.h"
+#include "optimotu.h"
 
 #include <fstream>
 #include <cmath>
 #include <algorithm>
+#include <string>
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppThread)]]
 #include <RcppThread.h>
@@ -660,12 +662,33 @@ void ClusterTree::merge_into(DistanceConsumer &consumer) {
       if (c->first_child) {
         cluster * next = c->first_child->next_sib;
         while (next) {
-          consumer(c->first_child->id, next->id, dconv.inverse(c->min_d));
+          j_t id1 = tip_index(c->first_child);
+          j_t id2 = tip_index(next);
+          consumer(id1, id2, dconv.inverse(c->min_d));
           next = next->next_sib;
         }
       }
     }
   }
+}
+
+j_t ClusterTree::tip_index(const cluster *c) const
+{
+  if (!c)
+  {
+    OPTIMOTU_STOP("ClusterTree::tip_index: null cluster");
+  }
+  while (c >= tipend)
+  {
+    if (!c->first_child)
+    {
+      OPTIMOTU_STOP(
+          "ClusterTree::tip_index: no tip under node id=" +
+          std::to_string(c->id) + ", n=" + std::to_string(n));
+    }
+    c = c->first_child;
+  }
+  return static_cast<j_t>(c - tip0);
 }
 
 void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
@@ -694,14 +717,9 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
           //           << " (" << next
           //           << ") with ID " << next->id
           //           << std::endl;
-          j_t id1 = c->first_child->id;
-          j_t id2 = next->id;
-          if (
-              id1 != NO_CLUST && id2 != NO_CLUST &&
-              id1 < this->n && id2 < this->n)
-          {
-            consumer(id1, id2, c->min_d);
-          }
+          j_t id1 = tip_index(c->first_child);
+          j_t id2 = tip_index(next);
+          consumer(id1, id2, c->min_d);
           next = next->next_sib;
         }
       }

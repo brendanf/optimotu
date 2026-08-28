@@ -342,7 +342,8 @@ parallels <- list(
 
 for (algorithm_name in names(algorithms)) {
   for (parallel_name in names(parallels)) {
-    if (algorithm_name == "slink" && parallel_name != "concurrent1") {
+    # SLINK requires a single ordered pair stream; concurrent(>1) is invalid.
+    if (algorithm_name == "slink" && parallel_name == "concurrent4") {
       next
     }
     testthat::test_that(

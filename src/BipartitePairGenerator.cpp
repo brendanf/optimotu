@@ -2,6 +2,32 @@
 #include "BipartitePairGenerator.h"
 #include <cmath>
 
+BipartitePairGenerator::BipartitePairGenerator(
+    const std::size_t begin_i,
+    const std::size_t end_i,
+    const std::size_t begin_j,
+    const std::size_t end_j) : PairGenerator(end_i - begin_i + end_j - begin_j),
+                               begin_i(begin_i),
+                               end_i(end_i),
+                               begin_j(begin_j),
+                               end_j(end_j),
+                               ni(end_i - begin_i),
+                               nj(end_j - begin_j)
+{
+  // Internal _i runs from nj to ni+nj-1 (rows); _j from 0 to nj-1
+  _i = nj;
+  has_more = (ni > 0 && nj > 0);
+  if (has_more && end_j > begin_i)
+  {
+    OPTIMOTU_STOP(
+        "BipartitePairGenerator requires end_j <= begin_i so that j0 < i0 "
+        "(begin_i=" +
+        std::to_string(begin_i) + ", end_i=" + std::to_string(end_i) +
+        ", begin_j=" + std::to_string(begin_j) + ", end_j=" +
+        std::to_string(end_j) + ")");
+  }
+}
+
 BipartitePairGenerator& BipartitePairGenerator::operator++() {
   if (++_j >= nj) {
     if (++_i >= ni + nj) {
@@ -59,27 +85,31 @@ context("BipartitePairGenerator") {
   }
 
   test_that("BipartitePairGenerator 1x1 produces one pair") {
-    BipartitePairGenerator gen(10, 11, 20, 21);
+    BipartitePairGenerator gen(20, 21, 10, 11);
     expect_true(gen);
-    expect_true(gen.i0() == 10);
-    expect_true(gen.j0() == 20);
+    expect_true(gen.i0() == 20);
+    expect_true(gen.j0() == 10);
     ++gen;
     expect_false(gen);
   }
 
-  test_that("BipartitePairGenerator(0,2,10,13) produces 6 pairs") {
-    BipartitePairGenerator gen(0, 2, 10, 13);
+  test_that("BipartitePairGenerator(10,13,0,2) produces 6 pairs") {
+    BipartitePairGenerator gen(10, 13, 0, 2);
     std::set<std::pair<std::size_t, std::size_t>> pairs;
     while (gen) {
       pairs.insert({gen.i0(), gen.j0()});
       ++gen;
     }
     expect_true(pairs.size() == 6u);
-    for (std::size_t i = 0; i < 2; ++i) {
-      for (std::size_t j = 10; j < 13; ++j) {
+    for (std::size_t i = 10; i < 13; ++i) {
+      for (std::size_t j = 0; j < 2; ++j) {
         expect_true(pairs.count({i, j}));
       }
     }
+  }
+
+  test_that("inverted BipartitePairGenerator stops") {
+    expect_error(BipartitePairGenerator(0, 2, 10, 13));
   }
 
   test_that("BipartitePairGenerator forward_map and reverse_map round-trip") {

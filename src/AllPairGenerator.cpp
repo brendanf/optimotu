@@ -3,6 +3,8 @@
 
 #include "optimotu.h"
 #include "AllPairGenerator.h"
+#include "BipartitePairGenerator.h"
+#include "MappedClusterAlgorithm.h"
 #include <cmath>
 
 AllPairGenerator& AllPairGenerator::operator++() {
@@ -178,6 +180,36 @@ context("AllPairGenerator") {
         expect_true(all_pairs.count({i, j}));
       }
     }
+  }
+}
+
+context("subset_tile_fwd_map")
+{
+
+  test_that("diagonal tile keeps sorted parent-locals in intersection")
+  {
+    std::unordered_map<j_t, j_t> global_to_subset{
+        {0, 0}, {2, 1}, {4, 2}, {6, 3}, {8, 4}};
+    AllPairGenerator tile(5, 0);
+    auto intersection_fwd = subset_tile_fwd_map(global_to_subset, tile);
+    expect_true(intersection_fwd.size() == 3u);
+    expect_true(intersection_fwd[0] == 0u);
+    expect_true(intersection_fwd[1] == 1u);
+    expect_true(intersection_fwd[2] == 2u);
+  }
+
+  test_that("bipartite tile keeps sorted parent-locals in intersection")
+  {
+    std::unordered_map<j_t, j_t> global_to_subset{
+        {0, 0}, {2, 1}, {4, 2}, {6, 3}, {8, 4}};
+    BipartitePairGenerator tile(5, 10, 0, 5);
+    auto intersection_fwd = subset_tile_fwd_map(global_to_subset, tile);
+    expect_true(intersection_fwd.size() == 5u);
+    expect_true(intersection_fwd[0] == 0u);
+    expect_true(intersection_fwd[1] == 1u);
+    expect_true(intersection_fwd[2] == 2u);
+    expect_true(intersection_fwd[3] == 3u);
+    expect_true(intersection_fwd[4] == 4u);
   }
 }
 
