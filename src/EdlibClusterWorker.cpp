@@ -19,7 +19,11 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
     );
 
     auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm * my_algo = clust_algo.make_child();
+    ClusterAlgorithm *my_algo = clust_algo.make_child(pg.get());
+    if (!my_algo)
+    {
+      continue;
+    }
     // iterate over all pairs in the pair generator
     while (*pg) {
       // i, j are the indices of the pair in the cluster algorithm

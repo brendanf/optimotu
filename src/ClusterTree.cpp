@@ -694,7 +694,14 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
           //           << " (" << next
           //           << ") with ID " << next->id
           //           << std::endl;
-          consumer(c->first_child->id, next->id, c->min_d);
+          j_t id1 = c->first_child->id;
+          j_t id2 = next->id;
+          if (
+              id1 != NO_CLUST && id2 != NO_CLUST &&
+              id1 < this->n && id2 < this->n)
+          {
+            consumer(id1, id2, c->min_d);
+          }
           next = next->next_sib;
         }
       }
@@ -926,6 +933,23 @@ MappedClusterAlgorithm * ClusterTreeImpl<verbose, test>::make_child(
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <int verbose, int test>
+ClusterAlgorithm *ClusterTreeImpl<verbose, test>::make_child(
+    const std::vector<std::size_t> &fwd_map)
+{
+  if (fwd_map.size() < 2)
+  {
+    return nullptr;
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto rev_map = invert_map(fwd_map);
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(this, fwd_map, rev_map);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
   this->children.push_back(std::move(child));
   return child_ptr;
 }

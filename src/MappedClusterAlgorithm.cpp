@@ -1,6 +1,14 @@
 #include "MappedClusterAlgorithm.h"
 #include "optimotu.h"
 
+ClusterAlgorithm *ClusterAlgorithm::make_child(
+    const std::vector<std::size_t> &fwd_map)
+{
+  (void)fwd_map;
+  OPTIMOTU_STOP("ClusterAlgorithm::make_child(fwd_map) is not implemented");
+  return nullptr;
+}
+
 using MCA = MappedClusterAlgorithm;
 
 std::vector<std::size_t> map_from_pair_generator(const PairGenerator & pg) {
@@ -64,10 +72,24 @@ MappedClusterAlgorithmImpl<verbose>::Surrogate::Surrogate(
 
 template<int verbose>
 void MappedClusterAlgorithmImpl<verbose>::Surrogate::operator()(j_t seq1, j_t seq2, double dist, int thread) {
+  if (
+      seq1 < 0 || seq2 < 0 ||
+      static_cast<std::size_t>(seq1) >= fwd_map.size() ||
+      static_cast<std::size_t>(seq2) >= fwd_map.size())
+  {
+    return;
+  }
   (*parent)(fwd_map[seq1], fwd_map[seq2], dist, thread);
 }
 template<int verbose>
 void MappedClusterAlgorithmImpl<verbose>::Surrogate::operator()(j_t seq1, j_t seq2, int i, int thread) {
+  if (
+      seq1 < 0 || seq2 < 0 ||
+      static_cast<std::size_t>(seq1) >= fwd_map.size() ||
+      static_cast<std::size_t>(seq2) >= fwd_map.size())
+  {
+    return;
+  }
   (*parent)(fwd_map[seq1], fwd_map[seq2], i, thread);
 }
 template<int verbose>
@@ -123,6 +145,13 @@ void MappedClusterAlgorithmImpl<verbose>::DistanceForwarder::operator()(PairGene
 }
 template<int verbose>
 void MappedClusterAlgorithmImpl<verbose>::DistanceForwarder::operator()(j_t seq1, j_t seq2, double dist, int thread) {
+  if (
+      seq1 < 0 || seq2 < 0 ||
+      static_cast<std::size_t>(seq1) >= fwd_map.size() ||
+      static_cast<std::size_t>(seq2) >= fwd_map.size())
+  {
+    return;
+  }
   (*target)(fwd_map[seq1], fwd_map[seq2], dist, thread);
 }
 
@@ -146,6 +175,13 @@ void MappedClusterAlgorithmImpl<verbose>::IndexForwarder::operator()(PairGenerat
 }
 template<int verbose>
 void MappedClusterAlgorithmImpl<verbose>::IndexForwarder::operator()(j_t seq1, j_t seq2, double dist, int thread) {
+  if (
+      seq1 < 0 || seq2 < 0 ||
+      static_cast<std::size_t>(seq1) >= fwd_map.size() ||
+      static_cast<std::size_t>(seq2) >= fwd_map.size())
+  {
+    return;
+  }
   (*target)(fwd_map[seq1], fwd_map[seq2], dist, thread);
 }
 template<int verbose>
@@ -154,6 +190,13 @@ void MappedClusterAlgorithmImpl<verbose>::IndexForwarder::operator()(PairGenerat
 }
 template<int verbose>
 void MappedClusterAlgorithmImpl<verbose>::IndexForwarder::operator()(j_t seq1, j_t seq2, int i, int thread) {
+  if (
+      seq1 < 0 || seq2 < 0 ||
+      static_cast<std::size_t>(seq1) >= fwd_map.size() ||
+      static_cast<std::size_t>(seq2) >= fwd_map.size())
+  {
+    return;
+  }
   (*target)(fwd_map[seq1], fwd_map[seq2], i, thread);
 }
 template<int verbose>
@@ -227,6 +270,20 @@ MappedClusterAlgorithmImpl<verbose>::MappedClusterAlgorithmImpl(
   inner(parent->make_inner_child(surrogate.get(), pg->max_value() + 1)),
   pair_generator(pg)
 {}
+
+template <int verbose>
+MappedClusterAlgorithmImpl<verbose>::MappedClusterAlgorithmImpl(
+    SingleClusterAlgorithm *parent,
+    SingleClusterAlgorithm *delegate,
+    const std::vector<std::size_t> &fwd_map,
+    const std::unordered_map<std::size_t, std::size_t> &rev_map) : MappedClusterAlgorithm(parent, fwd_map.size()),
+                                                                   fwd_map(fwd_map),
+                                                                   rev_map(rev_map),
+                                                                   surrogate(std::make_unique<Surrogate>(delegate, fwd_map)),
+                                                                   inner(parent->make_inner_child(surrogate.get(), fwd_map.size())),
+                                                                   pair_generator(nullptr)
+{
+}
 
 template<int verbose>
 MappedClusterAlgorithmImpl<verbose>::MappedClusterAlgorithmImpl(

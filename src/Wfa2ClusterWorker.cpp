@@ -21,7 +21,11 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
                                    gap_open2, gap_extend2, wfa::WFAligner::Alignment};
   for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
     auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm * my_algo = clust_algo.make_child();
+    ClusterAlgorithm *my_algo = clust_algo.make_child(pg.get());
+    if (!my_algo)
+    {
+      continue;
+    }
     OPTIMOTU_DEBUG(2, << "Wfa2SplitClusterWorker thread " << pg_index << " entered" << std::endl);
     size_t my_prealigned = 0;
     size_t my_aligned = 0;

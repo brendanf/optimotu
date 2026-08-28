@@ -4,6 +4,9 @@
 #include "ClusterAlgorithm.h"
 #include <memory>
 
+std::unordered_map<std::size_t, std::size_t> invert_map(
+    const std::vector<std::size_t> &fwd_map);
+
 // A MappedClusterAlgorithm is a ClusterAlgorithm that wraps another
 // ClusterAlgorithm and maps the indices of the inner algorithm to external
 // indices. This is typically used when the inner algorithm only accepts a
@@ -133,6 +136,13 @@ public:
     SingleClusterAlgorithm * delegate,
     PairGenerator * pg
   );
+
+  // Child with explicit mapping; inner merges into delegate (SLINK tiles).
+  MappedClusterAlgorithmImpl(
+      SingleClusterAlgorithm *parent,
+      SingleClusterAlgorithm *delegate,
+      const std::vector<std::size_t> &fwd_map,
+      const std::unordered_map<std::size_t, std::size_t> &rev_map);
 
   // Constructor for parent objects (no surrogate)
   MappedClusterAlgorithmImpl(SingleClusterAlgorithm & inner_ref, const std::vector<std::size_t> &fwd_map);

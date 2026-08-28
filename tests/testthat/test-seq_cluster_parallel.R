@@ -1,9 +1,9 @@
 simulate_clustered_sequences <- function(
-    n_clusters = 5L,
-    members_per_cluster = 5L,
-    seq_len = 220L,
-    centroid_sub_frac = 0.10,
-    member_sub_frac = 0.03
+  n_clusters = 5L,
+  members_per_cluster = 5L,
+  seq_len = 220L,
+  centroid_sub_frac = 0.10,
+  member_sub_frac = 0.03
 ) {
   alphabet <- c("A", "C", "G", "T")
 
@@ -13,7 +13,9 @@ simulate_clustered_sequences <- function(
     # only mutate every fifth position, and not within 3 positions of either end
     # this helps to endure that the optimal alignment is gap-free even when the
     # alignment algorithm allows gaps.
-    idx <- sample.int((length(out) - 6L) %/% 5L, n_mut, replace = FALSE) * 5L + 3L
+    idx <- sample.int((length(out) - 6L) %/% 5L, n_mut, replace = FALSE) *
+      5L +
+      3L
     for (i in idx) {
       out[i] <- sample(alphabet[alphabet != out[i]], size = 1L)
     }
@@ -26,15 +28,18 @@ simulate_clustered_sequences <- function(
     function(i) mutate_substitutions(ancestor, centroid_sub_frac),
     character(1)
   )
-  seq <- unlist(lapply(seq_len(n_clusters), function(cluster_id) {
-    vapply(
-      seq_len(members_per_cluster),
-      function(member_id) {
-        mutate_substitutions(centroids[[cluster_id]], member_sub_frac)
-      },
-      character(1)
-    )
-  }), use.names = FALSE)
+  seq <- unlist(
+    lapply(seq_len(n_clusters), function(cluster_id) {
+      vapply(
+        seq_len(members_per_cluster),
+        function(member_id) {
+          mutate_substitutions(centroids[[cluster_id]], member_sub_frac)
+        },
+        character(1)
+      )
+    }),
+    use.names = FALSE
+  )
   names(seq) <- sprintf(
     "c%02d_s%02d",
     rep(seq_len(n_clusters), each = members_per_cluster),
@@ -44,10 +49,10 @@ simulate_clustered_sequences <- function(
 }
 
 simulate_hierarchical_sequences <- function(
-    ancestor_len = 160L,
-    branching = 10L,
-    substitutions = c(18L, 9L, 5L, 2L),
-    seed = 1L
+  ancestor_len = 160L,
+  branching = 10L,
+  substitutions = c(18L, 9L, 5L, 2L),
+  seed = 1L
 ) {
   set.seed(seed)
   alphabet <- c("A", "C", "G", "T")
@@ -64,7 +69,10 @@ simulate_hierarchical_sequences <- function(
     paste(chars, collapse = "")
   }
 
-  current <- paste(sample(alphabet, ancestor_len, replace = TRUE), collapse = "")
+  current <- paste(
+    sample(alphabet, ancestor_len, replace = TRUE),
+    collapse = ""
+  )
   for (n_subs in substitutions) {
     next_level <- character(length(current) * branching)
     k <- 1L
@@ -274,7 +282,11 @@ testthat::test_that("parallel_merge does not deadlock for tree+hamming", {
 testthat::test_that("parallel_merge handles slink+hamming on hierarchical sequences", {
   seq_full <- simulate_hierarchical_sequences(seed = 1L)
   set.seed(1)
-  seq_subset <- seq_full[sample.int(length(seq_full), size = 500L, replace = FALSE)]
+  seq_subset <- seq_full[sample.int(
+    length(seq_full),
+    size = 500L,
+    replace = FALSE
+  )]
   out <- testthat::expect_no_error(
     seq_cluster(
       seq = seq_subset,
@@ -288,6 +300,30 @@ testthat::test_that("parallel_merge handles slink+hamming on hierarchical sequen
   )
   testthat::expect_true(is.matrix(out))
   testthat::expect_equal(ncol(out), length(seq_subset))
+})
+
+testthat::test_that("parallel_merge handles slink+hamming with multiple threads", {
+  seq_full <- simulate_hierarchical_sequences(seed = 1L)
+  set.seed(1)
+  seq_subset <- seq_full[sample.int(
+    length(seq_full),
+    size = 500L,
+    replace = FALSE
+  )]
+  for (threads in c(1L, 2L)) {
+    out <- testthat::expect_no_error(
+      seq_cluster(
+        seq = seq_subset,
+        dist_config = dist_hamming(),
+        threshold_config = threshold_set(c(0.02, 0.04)),
+        clust_config = clust_slink(),
+        parallel_config = parallel_merge(threads),
+        output_type = "matrix",
+        verbose = FALSE
+      )
+    )
+    testthat::expect_equal(ncol(out), length(seq_subset))
+  }
 })
 
 algorithms <- list(
@@ -312,7 +348,8 @@ for (algorithm_name in names(algorithms)) {
     testthat::test_that(
       sprintf(
         "seq_cluster %s with %s matches hclust truth",
-        algorithm_name, parallel_name
+        algorithm_name,
+        parallel_name
       ),
       {
         out <- testthat::expect_no_error(
@@ -331,6 +368,5 @@ for (algorithm_name in names(algorithms)) {
         testthat::expect_equal(conf_mat$FN, rep(0L, nrow(conf_mat)))
       }
     )
-
   }
 }

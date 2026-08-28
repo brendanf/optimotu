@@ -113,7 +113,26 @@ ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_child() {
 template<int verbose>
 MappedClusterAlgorithm * ClusterSLINK<verbose>::make_child(PairGenerator * pg) {
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(&delegate, pg);
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(this, &delegate, pg);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
+  this->children.push_back(std::move(child));
+  this->uses_delegate = true;
+  return child_ptr;
+}
+
+template <int verbose>
+ClusterAlgorithm *ClusterSLINK<verbose>::make_child(
+    const std::vector<std::size_t> &fwd_map)
+{
+  if (fwd_map.size() < 2)
+  {
+    return nullptr;
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto rev_map = invert_map(fwd_map);
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(
+      this, &delegate, fwd_map, rev_map);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );

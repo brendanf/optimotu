@@ -160,6 +160,7 @@ public:
 
   ClusterTreeImpl<verbose, test> * make_child() override;
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
+  ClusterAlgorithm *make_child(const std::vector<std::size_t> &fwd_map) override;
 
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0) override;
 

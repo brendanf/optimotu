@@ -79,7 +79,10 @@ estimate_subset_memory_mb <- function(
   )
   method_scale <- switch(
     parallel_method,
-    merge = threads,
+    merge = {
+      n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
+      1 + threads * (2 / n_tiles)
+    },
     concurrent = 1.1,
     hierarchical = max(1, threads / 2),
     1

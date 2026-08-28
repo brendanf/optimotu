@@ -617,6 +617,23 @@ MappedClusterAlgorithm * ClusterIndexedMatrix<A, V>::make_child(PairGenerator * 
 }
 
 template <class A, int V>
+ClusterAlgorithm *ClusterIndexedMatrix<A, V>::make_child(
+    const std::vector<std::size_t> &fwd_map)
+{
+  if (fwd_map.size() < 2)
+  {
+    return nullptr;
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto rev_map = invert_map(fwd_map);
+  auto child_ptr = new MappedClusterAlgorithmImpl<V>(this, fwd_map, rev_map);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <class A, int V>
 double ClusterIndexedMatrix<A, V>::max_relevant(j_t seq1, j_t seq2, int thread) const {
   if (seq1 == seq2) return 0.0;
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);

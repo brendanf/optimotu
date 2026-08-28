@@ -8,6 +8,7 @@
 #include "ClusterTree.h"
 #include "MemoryBudget.h"
 #include <unordered_map>
+#include <unordered_set>
 
 class MultipleClusterAlgorithm : public ClusterAlgorithm {
 protected:
@@ -37,6 +38,13 @@ protected:
   std::vector<std::size_t> tracked_allocations;
   std::size_t tracked_base_allocation = 0;
 
+  // When set, routing tables and names come from the parent (tile merge child).
+  const MultipleClusterAlgorithm *tile_routing_parent = nullptr;
+
+  const std::vector<std::vector<j_t>> &routing_subset_key() const;
+  const std::vector<std::unordered_map<j_t, j_t>> &routing_fwd_map() const;
+  const std::vector<std::vector<std::string>> &routing_subset_names() const;
+
   // Last-pair overlap cache is thread_local inside ensure_whichsets so
   // concurrent workers do not share a slot. Returns the subsets that
   // contain both sequences.
@@ -61,6 +69,9 @@ protected:
   );
 
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
+
+  // Tile-local merge child: shares parent routing tables.
+  MultipleClusterAlgorithm(MultipleClusterAlgorithm *parent, PairGenerator *pg);
 
   // Constructor for child objects
   // It makes sense to calculate many const members all together,
@@ -131,6 +142,8 @@ template<int verbose>
 class MultipleClusterAlgorithmImpl : public MultipleClusterAlgorithm {
 protected:
   MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm * parent);
+
+  MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm *parent, PairGenerator *pg);
 
   MultipleClusterAlgorithmImpl(
     MultipleClusterAlgorithm * parent,

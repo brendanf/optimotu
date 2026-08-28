@@ -31,7 +31,11 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
     size_t my_prealigned = 0;
     size_t my_aligned = 0;
     auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm * my_algo = clust_algo.make_child();
+    ClusterAlgorithm *my_algo = clust_algo.make_child(pg.get());
+    if (!my_algo)
+    {
+      continue;
+    }
 
     while (*pg) {
       size_t i = pg->i();

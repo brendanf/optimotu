@@ -72,6 +72,7 @@ public:
   SingleClusterAlgorithm * make_child() override;
 
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
+  ClusterAlgorithm *make_child(const std::vector<std::size_t> &fwd_map) override;
 
   double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
 

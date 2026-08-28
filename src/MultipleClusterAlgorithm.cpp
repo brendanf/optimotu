@@ -82,6 +82,21 @@ void budget_release(
 
 } // namespace
 
+const std::vector<std::vector<j_t>> &MCA::routing_subset_key() const
+{
+  return tile_routing_parent ? tile_routing_parent->subset_key : subset_key;
+}
+
+const std::vector<std::unordered_map<j_t, j_t>> &MCA::routing_fwd_map() const
+{
+  return tile_routing_parent ? tile_routing_parent->fwd_map : fwd_map;
+}
+
+const std::vector<std::vector<std::string>> &MCA::routing_subset_names() const
+{
+  return tile_routing_parent ? tile_routing_parent->subset_names : subset_names;
+}
+
 // Base protected main constructor: initializer list only.
 MCA::MultipleClusterAlgorithm(
   const ClusterAlgorithmFactory & factory,
@@ -110,6 +125,11 @@ MCA::MultipleClusterAlgorithm(
 template<int verbose>
 MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm * parent) :
   MultipleClusterAlgorithm(parent) {}
+
+template <int verbose>
+MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
+    MultipleClusterAlgorithm *parent,
+    PairGenerator *pg) : MultipleClusterAlgorithm(parent, pg) {}
 
 template<int verbose>
 MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
@@ -289,6 +309,60 @@ MCA::MultipleClusterAlgorithm(MCA * parent) :
   }
 }
 
+MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm(parent),
+                                                                factory(parent->factory),
+                                                                names(),
+                                                                subset_indices(),
+                                                                subset_names(),
+                                                                threads(parent->threads),
+                                                                memory_budget(parent->memory_budget),
+                                                                subset_key(),
+                                                                fwd_map(),
+                                                                borrowed_subsets(),
+                                                                tracked_allocations(),
+                                                                tile_routing_parent(parent)
+{
+  subsets.resize(parent->subsets.size(), nullptr);
+
+  std::unordered_set<std::size_t> tile_globals;
+  tile_globals.reserve(pg->max_value() + 1);
+  for (std::size_t i = 0; i <= pg->max_value(); ++i)
+  {
+    tile_globals.insert(pg->forward_map(i));
+  }
+
+  for (j_t j = 0; j < static_cast<j_t>(parent->subsets.size()); ++j)
+  {
+    std::vector<j_t> locals;
+    locals.reserve(parent->fwd_map[j].size());
+    for (const auto &kv : parent->fwd_map[j])
+    {
+      if (tile_globals.count(kv.first))
+      {
+        locals.push_back(kv.second);
+      }
+    }
+    if (locals.size() < 2)
+    {
+      continue;
+    }
+    const std::size_t subset_bytes = factory.estimate_bytes(parent->subsets[j]->n);
+    budget_acquire(
+        memory_budget,
+        subset_bytes,
+        "MultipleClusterAlgorithm tile child subset");
+    auto child_subset = parent->subsets[j]->make_child();
+    if (!child_subset)
+    {
+      budget_release(memory_budget, subset_bytes);
+      continue;
+    }
+    subsets[j] = static_cast<SingleClusterAlgorithm *>(child_subset);
+    borrowed_subsets.emplace_back(parent->subsets[j], child_subset);
+    tracked_allocations.push_back(subset_bytes);
+  }
+}
+
 // This constructor is used to create a child algorithm for a
 // MultipleClusterAlgorithm.
 MCA::MultipleClusterAlgorithm(
@@ -341,10 +415,10 @@ MCA::~MultipleClusterAlgorithm() {
 // storage: they all pass thread=0, and tile indexes are not a valid
 // thread id.
 const std::vector<j_t> & MCA::ensure_whichsets(j_t seq1, j_t seq2) const {
-  if (seq1 >= subset_key.size() || seq2 >= subset_key.size()) {
-    OPTIMOTU_STOP("MultipleClusterAlgorithm: sequence index out of range (seq1="
-      + std::to_string(seq1) + ", seq2=" + std::to_string(seq2)
-      + ", names.size()=" + std::to_string(subset_key.size()) + ")");
+  const auto &key = routing_subset_key();
+  if (seq1 >= key.size() || seq2 >= key.size())
+  {
+    OPTIMOTU_STOP("MultipleClusterAlgorithm: sequence index out of range (seq1=" + std::to_string(seq1) + ", seq2=" + std::to_string(seq2) + ", names.size()=" + std::to_string(key.size()) + ")");
   }
   thread_local const MCA * cached_algo = nullptr;
   thread_local j_t cached_seq1 = std::numeric_limits<j_t>::max();
@@ -358,16 +432,16 @@ const std::vector<j_t> & MCA::ensure_whichsets(j_t seq1, j_t seq2) const {
     return whichsets;
   }
   whichsets.clear();
-  if (whichsets.capacity() < subset_names.size()) {
-    whichsets.reserve(subset_names.size());
+  if (whichsets.capacity() < routing_subset_names().size())
+  {
+    whichsets.reserve(routing_subset_names().size());
   }
   std::set_intersection(
-    subset_key[seq1].begin(),
-    subset_key[seq1].end(),
-    subset_key[seq2].begin(),
-    subset_key[seq2].end(),
-    std::back_inserter(whichsets)
-  );
+      key[seq1].begin(),
+      key[seq1].end(),
+      key[seq2].begin(),
+      key[seq2].end(),
+      std::back_inserter(whichsets));
   cached_algo = this;
   cached_seq1 = seq1;
   cached_seq2 = seq2;
@@ -390,9 +464,20 @@ void MCA::apply_pair(
   if (seq1 == seq2) return;
   std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   const std::vector<j_t> & which = ensure_whichsets(seq1, seq2);
+  const auto &maps = routing_fwd_map();
   for (j_t j : which) {
-    j_t s1 = fwd_map[j].at(seq1);
-    j_t s2 = fwd_map[j].at(seq2);
+    if (!subsets[j])
+    {
+      continue;
+    }
+    const auto it1 = maps[j].find(seq1);
+    const auto it2 = maps[j].find(seq2);
+    if (it1 == maps[j].end() || it2 == maps[j].end())
+    {
+      continue;
+    }
+    j_t s1 = it1->second;
+    j_t s2 = it2->second;
     if (
       filter_irrelevant &&
       !(dist < subsets[j]->max_relevant(s1, s2, thread))
@@ -435,23 +520,41 @@ void MCA::operator()(DistanceElement d, int thread) {
 }
 
 void MCA::finalize() {
-  for (auto s : subsets) s->finalize();
+  for (auto s : subsets)
+  {
+    if (s)
+    {
+      s->finalize();
+    }
+  }
 }
 
 // does not lock anything directly!
 // relies on locks inside subset algorithms for thread safety.
 double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
-  if (seq1 >= subset_key.size() || seq2 >= subset_key.size()) {
+  const auto &key = routing_subset_key();
+  if (seq1 >= key.size() || seq2 >= key.size())
+  {
     OPTIMOTU_STOP("MultipleClusterAlgorithm::max_relevant: sequence index out of range");
   }
   double max = -1.0;
   const std::vector<j_t> & which = ensure_whichsets(seq1, seq2);
+  const auto &maps = routing_fwd_map();
   for (j_t j : which) {
+    if (!subsets[j])
+    {
+      continue;
+    }
+    const auto it1 = maps[j].find(seq1);
+    const auto it2 = maps[j].find(seq2);
+    if (it1 == maps[j].end() || it2 == maps[j].end())
+    {
+      continue;
+    }
     double maxj = subsets[j]->max_relevant(
-      fwd_map[j].at(seq1),
-      fwd_map[j].at(seq2),
-      thread
-    );
+        it1->second,
+        it2->second,
+        thread);
     max = std::max(max, maxj);
   }
   return max;
@@ -459,7 +562,10 @@ double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
 
 void MCA::merge_into(DistanceConsumer &consumer) {
   for (auto & ss : this->subsets) {
-    ss->merge_into(consumer);
+    if (ss)
+    {
+      ss->merge_into(consumer);
+    }
   }
 }
 
@@ -470,7 +576,10 @@ void MCA::merge_into(ClusterAlgorithm &consumer) {
     );
   }
   for (auto & ss : this->subsets) {
-    ss->merge_into(consumer);
+    if (ss)
+    {
+      ss->merge_into(consumer);
+    }
   }
 }
 
@@ -478,13 +587,19 @@ void MCA::merge_into(ClusterAlgorithm &consumer) {
 // clustering
 void MCA::merge_into(MCA &consumer) {
   for (size_t i = 0; i < this->subsets.size(); i++) {
-    this->subsets[i]->merge_into(*consumer.subsets[i]);
+    if (this->subsets[i])
+    {
+      this->subsets[i]->merge_into(*consumer.subsets[i]);
+    }
   }
 }
 
 void MCA::merge_into_parent() {
   for (auto & ss : this->subsets) {
-    ss->merge_into_parent();
+    if (ss)
+    {
+      ss->merge_into_parent();
+    }
   }
 }
 
@@ -510,26 +625,66 @@ MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child() {
 }
 
 MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
-  // Split workers pass a tile PairGenerator whose indices are in the full
-  // sequence space. Subset algorithms are already indexed in subset-local
-  // space, so wrapping them with that generator maps global ids into a
-  // smaller algorithm and crashes. A full-size child still receives global
-  // i0/j0 from the worker and translates through fwd_map.
-  (void)pg;
-  return make_child();
+  if (!pg)
+  {
+    return make_child();
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new MultipleClusterAlgorithm(this, pg);
+  bool any_subset = false;
+  for (const auto *subset : child_ptr->subsets)
+  {
+    if (subset)
+    {
+      any_subset = true;
+      break;
+    }
+  }
+  if (!any_subset)
+  {
+    delete child_ptr;
+    return nullptr;
+  }
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
+  this->children.push_back(std::move(child));
+  return child_ptr;
 }
 
 template<int verbose>
 MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(
   PairGenerator * pg
 ) {
-  (void)pg;
-  return make_child();
+  if (!pg)
+  {
+    return make_child();
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto child_ptr = new MultipleClusterAlgorithmImpl<verbose>(this, pg);
+  bool any_subset = false;
+  for (const auto *subset : child_ptr->subsets)
+  {
+    if (subset)
+    {
+      any_subset = true;
+      break;
+    }
+  }
+  if (!any_subset)
+  {
+    delete child_ptr;
+    return nullptr;
+  }
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
+  this->children.push_back(std::move(child));
+  return child_ptr;
 }
 
 bool MCA::accepts_unordered_pairs() const {
   for (const auto * subset : subsets) {
-    if (!subset->accepts_unordered_pairs()) {
+    if (subset && !subset->accepts_unordered_pairs())
+    {
       return false;
     }
   }
@@ -538,22 +693,23 @@ bool MCA::accepts_unordered_pairs() const {
 
 void MCA::write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {
   for (size_t i = 0; i < this->subsets.size(); i++) {
-    // OPTIMOTU_COUT << "writing to matrix " << i << "..." << std::flush;
-    //           << "matrix size is " << matrix_list[i].nrow()
-    //           << "x" << matrix_list[i].ncol()
-    //           << std::endl << "subset size is " << this->m
-    //           << "x" << subsets[i]->n
-    //           << std::endl;
-    this->subsets[i]->write_to_matrix(matrix_list[i]);
-    // OPTIMOTU_COUT << "done" << std::endl;
+    if (this->subsets[i])
+    {
+      this->subsets[i]->write_to_matrix(matrix_list[i]);
+    }
   }
 }
 
 #ifdef OPTIMOTU_R
 Rcpp::List MCA::as_hclust() const {
   std::vector<Rcpp::List> out;
+  const auto &subset_name_list = routing_subset_names();
   for (size_t i = 0; i < this->subsets.size(); i++) {
-    out.push_back(this->subsets[i]->as_hclust(Rcpp::wrap(this->subset_names[i])));
+    if (this->subsets[i])
+    {
+      out.push_back(
+          this->subsets[i]->as_hclust(Rcpp::wrap(subset_name_list[i])));
+    }
   }
   return Rcpp::wrap(out);
 }

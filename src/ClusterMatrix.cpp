@@ -290,6 +290,23 @@ MappedClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_child(
   return child_ptr;
 }
 
+template <bool BM, int F, typename A, int V>
+ClusterAlgorithm *ClusterMatrix<BM, F, A, V>::make_child(
+    const std::vector<std::size_t> &fwd_map)
+{
+  if (fwd_map.size() < 2)
+  {
+    return nullptr;
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  auto rev_map = invert_map(fwd_map);
+  auto child_ptr = new MappedClusterAlgorithmImpl<V>(this, fwd_map, rev_map);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
 template<bool BM, int F, typename A, int V>
 SingleClusterAlgorithm * ClusterMatrix<BM, F, A, V>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
   // This is called from MappedClusterAlgorithm construction while make_child()

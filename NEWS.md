@@ -14,9 +14,14 @@ subsets, and on budget overflow retries with fewer threads, then with more pair
 subproblems, then by splitting the batch, controlled by the new arguments
 `retry_on_memory_exhaustion`, `retry_split_strategy`, `retry_reduce_threads`,
 `retry_min_threads`, `retry_overpartition`, and `retry_subproblem_factor`.
-* Cluster algorithms now release per-thread child algorithms as soon as they have
-merged into their parent, rather than holding them until the whole clustering
-finishes, which reduces peak memory use in parallel runs.
+* `parallel_merge()` split workers now create tile-local clustering shards via
+  `make_child(pair_generator)`, reducing peak memory for single-subset runs.
+  Multi-subset (`MultipleClusterAlgorithm`) tile children share parent routing
+  tables and still use full-size per-subset merge copies; subset-by-tile
+  intersection shards remain future work.
+* The clustering memory estimator for `parallel_merge()` now accounts for
+  tile-local shard size (`1 + threads * (2 / n_tiles)`) rather than assuming
+  each thread holds a full-size copy.
 * Fix `seq_cluster()` failing with `invalid sequence index` when clustering
 multiple subsets via `which` with `parallel_merge()`, for subsets whose sequences
 are not a prefix of the full input.

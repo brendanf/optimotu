@@ -114,6 +114,8 @@ public:
   // when it is finished
   virtual ClusterAlgorithm * make_child() = 0;
   virtual ClusterAlgorithm * make_child(PairGenerator * pg) = 0;
+  // Child sized to fwd_map.size(); fwd_map[local] is the parent index.
+  virtual ClusterAlgorithm *make_child(const std::vector<std::size_t> &fwd_map);
 
   // calculate the maximum distance between seq1 and seq2 which would actually
   // cause an update
