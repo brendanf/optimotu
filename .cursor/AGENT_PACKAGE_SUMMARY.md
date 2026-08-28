@@ -99,9 +99,12 @@ explicitly requests API changes.
 - `MappedClusterAlgorithm` intersection constructors bind `Surrogate` to
   `this->fwd_map` (not the ctor parameter) so merge forwards stable parent
   indices.
-- `estimate_subset_memory_mb()` scales `parallel_merge` by
-  `1 + threads * (2 / n_tiles)` rather than `threads`.
-- `test-optimize_thresholds_memory.R` checks the merge memory scale helper.
+- `estimate_subset_memory_mb()` mirrors native `estimate_bytes()` (tree/SLINK
+  `O(n)`, matrix/index `O(nm)`), then scales `parallel_merge` by
+  `1 + threads * (2 / n_tiles)`. `include_result = TRUE` adds `4nm` for
+  tree/SLINK only.
+- `test-optimize_thresholds_memory.R` checks those formulas, `include_result`,
+  and the merge scale helper.
 - Interrupt regression coverage for `seq_cluster()` lives in
   `test-seq_cluster_interrupt.R` and is environment-guarded (opt-in) to avoid
   flaky default CI runs.

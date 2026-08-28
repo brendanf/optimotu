@@ -25,7 +25,10 @@ subproblems, then by splitting the batch, controlled by the new arguments
   algorithm remains full-size.
 * The clustering memory estimator for `parallel_merge()` now accounts for
   tile-local shard size (`1 + threads * (2 / n_tiles)`) rather than assuming
-  each thread holds a full-size copy.
+  each thread holds a full-size copy. Per-subset estimates now follow native
+  `estimate_bytes()`: tree and SLINK scale with `n_seq` only, while matrix and
+  index scale with `n_seq * n_thresholds`. Optional `include_result` adds the
+  `n x m` integer output for tree/SLINK.
 * Fix `seq_cluster()` failing with `invalid sequence index` when clustering
 multiple subsets via `which` with `parallel_merge()`, for subsets whose sequences
 are not a prefix of the full input.

@@ -67,15 +67,19 @@ estimate_subset_memory_mb <- function(
   n_thresholds,
   clust_method,
   parallel_method,
-  threads
+  threads,
+  include_result = FALSE
 ) {
-  base_factor <- switch(
+  # Match Cluster*Factory::estimate_bytes() (int = 4, uint64_t = 8).
+  int_bytes <- 4
+  u64_bytes <- 8
+  algo_bytes <- switch(
     clust_method,
-    tree = 0.06,
-    slink = 0.05,
-    matrix = 0.22,
-    index = 0.30,
-    0.10
+    tree = n_seq * u64_bytes * 32,
+    slink = n_seq * u64_bytes * 24,
+    matrix = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 8,
+    index = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 12,
+    n_seq * n_thresholds * int_bytes
   )
   method_scale <- switch(
     parallel_method,
@@ -87,7 +91,12 @@ estimate_subset_memory_mb <- function(
     hierarchical = max(1, threads / 2),
     1
   )
-  max(1, n_seq * (n_thresholds + 1) * base_factor * method_scale / 1024)
+  total_bytes <- algo_bytes * method_scale
+  # Tree/SLINK do not keep the n x m output; matrix/index already include it.
+  if (isTRUE(include_result) && clust_method %in% c("tree", "slink")) {
+    total_bytes <- total_bytes + n_seq * n_thresholds * int_bytes
+  }
+  max(1, total_bytes / (1024 * 1024))
 }
 
 estimate_batch_memory_mb <- function(
@@ -95,7 +104,8 @@ estimate_batch_memory_mb <- function(
   testset_select,
   threshold_config,
   clust_config,
-  parallel_config
+  parallel_config,
+  include_result = FALSE
 ) {
   n_thresholds <- if (threshold_config$type == "uniform") {
     floor((threshold_config$to - threshold_config$from) / threshold_config$by) +
@@ -114,7 +124,8 @@ estimate_batch_memory_mb <- function(
     n_thresholds = n_thresholds,
     clust_method = clust_method,
     parallel_method = parallel_method,
-    threads = threads
+    threads = threads,
+    include_result = include_result
   )
   sum(per_subset)
 }
