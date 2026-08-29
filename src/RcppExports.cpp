@@ -438,13 +438,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_cluster_multi_best_threshold
-Rcpp::List seq_cluster_multi_best_threshold(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const Rcpp::ListOf<Rcpp::IntegerVector> true_partitions, const std::vector<std::string>& measures, const Rcpp::NumericVector& thresholds, const Rcpp::IntegerVector& threshold_order, const int verbose, const double clustering_memory_budget_mb);
+Rcpp::List seq_cluster_multi_best_threshold(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::IntegerVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const Rcpp::ListOf<Rcpp::IntegerVector> true_partitions, const std::vector<std::string>& measures, const Rcpp::NumericVector& thresholds, const Rcpp::IntegerVector& threshold_order, const int verbose, const double clustering_memory_budget_mb);
 RcppExport SEXP _optimotu_seq_cluster_multi_best_threshold(SEXP seqSEXP, SEXP whichSEXP, SEXP dist_configSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP true_partitionsSEXP, SEXP measuresSEXP, SEXP thresholdsSEXP, SEXP threshold_orderSEXP, SEXP verboseSEXP, SEXP clustering_memory_budget_mbSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::ListOf<Rcpp::CharacterVector> >::type which(whichSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::ListOf<Rcpp::IntegerVector> >::type which(whichSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type dist_config(dist_configSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type threshold_config(threshold_configSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type clust_config(clust_configSEXP);

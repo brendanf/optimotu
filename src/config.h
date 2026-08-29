@@ -11,6 +11,7 @@
 #include "DistClusterWorker.h"
 #include "DistWorker.h"
 #include "alignment_enums.h"
+#include "SequenceView.h"
 #include <cstddef>
 
 #ifdef OPTIMOTU_R
@@ -43,6 +44,15 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     std::size_t clustering_memory_budget_bytes = 0,
     const std::string &parallel_method = "merge");
 
+std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
+    const int threads,
+    ClusterAlgorithmFactory &factory,
+    j_t n_seq,
+    const std::vector<std::vector<j_t>> &subset_which,
+    int verbose = 0,
+    std::size_t clustering_memory_budget_bytes = 0,
+    const std::string &parallel_method = "merge");
+
 template <typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     const std::string &method,
@@ -56,7 +66,7 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
 
 std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     const std::string &type,
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     const double breakpoint,
     ClusterAlgorithm &cluster,
     const std::uint8_t threads,
@@ -85,6 +95,15 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     std::size_t clustering_memory_budget_bytes = 0
 );
 
+std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
+    Rcpp::List parallel_config,
+    ClusterAlgorithmFactory &factory,
+    j_t n_seq,
+    Rcpp::ListOf<Rcpp::IntegerVector> subset_which,
+    int verbose = 0,
+    std::size_t clustering_memory_budget_bytes = 0
+);
+
 template <typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
   Rcpp::List config,
@@ -97,7 +116,7 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
 std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     Rcpp::List dist_config,
     Rcpp::List parallel_config,
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &cluster,
     int verbose = 0
 );

@@ -2,13 +2,14 @@
 #define OPTIMOTU_HYBRIDCLUSTERWORKER_H
 
 #include "DistClusterWorker.h"
+#include "SequenceView.h"
 
 class HybridClusterWorker : public DistClusterWorker {
 protected:
   double breakpoint = 0.1;
 public :
   HybridClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1,
@@ -28,7 +29,7 @@ class HybridSplitClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::pair_generators;
 public :
   HybridSplitClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1,
@@ -48,7 +49,7 @@ class HybridConcurrentClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::pair_generators;
 public :
   HybridConcurrentClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1,

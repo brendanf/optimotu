@@ -22,7 +22,7 @@ void stop_memory_budget(const MemoryBudgetExceeded &e) {
 }
 
 MultiClusterJob run_seq_cluster_multi(
-  const std::vector<std::string> &cppseq,
+  const SequenceSet &seq,
   Rcpp::CharacterVector seqnames,
   Rcpp::ListOf<Rcpp::CharacterVector> which,
   Rcpp::List dist_config,
@@ -64,9 +64,9 @@ MultiClusterJob run_seq_cluster_multi(
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
   }
   try {
-    if (cppseq.size() >= 2) {
+    if (seq.size() >= 2) {
       auto worker = create_dist_cluster_worker(
-        dist_config, parallel_config, cppseq, *job.algo, verbose
+        dist_config, parallel_config, seq, *job.algo, verbose
       );
       if (verbose) {
         OPTIMOTU_CERR << "done\nclustering..." << std::endl;
@@ -79,7 +79,78 @@ MultiClusterJob run_seq_cluster_multi(
         );
       }
     } else if (verbose) {
-      OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << cppseq.size()
+      OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << seq.size()
+                    << " input sequence(s)" << std::endl;
+    }
+  } catch (const MemoryBudgetExceeded &e) {
+    stop_memory_budget(e);
+  }
+  if (verbose) {
+    OPTIMOTU_CERR << "done\nfinalizing worker..." << std::flush;
+  }
+  job.algo->finalize();
+  job.algo->prepare_output();
+  return job;
+}
+
+MultiClusterJob run_seq_cluster_multi(
+  const SequenceSet &seq,
+  Rcpp::ListOf<Rcpp::IntegerVector> which,
+  Rcpp::List dist_config,
+  Rcpp::List threshold_config,
+  Rcpp::List clust_config,
+  Rcpp::List parallel_config,
+  int verbose,
+  double clustering_memory_budget_mb
+) {
+  MultiClusterJob job;
+  if (verbose) {
+    OPTIMOTU_CERR << "creating DistanceConverter..." << std::flush;
+  }
+  job.dconv = create_distance_converter(threshold_config);
+  if (verbose) {
+    OPTIMOTU_CERR << "done\ncreating ClusterAlgorithmFactory..."
+                  << std::flush;
+  }
+  job.factory = create_cluster_algorithm(clust_config, job.dconv.get());
+  if (verbose) {
+    OPTIMOTU_CERR << "done\ncreating MultipleClusterAlgorithm..."
+                  << std::flush;
+  }
+  std::size_t clustering_memory_budget_bytes = 0;
+  if (clustering_memory_budget_mb > 0.0) {
+    clustering_memory_budget_bytes = static_cast<std::size_t>(
+      clustering_memory_budget_mb * 1024.0 * 1024.0
+    );
+  }
+  job.algo = create_multiple_cluster_algorithm(
+    parallel_config,
+    *job.factory,
+    static_cast<j_t>(seq.size()),
+    which,
+    verbose,
+    clustering_memory_budget_bytes
+  );
+  if (verbose) {
+    OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
+  }
+  try {
+    if (seq.size() >= 2) {
+      auto worker = create_dist_cluster_worker(
+        dist_config, parallel_config, seq, *job.algo, verbose
+      );
+      if (verbose) {
+        OPTIMOTU_CERR << "done\nclustering..." << std::endl;
+      }
+      if (worker->n_threads() == 1) {
+        (*worker)(0, 1);
+      } else {
+        RcppParallel::parallelFor(
+          0, worker->n_threads(), *worker, 1, worker->n_threads()
+        );
+      }
+    } else if (verbose) {
+      OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << seq.size()
                     << " input sequence(s)" << std::endl;
     }
   } catch (const MemoryBudgetExceeded &e) {

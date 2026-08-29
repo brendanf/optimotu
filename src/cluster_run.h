@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "SequenceView.h"
 
 void stop_memory_budget(const MemoryBudgetExceeded &e);
 
@@ -22,9 +23,20 @@ struct MultiClusterJob {
 };
 
 MultiClusterJob run_seq_cluster_multi(
-  const std::vector<std::string> &cppseq,
+  const SequenceSet &seq,
   Rcpp::CharacterVector seqnames,
   Rcpp::ListOf<Rcpp::CharacterVector> which,
+  Rcpp::List dist_config,
+  Rcpp::List threshold_config,
+  Rcpp::List clust_config,
+  Rcpp::List parallel_config,
+  int verbose,
+  double clustering_memory_budget_mb
+);
+
+MultiClusterJob run_seq_cluster_multi(
+  const SequenceSet &seq,
+  Rcpp::ListOf<Rcpp::IntegerVector> which,
   Rcpp::List dist_config,
   Rcpp::List threshold_config,
   Rcpp::List clust_config,

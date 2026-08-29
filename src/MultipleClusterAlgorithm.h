@@ -84,6 +84,18 @@ protected:
       ClusterInstanceRole root_role = ClusterInstanceRole::Parent,
       std::size_t parent_n_tiles = 0);
 
+  // Index-based construction: subset_which entries are 0-based sequence
+  // indices in original which order. Names/subset_names stay empty unless
+  // labels are needed later (best-threshold path does not need them).
+  MultipleClusterAlgorithm(
+      const ClusterAlgorithmFactory &factory,
+      j_t n_seq,
+      const std::vector<std::vector<j_t>> &subset_which,
+      const int threads,
+      std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr,
+      ClusterInstanceRole root_role = ClusterInstanceRole::Parent,
+      std::size_t parent_n_tiles = 0);
+
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
 
   // Tile-local merge child: shares parent routing tables.
@@ -95,6 +107,12 @@ public:
 
   MultipleClusterAlgorithm() = delete;
   ~MultipleClusterAlgorithm() override;
+
+  std::shared_ptr<MemoryBudgetTracker> get_memory_budget() const {
+    return memory_budget;
+  }
+  void acquire_memory(std::size_t bytes, const std::string &context);
+  void release_memory(std::size_t bytes);
 
   void operator()(j_t seq1, j_t seq2, double dist, int thread) override;
 
@@ -162,6 +180,16 @@ public:
       const ClusterAlgorithmFactory &factory,
       const std::vector<std::string> &names,
       const std::vector<std::vector<std::string>> &subset_names,
+      const int threads,
+      int verbose_param,
+      std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr,
+      ClusterInstanceRole root_role = ClusterInstanceRole::Parent,
+      std::size_t parent_n_tiles = 0);
+
+  MultipleClusterAlgorithmImpl(
+      const ClusterAlgorithmFactory &factory,
+      j_t n_seq,
+      const std::vector<std::vector<j_t>> &subset_which,
       const int threads,
       int verbose_param,
       std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr,

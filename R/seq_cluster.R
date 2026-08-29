@@ -215,6 +215,10 @@ seq_cluster.character <- function(
     if (isTRUE(verbose) || verbose >= 1L) {
       cat(" done\n")
     }
+    # Restrict to the union of subset members so packing and pair
+    # generation do not scale with unused sequences.
+    keep <- sort(unique(unlist(which, use.names = FALSE)))
+    seq <- seq[keep]
     seq_cluster_multi(
       seq = seq,
       which = which,

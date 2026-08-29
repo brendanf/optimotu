@@ -34,11 +34,20 @@ Native code:
 - `src/`
   - performance-critical C/C++ implementations
   - distance workers, clustering algorithms, generators, and glue via Rcpp
+  - R package builds define `OPTIMOTU_R` (`src/Makevars`). All R / Rcpp / R
+    API use must be wrapped in `#ifdef OPTIMOTU_R`. Core algorithms keep a
+    pure C++ entry (standard types / `SequenceView`) so a standalone C++
+    library or non-R wrappers remain possible. Dual factories in
+    `src/config.h` (C++ types first, Rcpp config overloads under
+    `OPTIMOTU_R`) are the pattern to copy.
+  - `src/SequenceView.h` is an R-free non-owning view of sequence bytes;
+    `sequence_views_from_r()` (R-only) aliases R `CHARSXP`s without copying.
   - `src/MemoryBudget.h` provides best-effort accounting for clustering-owned
-    allocations, plumbed through `config.*`, `MultipleClusterAlgorithm.*`,
-    `seq_cluster.cpp`, `cluster_run.cpp`, and the cluster workers. Exceeding
-    the budget raises `MemoryBudgetExceeded`, which surfaces in R as an error
-    whose message begins `clustering memory budget exceeded`.
+    allocations (including Hamming packed sequences), plumbed through
+    `config.*`, `MultipleClusterAlgorithm.*`, `seq_cluster.cpp`,
+    `cluster_run.cpp`, and the cluster workers. Exceeding the budget raises
+    `MemoryBudgetExceeded`, which surfaces in R as an error whose message
+    begins `clustering memory budget exceeded`.
   - `SingleClusterAlgorithm::write_threshold_row()` fills one threshold's
     cluster-assignment vector without an `n x m` matrix. Tree and SLINK use
     this in `optimize_thresholds()` so the result matrix is never allocated.
@@ -117,6 +126,8 @@ explicitly requests API changes.
   SLINK. `include_result = TRUE` adds `4nm` for tree/SLINK only;
   `optimize_thresholds()` does not need this for tree/SLINK because it scores
   via `write_threshold_row()` instead of materializing the result matrix.
+  Batch planning also adds Hamming packed-sequence bytes for the batch
+  sequence union (not the sum of subset sizes) when `dist_hamming()` is used.
 - `test-optimize_thresholds_stream.R` checks that row-wise cluster IDs match
   `write_to_matrix()`, and that streaming optima match
   `seq_cluster()` + `find_best_threshold()`, including duplicate thresholds

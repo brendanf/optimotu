@@ -2,6 +2,7 @@
 #define OPTIMOTU_EDLIBCLUSTERWORKER_H
 
 #include "DistClusterWorker.h"
+#include "SequenceView.h"
 
 class EdlibClusterWorker : public DistClusterWorker {
 public :
@@ -18,7 +19,7 @@ class EdlibSplitClusterWorker : public EdlibClusterWorker {
   using DistClusterWorker::_aligned;
 public:
   EdlibSplitClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     std::size_t worker_threads = 0
@@ -36,7 +37,7 @@ class EdlibConcurrentClusterWorker : public EdlibClusterWorker {
   using DistClusterWorker::_aligned;
   public:
   EdlibConcurrentClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     std::size_t worker_threads = 0

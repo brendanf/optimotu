@@ -160,10 +160,62 @@ template double distance_wfa2<AlignmentSpan::GLOBAL>(
     wfa::WFAligner &aligner
 );
 
+template<enum AlignmentSpan span>
+double distance_wfa2(const SequenceView &a, const SequenceView &b, wfa::WFAligner &aligner) {
+  wfa::WFAligner::AlignmentStatus status;
+
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    status = aligner.alignEnd2End(
+      a.data(), static_cast<int>(a.size()),
+      b.data(), static_cast<int>(b.size())
+    );
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    status = aligner.alignExtension(
+      a.data(), static_cast<int>(a.size()),
+      b.data(), static_cast<int>(b.size())
+    );
+  } else {
+    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+  }
+  if (status != wfa::WFAligner::StatusAlgCompleted &&
+      status != wfa::WFAligner::StatusAlgPartial) return 1.0;
+  std::string cigar(aligner.getCIGAR(true));
+  if constexpr (span == AlignmentSpan::EXTEND) {
+    return distance_from_cigar_extend(cigar);
+  } else {
+    return distance_from_cigar(cigar);
+  }
+}
+
+template double distance_wfa2<AlignmentSpan::EXTEND>(
+    const SequenceView &a,
+    const SequenceView &b,
+    wfa::WFAligner &aligner
+);
+
+template double distance_wfa2<AlignmentSpan::GLOBAL>(
+    const SequenceView &a,
+    const SequenceView &b,
+    wfa::WFAligner &aligner
+);
+
 // calculate distance using edlib, with a pre-initialized config object
 // this is
 double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner) {
   auto aln = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(), aligner);
+  double d = 1.0;
+  if (aln.status == EDLIB_STATUS_OK && aln.editDistance >= 0)
+    d = (double)aln.editDistance / (double)aln.alignmentLength;
+  edlibFreeAlignResult(aln);
+  return d;
+}
+
+double distance_edlib(const SequenceView &a, const SequenceView &b, EdlibAlignConfig &aligner) {
+  auto aln = edlibAlign(
+    a.data(), static_cast<int>(a.size()),
+    b.data(), static_cast<int>(b.size()),
+    aligner
+  );
   double d = 1.0;
   if (aln.status == EDLIB_STATUS_OK && aln.editDistance >= 0)
     d = (double)aln.editDistance / (double)aln.alignmentLength;
