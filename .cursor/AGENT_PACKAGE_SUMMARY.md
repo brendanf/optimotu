@@ -59,6 +59,10 @@ Native code:
     tiles see taxa as contiguous index blocks. Permutation is of character
     vector entries only (no CHARSXP copy). Skipped for
     `dist_file(by_name = FALSE)`.
+  - `MultipleClusterAlgorithm::make_child()` builds tile/copy children
+    without holding the parent MCA mutex for the whole construction; only
+    `children.push_back` is locked so `parallel_merge` tile init can run
+    concurrently (per-subset `make_child` locks remain).
 
 ## 3) Public API surface (high-impact functions)
 

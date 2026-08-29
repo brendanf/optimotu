@@ -780,23 +780,31 @@ void MCA::merge_into_parent() {
 }
 
 MultipleClusterAlgorithm * MCA::make_child() {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  // Build unlocked: parent routing tables are immutable after root init,
+  // subset make_child() takes each subset's own mutex, and the memory
+  // budget tracker is internally synchronized. Lock only the children
+  // registry so parallel_merge tiles can initialize concurrently.
   auto child_ptr = new MultipleClusterAlgorithm(this);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
-  this->children.push_back(std::move(child));
+  {
+    std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+    this->children.push_back(std::move(child));
+  }
   return child_ptr;
 }
 
 template<int verbose>
 MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child() {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   auto child_ptr = new MultipleClusterAlgorithmImpl<verbose>(this);
   auto child = std::unique_ptr<ClusterAlgorithm>(
     (ClusterAlgorithm*)child_ptr
   );
-  this->children.push_back(std::move(child));
+  {
+    std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+    this->children.push_back(std::move(child));
+  }
   return child_ptr;
 }
 
@@ -805,7 +813,6 @@ MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
   {
     return make_child();
   }
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   auto child_ptr = new MultipleClusterAlgorithm(this, pg);
   bool any_subset = false;
   for (const auto *subset : child_ptr->subsets)
@@ -823,7 +830,10 @@ MultipleClusterAlgorithm * MCA::make_child(PairGenerator * pg) {
   }
   auto child = std::unique_ptr<ClusterAlgorithm>(
       (ClusterAlgorithm *)child_ptr);
-  this->children.push_back(std::move(child));
+  {
+    std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+    this->children.push_back(std::move(child));
+  }
   return child_ptr;
 }
 
@@ -835,7 +845,6 @@ MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(
   {
     return make_child();
   }
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
   auto child_ptr = new MultipleClusterAlgorithmImpl<verbose>(this, pg);
   bool any_subset = false;
   for (const auto *subset : child_ptr->subsets)
@@ -853,7 +862,10 @@ MultipleClusterAlgorithm * MultipleClusterAlgorithmImpl<verbose>::make_child(
   }
   auto child = std::unique_ptr<ClusterAlgorithm>(
       (ClusterAlgorithm *)child_ptr);
-  this->children.push_back(std::move(child));
+  {
+    std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+    this->children.push_back(std::move(child));
+  }
   return child_ptr;
 }
 
