@@ -3,7 +3,7 @@
 #include "pairwise_alignment.h"
 
 Wfa2ClusterWorker::Wfa2ClusterWorker(
-  const std::vector<std::string> &seq,
+  const SequenceSet &seq,
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const int match, const int mismatch,

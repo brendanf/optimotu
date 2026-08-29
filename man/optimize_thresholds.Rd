@@ -77,7 +77,10 @@ messages; values greater than 1 (or TRUE) print more}
 
 \item{clustering_memory_budget_mb}{(\code{numeric(1)} or \code{NULL}) Best-effort
 memory budget for clustering-owned native structures, in MB. This is not a
-hard process-memory cap; set below machine limits for safer behavior.}
+hard process-memory cap; set below machine limits for safer behavior. When
+set, the budget includes clustering algorithm state, Hamming packed
+sequence bits (for \code{dist_hamming()}), and light bookkeeping. It does not
+include the caller's R \code{refseq} / taxonomy / \code{testset_select} objects.}
 
 \item{retry_on_memory_exhaustion}{(\code{logical(1)}) Retry clustering batches if
 the clustering memory budget is exceeded.}

@@ -36,6 +36,28 @@ std::vector<std::vector<j_t>> calculate_subset_indices(
   return out;
 }
 
+std::vector<std::vector<j_t>> sort_subset_indices(
+  j_t n_seq,
+  const std::vector<std::vector<j_t>> &subset_which
+) {
+  std::vector<std::vector<j_t>> out;
+  out.reserve(subset_which.size());
+  for (const auto &which : subset_which) {
+    std::vector<j_t> indices = which;
+    for (j_t idx : indices) {
+      if (idx >= n_seq) {
+        OPTIMOTU_STOP(
+          "subset index " + std::to_string(idx) +
+          " is out of range for " + std::to_string(n_seq) + " sequences"
+        );
+      }
+    }
+    std::sort(indices.begin(), indices.end());
+    out.push_back(std::move(indices));
+  }
+  return out;
+}
+
 namespace {
 
 std::size_t estimate_base_allocation(
@@ -57,6 +79,22 @@ std::size_t estimate_base_allocation(
   }
   total += names.size() * sizeof(std::vector<j_t>);
   total += subset_names.size() * sizeof(std::unordered_map<j_t, j_t>);
+  total += static_cast<std::size_t>(threads) * sizeof(std::vector<j_t>);
+  total += static_cast<std::size_t>(threads) * sizeof(std::pair<j_t, j_t>);
+  return total;
+}
+
+std::size_t estimate_base_allocation_indices(
+  j_t n_seq,
+  const std::vector<std::vector<j_t>> &subset_which,
+  int threads
+) {
+  std::size_t total = sizeof(MultipleClusterAlgorithm);
+  total += static_cast<std::size_t>(n_seq) * sizeof(std::vector<j_t>);
+  total += subset_which.size() * sizeof(std::unordered_map<j_t, j_t>);
+  for (const auto &subset : subset_which) {
+    total += subset.size() * sizeof(j_t);
+  }
   total += static_cast<std::size_t>(threads) * sizeof(std::vector<j_t>);
   total += static_cast<std::size_t>(threads) * sizeof(std::pair<j_t, j_t>);
   return total;
@@ -189,6 +227,35 @@ MCA::MultipleClusterAlgorithm(
   budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm base");
 }
 
+MCA::MultipleClusterAlgorithm(
+    const ClusterAlgorithmFactory &factory,
+    j_t n_seq,
+    const std::vector<std::vector<j_t>> &subset_which,
+    const int threads,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget,
+    ClusterInstanceRole root_role,
+    std::size_t parent_n_tiles) : ClusterAlgorithm(factory.dconv),
+                                  factory(factory),
+                                  names(),
+                                  subset_indices(sort_subset_indices(n_seq, subset_which)),
+                                  subset_names(subset_which.size()),
+                                  threads(threads),
+                                  root_role(root_role),
+                                  parent_n_tiles(parent_n_tiles),
+                                  memory_budget(memory_budget),
+                                  subset_key(static_cast<std::size_t>(n_seq)),
+                                  fwd_map(subset_which.size()),
+                                  sorted_to_which(subset_which.size()),
+                                  subsets(),
+                                  borrowed_subsets(),
+                                  tracked_allocations()
+{
+  tracked_base_allocation = estimate_base_allocation_indices(
+    n_seq, subset_which, threads
+  );
+  budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm base");
+}
+
 template <int verbose>
 MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(MultipleClusterAlgorithm *parent) : MultipleClusterAlgorithm(parent) {}
 
@@ -272,6 +339,58 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
       auto f = namekey.find(subset_names[i][which_pos]);
       assert(f != namekey.end());
       auto rank_it = fwd_map[i].find(f->second);
+      assert(rank_it != fwd_map[i].end());
+      sorted_to_which[i][rank_it->second] = which_pos;
+    }
+  }
+}
+
+template <int verbose>
+MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
+    const ClusterAlgorithmFactory &factory,
+    j_t n_seq,
+    const std::vector<std::vector<j_t>> &subset_which,
+    const int threads,
+    int,
+    std::shared_ptr<MemoryBudgetTracker> memory_budget,
+    ClusterInstanceRole root_role,
+    std::size_t parent_n_tiles) : MultipleClusterAlgorithm(
+                                      factory,
+                                      n_seq,
+                                      subset_which,
+                                      threads,
+                                      memory_budget,
+                                      root_role,
+                                      parent_n_tiles)
+{
+  OPTIMOTU_DEBUG(
+      1,
+      << "  Allocating " << subset_which.size()
+      << " index subsets..." << std::flush;);
+  subsets.reserve(subset_which.size());
+
+  for (j_t i = 0; i < static_cast<j_t>(subset_which.size()); ++i)
+  {
+    const std::size_t subset_bytes = factory.estimate_bytes(
+        subset_which[i].size(),
+        root_role,
+        parent_n_tiles);
+    budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm subset init");
+    owned_subsets.emplace_back(factory.create(subset_which[i].size(), verbose));
+    tracked_allocations.push_back(subset_bytes);
+    subsets.push_back(owned_subsets.back().get());
+    fwd_map[i].reserve(subset_indices[i].size());
+    sorted_to_which[i].assign(subset_which[i].size(), NO_CLUST);
+    for (j_t rank = 0; rank < subset_indices[i].size(); ++rank)
+    {
+      const j_t global = subset_indices[i][rank];
+      subset_key[global].push_back(i);
+      fwd_map[i].emplace(global, rank);
+    }
+    for (j_t which_pos = 0; which_pos < static_cast<j_t>(subset_which[i].size()); ++which_pos)
+    {
+      const j_t global = subset_which[i][which_pos];
+      auto rank_it = fwd_map[i].find(global);
       assert(rank_it != fwd_map[i].end());
       sorted_to_which[i][rank_it->second] = which_pos;
     }
@@ -430,6 +549,14 @@ MCA::~MultipleClusterAlgorithm() {
     budget_release(memory_budget, bytes);
   }
   budget_release(memory_budget, tracked_base_allocation);
+}
+
+void MCA::acquire_memory(std::size_t bytes, const std::string &context) {
+  budget_acquire(memory_budget, bytes, context);
+}
+
+void MCA::release_memory(std::size_t bytes) {
+  budget_release(memory_budget, bytes);
 }
 
 // Overlapping subsets for (seq1, seq2), cached per OS thread and MCA

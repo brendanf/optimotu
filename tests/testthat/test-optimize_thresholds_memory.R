@@ -358,3 +358,39 @@ testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", 
   )
   testthat::expect_equal(four, expected_four)
 })
+
+testthat::test_that("estimate_batch_memory_mb adds Hamming packed union bytes", {
+  testset <- data.frame(
+    n_seq = c(10L, 12L, 8L),
+    stringsAsFactors = FALSE
+  )
+  testset$seq_id <- list(
+    paste0("s", 1:10),
+    paste0("s", 5:16),
+    paste0("s", 14:21)
+  )
+  threshold_config <- threshold_uniform(0, 0.1, 0.05)
+  clust_config <- clust_slink()
+  parallel_config <- parallel_concurrent(1L)
+  without <- optimotu:::estimate_batch_memory_mb(
+    batch_idx = 1:2,
+    testset_select = testset,
+    threshold_config = threshold_config,
+    clust_config = clust_config,
+    parallel_config = parallel_config
+  )
+  with_ham <- optimotu:::estimate_batch_memory_mb(
+    batch_idx = 1:2,
+    testset_select = testset,
+    threshold_config = threshold_config,
+    clust_config = clust_config,
+    parallel_config = parallel_config,
+    dist_method = "hamming",
+    mean_seq_len = 400
+  )
+  n_union <- length(unique(unlist(testset$seq_id[1:2], use.names = FALSE)))
+  packed <- optimotu:::estimate_hamming_packed_mb(n_union, 400)
+  # Non-Hamming path already includes SequenceView allowance.
+  testthat::expect_equal(with_ham, without + packed)
+  testthat::expect_gt(with_ham, without)
+})

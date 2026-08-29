@@ -26,6 +26,14 @@ same_cluster_partition <- function(a, b) {
   invisible(TRUE)
 }
 
+# 0-based indices into seq for seq_cluster_multi_best_threshold().
+which_to_idx <- function(which, seq) {
+  out <- lapply(which, match, table = names(seq))
+  out <- lapply(out, function(x) as.integer(x - 1L))
+  names(out) <- names(which)
+  out
+}
+
 make_stream_fixture <- function(n_per = 8L, seq_len = 80L, n_mut = 3L) {
   set.seed(2)
   alphabet <- c("A", "C", "G", "T")
@@ -169,7 +177,7 @@ testthat::test_that("streaming optima match matrix find_best_threshold", {
   for (clust_config in list(clust_tree(), clust_slink())) {
     streamed <- seq_cluster_multi_best_threshold(
       seq = fx$seq,
-      which = ts$seq_id,
+      which = which_to_idx(ts$seq_id, fx$seq),
       dist_config = dist_config,
       threshold_config = threshold_config,
       clust_config = clust_config,
@@ -241,7 +249,7 @@ testthat::test_that("streaming optima handle duplicate thresholds and shuffled w
   map <- clustering_threshold_map(threshold_config)
   streamed <- seq_cluster_multi_best_threshold(
     seq = fx$seq,
-    which = which,
+    which = which_to_idx(which, fx$seq),
     dist_config = dist_config,
     threshold_config = threshold_config,
     clust_config = clust_config,

@@ -139,6 +139,49 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
       parent_n_tiles);
 }
 
+std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
+    const int threads,
+    ClusterAlgorithmFactory &factory,
+    j_t n_seq,
+    const std::vector<std::vector<j_t>> &subset_which,
+    int verbose,
+    std::size_t clustering_memory_budget_bytes,
+    const std::string &parallel_method)
+{
+  auto memory_budget = clustering_memory_budget_bytes > 0
+    ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
+    : nullptr;
+  const ClusterInstanceRole root_role =
+      root_role_from_parallel_method(parallel_method, threads);
+  const std::size_t parent_n_tiles =
+      parent_n_tiles_from_parallel_method(parallel_method, threads);
+  if (verbose == 0)
+  {
+    return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
+        factory, n_seq, subset_which, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
+  }
+  if (verbose == 1) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
+        factory, n_seq, subset_which, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
+  }
+  if (verbose == 2)
+  {
+    return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
+        factory, n_seq, subset_which, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
+  }
+  if (verbose == 3) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
+        factory, n_seq, subset_which, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
+  }
+  return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
+      factory, n_seq, subset_which, threads, 0, memory_budget, root_role,
+      parent_n_tiles);
+}
+
 template<typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     const std::string &method,
@@ -196,7 +239,7 @@ template std::unique_ptr<ClusterWorker> create_cluster_worker<std::istream>(
 
 std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     const std::string &type,
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     const double breakpoint,
     ClusterAlgorithm &cluster,
     const std::uint8_t threads,
@@ -454,6 +497,66 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
       root_role, parent_n_tiles);
 }
 
+std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
+    Rcpp::List parallel_config,
+    ClusterAlgorithmFactory &factory,
+    j_t n_seq,
+    Rcpp::ListOf<Rcpp::IntegerVector> subset_which,
+    int verbose,
+    std::size_t clustering_memory_budget_bytes
+) {
+  int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  std::string parallel_method = element_as_string(
+      parallel_config, "method", "parallel_config");
+  std::vector<std::vector<j_t>> subset_which_vec;
+  subset_which_vec.reserve(static_cast<std::size_t>(subset_which.size()));
+  for (int i = 0; i < subset_which.size(); ++i) {
+    Rcpp::IntegerVector w = subset_which[i];
+    std::vector<j_t> indices;
+    indices.reserve(static_cast<std::size_t>(w.size()));
+    for (int j = 0; j < w.size(); ++j) {
+      int idx = w[j];
+      if (idx < 0) {
+        OPTIMOTU_STOP("subset indices must be non-negative");
+      }
+      indices.push_back(static_cast<j_t>(idx));
+    }
+    subset_which_vec.push_back(std::move(indices));
+  }
+  int v = (verbose > 4) ? 4 : verbose;
+  auto memory_budget = clustering_memory_budget_bytes > 0
+    ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
+    : nullptr;
+  const ClusterInstanceRole root_role =
+      root_role_from_parallel_method(parallel_method, threads);
+  const std::size_t parent_n_tiles =
+      parent_n_tiles_from_parallel_method(parallel_method, threads);
+  if (v == 0)
+  {
+    return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
+        factory, n_seq, subset_which_vec, threads, 0, memory_budget,
+        root_role, parent_n_tiles);
+  }
+  if (v == 1) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
+        factory, n_seq, subset_which_vec, threads, 0, memory_budget,
+        root_role, parent_n_tiles);
+  }
+  if (v == 2) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
+        factory, n_seq, subset_which_vec, threads, 0, memory_budget,
+        root_role, parent_n_tiles);
+  }
+  if (v == 3) {
+    return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
+        factory, n_seq, subset_which_vec, threads, 0, memory_budget,
+        root_role, parent_n_tiles);
+  }
+  return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
+      factory, n_seq, subset_which_vec, threads, 0, memory_budget,
+      root_role, parent_n_tiles);
+}
+
 template<typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(
     Rcpp::List config,
@@ -523,7 +626,7 @@ template std::unique_ptr<ClusterWorker> create_cluster_worker<Rcpp::DataFrame>(
 std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     Rcpp::List dist_config,
     Rcpp::List parallel_config,
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &cluster,
     int verbose
 ) {

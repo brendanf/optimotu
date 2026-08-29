@@ -3,6 +3,7 @@
 #include "config.h"
 #include "cluster_run.h"
 #include "cluster_measures.h"
+#include "sequence_view_r.h"
 #include <RcppParallel.h>
 #include <algorithm>
 #include <chrono>
@@ -46,14 +47,14 @@ Rcpp::RObject seq_cluster_single(
     OPTIMOTU_CERR << "done\ncreating ClusterAlgorithm..." << std::flush;
   }
   Rcpp::IntegerMatrix im(dconv->m, seq.size());
-  std::vector<std::string> cppseq = Rcpp::as<std::vector<std::string>>(seq);
+  SequenceSet seq_views = sequence_views_from_r(seq);
   auto algo = create_cluster_algorithm(clust_config, dconv.get())->create(im);
   size_t n_prealigned = 0, n_aligned = 0;
-  if (cppseq.size() >= 2) {
+  if (seq_views.size() >= 2) {
     if (verbose) {
       OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
     }
-    auto worker = create_dist_cluster_worker(dist_config, parallel_config, cppseq, *algo, verbose);
+    auto worker = create_dist_cluster_worker(dist_config, parallel_config, seq_views, *algo, verbose);
     if (verbose) {
       OPTIMOTU_CERR << "done\nclustering..." << std::endl;
     }
@@ -66,7 +67,7 @@ Rcpp::RObject seq_cluster_single(
     n_prealigned = worker->prealigned();
     n_aligned = worker->aligned();
   } else if (verbose) {
-    OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << cppseq.size()
+    OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << seq_views.size()
                   << " input sequence(s)\n";
   }
   if (verbose) {
@@ -117,9 +118,9 @@ Rcpp::List seq_cluster_multi(
   if (output_type != "matrix" && output_type != "hclust") {
     OPTIMOTU_STOP("Unknown 'output_type'");
   }
-  const std::vector<std::string> cppseq = Rcpp::as<std::vector<std::string>>(seq);
+  const SequenceSet seq_views = sequence_views_from_r(seq);
   auto job = run_seq_cluster_multi(
-      cppseq,
+      seq_views,
       seq.names(),
       which,
       dist_config,
@@ -172,9 +173,9 @@ Rcpp::List seq_cluster_multi_via_rows(
     const int verbose = 0,
     const double clustering_memory_budget_mb = -1.0)
 {
-  const std::vector<std::string> cppseq = Rcpp::as<std::vector<std::string>>(seq);
+  const SequenceSet seq_views = sequence_views_from_r(seq);
   auto job = run_seq_cluster_multi(
-      cppseq,
+      seq_views,
       seq.names(),
       which,
       dist_config,
@@ -202,7 +203,7 @@ Rcpp::List seq_cluster_multi_via_rows(
 // [[Rcpp::export]]
 Rcpp::List seq_cluster_multi_best_threshold(
     const Rcpp::CharacterVector &seq,
-    const Rcpp::ListOf<Rcpp::CharacterVector> which,
+    const Rcpp::ListOf<Rcpp::IntegerVector> which,
     const Rcpp::List dist_config,
     const Rcpp::List threshold_config,
     const Rcpp::List clust_config,
@@ -218,10 +219,9 @@ Rcpp::List seq_cluster_multi_best_threshold(
   {
     OPTIMOTU_STOP("true_partitions and which must have the same length");
   }
-  const std::vector<std::string> cppseq = Rcpp::as<std::vector<std::string>>(seq);
+  const SequenceSet seq_views = sequence_views_from_r(seq);
   auto job = run_seq_cluster_multi(
-      cppseq,
-      seq.names(),
+      seq_views,
       which,
       dist_config,
       threshold_config,
@@ -301,8 +301,8 @@ Rcpp::DataFrame seq_cluster_profile_output(
     OPTIMOTU_STOP("parallel_config is not a valid parallel configuration");
   }
   auto dconv = create_distance_converter(threshold_config);
-  std::vector<std::string> cppseq = Rcpp::as<std::vector<std::string>>(seq);
-  const j_t n = static_cast<j_t>(cppseq.size());
+  SequenceSet seq_views = sequence_views_from_r(seq);
+  const j_t n = static_cast<j_t>(seq_views.size());
   const d_t m = dconv->m;
   auto factory = create_cluster_algorithm(clust_config, dconv.get());
   auto algo = factory->create(n);
@@ -311,10 +311,10 @@ Rcpp::DataFrame seq_cluster_profile_output(
     threads = 1;
 
   auto t_cluster0 = std::chrono::steady_clock::now();
-  if (cppseq.size() >= 2)
+  if (seq_views.size() >= 2)
   {
     auto worker = create_dist_cluster_worker(
-        dist_config, parallel_config, cppseq, *algo, verbose);
+        dist_config, parallel_config, seq_views, *algo, verbose);
     int wthreads = worker->n_threads();
     if (wthreads == 1)
     {

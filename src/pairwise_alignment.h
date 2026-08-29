@@ -7,6 +7,7 @@
 #include <bindings/cpp/WFAligner.hpp>
 #include <edlib.h>
 #include "alignment_enums.h"
+#include "SequenceView.h"
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -15,7 +16,12 @@
 template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner);
 
+template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+double distance_wfa2(const SequenceView &a, const SequenceView &b, wfa::WFAligner &aligner);
+
 double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner);
+
+double distance_edlib(const SequenceView &a, const SequenceView &b, EdlibAlignConfig &aligner);
 
 template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 double distance_edlib(const std::string &a, const std::string &b);

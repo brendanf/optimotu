@@ -1,5 +1,12 @@
 # optimotu (development version)
 
+* Reduce R-to-C++ sequence copies on the clustering path: sequences are viewed
+as non-owning `SequenceView`s (no `std::string` byte copy),
+`optimize_thresholds()` materializes `refseq` once and each batch / multi-subset
+`seq_cluster()` call restricts to the union of sequences in `which`, and
+`optimize_thresholds()` passes 0-based integer subset membership into C++ so
+subset ID strings are not re-copied. Hamming `PackedSequenceSet` bytes are
+included in the clustering memory budget and batch planner.
 * `optimize_thresholds()` no longer materializes the `n x m` integer cluster
 matrix for tree and SLINK clustering. Quality measures are scored from
 on-the-fly threshold rows, so peak memory follows clustering-owned state

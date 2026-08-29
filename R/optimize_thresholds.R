@@ -127,13 +127,28 @@ estimate_subset_memory_mb <- function(
   max(1, total_bytes / (1024 * 1024))
 }
 
+estimate_hamming_packed_mb <- function(n_union, seq_len) {
+  if (
+    n_union <= 0L || is.null(seq_len) || !is.finite(seq_len) || seq_len <= 0
+  ) {
+    return(0)
+  }
+  # Match PackedSequenceSet::estimate_bytes (NUCLEOTIDES_IN_WORD = 16).
+  ulen <- ceiling(seq_len / 16)
+  mulen <- ceiling(seq_len / 64)
+  bytes <- n_union * (ulen * 8 + mulen * 8 + 2 * 4)
+  bytes / (1024 * 1024)
+}
+
 estimate_batch_memory_mb <- function(
   batch_idx,
   testset_select,
   threshold_config,
   clust_config,
   parallel_config,
-  include_result = FALSE
+  include_result = FALSE,
+  dist_method = NULL,
+  mean_seq_len = NULL
 ) {
   n_thresholds <- if (threshold_config$type == "uniform") {
     floor((threshold_config$to - threshold_config$from) / threshold_config$by) +
@@ -155,7 +170,23 @@ estimate_batch_memory_mb <- function(
     threads = threads,
     include_result = include_result
   )
-  sum(per_subset)
+  total <- sum(per_subset)
+  if (identical(dist_method, "hamming") && length(batch_idx) > 0L) {
+    n_union <- length(unique(unlist(
+      testset_select$seq_id[batch_idx],
+      use.names = FALSE
+    )))
+    total <- total + estimate_hamming_packed_mb(n_union, mean_seq_len)
+  }
+  # Light allowance for SequenceView vector (~16B/view).
+  if (length(batch_idx) > 0L) {
+    n_union <- length(unique(unlist(
+      testset_select$seq_id[batch_idx],
+      use.names = FALSE
+    )))
+    total <- total + max(0, n_union * 16 / (1024 * 1024))
+  }
+  total
 }
 
 make_initial_batches <- function(
@@ -164,7 +195,9 @@ make_initial_batches <- function(
   threshold_config,
   clust_config,
   parallel_config,
-  budget_mb
+  budget_mb,
+  dist_method = NULL,
+  mean_seq_len = NULL
 ) {
   if (length(ordered_idx) == 0L) {
     return(list())
@@ -182,7 +215,9 @@ make_initial_batches <- function(
       testset_select,
       threshold_config,
       clust_config,
-      parallel_config
+      parallel_config,
+      dist_method = dist_method,
+      mean_seq_len = mean_seq_len
     )
     if (length(current) > 0L && est > budget_mb) {
       batches[[length(batches) + 1L]] <- current
@@ -393,9 +428,17 @@ cluster_find_best_thresholds <- function(
     as = "character"
   )
   verify_which(which, names(seq_char))
+  # Only pass sequences that appear in at least one subset so Hamming
+  # packing and pair generation scale with the batch, not the full set.
+  keep <- sort(unique(unlist(which, use.names = FALSE)))
+  seq_char <- seq_char[keep]
+  # 0-based indices into the subsetted sequence vector (C++ path).
+  which_idx <- lapply(which, match, table = names(seq_char))
+  which_idx <- lapply(which_idx, function(x) as.integer(x - 1L))
+  names(which_idx) <- names(which)
   seq_cluster_multi_best_threshold(
     seq = seq_char,
-    which = which,
+    which = which_idx,
     dist_config = dist_config,
     threshold_config = threshold_config,
     clust_config = clust_config,
@@ -665,7 +708,10 @@ find_best_threshold <- function(
 #' thresholds for
 #' @param clustering_memory_budget_mb (`numeric(1)` or `NULL`) Best-effort
 #' memory budget for clustering-owned native structures, in MB. This is not a
-#' hard process-memory cap; set below machine limits for safer behavior.
+#' hard process-memory cap; set below machine limits for safer behavior. When
+#' set, the budget includes clustering algorithm state, Hamming packed
+#' sequence bits (for `dist_hamming()`), and light bookkeeping. It does not
+#' include the caller's R `refseq` / taxonomy / `testset_select` objects.
 #' @param retry_on_memory_exhaustion (`logical(1)`) Retry clustering batches if
 #' the clustering memory budget is exceeded.
 #' @param retry_split_strategy (`character(1)`) Strategy used to split failed
@@ -760,6 +806,22 @@ optimize_thresholds <- function(
     taxonomy <- taxonomy[match(refseq_names, taxonomy[[id_col]]), ]
   }
 
+  # Materialize sequences once; batches subset to their which-union.
+  mean_seq_len <- NULL
+  if (!identical(dist_config$method, "file")) {
+    refseq <- seq_as_char(
+      refseq,
+      seq_idx = seq_idx,
+      seq_file = seq_file,
+      as = "character"
+    )
+    seq_idx <- NULL
+    seq_file <- NULL
+    if (length(refseq) > 0L) {
+      mean_seq_len <- mean(nchar(refseq, type = "bytes"))
+    }
+  }
+
   # Calculate which subsets to optimize
   if (isTRUE(verbose) || verbose >= 1L) {
     cat("Calculating subsets to optimize...")
@@ -809,7 +871,9 @@ optimize_thresholds <- function(
     threshold_config,
     clust_config,
     parallel_config,
-    clustering_memory_budget_mb
+    clustering_memory_budget_mb,
+    dist_method = dist_config$method,
+    mean_seq_len = mean_seq_len
   )
   if (
     (isTRUE(verbose) || verbose >= 1L) && !is.null(clustering_memory_budget_mb)

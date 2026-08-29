@@ -3,15 +3,18 @@
 
 #include "DistClusterWorker.h"
 #include "PackedSequenceSet.h"
+#include "SequenceView.h"
+#include <cstddef>
 
 class HammingClusterWorker : public DistClusterWorker {
 protected:
   const PackedSequenceSet pss;
   const int min_overlap;
   const bool ignore_gaps;
+  std::size_t tracked_pss_bytes = 0;
 public :
   HammingClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
@@ -19,6 +22,7 @@ public :
     int verbose = 0,
     std::size_t worker_threads = 0
   );
+  ~HammingClusterWorker() override;
 };
 
 template<int verbose>
@@ -35,7 +39,7 @@ class HammingSplitClusterWorker : public HammingClusterWorker {
 
 public :
   HammingSplitClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,
@@ -58,7 +62,7 @@ class HammingConcurrentClusterWorker : public HammingClusterWorker {
   using DistClusterWorker::_aligned;
 public :
   HammingConcurrentClusterWorker(
-    const std::vector<std::string> &seq,
+    const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const int min_overlap = 0,

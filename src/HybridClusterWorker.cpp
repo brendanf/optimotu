@@ -9,7 +9,7 @@
 typedef RcppParallel::RMatrix<int> matrix_t;
 
 HybridClusterWorker::HybridClusterWorker(
-  const std::vector<std::string> &seq,
+  const SequenceSet &seq,
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const double breakpoint,

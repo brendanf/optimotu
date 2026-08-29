@@ -5,18 +5,38 @@ extern "C" {
 #include "defs.h"
 }
 
-PackedSequenceSet::PackedSequenceSet(const std::vector<std::string> &seq) {
-  num_seqs = seq.size();
+std::size_t PackedSequenceSet::estimate_bytes(std::size_t n, int alen) {
+  if (n == 0 || alen <= 0) {
+    return 0;
+  }
+  int ulen = alen / NUCLEOTIDES_IN_WORD;
+  if (alen > ulen * NUCLEOTIDES_IN_WORD) {
+    ulen++;
+  }
+  int mulen = alen / NUCLEOTIDES_IN_WORD / 4;
+  if (alen > mulen * NUCLEOTIDES_IN_WORD / 4) {
+    mulen++;
+  }
+  return n * (
+    static_cast<std::size_t>(ulen) * sizeof(uint64_t) +
+    static_cast<std::size_t>(mulen) * sizeof(uint64_t) +
+    2 * sizeof(int)
+  );
+}
+
+PackedSequenceSet::PackedSequenceSet(const SequenceSet &seq) {
+  num_seqs = static_cast<int>(seq.size());
   if (num_seqs == 0) return;
   packed_seq.reserve(seq.size());
   mask.reserve(seq.size());
   start.reserve(seq.size());
   end.reserve(seq.size());
   alen = -1;
-  for (int i = 0; i < seq.size(); i++) {
-    auto s = seq[i];
+  for (int i = 0; i < num_seqs; i++) {
+    const SequenceView &s = seq[static_cast<std::size_t>(i)];
     int alen_s = 0;
-    for (auto c : s) {
+    for (std::size_t k = 0; k < s.size(); ++k) {
+      char c = s[k];
       if ((c < 'a') || (c > 'z')) {
         alen_s++;
       }
@@ -40,33 +60,24 @@ PackedSequenceSet::PackedSequenceSet(const std::vector<std::string> &seq) {
     mask.emplace_back(mulen, 0LL);
     start.emplace_back(0);
     end.emplace_back(0);
-    // Rcpp::Rcerr << "Packing sequence " << i
-    //             << " (len=" << alen_s
-    //             << ", ulen=" << packed_seq.back().size()
-    //             << ", mulen=" << mask.back().size()
-    //             << ")" << std::endl;
     nucleotide2binary(s.c_str(), alen, packed_seq.back().data(),
                       mask.back().data(), &(start.back()), &(end.back()));
-    // Rcpp::Rcerr << "   done sequence " << i
-    //             << " (len=" << alen_s
-    //             << ", ulen=" << packed_seq.back().size()
-    //             << ", mulen=" << mask.back().size()
-    //             << ")" << std::endl;
   }
   verify(seq);
 }
 
-bool PackedSequenceSet::verify(const std::vector<std::string> & seq) const {
+bool PackedSequenceSet::verify(const SequenceSet & seq) const {
   bool valid = true;
-  if (seq.size() != num_seqs) {
+  if (seq.size() != static_cast<std::size_t>(num_seqs)) {
     OPTIMOTU_CERR << "mismatch between length of sequence set and number of sequences: "
                   << seq.size() << " != " << num_seqs << std::endl;
     return false;
   }
-  for (int i = 0; i < seq.size(); i++) {
-    auto s = seq[i];
+  for (int i = 0; i < num_seqs; i++) {
+    const SequenceView &s = seq[static_cast<std::size_t>(i)];
     int alen_s = 0;
-    for (auto c : s) {
+    for (std::size_t k = 0; k < s.size(); ++k) {
+      char c = s[k];
       if ((c < 'a') || (c > 'z')) {
         alen_s++;
       }
@@ -78,7 +89,7 @@ bool PackedSequenceSet::verify(const std::vector<std::string> & seq) const {
     int mulen_s = alen_s / NUCLEOTIDES_IN_WORD / 4;
     if (alen_s > mulen_s * NUCLEOTIDES_IN_WORD / 4)
       mulen_s++;
-    if (ulen_s != packed_seq[i].size()) {
+    if (ulen_s != static_cast<int>(packed_seq[i].size())) {
       OPTIMOTU_CERR << "mismatch between length of sequence " << i
                     << " and packed bits: " << ulen_s
                     << " != " << packed_seq[i].size() << std::endl;
@@ -86,12 +97,13 @@ bool PackedSequenceSet::verify(const std::vector<std::string> & seq) const {
     } else {
       int j = 0, k = 0;
       uint64_t packed_seq_i = packed_seq[i][k];
-      for (auto c : s) {
+      for (std::size_t pos = 0; pos < s.size(); ++pos) {
+        char c = s[pos];
         if ((c >= 'a') && (c <= 'z')) {
           continue;
         }
         if (j == 0) {
-          if (k >= packed_seq[i].size()) {
+          if (k >= static_cast<int>(packed_seq[i].size())) {
             OPTIMOTU_CERR << "mismatch between length of sequence " << i
                           << " and packed bits: " << k
                           << " != " << packed_seq[i].size() << std::endl;
@@ -155,7 +167,7 @@ bool PackedSequenceSet::verify(const std::vector<std::string> & seq) const {
         }
       }
     }
-    if (mulen_s != mask[i].size()) {
+    if (mulen_s != static_cast<int>(mask[i].size())) {
       OPTIMOTU_CERR << "mismatch between length of sequence " << i
                     << " and mask: " << mulen_s
                     << " != " << mask[i].size() << std::endl;
@@ -163,12 +175,13 @@ bool PackedSequenceSet::verify(const std::vector<std::string> & seq) const {
     } else {
       int j = 0, k = 0;
       uint64_t mask_i = mask[i][k];
-      for (auto c : s) {
+      for (std::size_t pos = 0; pos < s.size(); ++pos) {
+        char c = s[pos];
         if ((c >= 'a') && (c <= 'z')) {
           continue;
         }
         if (j == 0) {
-          if (k >= mask[i].size()) {
+          if (k >= static_cast<int>(mask[i].size())) {
             OPTIMOTU_CERR << "mismatch between length of sequence " << i
                           << " and mask: " << k
                           << " >= " << mask[i].size() << std::endl;
@@ -208,18 +221,18 @@ bool PackedSequenceSet::verify(const std::vector<std::string> & seq) const {
 }
 
 PackedSequenceSet::PackedSequenceSet(
-  const std::vector<std::string> & seq1,
-  const std::vector<std::string> & seq2
+  const SequenceSet & seq1,
+  const SequenceSet & seq2
 ) {
-  num_seqs = seq1.size() + seq2.size();
+  num_seqs = static_cast<int>(seq1.size() + seq2.size());
   if (num_seqs == 0) return;
-  packed_seq.reserve(num_seqs);
-  mask.reserve(num_seqs);
-  start.reserve(num_seqs);
-  end.reserve(num_seqs);
+  packed_seq.reserve(static_cast<std::size_t>(num_seqs));
+  mask.reserve(static_cast<std::size_t>(num_seqs));
+  start.reserve(static_cast<std::size_t>(num_seqs));
+  end.reserve(static_cast<std::size_t>(num_seqs));
 
-  for (auto s : seq1) {
-    alen = s.size();
+  for (const auto &s : seq1) {
+    alen = static_cast<int>(s.size());
     ulen = alen / NUCLEOTIDES_IN_WORD;
     if (alen > ulen * NUCLEOTIDES_IN_WORD)
       ulen++;
@@ -234,8 +247,8 @@ PackedSequenceSet::PackedSequenceSet(
                       &mask.back()[0], &start.back(), &end.back());
   }
 
-  for (auto s : seq2) {
-    alen = s.size();
+  for (const auto &s : seq2) {
+    alen = static_cast<int>(s.size());
     ulen = alen / NUCLEOTIDES_IN_WORD;
     if (alen > ulen * NUCLEOTIDES_IN_WORD)
       ulen++;
@@ -251,6 +264,17 @@ PackedSequenceSet::PackedSequenceSet(
   }
 
 }
+
+PackedSequenceSet::PackedSequenceSet(const std::vector<std::string> &seq)
+  : PackedSequenceSet(sequence_views_from_strings(seq)) {}
+
+PackedSequenceSet::PackedSequenceSet(
+  const std::vector<std::string> & seq1,
+  const std::vector<std::string> & seq2
+) : PackedSequenceSet(
+      sequence_views_from_strings(seq1),
+      sequence_views_from_strings(seq2)
+    ) {}
 
 double PackedSequenceSet::dist(const int i, const int j, const int min_overlap,
                                const bool ignore_gap) const {

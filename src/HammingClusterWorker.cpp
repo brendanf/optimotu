@@ -1,4 +1,5 @@
 #include "HammingClusterWorker.h"
+#include "MultipleClusterAlgorithm.h"
 extern "C" {
 #include "defs.h"
 }
@@ -6,7 +7,7 @@ extern "C" {
 typedef RcppParallel::RMatrix<int> matrix_t;
 
 HammingClusterWorker::HammingClusterWorker(
-  const std::vector<std::string> &seq,
+  const SequenceSet &seq,
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
@@ -14,11 +15,28 @@ HammingClusterWorker::HammingClusterWorker(
   int verbose,
   std::size_t worker_threads
 ) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads), pss(seq),
-min_overlap(min_overlap), ignore_gaps(ignore_gaps) {};
+min_overlap(min_overlap), ignore_gaps(ignore_gaps) {
+  tracked_pss_bytes = PackedSequenceSet::estimate_bytes(
+    seq.size(), pss.alen
+  );
+  if (tracked_pss_bytes > 0) {
+    if (auto *mca = dynamic_cast<MultipleClusterAlgorithm *>(&clust_algo)) {
+      mca->acquire_memory(tracked_pss_bytes, "PackedSequenceSet");
+    }
+  }
+}
+
+HammingClusterWorker::~HammingClusterWorker() {
+  if (tracked_pss_bytes > 0) {
+    if (auto *mca = dynamic_cast<MultipleClusterAlgorithm *>(&clust_algo)) {
+      mca->release_memory(tracked_pss_bytes);
+    }
+  }
+}
 
 template<int verbose>
 HammingSplitClusterWorker<verbose>::HammingSplitClusterWorker(
-  const std::vector<std::string> &seq,
+  const SequenceSet &seq,
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
@@ -84,7 +102,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
 
 template<int verbose>
 HammingConcurrentClusterWorker<verbose>::HammingConcurrentClusterWorker(
-  const std::vector<std::string> &seq,
+  const SequenceSet &seq,
   ClusterAlgorithm &clust_algo,
   DivisiblePairGenerator::Builder & pgb,
   const int min_overlap,
