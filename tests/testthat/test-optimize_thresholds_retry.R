@@ -91,6 +91,57 @@ testthat::test_that("optimize_thresholds budgeted mode preserves output", {
   testthat::expect_equal(budgeted, baseline)
 })
 
+testthat::test_that("optimize_thresholds auto budget matches unbounded on Linux", {
+  testthat::skip_if_not(identical(Sys.info()[["sysname"]], "Linux"))
+  seq <- c(
+    "ACGTACGTACGT",
+    "ACGTACGTTCGT",
+    "ACGTTCGTACGT",
+    "ACGTTCGTTCGT",
+    "ACGTACGGACGT",
+    "ACGTACGGTCGT"
+  )
+  names(seq) <- paste0("s", seq_along(seq))
+  taxonomy <- data.frame(
+    seq_id = names(seq),
+    kingdom = rep("k1", length(seq)),
+    phylum = rep(c("p1", "p1", "p1", "p2", "p2", "p2"), 1),
+    class = rep(c("c1", "c1", "c2", "c3", "c3", "c4"), 1),
+    stringsAsFactors = FALSE
+  )
+
+  baseline <- suppressWarnings(optimize_thresholds(
+    taxonomy = taxonomy,
+    refseq = seq,
+    ranks = c("kingdom", "phylum", "class"),
+    dist_config = dist_edlib(),
+    threshold_config = threshold_set(c(0.05, 0.10)),
+    clust_config = clust_tree(),
+    parallel_config = parallel_merge(threads = 2L),
+    min_taxa = 2L,
+    min_refseq = 4L,
+    measures = c("MCC", "FM"),
+    verbose = FALSE
+  ))
+
+  auto_budgeted <- suppressWarnings(optimize_thresholds(
+    taxonomy = taxonomy,
+    refseq = seq,
+    ranks = c("kingdom", "phylum", "class"),
+    dist_config = dist_edlib(),
+    threshold_config = threshold_set(c(0.05, 0.10)),
+    clust_config = clust_tree(),
+    parallel_config = parallel_merge(threads = 2L),
+    min_taxa = 2L,
+    min_refseq = 4L,
+    measures = c("MCC", "FM"),
+    clustering_memory_budget_mb = "auto",
+    verbose = FALSE
+  ))
+
+  testthat::expect_equal(auto_budgeted, baseline)
+})
+
 testthat::test_that("memory-budget helpers plan, split, and detect errors", {
   testset_select <- data.frame(
     n_seq = c(90L, 40L, 40L, 20L, 20L),

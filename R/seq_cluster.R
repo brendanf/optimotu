@@ -10,9 +10,12 @@
 #' `seq_cluster_usearch()`.
 #' @param verbose (`logical(1)` or `integer(1)`) whether to print progress;
 #' values greater than 1 (or TRUE) print more
-#' @param clustering_memory_budget_mb (`numeric(1)` or `NULL`) Optional
-#' best-effort memory budget in MB for native clustering structures in
-#' multi-subset mode.
+#' @param clustering_memory_budget_mb (`numeric(1)`, `"auto"`, or `NULL`)
+#' Optional best-effort memory budget in MB for native clustering
+#' structures in multi-subset mode. `NULL` (the default) leaves clustering
+#' unbounded. `"auto"` (Linux only) uses 80% of swap-free available memory
+#' (`MemAvailable`), capped by remaining cgroup quota when a limit is
+#' present. Non-Linux platforms error if `"auto"` is requested.
 #' @export
 seq_cluster <- function(
   seq,
@@ -165,11 +168,9 @@ seq_cluster.character <- function(
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   checkmate::assert_character(seq_id)
-  checkmate::assert_number(
+  clustering_memory_budget_mb <- resolve_clustering_memory_budget_mb(
     clustering_memory_budget_mb,
-    lower = 0,
-    null.ok = TRUE,
-    finite = TRUE
+    lower = 0
   )
   out <- if (!is.list(which)) {
     if (!(length(seq) == 0L && isTRUE(which))) {

@@ -48,6 +48,9 @@ Native code:
     `cluster_run.cpp`, and the cluster workers. Exceeding the budget raises
     `MemoryBudgetExceeded`, which surfaces in R as an error whose message
     begins `clustering memory budget exceeded`.
+    `clustering_memory_budget_mb = "auto"` (non-default, Linux only) sets
+    that budget to 80% of `MemAvailable`, capped by remaining cgroup memory
+    when a limit is set (`R/memory_budget.R`). Other platforms error.
   - `SingleClusterAlgorithm::write_threshold_row()` fills one threshold's
     cluster-assignment vector without an `n x m` matrix. Tree and SLINK use
     this in `optimize_thresholds()` so the result matrix is never allocated.

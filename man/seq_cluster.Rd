@@ -70,9 +70,12 @@ values greater than 1 (or TRUE) print more}
 \item{seq_file}{optional path overrides for index-backed \code{seq} only; see
 \code{\link[=seq_as_char]{seq_as_char()}}. Not used with \code{dist_file()}.}
 
-\item{clustering_memory_budget_mb}{(\code{numeric(1)} or \code{NULL}) Optional
-best-effort memory budget in MB for native clustering structures in
-multi-subset mode.}
+\item{clustering_memory_budget_mb}{(\code{numeric(1)}, \code{"auto"}, or \code{NULL})
+Optional best-effort memory budget in MB for native clustering
+structures in multi-subset mode. \code{NULL} (the default) leaves clustering
+unbounded. \code{"auto"} (Linux only) uses 80\% of swap-free available memory
+(\code{MemAvailable}), capped by remaining cgroup quota when a limit is
+present. Non-Linux platforms error if \code{"auto"} is requested.}
 }
 \description{
 Single-linkage clustering of nucleotide sequences
