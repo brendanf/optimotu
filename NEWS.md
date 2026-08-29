@@ -1,5 +1,10 @@
 # optimotu (development version)
 
+* `MultipleClusterAlgorithm::make_child()` no longer holds the parent mutex
+for the full tile/child construction. Construction runs unlocked (subset
+locks and the memory budget tracker still protect their own state); only
+registration into `children` is locked, so `parallel_merge` workers can
+initialize tiles concurrently.
 * `optimize_thresholds()` reorders reference sequences into lexical taxonomy
 order (`ranks`, then the ID column) before clustering so merge-mode
 `AllPairGenerator` tiles hit fewer taxonomic subsets. Only the character
