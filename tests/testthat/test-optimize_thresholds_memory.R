@@ -359,6 +359,96 @@ testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", 
   testthat::expect_equal(four, expected_four)
 })
 
+testthat::test_that("incremental batch planner matches unique(unlist) unions", {
+  # Overlapping character IDs and explicit seq_index must agree, and batch
+  # cuts must match a naive unique(unlist()) planner.
+  testset <- data.frame(
+    n_seq = c(10L, 12L, 8L, 15L),
+    stringsAsFactors = FALSE
+  )
+  testset$seq_id <- list(
+    paste0("s", 1:10),
+    paste0("s", 5:16),
+    paste0("s", 14:21),
+    paste0("s", 1:15)
+  )
+  testset$seq_index <- list(
+    1:10,
+    5:16,
+    14:21,
+    1:15
+  )
+  threshold_config <- threshold_uniform(0, 0.1, 0.05)
+  clust_config <- clust_slink()
+  parallel_config <- parallel_concurrent(1L)
+  ordered_idx <- seq_len(nrow(testset))
+
+  naive_batches <- function(budget_mb) {
+    batches <- list()
+    current <- integer(0)
+    for (idx in ordered_idx) {
+      candidate <- c(current, idx)
+      est <- optimotu:::estimate_batch_memory_mb(
+        candidate,
+        testset,
+        threshold_config,
+        clust_config,
+        parallel_config,
+        dist_method = "hamming",
+        mean_seq_len = 400
+      )
+      if (length(current) > 0L && est > budget_mb) {
+        batches[[length(batches) + 1L]] <- current
+        current <- idx
+      } else {
+        current <- candidate
+      }
+    }
+    batches[[length(batches) + 1L]] <- current
+    batches
+  }
+
+  for (budget in c(0.05, 0.2, 1, 100)) {
+    got <- optimotu:::make_initial_batches(
+      ordered_idx,
+      testset,
+      threshold_config,
+      clust_config,
+      parallel_config,
+      budget,
+      dist_method = "hamming",
+      mean_seq_len = 400
+    )
+    testthat::expect_equal(got, naive_batches(budget), info = budget)
+  }
+
+  # seq_id-only fallback agrees with seq_index path.
+  testset_ids_only <- testset
+  testset_ids_only$seq_index <- NULL
+  testthat::expect_equal(
+    optimotu:::make_initial_batches(
+      ordered_idx,
+      testset,
+      threshold_config,
+      clust_config,
+      parallel_config,
+      0.2,
+      dist_method = "hamming",
+      mean_seq_len = 400
+    ),
+    optimotu:::make_initial_batches(
+      ordered_idx,
+      testset_ids_only,
+      threshold_config,
+      clust_config,
+      parallel_config,
+      0.2,
+      dist_method = "hamming",
+      mean_seq_len = 400
+    )
+  )
+})
+
 testthat::test_that("estimate_batch_memory_mb adds Hamming packed union bytes", {
   testset <- data.frame(
     n_seq = c(10L, 12L, 8L),

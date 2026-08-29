@@ -287,6 +287,8 @@ seq_search_internal <- function(query, ref, dist_config, parallel_config, thresh
 #'  - `n_taxa` (`integer`) the number of unique taxa at the rank
 #'  - `n_seq` (`integer`) the number of sequences
 #'  - `seq_id` (`list` of `character`) a list of sequence IDs
+#'  - `seq_index` (`list` of `integer`) 1-based row indices in `data` for
+#'     each element in `seq_id`
 #'  - `true_partition` (`list` of `integer`) integer mapping to taxa for each
 #'     element in `seq_id`
 #' @keywords internal

@@ -140,6 +140,37 @@ estimate_hamming_packed_mb <- function(n_union, seq_len) {
   bytes / (1024 * 1024)
 }
 
+# Prefer 1-based seq_index lists; synthesize from seq_id when absent
+# (tests / older callers).
+testset_seq_indices <- function(testset_select) {
+  if (!is.null(testset_select$seq_index)) {
+    return(testset_select$seq_index)
+  }
+  if (is.null(testset_select$seq_id)) {
+    # No membership info: empty unions (matches unique(unlist(NULL))).
+    return(replicate(nrow(testset_select), integer(0), simplify = FALSE))
+  }
+  all_ids <- unique(unlist(testset_select$seq_id, use.names = FALSE))
+  key <- seq_along(all_ids)
+  names(key) <- all_ids
+  lapply(testset_select$seq_id, function(ids) {
+    unname(as.integer(key[ids]))
+  })
+}
+
+batch_n_union <- function(testset_select, batch_idx) {
+  if (length(batch_idx) == 0L) {
+    return(0L)
+  }
+  if (!is.null(testset_select$seq_index)) {
+    return(length(unique(unlist(
+      testset_select$seq_index[batch_idx],
+      use.names = FALSE
+    ))))
+  }
+  length(unique(unlist(testset_select$seq_id[batch_idx], use.names = FALSE)))
+}
+
 estimate_batch_memory_mb <- function(
   batch_idx,
   testset_select,
@@ -171,19 +202,12 @@ estimate_batch_memory_mb <- function(
     include_result = include_result
   )
   total <- sum(per_subset)
-  if (identical(dist_method, "hamming") && length(batch_idx) > 0L) {
-    n_union <- length(unique(unlist(
-      testset_select$seq_id[batch_idx],
-      use.names = FALSE
-    )))
+  n_union <- batch_n_union(testset_select, batch_idx)
+  if (identical(dist_method, "hamming") && n_union > 0L) {
     total <- total + estimate_hamming_packed_mb(n_union, mean_seq_len)
   }
   # Light allowance for SequenceView vector (~16B/view).
-  if (length(batch_idx) > 0L) {
-    n_union <- length(unique(unlist(
-      testset_select$seq_id[batch_idx],
-      use.names = FALSE
-    )))
+  if (n_union > 0L) {
     total <- total + max(0, n_union * 16 / (1024 * 1024))
   }
   total
@@ -206,24 +230,80 @@ make_initial_batches <- function(
     return(list(ordered_idx))
   }
 
+  n_thresholds <- if (threshold_config$type == "uniform") {
+    floor((threshold_config$to - threshold_config$from) / threshold_config$by) +
+      1L
+  } else {
+    length(threshold_config$thresholds)
+  }
+  clust_method <- clust_config$method
+  parallel_method <- parallel_config$method
+  threads <- parallel_config$threads
+  do_hamming <- identical(dist_method, "hamming")
+
+  seq_indices <- testset_seq_indices(testset_select)
+  n_seq_total <- 0L
+  for (ids in seq_indices) {
+    if (length(ids) > 0L) {
+      n_seq_total <- max(n_seq_total, max(ids))
+    }
+  }
+
+  reset_membership <- function() {
+    list(in_batch = logical(n_seq_total), n_union = 0L, algo_mb = 0)
+  }
+
+  add_subset_union <- function(state, ids) {
+    if (length(ids) == 0L) {
+      return(state)
+    }
+    new_mask <- !state$in_batch[ids]
+    n_new <- sum(new_mask)
+    if (n_new > 0L) {
+      state$in_batch[ids[new_mask]] <- TRUE
+      state$n_union <- state$n_union + n_new
+    }
+    state
+  }
+
+  batch_total_mb <- function(state) {
+    total <- state$algo_mb
+    if (do_hamming && state$n_union > 0L) {
+      total <- total +
+        estimate_hamming_packed_mb(state$n_union, mean_seq_len)
+    }
+    if (state$n_union > 0L) {
+      total <- total + max(0, state$n_union * 16 / (1024 * 1024))
+    }
+    total
+  }
+
   batches <- list()
   current <- integer(0)
+  state <- reset_membership()
   for (idx in ordered_idx) {
-    candidate <- c(current, idx)
-    est <- estimate_batch_memory_mb(
-      candidate,
-      testset_select,
-      threshold_config,
-      clust_config,
-      parallel_config,
-      dist_method = dist_method,
-      mean_seq_len = mean_seq_len
+    subset_mb <- estimate_subset_memory_mb(
+      testset_select$n_seq[idx],
+      n_thresholds = n_thresholds,
+      clust_method = clust_method,
+      parallel_method = parallel_method,
+      threads = threads,
+      include_result = FALSE
     )
+    # Probe union cost without mutating; commit only if we keep the subset.
+    probe <- state
+    probe$algo_mb <- probe$algo_mb + subset_mb
+    probe <- add_subset_union(probe, seq_indices[[idx]])
+    est <- batch_total_mb(probe)
     if (length(current) > 0L && est > budget_mb) {
       batches[[length(batches) + 1L]] <- current
       current <- idx
+      state <- reset_membership()
+      state$algo_mb <- subset_mb
+      state <- add_subset_union(state, seq_indices[[idx]])
     } else {
-      current <- candidate
+      current <- c(current, idx)
+      state <- probe
     }
   }
   batches[[length(batches) + 1L]] <- current
@@ -328,16 +408,18 @@ cluster_find_best_thresholds <- function(
   clustering_memory_budget_mb
 ) {
   map <- clustering_threshold_map(threshold_config)
-  if (is.list(which) && length(which) > 0L && !is.character(which[[1]])) {
-    seq_ids <- seq_input_seq_ids(seq, seq_idx, seq_file)
-    which <- lapply(which, `[`, x = seq_ids)
-  }
+  which_is_index <- is.list(which) &&
+    length(which) > 0L &&
+    is.numeric(which[[1]])
 
   if (identical(dist_config$method, "file")) {
     if (!is.null(seq_file)) {
       stop("`seq_file` is not supported with `dist_file()`.", call. = FALSE)
     }
     names_vec <- seq_input_seq_ids(seq, seq_idx, NULL)
+    if (which_is_index) {
+      which <- lapply(which, function(i) names_vec[i])
+    }
     verify_which(which, names_vec)
     return(distmx_cluster_multi_best_threshold(
       file = dist_config$filename,
@@ -362,6 +444,9 @@ cluster_find_best_thresholds <- function(
       seq_file = seq_file,
       as = "character"
     )
+    if (which_is_index) {
+      which <- lapply(which, function(i) names(seq_char)[i])
+    }
     verify_which(which, names(seq_char))
     keep <- sort(unique(unlist(which, use.names = FALSE)))
     seq_char <- seq_char[keep]
@@ -427,15 +512,27 @@ cluster_find_best_thresholds <- function(
     seq_file = seq_file,
     as = "character"
   )
-  verify_which(which, names(seq_char))
-  # Only pass sequences that appear in at least one subset so Hamming
-  # packing and pair generation scale with the batch, not the full set.
-  keep <- sort(unique(unlist(which, use.names = FALSE)))
-  seq_char <- seq_char[keep]
-  # 0-based indices into the subsetted sequence vector (C++ path).
-  which_idx <- lapply(which, match, table = names(seq_char))
-  which_idx <- lapply(which_idx, function(x) as.integer(x - 1L))
-  names(which_idx) <- names(which)
+  # Integer which: 1-based indices into seq_char (aligned with taxonomy).
+  # Character which: legacy name lookup (verify + match).
+  if (which_is_index) {
+    keep <- sort(unique(unlist(which, use.names = FALSE)))
+    keep <- as.integer(keep)
+    seq_char <- seq_char[keep]
+    # Map original 1-based indices to 0-based positions in the subset.
+    pos <- integer(max(keep))
+    pos[keep] <- seq_along(keep) - 1L
+    which_idx <- lapply(which, function(ids) pos[as.integer(ids)])
+    names(which_idx) <- names(which)
+  } else {
+    verify_which(which, names(seq_char))
+    # Only pass sequences that appear in at least one subset so Hamming
+    # packing and pair generation scale with the batch, not the full set.
+    keep <- sort(unique(unlist(which, use.names = FALSE)))
+    seq_char <- seq_char[keep]
+    which_idx <- lapply(which, match, table = names(seq_char))
+    which_idx <- lapply(which_idx, function(x) as.integer(x - 1L))
+    names(which_idx) <- names(which)
+  }
   seq_cluster_multi_best_threshold(
     seq = seq_char,
     which = which_idx,
@@ -925,7 +1022,7 @@ optimize_thresholds <- function(
           threshold_config = threshold_config,
           clust_config = clust_config,
           parallel_config = local_parallel_config,
-          which = testset_select$seq_id[batch_idx],
+          which = testset_select$seq_index[batch_idx],
           true_partitions = testset_select$true_partition[batch_idx],
           measures = measures,
           verbose = verbose,
