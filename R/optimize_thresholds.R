@@ -706,12 +706,17 @@ find_best_threshold <- function(
 #' contains sequence identifiers
 #' @param measures (`character`) one or more measures to calculate optimum
 #' thresholds for
-#' @param clustering_memory_budget_mb (`numeric(1)` or `NULL`) Best-effort
-#' memory budget for clustering-owned native structures, in MB. This is not a
-#' hard process-memory cap; set below machine limits for safer behavior. When
-#' set, the budget includes clustering algorithm state, Hamming packed
-#' sequence bits (for `dist_hamming()`), and light bookkeeping. It does not
-#' include the caller's R `refseq` / taxonomy / `testset_select` objects.
+#' @param clustering_memory_budget_mb (`numeric(1)`, `"auto"`, or `NULL`)
+#' Best-effort memory budget for clustering-owned native structures, in MB.
+#' This is not a hard process-memory cap; set below machine limits for safer
+#' behavior. When set, the budget includes clustering algorithm state,
+#' Hamming packed sequence bits (for `dist_hamming()`), and light
+#' bookkeeping. It does not include the caller's R `refseq` / taxonomy /
+#' `testset_select` objects. `NULL` (the default) leaves clustering
+#' unbounded. `"auto"` (Linux only) uses 80% of the kernel's swap-free
+#' available memory (`MemAvailable` in `/proc/meminfo`), capped by remaining
+#' cgroup memory when a limit is present. Non-Linux platforms error if
+#' `"auto"` is requested.
 #' @param retry_on_memory_exhaustion (`logical(1)`) Retry clustering batches if
 #' the clustering memory budget is exceeded.
 #' @param retry_split_strategy (`character(1)`) Strategy used to split failed
@@ -783,11 +788,10 @@ optimize_thresholds <- function(
     measures,
     c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
   )
-  checkmate::assert_number(
+  was_auto_budget <- identical(clustering_memory_budget_mb, "auto")
+  clustering_memory_budget_mb <- resolve_clustering_memory_budget_mb(
     clustering_memory_budget_mb,
-    lower = 1,
-    null.ok = TRUE,
-    finite = TRUE
+    lower = 1
   )
   checkmate::assert_flag(retry_on_memory_exhaustion)
   retry_split_strategy <- match.arg(retry_split_strategy)
@@ -878,6 +882,13 @@ optimize_thresholds <- function(
   if (
     (isTRUE(verbose) || verbose >= 1L) && !is.null(clustering_memory_budget_mb)
   ) {
+    if (was_auto_budget) {
+      cat(
+        "Auto clustering memory budget:",
+        signif(clustering_memory_budget_mb, 6),
+        "MB\n"
+      )
+    }
     cat(
       "Planning memory-aware batches:",
       length(initial_batches),

@@ -75,12 +75,17 @@ messages; values greater than 1 (or TRUE) print more}
 \item{seq_file}{optional path overrides for index-backed \code{refseq} only; see
 \code{\link[=seq_as_char]{seq_as_char()}}. Taxonomy rows must match the selected sequence IDs.}
 
-\item{clustering_memory_budget_mb}{(\code{numeric(1)} or \code{NULL}) Best-effort
-memory budget for clustering-owned native structures, in MB. This is not a
-hard process-memory cap; set below machine limits for safer behavior. When
-set, the budget includes clustering algorithm state, Hamming packed
-sequence bits (for \code{dist_hamming()}), and light bookkeeping. It does not
-include the caller's R \code{refseq} / taxonomy / \code{testset_select} objects.}
+\item{clustering_memory_budget_mb}{(\code{numeric(1)}, \code{"auto"}, or \code{NULL})
+Best-effort memory budget for clustering-owned native structures, in MB.
+This is not a hard process-memory cap; set below machine limits for safer
+behavior. When set, the budget includes clustering algorithm state,
+Hamming packed sequence bits (for \code{dist_hamming()}), and light
+bookkeeping. It does not include the caller's R \code{refseq} / taxonomy /
+\code{testset_select} objects. \code{NULL} (the default) leaves clustering
+unbounded. \code{"auto"} (Linux only) uses 80\% of the kernel's swap-free
+available memory (\code{MemAvailable} in \verb{/proc/meminfo}), capped by remaining
+cgroup memory when a limit is present. Non-Linux platforms error if
+\code{"auto"} is requested.}
 
 \item{retry_on_memory_exhaustion}{(\code{logical(1)}) Retry clustering batches if
 the clustering memory budget is exceeded.}

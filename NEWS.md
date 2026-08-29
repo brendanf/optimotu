@@ -19,6 +19,9 @@ matches clustering that subset on its own.
 clustering-owned native structures in multi-subset mode. This bounds clustering
 allocations only, not total process memory. The default (`NULL`) leaves behavior
 unchanged.
+* `clustering_memory_budget_mb = "auto"` (Linux only) sets that budget to 80% of
+swap-free available memory (`MemAvailable`), capped by remaining cgroup quota
+when a limit is set. Non-Linux platforms error.
 * `optimize_thresholds()` now recovers from clustering memory exhaustion instead
 of failing outright. When a budget is set, it plans memory-aware batches of
 subsets, and on budget overflow retries with fewer threads, then with more pair
