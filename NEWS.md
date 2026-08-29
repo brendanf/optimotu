@@ -1,5 +1,10 @@
 # optimotu (development version)
 
+* `optimize_thresholds()` reorders reference sequences into lexical taxonomy
+order (`ranks`, then the ID column) before clustering so merge-mode
+`AllPairGenerator` tiles hit fewer taxonomic subsets. Only the character
+vector pointers are permuted (CHARSXP contents are not copied). Reordering
+is skipped for `dist_file(by_name = FALSE)`.
 * Speed up `optimize_thresholds()` prework at large scale: batch memory
 planning keeps a running integer sequence union (O(subset size) per add)
 instead of repeated `unique(unlist(seq_id))`, `summarize_by_rank()` reuses

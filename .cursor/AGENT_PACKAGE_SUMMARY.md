@@ -54,6 +54,11 @@ Native code:
   - `SingleClusterAlgorithm::write_threshold_row()` fills one threshold's
     cluster-assignment vector without an `n x m` matrix. Tree and SLINK use
     this in `optimize_thresholds()` so the result matrix is never allocated.
+  - `optimize_thresholds()` reorders sequences into lexical taxonomy order
+    (ranks, then ID) before clustering so Hamming/`AllPairGenerator` merge
+    tiles see taxa as contiguous index blocks. Permutation is of character
+    vector entries only (no CHARSXP copy). Skipped for
+    `dist_file(by_name = FALSE)`.
 
 ## 3) Public API surface (high-impact functions)
 

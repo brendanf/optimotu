@@ -120,3 +120,10 @@ for subproblem count during overpartition retries.}
 \description{
 Optimize clustering thresholds for taxonomically identified reference sequences
 }
+\details{
+Sequences are reordered (without copying CHARSXP contents) into lexical
+taxonomy order (\code{ranks}, then \code{id_col}) before clustering so that
+merge-mode pair tiles hit fewer taxonomic subsets. Reordering is skipped
+for \code{dist_file(by_name = FALSE)}, where integer IDs in the distance file
+follow the original sequence order.
+}

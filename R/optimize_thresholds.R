@@ -62,6 +62,13 @@ is_memory_budget_error <- function(e) {
   grepl("clustering memory budget exceeded", conditionMessage(e), fixed = TRUE)
 }
 
+# Lexical row order for taxonomy-aligned sequences: coarse ranks first, then
+# id_col. Used so AllPairGenerator tiles see taxa as contiguous index blocks.
+taxonomy_sequence_order <- function(taxonomy, ranks, id_col) {
+  ord_args <- as.list(taxonomy[c(ranks, id_col)])
+  do.call(order, c(ord_args, list(na.last = TRUE)))
+}
+
 estimate_subset_memory_mb <- function(
   n_seq,
   n_thresholds,
@@ -829,6 +836,14 @@ find_best_threshold <- function(
 #' for subproblem count during overpartition retries.
 #' @param verbose (`logical(1)` or `integer(1)`) whether to print progress
 #' messages; values greater than 1 (or TRUE) print more
+#'
+#' @details
+#' Sequences are reordered (without copying CHARSXP contents) into lexical
+#' taxonomy order (`ranks`, then `id_col`) before clustering so that
+#' merge-mode pair tiles hit fewer taxonomic subsets. Reordering is skipped
+#' for `dist_file(by_name = FALSE)`, where integer IDs in the distance file
+#' follow the original sequence order.
+#'
 #' @return (`data.frame`) a data frame with the following columns:
 #'   - `rank` (`character`) the rank being optimized
 #'   - `superrank` (`character`) the containing rank for optimization
@@ -904,8 +919,18 @@ optimize_thresholds <- function(
   # SLINK will fail if the order of sequences is different in the testset and
   # the reference sequences
   if (!isTRUE(all.equal(refseq_names, taxonomy[[id_col]]))) {
-    taxonomy <- taxonomy[match(refseq_names, taxonomy[[id_col]]), ]
+    taxonomy <- taxonomy[
+      match(refseq_names, taxonomy[[id_col]]),
+      ,
+      drop = FALSE
+    ]
   }
+
+  # dist_file(by_name = FALSE) uses integer IDs tied to original file order;
+  # do not permute taxonomy/seqnames for that path.
+  file_by_index <- identical(dist_config$method, "file") &&
+    !isTRUE(dist_config$by_name) &&
+    !isTRUE(dist_config$by_names)
 
   # Materialize sequences once; batches subset to their which-union.
   mean_seq_len <- NULL
@@ -920,6 +945,19 @@ optimize_thresholds <- function(
     seq_file <- NULL
     if (length(refseq) > 0L) {
       mean_seq_len <- mean(nchar(refseq, type = "bytes"))
+    }
+  }
+
+  # Lexical taxonomy order: permute STRSXP pointers only (no CHARSXP copy).
+  if (!file_by_index) {
+    ord <- taxonomy_sequence_order(taxonomy, ranks, id_col)
+    taxonomy <- taxonomy[ord, , drop = FALSE]
+    if (!identical(dist_config$method, "file")) {
+      refseq <- refseq[ord]
+    } else {
+      # by_name path: seqnames must match taxonomy rows for index->name map.
+      refseq <- taxonomy[[id_col]]
+      names(refseq) <- taxonomy[[id_col]]
     }
   }
 
