@@ -76,22 +76,41 @@ estimate_subset_memory_mb <- function(
   algo_bytes <- switch(
     clust_method,
     tree = n_seq * u64_bytes * 32,
-    slink = n_seq * u64_bytes * 32,
     matrix = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 8,
     index = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 12,
     n_seq * n_thresholds * int_bytes
   )
+  slink_leaf <- n_seq * u64_bytes * 4
+  slink_parent <- n_seq * u64_bytes * 32
   method_scale <- switch(
     parallel_method,
     merge = {
-      n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
-      1 + threads * (2 / n_tiles)
+      # One thread uses a single full-range tile and works on the root.
+      if (threads <= 1) {
+        1.1
+      } else {
+        n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
+        1 + threads * (2 / n_tiles)
+      }
     },
     concurrent = 1.1,
     hierarchical = max(1, threads / 2),
     1
   )
-  total_bytes <- algo_bytes * method_scale
+  total_bytes <- if (clust_method == "slink") {
+    root <- if (
+      parallel_method == "concurrent" ||
+        (parallel_method == "merge" && threads <= 1)
+    ) {
+      slink_leaf
+    } else {
+      slink_parent
+    }
+    child <- slink_leaf
+    root + (method_scale - 1) * child
+  } else {
+    algo_bytes * method_scale
+  }
   # Tree/SLINK do not keep the n x m output; matrix/index already include it.
   if (isTRUE(include_result) && clust_method %in% c("tree", "slink")) {
     total_bytes <- total_bytes + n_seq * n_thresholds * int_bytes

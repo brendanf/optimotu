@@ -12,7 +12,8 @@ using CAF = ClusterAlgorithmFactory;
 CAF::ClusterAlgorithmFactory(const DistanceConverter & dconv) :
   dconv{dconv} {}
 
-std::size_t CAF::estimate_bytes(j_t n) const {
+std::size_t CAF::estimate_bytes(j_t n, ClusterInstanceRole) const
+{
   const std::size_t ns = static_cast<std::size_t>(n);
   const std::size_t ms = static_cast<std::size_t>(dconv.m);
   return ns * ms * sizeof(int);
@@ -37,7 +38,8 @@ std::unique_ptr<SingleClusterAlgorithm> CMF::create(init_matrix_t & im, int) con
   return create_cluster_matrix(this->dconv, im, this->binary_search, this->fill_type);
 }
 
-std::size_t CMF::estimate_bytes(j_t n) const {
+std::size_t CMF::estimate_bytes(j_t n, ClusterInstanceRole) const
+{
   const std::size_t ns = static_cast<std::size_t>(n);
   const std::size_t ms = static_cast<std::size_t>(dconv.m);
   // Matrix plus helper vectors and some allocator overhead.
@@ -56,7 +58,8 @@ std::unique_ptr<SingleClusterAlgorithm> CIMF::create(init_matrix_t & im, int) co
   return create_cluster_indexed_matrix(this->dconv, im);
 }
 
-std::size_t CIMF::estimate_bytes(j_t n) const {
+std::size_t CIMF::estimate_bytes(j_t n, ClusterInstanceRole) const
+{
   const std::size_t ns = static_cast<std::size_t>(n);
   const std::size_t ms = static_cast<std::size_t>(dconv.m);
   // Indexed matrix stores matrix + index list + buffers.
@@ -76,7 +79,8 @@ std::unique_ptr<SingleClusterAlgorithm> CTF::create(init_matrix_t & im, int verb
   return create_cluster_tree(this->dconv, im, verbose, test);
 }
 
-std::size_t CTF::estimate_bytes(j_t n) const {
+std::size_t CTF::estimate_bytes(j_t n, ClusterInstanceRole) const
+{
   const std::size_t ns = static_cast<std::size_t>(n);
   // ClusterTree uses roughly 2*n nodes and free-list structures.
   return ns * sizeof(std::uint64_t) * 32;
@@ -94,10 +98,14 @@ std::unique_ptr<SingleClusterAlgorithm> CSF::create(init_matrix_t & im, int verb
   return create_cluster_slink(this->dconv, im, verbose);
 }
 
-std::size_t CSF::estimate_bytes(j_t n) const {
+std::size_t CSF::estimate_bytes(j_t n, ClusterInstanceRole role) const
+{
   const std::size_t ns = static_cast<std::size_t>(n);
-  // Upper bound: each instance allocates either SLINK vectors or the delegate
-  // tree, never both. Tree storage dominates.
+  if (role == ClusterInstanceRole::Leaf)
+  {
+    // Pi, Lambda, M vectors plus allocator overhead.
+    return ns * sizeof(std::uint64_t) * 4;
+  }
+  // Delegate tree storage for parent instances.
   return ns * sizeof(std::uint64_t) * 32;
 }
-

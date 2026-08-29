@@ -26,13 +26,18 @@ subproblems, then by splitting the batch, controlled by the new arguments
   increasing indices from tile pair generators; returned matrices and `hclust`
   labels follow the original `which` order. Split workers finalize each tile
   shard before merging so SLINK can finish its last iteration. The parent
-  algorithm remains full-size.
+  algorithm remains full-size. `clust_slink()` instances allocate either the
+  SLINK pointer arrays or the delegate tree, never both. With one thread,
+  merge matches concurrent and the root holds only the SLINK arrays.
 * The clustering memory estimator for `parallel_merge()` now accounts for
   tile-local shard size (`1 + threads * (2 / n_tiles)`) rather than assuming
-  each thread holds a full-size copy. Per-subset estimates now follow native
-  `estimate_bytes()`: tree and SLINK scale with `n_seq` only, while matrix and
-  index scale with `n_seq * n_thresholds`. Optional `include_result` adds the
-  `n x m` integer output for tree/SLINK.
+  each thread holds a full-size copy. With one thread, merge uses the same
+  scale as concurrent. Per-subset estimates follow native `estimate_bytes()`:
+  tree and SLINK scale with `n_seq` only, while matrix and index scale with
+  `n_seq * n_thresholds`. SLINK leaf instances (concurrent, or merge with one
+  thread) use a smaller coefficient than parent instances that hold the
+  delegate tree. Optional `include_result` adds the `n x m` integer output for
+  tree/SLINK.
 * Fix `seq_cluster()` failing with `invalid sequence index` when clustering
 multiple subsets via `which` with `parallel_merge()`, for subsets whose sequences
 are not a prefix of the full input.

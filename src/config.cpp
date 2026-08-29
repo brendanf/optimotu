@@ -16,6 +16,24 @@
 
 #include "AllPairGenerator.h"
 
+namespace
+{
+
+  ClusterInstanceRole root_role_from_parallel_method(
+      const std::string &method,
+      int threads)
+  {
+    // One thread never creates children, so the root stays a leaf (SLINK
+    // vectors, not the delegate tree). Merge with threads > 1 is a parent.
+    if (method == "concurrent" || (method == "merge" && threads <= 1))
+    {
+      return ClusterInstanceRole::Leaf;
+    }
+    return ClusterInstanceRole::Parent;
+  }
+
+} // namespace
+
 std::unique_ptr<DistanceConverter> create_distance_converter(
     const std::string &type,
     const double from,
@@ -63,29 +81,34 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     const std::vector<std::string> seqnames,
     const std::vector<std::vector<std::string>> subset_names,
     int verbose,
-    std::size_t clustering_memory_budget_bytes
-) {
+    std::size_t clustering_memory_budget_bytes,
+    const std::string &parallel_method)
+{
   auto memory_budget = clustering_memory_budget_bytes > 0
     ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
     : nullptr;
-  if (verbose == 0) {
+  const ClusterInstanceRole root_role =
+      root_role_from_parallel_method(parallel_method, threads);
+  if (verbose == 0)
+  {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
-      factory, seqnames, subset_names, threads, 0, memory_budget);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
   }
   if (verbose == 1) {
     return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
-      factory, seqnames, subset_names, threads, 0, memory_budget);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
   }
-  if (verbose == 2) {
+  if (verbose == 2)
+  {
     return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
-      factory, seqnames, subset_names, threads, 0, memory_budget);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
   }
   if (verbose == 3) {
     return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
-      factory, seqnames, subset_names, threads, 0, memory_budget);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
   }
   return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
-    factory, seqnames, subset_names, threads, 0, memory_budget);
+      factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
 }
 
 template<typename distmx_t>
@@ -365,30 +388,40 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     std::size_t clustering_memory_budget_bytes
 ) {
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  std::string parallel_method = element_as_string(
+      parallel_config, "method", "parallel_config");
   auto seqnames_vec = Rcpp::as<std::vector<std::string>>(seqnames);
   auto subset_names_vec = Rcpp::as<std::vector<std::vector<std::string>>>(subset_names);
   int v = (verbose > 4) ? 4 : verbose;
   auto memory_budget = clustering_memory_budget_bytes > 0
     ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
     : nullptr;
-  if (v == 0) {
+  const ClusterInstanceRole root_role =
+      root_role_from_parallel_method(parallel_method, threads);
+  if (v == 0)
+  {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
+        factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
+        root_role);
   }
   if (v == 1) {
     return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
+        factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
+        root_role);
   }
   if (v == 2) {
     return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
+        factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
+        root_role);
   }
   if (v == 3) {
     return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
-      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
+        factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
+        root_role);
   }
   return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
-    factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget);
+      factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
+      root_role);
 }
 
 template<typename distmx_t>

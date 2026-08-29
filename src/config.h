@@ -40,8 +40,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     const std::vector<std::string> seqnames,
     const std::vector<std::vector<std::string>> subset_names,
     int verbose = 0,
-    std::size_t clustering_memory_budget_bytes = 0
-);
+    std::size_t clustering_memory_budget_bytes = 0,
+    const std::string &parallel_method = "merge");
 
 template <typename distmx_t>
 std::unique_ptr<ClusterWorker> create_cluster_worker(

@@ -149,11 +149,16 @@ MergeClusterWorker<distmx_t, id_t>::MergeClusterWorker(
     const int threads
 ) : ClusterWorkerImpl<distmx_t, id_t>(algo, distmx, threads) {
   algo_list.reserve(threads);
-  // OPTIMOTU_COUT << "MergeClusterWorker constructor start...";
   for (int i = 0; i < threads; ++i) {
-    algo_list.push_back(algo->make_child());
+    if (threads == 1)
+    {
+      algo_list.push_back(algo);
+    }
+    else
+    {
+      algo_list.push_back(algo->make_child());
+    }
   }
-  // OPTIMOTU_COUT << "done" << std::endl;
 }
 
 template<typename distmx_t, typename id_t>
@@ -165,7 +170,14 @@ MergeClusterWorker<distmx_t, id_t>::MergeClusterWorker(
 ) : ClusterWorkerImpl<distmx_t, id_t>(algo, distmx, id_list, threads) {
   algo_list.reserve(threads);
   for (int i = 0; i < threads; ++i) {
-    algo_list.push_back(algo->make_child());
+    if (threads == 1)
+    {
+      algo_list.push_back(algo);
+    }
+    else
+    {
+      algo_list.push_back(algo->make_child());
+    }
   }
 }
 
@@ -178,11 +190,11 @@ void MergeClusterWorker<distmx_t, id_type>::operator()(size_t begin, size_t end)
     algo_list[begin]->operator()(d, begin);
   }
   algo_list[begin]->finalize();
-  // mutex.lock();
-  // OPTIMOTU_COUT << "ClusterWorker thread " << begin << " merging..." << std::endl;
-  // mutex.unlock();
-  algo_list[begin]->merge_into_parent();
-  algo->release_child(algo_list[begin]);
+  if (this->threads > 1)
+  {
+    algo_list[begin]->merge_into_parent();
+    algo->release_child(algo_list[begin]);
+  }
 
   // mutex.lock();
   // OPTIMOTU_COUT << "ClusterWorker thread " << begin << " exiting" << std::endl;

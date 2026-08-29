@@ -167,19 +167,21 @@ MCA::MultipleClusterAlgorithm(
     const std::vector<std::string> &names,
     const std::vector<std::vector<std::string>> &subset_names,
     const int threads,
-    std::shared_ptr<MemoryBudgetTracker> memory_budget) : ClusterAlgorithm(factory.dconv),
-                                                          factory(factory),
-                                                          names(names),
-                                                          subset_indices(calculate_subset_indices(names, subset_names)),
-                                                          subset_names(subset_names),
-                                                          threads(threads),
-                                                          memory_budget(memory_budget),
-                                                          subset_key(names.size()),
-                                                          fwd_map(subset_names.size()),
-                                                          sorted_to_which(subset_names.size()),
-                                                          subsets(),
-                                                          borrowed_subsets(),
-                                                          tracked_allocations()
+    std::shared_ptr<MemoryBudgetTracker> memory_budget,
+    ClusterInstanceRole root_role) : ClusterAlgorithm(factory.dconv),
+                                     factory(factory),
+                                     names(names),
+                                     subset_indices(calculate_subset_indices(names, subset_names)),
+                                     subset_names(subset_names),
+                                     threads(threads),
+                                     root_role(root_role),
+                                     memory_budget(memory_budget),
+                                     subset_key(names.size()),
+                                     fwd_map(subset_names.size()),
+                                     sorted_to_which(subset_names.size()),
+                                     subsets(),
+                                     borrowed_subsets(),
+                                     tracked_allocations()
 {
   tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
   budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm base");
@@ -200,7 +202,8 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
     const std::vector<std::vector<std::string>> &subset_names,
     const int threads,
     int,
-    std::shared_ptr<MemoryBudgetTracker> memory_budget) : MultipleClusterAlgorithm(factory, names, subset_names, threads, memory_budget)
+    std::shared_ptr<MemoryBudgetTracker> memory_budget,
+    ClusterInstanceRole root_role) : MultipleClusterAlgorithm(factory, names, subset_names, threads, memory_budget, root_role)
 {
   OPTIMOTU_DEBUG(
       1,
@@ -228,7 +231,9 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
 
   for (j_t i = 0; i < subset_names.size(); ++i)
   {
-    const std::size_t subset_bytes = factory.estimate_bytes(subset_names[i].size());
+    const std::size_t subset_bytes = factory.estimate_bytes(
+        subset_names[i].size(),
+        root_role);
     budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm subset init");
     owned_subsets.emplace_back(factory.create(subset_names[i].size(), verbose));
     tracked_allocations.push_back(subset_bytes);
@@ -332,6 +337,7 @@ MCA::MultipleClusterAlgorithm(MCA *parent) : ClusterAlgorithm(parent),
                                              subset_indices(parent->subset_indices),
                                              subset_names(parent->subset_names),
                                              threads(parent->threads),
+                                             root_role(parent->root_role),
                                              memory_budget(parent->memory_budget),
                                              subset_key(parent->subset_key),
                                              fwd_map(parent->fwd_map),
@@ -342,8 +348,11 @@ MCA::MultipleClusterAlgorithm(MCA *parent) : ClusterAlgorithm(parent),
   tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
   budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm child base");
   subsets.reserve(subset_names.size());
-  for (auto & subset : parent->subsets) {
-    const std::size_t subset_bytes = factory.estimate_bytes(subset->n);
+  for (auto &subset : parent->subsets)
+  {
+    const std::size_t subset_bytes = factory.estimate_bytes(
+        subset->n,
+        ClusterInstanceRole::Leaf);
     budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm child subset");
     auto child_subset = subset->make_child();
     subsets.push_back(child_subset);
@@ -358,6 +367,7 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
                                                                 subset_indices(),
                                                                 subset_names(),
                                                                 threads(parent->threads),
+                                                                root_role(parent->root_role),
                                                                 memory_budget(parent->memory_budget),
                                                                 subset_key(),
                                                                 fwd_map(),
@@ -381,7 +391,9 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
       tile_subset_locals[j].insert(static_cast<j_t>(local));
     }
     const std::size_t subset_bytes =
-        factory.estimate_bytes(intersection_fwd.size());
+        factory.estimate_bytes(
+            intersection_fwd.size(),
+            ClusterInstanceRole::Leaf);
     budget_acquire(
         memory_budget,
         subset_bytes,

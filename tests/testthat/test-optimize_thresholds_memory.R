@@ -4,11 +4,55 @@ algo_bytes <- function(n_seq, n_thresholds, clust_method) {
   switch(
     clust_method,
     tree = n_seq * u64_bytes * 32,
-    slink = n_seq * u64_bytes * 32,
     matrix = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 8,
     index = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 12,
     n_seq * n_thresholds * int_bytes
   )
+}
+
+slink_leaf_bytes <- function(n_seq) {
+  n_seq * 8 * 4
+}
+
+slink_parent_bytes <- function(n_seq) {
+  n_seq * 8 * 32
+}
+
+estimate_subset_bytes <- function(
+  n_seq,
+  n_thresholds,
+  clust_method,
+  parallel_method,
+  threads
+) {
+  method_scale <- merge_scale(threads)
+  if (clust_method == "slink") {
+    root <- if (
+      parallel_method == "concurrent" ||
+        (parallel_method == "merge" && threads <= 1)
+    ) {
+      slink_leaf_bytes(n_seq)
+    } else {
+      slink_parent_bytes(n_seq)
+    }
+    child <- slink_leaf_bytes(n_seq)
+    scale <- switch(
+      parallel_method,
+      merge = if (threads <= 1) 1.1 else method_scale,
+      concurrent = 1.1,
+      hierarchical = max(1, threads / 2),
+      1
+    )
+    return(root + (scale - 1) * child)
+  }
+  scale <- switch(
+    parallel_method,
+    merge = if (threads <= 1) 1.1 else method_scale,
+    concurrent = 1.1,
+    hierarchical = max(1, threads / 2),
+    1
+  )
+  algo_bytes(n_seq, n_thresholds, clust_method) * scale
 }
 
 merge_scale <- function(threads) {
@@ -29,10 +73,59 @@ testthat::test_that("estimate_subset_memory_mb matches estimate_bytes logic", {
     )
     expected <- max(
       1,
-      algo_bytes(n_seq, n_thresholds, method) * 1.1 / (1024 * 1024)
+      estimate_subset_bytes(
+        n_seq,
+        n_thresholds,
+        method,
+        "concurrent",
+        1L
+      ) /
+        (1024 * 1024)
     )
     testthat::expect_equal(got, expected, info = method)
   }
+})
+
+testthat::test_that("one-thread merge matches concurrent estimates", {
+  n_seq <- 10000L
+  n_thresholds <- 40L
+  for (method in c("tree", "slink", "matrix", "index")) {
+    merge_one <- optimotu:::estimate_subset_memory_mb(
+      n_seq,
+      n_thresholds,
+      method,
+      "merge",
+      1L
+    )
+    concurrent_one <- optimotu:::estimate_subset_memory_mb(
+      n_seq,
+      n_thresholds,
+      method,
+      "concurrent",
+      1L
+    )
+    testthat::expect_equal(merge_one, concurrent_one, info = method)
+  }
+})
+
+testthat::test_that("concurrent slink estimate is smaller than concurrent tree", {
+  n_seq <- 10000L
+  n_thresholds <- 40L
+  tree_mb <- optimotu:::estimate_subset_memory_mb(
+    n_seq,
+    n_thresholds,
+    "tree",
+    "concurrent",
+    1L
+  )
+  slink_mb <- optimotu:::estimate_subset_memory_mb(
+    n_seq,
+    n_thresholds,
+    "slink",
+    "concurrent",
+    1L
+  )
+  testthat::expect_lt(slink_mb, tree_mb)
 })
 
 testthat::test_that("tree and slink estimates do not grow with n_thresholds", {
@@ -87,8 +180,15 @@ testthat::test_that("tree and slink estimates do not grow with n_thresholds", {
 testthat::test_that("include_result adds 4nm only for tree and slink", {
   n_seq <- 10000L
   n_thresholds <- 40L
-  result_mb <- n_seq * n_thresholds * 4 / (1024 * 1024)
+  result_bytes <- n_seq * n_thresholds * 4
   for (method in c("tree", "slink")) {
+    base_bytes <- estimate_subset_bytes(
+      n_seq,
+      n_thresholds,
+      method,
+      "concurrent",
+      1L
+    )
     without <- optimotu:::estimate_subset_memory_mb(
       n_seq,
       n_thresholds,
@@ -105,7 +205,13 @@ testthat::test_that("include_result adds 4nm only for tree and slink", {
       1L,
       include_result = TRUE
     )
-    testthat::expect_equal(with_result, without + result_mb, info = method)
+    expected <- max(1, (base_bytes + result_bytes) / (1024 * 1024))
+    testthat::expect_equal(with_result, expected, info = method)
+    testthat::expect_equal(
+      without,
+      max(1, base_bytes / (1024 * 1024)),
+      info = method
+    )
   }
   for (method in c("matrix", "index")) {
     without <- optimotu:::estimate_subset_memory_mb(
@@ -146,6 +252,38 @@ testthat::test_that("estimate_subset_memory_mb scales merge by tile shards", {
     threads = threads
   )
   testthat::expect_equal(got, expected)
+})
+
+testthat::test_that("merge slink uses parent root and leaf tile shards", {
+  n_seq <- 10000L
+  n_thresholds <- 40L
+  threads <- 2L
+  expected <- max(
+    1,
+    estimate_subset_bytes(
+      n_seq,
+      n_thresholds,
+      "slink",
+      "merge",
+      threads
+    ) / (1024 * 1024)
+  )
+  got <- optimotu:::estimate_subset_memory_mb(
+    n_seq = n_seq,
+    n_thresholds = n_thresholds,
+    clust_method = "slink",
+    parallel_method = "merge",
+    threads = threads
+  )
+  testthat::expect_equal(got, expected)
+  tree_merge <- optimotu:::estimate_subset_memory_mb(
+    n_seq,
+    n_thresholds,
+    "tree",
+    "merge",
+    threads
+  )
+  testthat::expect_lt(got, tree_merge)
 })
 
 testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", {

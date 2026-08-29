@@ -34,7 +34,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
 
   for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
     auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm *my_algo = clust_algo.make_child(pg.get());
+    ClusterAlgorithm *my_algo = tile_algo(pg.get());
     if (!my_algo)
     {
       continue;
@@ -77,9 +77,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
     _aligned += my_aligned;
     _prealigned += my_prealigned;
     mutex.unlock();
-    my_algo->finalize();
-    my_algo->merge_into_parent();
-    clust_algo.release_child(my_algo);
+    finish_tile(my_algo);
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
   }
 }

@@ -21,6 +21,7 @@ protected:
   const std::vector<std::vector<std::string>> subset_names;
   // the number of threads
   const int threads;
+  const ClusterInstanceRole root_role;
   std::shared_ptr<MemoryBudgetTracker> memory_budget;
 
   // for each element, which subsets does it belong to? sorted
@@ -71,12 +72,12 @@ protected:
   // Protected main constructor: initializer list only (no body).
   // Used by MultipleClusterAlgorithmImpl to set up members before filling subsets.
   MultipleClusterAlgorithm(
-    const ClusterAlgorithmFactory & factory,
-    const std::vector<std::string> &names,
-    const std::vector<std::vector<std::string>> &subset_names,
-    const int threads,
-    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
-  );
+      const ClusterAlgorithmFactory &factory,
+      const std::vector<std::string> &names,
+      const std::vector<std::vector<std::string>> &subset_names,
+      const int threads,
+      std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr,
+      ClusterInstanceRole root_role = ClusterInstanceRole::Parent);
 
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
 
@@ -153,13 +154,13 @@ protected:
 
 public:
   MultipleClusterAlgorithmImpl(
-    const ClusterAlgorithmFactory & factory,
-    const std::vector<std::string> &names,
-    const std::vector<std::vector<std::string>> &subset_names,
-    const int threads,
-    int verbose_param,
-    std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr
-  );
+      const ClusterAlgorithmFactory &factory,
+      const std::vector<std::string> &names,
+      const std::vector<std::vector<std::string>> &subset_names,
+      const int threads,
+      int verbose_param,
+      std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr,
+      ClusterInstanceRole root_role = ClusterInstanceRole::Parent);
 
   MultipleClusterAlgorithm * make_child() override;
   MultipleClusterAlgorithm * make_child(PairGenerator * pg) override;

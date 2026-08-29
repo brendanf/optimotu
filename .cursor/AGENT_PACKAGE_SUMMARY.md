@@ -104,12 +104,16 @@ explicitly requests API changes.
   indices.
 - `ClusterSLINK` defers allocation: each instance holds either the SLINK
   pointer representation or the delegate `ClusterTree`, not both.
+- `estimate_bytes(n, role)` takes `ClusterInstanceRole::Leaf` or `Parent`.
+  SLINK leaf instances use `n * 8 * 4` bytes; parent (delegate tree) uses
+  `n * 8 * 32`. Tree/matrix/index ignore `role`.
 - `estimate_subset_memory_mb()` mirrors native `estimate_bytes()` (tree/SLINK
-  `O(n)`, matrix/index `O(nm)`), then scales `parallel_merge` by
-  `1 + threads * (2 / n_tiles)`. `include_result = TRUE` adds `4nm` for
-  tree/SLINK only; `optimize_thresholds()` does not need this for tree/SLINK
-  because it scores via `write_threshold_row()` instead of materializing the
-  result matrix.
+  `O(n)`, matrix/index `O(nm)`). Merge with `threads = 1` matches concurrent
+  (one leaf instance; SLINK allocates pointer arrays only). With more threads,
+  merge is one parent root plus leaf-sized tile shards for SLINK.
+  `include_result = TRUE` adds `4nm` for tree/SLINK only; `optimize_thresholds()`
+  does not need this for tree/SLINK because it scores via
+  `write_threshold_row()` instead of materializing the result matrix.
 - `test-optimize_thresholds_stream.R` checks that row-wise cluster IDs match
   `write_to_matrix()`, and that streaming optima match
   `seq_cluster()` + `find_best_threshold()`, including duplicate thresholds
