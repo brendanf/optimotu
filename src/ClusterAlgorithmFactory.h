@@ -24,9 +24,12 @@ public:
 
   virtual std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const = 0;
   virtual std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const = 0;
+  // n_tiles is used by SLINK parents (merge-cache peak); ignored otherwise.
+  // 0 means "unknown / conservative tree-sized parent".
   virtual std::size_t estimate_bytes(
       j_t n,
-      ClusterInstanceRole role = ClusterInstanceRole::Parent) const;
+      ClusterInstanceRole role = ClusterInstanceRole::Parent,
+      std::size_t n_tiles = 0) const;
 };
 
 class ClusterMatrixFactory : public ClusterAlgorithmFactory{
@@ -44,7 +47,8 @@ public:
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
   std::size_t estimate_bytes(
       j_t n,
-      ClusterInstanceRole role = ClusterInstanceRole::Parent) const override;
+      ClusterInstanceRole role = ClusterInstanceRole::Parent,
+      std::size_t n_tiles = 0) const override;
 };
 
 class ClusterIndexedMatrixFactory : public ClusterAlgorithmFactory{
@@ -55,7 +59,8 @@ public:
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
   std::size_t estimate_bytes(
       j_t n,
-      ClusterInstanceRole role = ClusterInstanceRole::Parent) const override;
+      ClusterInstanceRole role = ClusterInstanceRole::Parent,
+      std::size_t n_tiles = 0) const override;
 };
 
 class ClusterTreeFactory : public ClusterAlgorithmFactory{
@@ -67,7 +72,8 @@ public:
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
   std::size_t estimate_bytes(
       j_t n,
-      ClusterInstanceRole role = ClusterInstanceRole::Parent) const override;
+      ClusterInstanceRole role = ClusterInstanceRole::Parent,
+      std::size_t n_tiles = 0) const override;
 };
 
 class ClusterSLINKFactory : public ClusterAlgorithmFactory{
@@ -78,7 +84,8 @@ public:
   std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const override;
   std::size_t estimate_bytes(
       j_t n,
-      ClusterInstanceRole role = ClusterInstanceRole::Parent) const override;
+      ClusterInstanceRole role = ClusterInstanceRole::Parent,
+      std::size_t n_tiles = 0) const override;
 };
 
 #endif //OPTIMOTU_CLUSTERALGORITHMFACTORY_H_INCLUDED

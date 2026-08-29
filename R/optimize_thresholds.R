@@ -81,7 +81,16 @@ estimate_subset_memory_mb <- function(
     n_seq * n_thresholds * int_bytes
   )
   slink_leaf <- n_seq * u64_bytes * 4
-  slink_parent <- n_seq * u64_bytes * 32
+  # Parent peak: SLINK state + merge-cache (~16B/edge, ~n*T edges).
+  slink_parent <- if (parallel_method == "merge" && threads > 1) {
+    n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
+    slink_leaf + n_seq * n_tiles * 16
+  } else if (parallel_method == "hierarchical") {
+    slink_leaf + n_seq * threads * 16
+  } else {
+    # Unknown parallel method: assume full-copy style T = threads.
+    slink_leaf + n_seq * max(threads, 1L) * 16
+  }
   method_scale <- switch(
     parallel_method,
     merge = {

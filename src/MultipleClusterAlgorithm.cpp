@@ -168,20 +168,22 @@ MCA::MultipleClusterAlgorithm(
     const std::vector<std::vector<std::string>> &subset_names,
     const int threads,
     std::shared_ptr<MemoryBudgetTracker> memory_budget,
-    ClusterInstanceRole root_role) : ClusterAlgorithm(factory.dconv),
-                                     factory(factory),
-                                     names(names),
-                                     subset_indices(calculate_subset_indices(names, subset_names)),
-                                     subset_names(subset_names),
-                                     threads(threads),
-                                     root_role(root_role),
-                                     memory_budget(memory_budget),
-                                     subset_key(names.size()),
-                                     fwd_map(subset_names.size()),
-                                     sorted_to_which(subset_names.size()),
-                                     subsets(),
-                                     borrowed_subsets(),
-                                     tracked_allocations()
+    ClusterInstanceRole root_role,
+    std::size_t parent_n_tiles) : ClusterAlgorithm(factory.dconv),
+                                  factory(factory),
+                                  names(names),
+                                  subset_indices(calculate_subset_indices(names, subset_names)),
+                                  subset_names(subset_names),
+                                  threads(threads),
+                                  root_role(root_role),
+                                  parent_n_tiles(parent_n_tiles),
+                                  memory_budget(memory_budget),
+                                  subset_key(names.size()),
+                                  fwd_map(subset_names.size()),
+                                  sorted_to_which(subset_names.size()),
+                                  subsets(),
+                                  borrowed_subsets(),
+                                  tracked_allocations()
 {
   tracked_base_allocation = estimate_base_allocation(names, subset_names, threads);
   budget_acquire(this->memory_budget, tracked_base_allocation, "MultipleClusterAlgorithm base");
@@ -203,7 +205,15 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
     const int threads,
     int,
     std::shared_ptr<MemoryBudgetTracker> memory_budget,
-    ClusterInstanceRole root_role) : MultipleClusterAlgorithm(factory, names, subset_names, threads, memory_budget, root_role)
+    ClusterInstanceRole root_role,
+    std::size_t parent_n_tiles) : MultipleClusterAlgorithm(
+                                      factory,
+                                      names,
+                                      subset_names,
+                                      threads,
+                                      memory_budget,
+                                      root_role,
+                                      parent_n_tiles)
 {
   OPTIMOTU_DEBUG(
       1,
@@ -233,7 +243,8 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
   {
     const std::size_t subset_bytes = factory.estimate_bytes(
         subset_names[i].size(),
-        root_role);
+        root_role,
+        parent_n_tiles);
     budget_acquire(this->memory_budget, subset_bytes, "MultipleClusterAlgorithm subset init");
     owned_subsets.emplace_back(factory.create(subset_names[i].size(), verbose));
     tracked_allocations.push_back(subset_bytes);
@@ -338,6 +349,7 @@ MCA::MultipleClusterAlgorithm(MCA *parent) : ClusterAlgorithm(parent),
                                              subset_names(parent->subset_names),
                                              threads(parent->threads),
                                              root_role(parent->root_role),
+                                             parent_n_tiles(parent->parent_n_tiles),
                                              memory_budget(parent->memory_budget),
                                              subset_key(parent->subset_key),
                                              fwd_map(parent->fwd_map),
@@ -368,6 +380,7 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
                                                                 subset_names(),
                                                                 threads(parent->threads),
                                                                 root_role(parent->root_role),
+                                                                parent_n_tiles(parent->parent_n_tiles),
                                                                 memory_budget(parent->memory_budget),
                                                                 subset_key(),
                                                                 fwd_map(),

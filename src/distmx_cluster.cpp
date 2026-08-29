@@ -55,6 +55,8 @@ Rcpp::RObject distmx_cluster_single(
     RcppParallel::parallelFor(0, threads, *worker, 1, threads);
   }
   worker->finalize();
+  algo->finalize();
+  algo->prepare_output();
   if (verbose) OPTIMOTU_CERR << "done\ncreating output..." << std::flush;
   Rcpp::RObject output = R_NilValue;
   if (output_type == "matrix") {
