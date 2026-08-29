@@ -4,31 +4,47 @@
 #ifdef OPTIMOTU_R
 
 #include <Rcpp.h>
+#include <cstring>
 #include <map>
 #include <set>
+#include <unordered_map>
 #include <vector>
 #include <cstdint>
 
-// a single identification of a sequence as a taxon
-struct TaxonID {
-  std::string seq_id;
-  std::string taxon;
-  TaxonID(std::string seq_id, std::string taxon) : seq_id(seq_id), taxon(taxon) {}
+// R CHARSXPs are typically interned; identical strings share a pointer, so
+// we can store IDs without copying bytes into std::string. Map keys still
+// compare by character content so output row order matches the historical
+// std::map<std::string, ...> behaviour.
+
+struct CharsexpLess
+{
+  bool operator()(SEXP a, SEXP b) const
+  {
+    return std::strcmp(CHAR(a), CHAR(b)) < 0;
+  }
 };
 
-// a list of sequence IDs and their taxonomic identification
+// a single identification of a sequence as a taxon
+struct TaxonID {
+  SEXP seq_id;
+  SEXP taxon;
+  int seq_index; // 1-based row in input data
+  TaxonID(SEXP seq_id, SEXP taxon, int seq_index)
+      : seq_id(seq_id), taxon(taxon), seq_index(seq_index) {}
+};
+
 typedef std::vector<TaxonID> TaxonIDVec;
 
-// a list of unique taxa (presumed to be subtaxa of a given supertaxon) and
-// sequence IDs which map to them
-struct Subtaxa {
-  std::set<std::string> taxa;
+struct Subtaxa
+{
+  // Unique taxa; true_partition IDs follow lexicographic order (historical
+  // std::set<std::string> behaviour).
+  std::set<SEXP, CharsexpLess> taxa;
   TaxonIDVec seq_map;
   Subtaxa() : taxa(), seq_map() {}
 };
 
-// a map linking the superordinate taxon to the subtaxa
-typedef std::map<std::string, Subtaxa> SupertaxonMap;
+typedef std::map<SEXP, Subtaxa, CharsexpLess> SupertaxonMap;
 
 //' Summarize taxonomic ranks by superordinate rank
 //' @param data ('data.frame') the taxonomy to summarize; should contain a
@@ -45,6 +61,8 @@ typedef std::map<std::string, Subtaxa> SupertaxonMap;
 //'  - `n_taxa` (`integer`) the number of unique taxa at the rank
 //'  - `n_seq` (`integer`) the number of sequences
 //'  - `seq_id` (`list` of `character`) a list of sequence IDs
+//'  - `seq_index` (`list` of `integer`) 1-based row indices in `data` for
+//'     each element in `seq_id`
 //'  - `true_partition` (`list` of `integer`) integer mapping to taxa for each
 //'     element in `seq_id`
 //' @keywords internal
@@ -53,23 +71,25 @@ typedef std::map<std::string, Subtaxa> SupertaxonMap;
 Rcpp::RObject summarize_by_rank(
     Rcpp::DataFrame data,
     Rcpp::CharacterVector ranks,
-    std::string id_col = "seq_id"
-) {
+    std::string id_col = "seq_id")
+{
 
   auto id_col_cstr = id_col.c_str();
-  // access the columns by name
-  if (!data.containsElementNamed(id_col_cstr)) {
+  if (!data.containsElementNamed(id_col_cstr))
+  {
     Rcpp::stop("data must contain a column named '%s'", id_col_cstr);
   }
   Rcpp::CharacterVector seq_id = data[id_col];
-  if (Rcpp::any(Rcpp::is_na(seq_id))) {
+  if (Rcpp::any(Rcpp::is_na(seq_id)))
+  {
     Rcpp::stop("data$%s cannot contain NA values", id_col_cstr);
   }
-  std::vector<std::string> seq_id_str = Rcpp::as<std::vector<std::string>>(seq_id);
 
   std::vector<Rcpp::CharacterVector> taxonomy(ranks.size());
-  for (int i = 0; i < ranks.size(); i++) {
-    if (!data.containsElementNamed(ranks[i])) {
+  for (int i = 0; i < ranks.size(); i++)
+  {
+    if (!data.containsElementNamed(ranks[i]))
+    {
       Rcpp::String rank_i = ranks[i];
       Rcpp::stop("data must contain a column named '%s'", rank_i.get_cstring());
     }
@@ -79,92 +99,94 @@ Rcpp::RObject summarize_by_rank(
 
   // First vector index is the superordinate rank,
   // second vector index is the subordinate rank,
-  // third map index is the superordinate taxon
-  // fourth pair contains:
-  //    set of unique taxa at subordinate rank,
-  //    vector of pairs of sequence ID and taxon (at subordinate rank)
+  // third map index is the superordinate taxon.
   std::vector<std::vector<SupertaxonMap>> taxon_map;
 
-  // fill the taxonomy map
-  for (int super_r = 0; super_r < ranks.size() - 1; super_r++) {
+  for (int super_r = 0; super_r < ranks.size() - 1; super_r++)
+  {
     taxon_map.emplace_back();
-    for (int sub_r = super_r + 1; sub_r < ranks.size(); sub_r++) {
+    for (int sub_r = super_r + 1; sub_r < ranks.size(); sub_r++)
+    {
       taxon_map[super_r].emplace_back();
+      auto &sub_map = taxon_map[super_r][sub_r - super_r - 1];
       for (int i = 0; i < data.nrow(); i++) {
-        Rcpp::String super_taxon = taxonomy[super_r][i];
-        Rcpp::String sub_taxon = taxonomy[sub_r][i];
+        SEXP super_taxon = taxonomy[super_r][i];
+        SEXP sub_taxon = taxonomy[sub_r][i];
         if (super_taxon == NA_STRING) continue;
         if (sub_taxon == NA_STRING) continue;
 
-        std::string super_taxon_str(super_taxon.get_cstring());
-        std::string sub_taxon_str(sub_taxon.get_cstring());
-
-        auto map_entry = taxon_map[super_r][sub_r - super_r - 1].try_emplace(super_taxon_str);
-        map_entry.first->second.taxa.insert(sub_taxon_str);
-        map_entry.first->second.seq_map.emplace_back(seq_id_str[i], sub_taxon_str);
+        auto map_entry = sub_map.try_emplace(super_taxon);
+        Subtaxa &st = map_entry.first->second;
+        st.taxa.insert(sub_taxon);
+        st.seq_map.emplace_back(seq_id[i], sub_taxon, i + 1);
       }
     }
   }
 
-  // count the size of the output data frame
   int n_out = 0;
   for (const auto & super_map : taxon_map) {
     for (const auto & sub_map : super_map) {
-      n_out += sub_map.size();
+      n_out += static_cast<int>(sub_map.size());
     }
   }
 
-  // allocate the output data frame
-  Rcpp::CharacterVector supertaxon(n_out);
-  Rcpp::CharacterVector superrank(n_out);
-  Rcpp::CharacterVector rank(n_out);
+  Rcpp::CharacterVector out_supertaxon(n_out);
+  Rcpp::CharacterVector out_superrank(n_out);
+  Rcpp::CharacterVector out_rank(n_out);
   Rcpp::IntegerVector n_taxa(n_out);
   Rcpp::IntegerVector n_seq(n_out);
   Rcpp::List seq_ids(n_out);
+  Rcpp::List seq_indices(n_out);
   Rcpp::List true_taxa(n_out);
 
-  // Fill the output
   int i = 0;
   for (int super_r = 0; super_r < ranks.size() - 1; super_r++) {
     for (int sub_r = super_r + 1; sub_r < ranks.size(); sub_r++) {
       const auto & sub_map = taxon_map[super_r][sub_r - super_r - 1];
-      for (const auto & [super_taxon, seq_taxa] : sub_map) {
-        supertaxon[i] = super_taxon;
-        superrank[i] = ranks[super_r];
-        rank[i] = ranks[sub_r];
-        n_taxa[i] = seq_taxa.taxa.size();
-        n_seq[i] = seq_taxa.seq_map.size();
+      for (const auto &entry : sub_map)
+      {
+        SEXP super_taxon = entry.first;
+        const Subtaxa &seq_taxa = entry.second;
+        // Assign CHARSXP without allocating a new string.
+        SET_STRING_ELT(out_supertaxon, i, super_taxon);
+        SET_STRING_ELT(out_superrank, i, ranks[super_r]);
+        SET_STRING_ELT(out_rank, i, ranks[sub_r]);
+        n_taxa[i] = static_cast<int>(seq_taxa.taxa.size());
+        n_seq[i] = static_cast<int>(seq_taxa.seq_map.size());
         Rcpp::CharacterVector seq_id_vec(seq_taxa.seq_map.size());
+        Rcpp::IntegerVector seq_index_vec(seq_taxa.seq_map.size());
         Rcpp::IntegerVector true_taxa_vec(seq_taxa.seq_map.size());
-        std::map<std::string, int> taxon_id_map;
-        int j = 0;
-        for (const auto & taxon : seq_taxa.taxa) {
-          taxon_id_map[taxon] = j;
-          j++;
+        std::unordered_map<SEXP, int> taxon_id_map;
+        taxon_id_map.reserve(seq_taxa.taxa.size());
+        int tax_j = 0;
+        for (SEXP taxon : seq_taxa.taxa)
+        {
+          taxon_id_map.emplace(taxon, tax_j);
+          tax_j++;
         }
         for (std::size_t j = 0; j < seq_taxa.seq_map.size(); j++) {
-          seq_id_vec[j] = seq_taxa.seq_map[j].seq_id;
-          true_taxa_vec[j] = taxon_id_map[seq_taxa.seq_map[j].taxon];
+          SET_STRING_ELT(seq_id_vec, j, seq_taxa.seq_map[j].seq_id);
+          seq_index_vec[j] = seq_taxa.seq_map[j].seq_index;
+          true_taxa_vec[j] = taxon_id_map.at(seq_taxa.seq_map[j].taxon);
         }
         seq_ids[i] = seq_id_vec;
+        seq_indices[i] = seq_index_vec;
         true_taxa[i] = true_taxa_vec;
         i++;
       }
     }
   }
 
-  // generate a List, because Rcpp::DataFrame does not supposrt list columns
   Rcpp::List output = Rcpp::List::create(
-    Rcpp::Named("supertaxon") = supertaxon,
-    Rcpp::Named("superrank") = superrank,
-    Rcpp::Named("rank") = rank,
-    Rcpp::Named("n_taxa") = n_taxa,
-    Rcpp::Named("n_seq") = n_seq,
-    Rcpp::Named("seq_id") = seq_ids,
-    Rcpp::Named("true_partition") = true_taxa
-  );
+      Rcpp::Named("supertaxon") = out_supertaxon,
+      Rcpp::Named("superrank") = out_superrank,
+      Rcpp::Named("rank") = out_rank,
+      Rcpp::Named("n_taxa") = n_taxa,
+      Rcpp::Named("n_seq") = n_seq,
+      Rcpp::Named("seq_id") = seq_ids,
+      Rcpp::Named("seq_index") = seq_indices,
+      Rcpp::Named("true_partition") = true_taxa);
 
-  // make it a valid tibble
   output.attr("class") = Rcpp::CharacterVector::create("tbl_df", "tbl", "data.frame");
   output.attr("row.names") = Rcpp::seq_len(n_out);
 

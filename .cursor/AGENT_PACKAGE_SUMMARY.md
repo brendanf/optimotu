@@ -129,8 +129,14 @@ explicitly requests API changes.
   SLINK. `include_result = TRUE` adds `4nm` for tree/SLINK only;
   `optimize_thresholds()` does not need this for tree/SLINK because it scores
   via `write_threshold_row()` instead of materializing the result matrix.
-  Batch planning also adds Hamming packed-sequence bytes for the batch
-  sequence union (not the sum of subset sizes) when `dist_hamming()` is used.
+  Batch planning keeps a running integer sequence union (`seq_index` from
+  `summarize_by_rank()`) and adds Hamming packed-sequence bytes for that
+  union (not the sum of subset sizes) when `dist_hamming()` is used; it does
+  not call `unique(unlist(seq_id))` per candidate step.
+- `summarize_by_rank()` reuses interned CHARSXPs (no `std::string` ID copies)
+  and returns `seq_index` (1-based row indices in the taxonomy) alongside
+  `seq_id`. `optimize_thresholds()` passes those indices into clustering
+  batches so remapping avoids `match()` on sequence names.
 - `test-optimize_thresholds_stream.R` checks that row-wise cluster IDs match
   `write_to_matrix()`, and that streaming optima match
   `seq_cluster()` + `find_best_threshold()`, including duplicate thresholds

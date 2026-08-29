@@ -1,5 +1,10 @@
 # optimotu (development version)
 
+* Speed up `optimize_thresholds()` prework at large scale: batch memory
+planning keeps a running integer sequence union (O(subset size) per add)
+instead of repeated `unique(unlist(seq_id))`, `summarize_by_rank()` reuses
+interned CHARSXPs and returns a `seq_index` column, and each clustering
+batch remaps subsets via integer indices rather than `match()` on names.
 * Reduce R-to-C++ sequence copies on the clustering path: sequences are viewed
 as non-owning `SequenceView`s (no `std::string` byte copy),
 `optimize_thresholds()` materializes `refseq` once and each batch / multi-subset

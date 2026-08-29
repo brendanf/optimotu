@@ -25,6 +25,8 @@ a data frame with columns:
 \item \code{n_taxa} (\code{integer}) the number of unique taxa at the rank
 \item \code{n_seq} (\code{integer}) the number of sequences
 \item \code{seq_id} (\code{list} of \code{character}) a list of sequence IDs
+\item \code{seq_index} (\code{list} of \code{integer}) 1-based row indices in \code{data} for
+each element in \code{seq_id}
 \item \code{true_partition} (\code{list} of \code{integer}) integer mapping to taxa for each
 element in \code{seq_id}
 }
