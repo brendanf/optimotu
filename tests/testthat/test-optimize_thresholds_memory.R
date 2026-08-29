@@ -14,8 +14,16 @@ slink_leaf_bytes <- function(n_seq) {
   n_seq * 8 * 4
 }
 
-slink_parent_bytes <- function(n_seq) {
-  n_seq * 8 * 32
+slink_parent_bytes <- function(n_seq, parallel_method = "merge", threads = 2L) {
+  leaf <- slink_leaf_bytes(n_seq)
+  if (parallel_method == "merge" && threads > 1) {
+    n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
+    return(leaf + n_seq * n_tiles * 16)
+  }
+  if (parallel_method == "hierarchical") {
+    return(leaf + n_seq * threads * 16)
+  }
+  leaf + n_seq * max(threads, 1L) * 16
 }
 
 estimate_subset_bytes <- function(
@@ -33,7 +41,7 @@ estimate_subset_bytes <- function(
     ) {
       slink_leaf_bytes(n_seq)
     } else {
-      slink_parent_bytes(n_seq)
+      slink_parent_bytes(n_seq, parallel_method, threads)
     }
     child <- slink_leaf_bytes(n_seq)
     scale <- switch(
@@ -266,7 +274,8 @@ testthat::test_that("merge slink uses parent root and leaf tile shards", {
       "slink",
       "merge",
       threads
-    ) / (1024 * 1024)
+    ) /
+      (1024 * 1024)
   )
   got <- optimotu:::estimate_subset_memory_mb(
     n_seq = n_seq,
@@ -284,6 +293,42 @@ testthat::test_that("merge slink uses parent root and leaf tile shards", {
     threads
   )
   testthat::expect_lt(got, tree_merge)
+  # Parent cache peak at T=2 is 64n, below tree 256n.
+  testthat::expect_equal(
+    slink_parent_bytes(n_seq, "merge", threads),
+    slink_leaf_bytes(n_seq) + n_seq * 2 * 16
+  )
+})
+
+testthat::test_that("merge slink parent uses uncapped cache formula", {
+  n_seq <- 10000L
+  n_thresholds <- 40L
+  # T=8 at 32 threads: cache peak 160n < 256n tree.
+  slink_32 <- optimotu:::estimate_subset_memory_mb(
+    n_seq,
+    n_thresholds,
+    "slink",
+    "merge",
+    32L
+  )
+  tree_32 <- optimotu:::estimate_subset_memory_mb(
+    n_seq,
+    n_thresholds,
+    "tree",
+    "merge",
+    32L
+  )
+  testthat::expect_lt(slink_32, tree_32)
+  # Above former tree-sized crossover (T > 14), estimate keeps growing.
+  n_tiles_120 <- ceiling(0.5 * (sqrt(1 + 8 * 120) - 1))
+  testthat::expect_equal(
+    slink_parent_bytes(n_seq, "merge", 120L),
+    slink_leaf_bytes(n_seq) + n_seq * n_tiles_120 * 16
+  )
+  testthat::expect_gt(
+    slink_parent_bytes(n_seq, "merge", 120L),
+    n_seq * 8 * 32
+  )
 })
 
 testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", {

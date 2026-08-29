@@ -12,7 +12,7 @@ using CAF = ClusterAlgorithmFactory;
 CAF::ClusterAlgorithmFactory(const DistanceConverter & dconv) :
   dconv{dconv} {}
 
-std::size_t CAF::estimate_bytes(j_t n, ClusterInstanceRole) const
+std::size_t CAF::estimate_bytes(j_t n, ClusterInstanceRole, std::size_t) const
 {
   const std::size_t ns = static_cast<std::size_t>(n);
   const std::size_t ms = static_cast<std::size_t>(dconv.m);
@@ -38,7 +38,7 @@ std::unique_ptr<SingleClusterAlgorithm> CMF::create(init_matrix_t & im, int) con
   return create_cluster_matrix(this->dconv, im, this->binary_search, this->fill_type);
 }
 
-std::size_t CMF::estimate_bytes(j_t n, ClusterInstanceRole) const
+std::size_t CMF::estimate_bytes(j_t n, ClusterInstanceRole, std::size_t) const
 {
   const std::size_t ns = static_cast<std::size_t>(n);
   const std::size_t ms = static_cast<std::size_t>(dconv.m);
@@ -58,7 +58,7 @@ std::unique_ptr<SingleClusterAlgorithm> CIMF::create(init_matrix_t & im, int) co
   return create_cluster_indexed_matrix(this->dconv, im);
 }
 
-std::size_t CIMF::estimate_bytes(j_t n, ClusterInstanceRole) const
+std::size_t CIMF::estimate_bytes(j_t n, ClusterInstanceRole, std::size_t) const
 {
   const std::size_t ns = static_cast<std::size_t>(n);
   const std::size_t ms = static_cast<std::size_t>(dconv.m);
@@ -79,7 +79,7 @@ std::unique_ptr<SingleClusterAlgorithm> CTF::create(init_matrix_t & im, int verb
   return create_cluster_tree(this->dconv, im, verbose, test);
 }
 
-std::size_t CTF::estimate_bytes(j_t n, ClusterInstanceRole) const
+std::size_t CTF::estimate_bytes(j_t n, ClusterInstanceRole, std::size_t) const
 {
   const std::size_t ns = static_cast<std::size_t>(n);
   // ClusterTree uses roughly 2*n nodes and free-list structures.
@@ -98,7 +98,10 @@ std::unique_ptr<SingleClusterAlgorithm> CSF::create(init_matrix_t & im, int verb
   return create_cluster_slink(this->dconv, im, verbose);
 }
 
-std::size_t CSF::estimate_bytes(j_t n, ClusterInstanceRole role) const
+std::size_t CSF::estimate_bytes(
+    j_t n,
+    ClusterInstanceRole role,
+    std::size_t n_tiles) const
 {
   const std::size_t ns = static_cast<std::size_t>(n);
   if (role == ClusterInstanceRole::Leaf)
@@ -106,6 +109,9 @@ std::size_t CSF::estimate_bytes(j_t n, ClusterInstanceRole role) const
     // Pi, Lambda, M vectors plus allocator overhead.
     return ns * sizeof(std::uint64_t) * 4;
   }
-  // Delegate tree storage for parent instances.
-  return ns * sizeof(std::uint64_t) * 32;
+  // Parent peak: SLINK state plus merge-cache edges (~16 bytes each, ~n*T
+  // edges for tiled merge). n_tiles == 0 means unknown; assume T = 1.
+  const std::size_t t = n_tiles == 0 ? 1 : n_tiles;
+  const std::size_t slink_bytes = ns * sizeof(std::uint64_t) * 4;
+  return slink_bytes + ns * t * 16;
 }

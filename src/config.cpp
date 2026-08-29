@@ -16,6 +16,9 @@
 
 #include "AllPairGenerator.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace
 {
 
@@ -24,12 +27,30 @@ namespace
       int threads)
   {
     // One thread never creates children, so the root stays a leaf (SLINK
-    // vectors, not the delegate tree). Merge with threads > 1 is a parent.
+    // vectors only). Merge with threads > 1 is a parent.
     if (method == "concurrent" || (method == "merge" && threads <= 1))
     {
       return ClusterInstanceRole::Leaf;
     }
     return ClusterInstanceRole::Parent;
+  }
+
+  // Tile/edge multiplicity for SLINK parent merge-cache estimates.
+  // Tiled merge: T ~ sqrt(threads). Full-copy hierarchical: T = threads.
+  std::size_t parent_n_tiles_from_parallel_method(
+      const std::string &method,
+      int threads)
+  {
+    if (method == "concurrent" || (method == "merge" && threads <= 1))
+    {
+      return 0;
+    }
+    if (method == "merge")
+    {
+      return static_cast<std::size_t>(
+          std::ceil(0.5 * (std::sqrt(1.0 + 8.0 * threads) - 1.0)));
+    }
+    return static_cast<std::size_t>(std::max(threads, 1));
   }
 
 } // namespace
@@ -89,26 +110,33 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     : nullptr;
   const ClusterInstanceRole root_role =
       root_role_from_parallel_method(parallel_method, threads);
+  const std::size_t parent_n_tiles =
+      parent_n_tiles_from_parallel_method(parallel_method, threads);
   if (verbose == 0)
   {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
-        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
   }
   if (verbose == 1) {
     return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
-        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
   }
   if (verbose == 2)
   {
     return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
-        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
   }
   if (verbose == 3) {
     return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
-        factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
+        factory, seqnames, subset_names, threads, 0, memory_budget, root_role,
+        parent_n_tiles);
   }
   return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
-      factory, seqnames, subset_names, threads, 0, memory_budget, root_role);
+      factory, seqnames, subset_names, threads, 0, memory_budget, root_role,
+      parent_n_tiles);
 }
 
 template<typename distmx_t>
@@ -398,30 +426,32 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     : nullptr;
   const ClusterInstanceRole root_role =
       root_role_from_parallel_method(parallel_method, threads);
+  const std::size_t parent_n_tiles =
+      parent_n_tiles_from_parallel_method(parallel_method, threads);
   if (v == 0)
   {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
         factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
-        root_role);
+        root_role, parent_n_tiles);
   }
   if (v == 1) {
     return std::make_unique<MultipleClusterAlgorithmImpl<1>>(
         factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
-        root_role);
+        root_role, parent_n_tiles);
   }
   if (v == 2) {
     return std::make_unique<MultipleClusterAlgorithmImpl<2>>(
         factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
-        root_role);
+        root_role, parent_n_tiles);
   }
   if (v == 3) {
     return std::make_unique<MultipleClusterAlgorithmImpl<3>>(
         factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
-        root_role);
+        root_role, parent_n_tiles);
   }
   return std::make_unique<MultipleClusterAlgorithmImpl<4>>(
       factory, seqnames_vec, subset_names_vec, threads, 0, memory_budget,
-      root_role);
+      root_role, parent_n_tiles);
 }
 
 template<typename distmx_t>

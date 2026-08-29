@@ -22,6 +22,10 @@ protected:
   // the number of threads
   const int threads;
   const ClusterInstanceRole root_role;
+  // Edge-tile count for SLINK parent merge-cache estimates (0 = unknown,
+  // treated as T = 1). Tiled merge uses ~sqrt(threads); hierarchical uses
+  // threads.
+  const std::size_t parent_n_tiles;
   std::shared_ptr<MemoryBudgetTracker> memory_budget;
 
   // for each element, which subsets does it belong to? sorted
@@ -77,7 +81,8 @@ protected:
       const std::vector<std::vector<std::string>> &subset_names,
       const int threads,
       std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr,
-      ClusterInstanceRole root_role = ClusterInstanceRole::Parent);
+      ClusterInstanceRole root_role = ClusterInstanceRole::Parent,
+      std::size_t parent_n_tiles = 0);
 
   MultipleClusterAlgorithm(MultipleClusterAlgorithm * parent);
 
@@ -160,7 +165,8 @@ public:
       const int threads,
       int verbose_param,
       std::shared_ptr<MemoryBudgetTracker> memory_budget = nullptr,
-      ClusterInstanceRole root_role = ClusterInstanceRole::Parent);
+      ClusterInstanceRole root_role = ClusterInstanceRole::Parent,
+      std::size_t parent_n_tiles = 0);
 
   MultipleClusterAlgorithm * make_child() override;
   MultipleClusterAlgorithm * make_child(PairGenerator * pg) override;

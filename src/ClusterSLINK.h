@@ -7,8 +7,8 @@
 #include "single_linkage.h"
 #include "ClusterAlgorithm.h"
 #include "MappedClusterAlgorithm.h"
-#include "ClusterTree.h"
 #include <memory>
+#include <vector>
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -27,16 +27,21 @@ protected:
     j_t slink_seq1 = 0;
     j_t slink_seq2 = 0;
   };
+  struct MergeEdge
+  {
+    j_t seq1;
+    j_t seq2;
+    d_t i;
+  };
   std::unique_ptr<SlinkState> slink;
-  std::unique_ptr<ClusterTreeImpl<verbose, 0>> delegate;
-  // Set when any child has been created, and never cleared. Results then live
-  // in `delegate` rather than in this object's own Pi/Lambda. This cannot be
-  // derived from `children`, because children are erased by release_child()
-  // once they have merged.
-  bool uses_delegate = false;
+  // Unordered MST edges from children; sorted and replayed in finalize().
+  // Set when any child has been created. Cannot be derived from `children`
+  // because children are erased by release_child() after they merge.
+  std::vector<MergeEdge> merge_cache;
+  bool uses_cache = false;
 
   void ensure_slink();
-  void ensure_delegate();
+  void apply_ordered(j_t seq1, j_t seq2, d_t i);
   void init_iter();
   void update();
   void finish_iter();
@@ -84,7 +89,7 @@ public:
   virtual double max_relevant(PairGenerator & pg, int thread = 0) const override;
 
   bool accepts_unordered_pairs() const override {
-    return false;
+    return uses_cache;
   }
 };
 

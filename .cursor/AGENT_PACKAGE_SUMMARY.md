@@ -102,18 +102,21 @@ explicitly requests API changes.
 - `MappedClusterAlgorithm` intersection constructors bind `Surrogate` to
   `this->fwd_map` (not the ctor parameter) so merge forwards stable parent
   indices.
-- `ClusterSLINK` defers allocation: each instance holds either the SLINK
-  pointer representation or the delegate `ClusterTree`, not both.
-- `estimate_bytes(n, role)` takes `ClusterInstanceRole::Leaf` or `Parent`.
-  SLINK leaf instances use `n * 8 * 4` bytes; parent (delegate tree) uses
-  `n * 8 * 32`. Tree/matrix/index ignore `role`.
+- `ClusterSLINK` defers allocation: leaf instances hold the SLINK pointer
+  representation; merge parents cache unordered child MST edges and replay
+  them through SLINK in `finalize()` (no `ClusterTree` delegate).
+- `estimate_bytes(n, role, n_tiles)` takes `ClusterInstanceRole::Leaf` or
+  `Parent`. SLINK leaf instances use `n * 8 * 4` bytes; parent peak is
+  `n * 8 * 4 + 16 * n * T` where `T` is the merge tile count (`~sqrt(threads)`)
+  or `threads` for hierarchical full-copy merge (`T = 1` if unknown).
+  Tree/matrix/index ignore `role` / `n_tiles`.
 - `estimate_subset_memory_mb()` mirrors native `estimate_bytes()` (tree/SLINK
   `O(n)`, matrix/index `O(nm)`). Merge with `threads = 1` matches concurrent
   (one leaf instance; SLINK allocates pointer arrays only). With more threads,
-  merge is one parent root plus leaf-sized tile shards for SLINK.
-  `include_result = TRUE` adds `4nm` for tree/SLINK only; `optimize_thresholds()`
-  does not need this for tree/SLINK because it scores via
-  `write_threshold_row()` instead of materializing the result matrix.
+  merge is one parent root (merge-cache sized) plus leaf-sized tile shards for
+  SLINK. `include_result = TRUE` adds `4nm` for tree/SLINK only;
+  `optimize_thresholds()` does not need this for tree/SLINK because it scores
+  via `write_threshold_row()` instead of materializing the result matrix.
 - `test-optimize_thresholds_stream.R` checks that row-wise cluster IDs match
   `write_to_matrix()`, and that streaming optima match
   `seq_cluster()` + `find_best_threshold()`, including duplicate thresholds

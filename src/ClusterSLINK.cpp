@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "ClusterSLINK.h"
+#include <algorithm>
 #include <cstdint>
 
 template <int verbose>
@@ -26,18 +27,8 @@ void ClusterSLINK<verbose>::ensure_slink()
 }
 
 template <int verbose>
-void ClusterSLINK<verbose>::ensure_delegate()
+void ClusterSLINK<verbose>::init_iter()
 {
-  if (!delegate)
-  {
-    delegate = std::make_unique<ClusterTreeImpl<verbose, 0>>(dconv, n);
-  }
-}
-
-template<int verbose>
-void ClusterSLINK<verbose>::init_iter() {
-  // OPTIMOTU_CERR << "### Initializing SLINK iteration " << slink->slink_seq1
-  //               << std::endl;
   for (j_t k = 0; k < slink->slink_seq1; k++)
   {
     slink->M[k] = m;
@@ -63,10 +54,9 @@ void ClusterSLINK<verbose>::update() {
   }
 }
 
-template<int verbose>
-void ClusterSLINK<verbose>::finish_iter() {
-  // OPTIMOTU_CERR << "### Finishing SLINK iteration " << slink->slink_seq1
-  //               << std::endl;
+template <int verbose>
+void ClusterSLINK<verbose>::finish_iter()
+{
   while (slink->slink_seq2 < slink->slink_seq1)
   {
     update();
@@ -81,106 +71,30 @@ void ClusterSLINK<verbose>::finish_iter() {
   }
 }
 
-template<int verbose>
-void ClusterSLINK<verbose>::finalize() {
-  if (uses_delegate)
-  {
-    delegate->finalize();
-    return;
-  }
-  ensure_slink();
-  finish_iter();
-}
-
-template<int verbose>
-ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
-  // this is not locked, because it is called during the MappedClusterAlgorithm,
-  // constructor, which is called by make_child(), which is already locked.
-  ensure_delegate();
-  auto child_ptr = new ClusterSLINK<verbose>(parent, n);
-  auto child = std::unique_ptr<ClusterAlgorithm>(
-    (ClusterAlgorithm*)child_ptr
-  );
-  this->children.push_back(std::move(child));
-  this->uses_delegate = true;
-  return child_ptr;
-}
-
-template<int verbose>
-ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_child() {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  ensure_delegate();
-  auto child_ptr = new ClusterSLINK<verbose>(delegate.get(), n);
-  auto child = std::unique_ptr<ClusterAlgorithm>(
-    (ClusterAlgorithm*)child_ptr
-  );
-  this->children.push_back(std::move(child));
-  this->uses_delegate = true;
-  return child_ptr;
-}
-
-template<int verbose>
-MappedClusterAlgorithm * ClusterSLINK<verbose>::make_child(PairGenerator * pg) {
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  ensure_delegate();
-  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(
-      this, delegate.get(), pg);
-  auto child = std::unique_ptr<ClusterAlgorithm>(
-      (ClusterAlgorithm *)child_ptr);
-  this->children.push_back(std::move(child));
-  this->uses_delegate = true;
-  return child_ptr;
-}
-
 template <int verbose>
-ClusterAlgorithm *ClusterSLINK<verbose>::make_child(
-    const std::vector<std::size_t> &fwd_map)
+void ClusterSLINK<verbose>::apply_ordered(j_t seq1, j_t seq2, d_t i)
 {
-  if (fwd_map.size() < 2)
+  if (seq2 < 0 || seq2 >= n)
   {
-    return nullptr;
-  }
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  ensure_delegate();
-  auto rev_map = invert_map(fwd_map);
-  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(
-      this, delegate.get(), fwd_map, rev_map);
-  auto child = std::unique_ptr<ClusterAlgorithm>(
-      (ClusterAlgorithm *)child_ptr);
-  this->children.push_back(std::move(child));
-  this->uses_delegate = true;
-  return child_ptr;
-}
-
-template <int verbose>
-void ClusterSLINK<verbose>::operator()(j_t seq1, j_t seq2, d_t i, int thread)
-{
-  if (uses_delegate)
-  {
-    delegate->operator()(seq1, seq2, i, thread);
-    return;
-  }
-  ensure_slink();
-  if (seq2 < 0 || seq2 >= n) {
     OPTIMOTU_CERR << "Sequence index" << seq2 << " out of range." << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
-  if (seq1 < 0 || seq1 >= n) {
+  if (seq1 < 0 || seq1 >= n)
+  {
     OPTIMOTU_CERR << "Sequence index" << seq1 << " out of range." << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
-  if (seq1 <= seq2) {
+  if (seq1 <= seq2)
+  {
     OPTIMOTU_CERR << "ClusterSLINK requires seq2 < seq1.  seq2=" << seq2
-                  << ", seq1=" << seq1
-                  << ", thread " << thread << std::endl;
+                  << ", seq1=" << seq1 << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
   if (seq1 < slink->slink_seq1)
   {
     OPTIMOTU_CERR << "ClusterSLINK requires sequences in order."
                   << " Current seq1=" << seq1
-                  << ", slink_seq1=" << slink->slink_seq1
-                  << ", thread " << thread << std::endl;
+                  << ", slink_seq1=" << slink->slink_seq1 << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
   while (seq1 > slink->slink_seq1)
@@ -194,8 +108,7 @@ void ClusterSLINK<verbose>::operator()(j_t seq1, j_t seq2, d_t i, int thread)
   {
     OPTIMOTU_CERR << "ClusterSLINK requires sequences in order."
                   << " Current seq2=" << seq2
-                  << ", slink_seq2=" << slink->slink_seq2
-                  << ", thread " << thread << std::endl;
+                  << ", slink_seq2=" << slink->slink_seq2 << std::endl;
     OPTIMOTU_STOP("ClusterSLINK input error.");
   }
   while (slink->slink_seq2 <= seq2)
@@ -210,17 +123,139 @@ void ClusterSLINK<verbose>::operator()(j_t seq1, j_t seq2, d_t i, int thread)
 }
 
 template<int verbose>
+void ClusterSLINK<verbose>::finalize() {
+  if (uses_cache)
+  {
+    std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+    std::sort(
+        merge_cache.begin(),
+        merge_cache.end(),
+        [](const MergeEdge &a, const MergeEdge &b)
+        {
+          if (a.seq1 != b.seq1)
+          {
+            return a.seq1 < b.seq1;
+          }
+          return a.seq2 < b.seq2;
+        });
+    // Tile MST pointer representations can emit the same parent pair more
+    // than once; keep the lightest edge so replay stays in order.
+    if (!merge_cache.empty())
+    {
+      std::size_t w = 0;
+      for (std::size_t r = 1; r < merge_cache.size(); ++r)
+      {
+        if (merge_cache[r].seq1 == merge_cache[w].seq1 &&
+            merge_cache[r].seq2 == merge_cache[w].seq2)
+        {
+          merge_cache[w].i = std::min(merge_cache[w].i, merge_cache[r].i);
+        }
+        else
+        {
+          merge_cache[++w] = merge_cache[r];
+        }
+      }
+      merge_cache.resize(w + 1);
+    }
+    ensure_slink();
+    for (const MergeEdge &e : merge_cache)
+    {
+      apply_ordered(e.seq1, e.seq2, e.i);
+    }
+    merge_cache.clear();
+    merge_cache.shrink_to_fit();
+    uses_cache = false;
+    finish_iter();
+    return;
+  }
+  ensure_slink();
+  finish_iter();
+}
+
+template<int verbose>
+ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_inner_child(ClusterAlgorithm * parent, const j_t n) {
+  // this is not locked, because it is called during the MappedClusterAlgorithm,
+  // constructor, which is called by make_child(), which is already locked.
+  this->uses_cache = true;
+  auto child_ptr = new ClusterSLINK<verbose>(parent, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template<int verbose>
+ClusterSLINK<verbose> * ClusterSLINK<verbose>::make_child() {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  this->uses_cache = true;
+  auto child_ptr = new ClusterSLINK<verbose>(this, n);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+    (ClusterAlgorithm*)child_ptr
+  );
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template<int verbose>
+MappedClusterAlgorithm * ClusterSLINK<verbose>::make_child(PairGenerator * pg) {
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  this->uses_cache = true;
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(this, pg);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <int verbose>
+ClusterAlgorithm *ClusterSLINK<verbose>::make_child(
+    const std::vector<std::size_t> &fwd_map)
+{
+  if (fwd_map.size() < 2)
+  {
+    return nullptr;
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+  this->uses_cache = true;
+  auto rev_map = invert_map(fwd_map);
+  auto child_ptr = new MappedClusterAlgorithmImpl<verbose>(
+      this, fwd_map, rev_map);
+  auto child = std::unique_ptr<ClusterAlgorithm>(
+      (ClusterAlgorithm *)child_ptr);
+  this->children.push_back(std::move(child));
+  return child_ptr;
+}
+
+template <int verbose>
+void ClusterSLINK<verbose>::operator()(j_t seq1, j_t seq2, d_t i, int thread)
+{
+  if (uses_cache)
+  {
+    if (seq1 == seq2)
+    {
+      return;
+    }
+    if (seq1 < seq2)
+    {
+      std::swap(seq1, seq2);
+    }
+    std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
+    merge_cache.push_back({seq1, seq2, i});
+    return;
+  }
+  ensure_slink();
+  apply_ordered(seq1, seq2, i);
+}
+
+template<int verbose>
 void ClusterSLINK<verbose>::operator()(PairGenerator & pg, d_t i, int thread) {
   if (pg) this->operator()(pg.i0(), pg.j0(), i, thread);
 }
 
-template<int verbose>
-void ClusterSLINK<verbose>::write_to_matrix(internal_matrix_t &out) {
-  if (uses_delegate)
-  {
-    delegate->write_to_matrix(out);
-    return;
-  }
+template <int verbose>
+void ClusterSLINK<verbose>::write_to_matrix(internal_matrix_t &out)
+{
   ensure_slink();
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   j_t j;
@@ -245,20 +280,11 @@ void ClusterSLINK<verbose>::write_to_matrix(internal_matrix_t &out) {
 template <int verbose>
 void ClusterSLINK<verbose>::prepare_output()
 {
-  if (uses_delegate)
-  {
-    delegate->prepare_output();
-  }
 }
 
 template <int verbose>
 void ClusterSLINK<verbose>::write_threshold_row(d_t t, int *dest) const
 {
-  if (uses_delegate)
-  {
-    delegate->write_threshold_row(t, dest);
-    return;
-  }
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t i = 0; i < this->n; ++i)
   {
@@ -280,11 +306,9 @@ struct RevOrderElement {
   int i;
 };
 
-template<int verbose>
-Rcpp::List ClusterSLINK<verbose>::as_hclust(const Rcpp::CharacterVector &seqnames) const {
-  if (uses_delegate)
-    return delegate->as_hclust(seqnames);
-
+template <int verbose>
+Rcpp::List ClusterSLINK<verbose>::as_hclust(const Rcpp::CharacterVector &seqnames) const
+{
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   Rcpp::IntegerMatrix merge(this->n - 1, 2);
   Rcpp::NumericVector height(this->n-1);
@@ -304,7 +328,6 @@ Rcpp::List ClusterSLINK<verbose>::as_hclust(const Rcpp::CharacterVector &seqname
   slink_merge.reserve(this->n);
   int last_clust = 0;
   {
-    std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
     for (int i = 0; i < (int)n;) {
       slink_merge.emplace_back(slink->Lambda[i], -i, -slink->Pi[i]);
       ++i;
@@ -355,13 +378,9 @@ Rcpp::List ClusterSLINK<verbose>::as_hclust(const Rcpp::CharacterVector &seqname
 }
 #endif // OPTIMOTU_R
 
-template<int verbose>
-void ClusterSLINK<verbose>::merge_into(DistanceConsumer &consumer) {
-  if (uses_delegate)
-  {
-    delegate->merge_into(consumer);
-    return;
-  }
+template <int verbose>
+void ClusterSLINK<verbose>::merge_into(DistanceConsumer &consumer)
+{
   ensure_slink();
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 0; j < this->n; j++) {
@@ -379,11 +398,6 @@ void ClusterSLINK<verbose>::merge_into(ClusterAlgorithm &consumer) {
       "ClusterSLINK::merge_into requires a consumer that accepts unordered pairs"
     );
   }
-  if (uses_delegate)
-  {
-    delegate->merge_into(consumer);
-    return;
-  }
   ensure_slink();
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   for (j_t j = 0; j < this->n; j++) {
@@ -394,19 +408,16 @@ void ClusterSLINK<verbose>::merge_into(ClusterAlgorithm &consumer) {
 
 template<int verbose>
 void ClusterSLINK<verbose>::merge_into_parent() {
-  if (!parent) return;
-  if (uses_delegate) {
-    delegate->merge_into(*parent);
-  } else {
-    this->merge_into(*parent);
-  }
+  if (!parent)
+    return;
+  this->merge_into(*parent);
 }
 
 template<int verbose>
 double ClusterSLINK<verbose>::max_relevant(j_t seq1, j_t seq2, int thread) const {
-  if (uses_delegate)
+  if (uses_cache && !slink)
   {
-    return delegate->max_relevant(seq1, seq2, thread);
+    return dconv.inverse(this->m - 1);
   }
   if (seq1 <= seq2) {
     OPTIMOTU_CERR << "ClusterSLINK requires seq2 < seq1.  seq2=" << seq2
