@@ -226,6 +226,35 @@ void ClusterSLINK<verbose>::write_to_matrix(internal_matrix_t &out) {
   }
 }
 
+template <int verbose>
+void ClusterSLINK<verbose>::prepare_output()
+{
+  if (uses_delegate)
+    delegate.prepare_output();
+}
+
+template <int verbose>
+void ClusterSLINK<verbose>::write_threshold_row(d_t t, int *dest) const
+{
+  if (uses_delegate)
+  {
+    delegate.write_threshold_row(t, dest);
+    return;
+  }
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
+  for (j_t i = 0; i < this->n; ++i)
+  {
+    j_t j = i;
+    // Lambda is initialized to m, so this stops at the root of the
+    // pointer representation. Same cut as write_to_matrix().
+    while (Lambda[j] <= t)
+    {
+      j = Pi[j];
+    }
+    dest[i] = static_cast<int>(j);
+  }
+}
+
 #ifdef OPTIMOTU_R
 
 struct RevOrderElement {

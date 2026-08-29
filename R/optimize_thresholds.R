@@ -226,6 +226,165 @@ set_parallel_subproblems <- function(parallel_config, subproblems) {
   out
 }
 
+clustering_threshold_map <- function(threshold_config) {
+  if (threshold_config$type == "uniform") {
+    n <- floor(
+      (threshold_config$to - threshold_config$from) / threshold_config$by
+    ) +
+      1L
+    list(
+      thresholds = threshold_config$from +
+        (seq_len(n) - 1L) * threshold_config$by,
+      threshold_order = seq_len(n)
+    )
+  } else {
+    order <- as.integer(threshold_config$threshold_order)
+    expanded <- threshold_config$thresholds[order]
+    if (!is.null(threshold_config$thresh_names)) {
+      named <- suppressWarnings(as.numeric(threshold_config$thresh_names))
+      if (length(named) == length(order) && !anyNA(named)) {
+        expanded <- named
+      }
+    }
+    list(thresholds = expanded, threshold_order = order)
+  }
+}
+
+cluster_find_best_thresholds <- function(
+  seq,
+  dist_config,
+  threshold_config,
+  clust_config,
+  parallel_config,
+  which,
+  true_partitions,
+  measures,
+  verbose,
+  seq_idx,
+  seq_file,
+  clustering_memory_budget_mb
+) {
+  map <- clustering_threshold_map(threshold_config)
+  if (is.list(which) && length(which) > 0L && !is.character(which[[1]])) {
+    seq_ids <- seq_input_seq_ids(seq, seq_idx, seq_file)
+    which <- lapply(which, `[`, x = seq_ids)
+  }
+
+  if (identical(dist_config$method, "file")) {
+    if (!is.null(seq_file)) {
+      stop("`seq_file` is not supported with `dist_file()`.", call. = FALSE)
+    }
+    names_vec <- seq_input_seq_ids(seq, seq_idx, NULL)
+    verify_which(which, names_vec)
+    return(distmx_cluster_multi_best_threshold(
+      file = dist_config$filename,
+      seqnames = names_vec,
+      which = which,
+      threshold_config = threshold_config,
+      method_config = clust_config,
+      parallel_config = parallel_config,
+      true_partitions = true_partitions,
+      measures = measures,
+      thresholds = map$thresholds,
+      threshold_order = map$threshold_order,
+      verbose = isTRUE(verbose) || verbose >= 1L,
+      by_name = isTRUE(dist_config$by_name) || isTRUE(dist_config$by_names)
+    ))
+  }
+
+  if (identical(dist_config$method, "usearch")) {
+    seq_char <- seq_as_char(
+      seq,
+      seq_idx = seq_idx,
+      seq_file = seq_file,
+      as = "character"
+    )
+    verify_which(which, names(seq_char))
+    keep <- sort(unique(unlist(which, use.names = FALSE)))
+    seq_char <- seq_char[keep]
+    tf <- tempfile(pattern = "clust", fileext = ".fasta")
+    on.exit(unlink(tf), add = TRUE)
+    Biostrings::writeXStringSet(
+      Biostrings::BStringSet(`names<-`(seq_char, seq_along(seq_char) - 1L)),
+      tf
+    )
+    usearch_thresh_max <- if (threshold_config$type == "uniform") {
+      threshold_config$to
+    } else {
+      threshold_config$thresholds[length(threshold_config$thresholds)]
+    }
+    fifoname <- tempfile("fifo")
+    stopifnot(system2("mkfifo", fifoname) == 0)
+    on.exit(unlink(fifoname), add = TRUE)
+    usearch <- dist_config$usearch
+    if (is.null(usearch) || !nzchar(usearch)) {
+      usearch <- Sys.which("usearch")
+    }
+    args <- c(
+      "-calc_distmx",
+      tf,
+      "-tabbedout",
+      fifoname,
+      "-maxdist",
+      usearch_thresh_max,
+      "-termdist",
+      min(1, 2 * usearch_thresh_max),
+      "-lopen",
+      "0",
+      "-lext",
+      "1"
+    )
+    usearch_ncpu <- dist_config$usearch_ncpu
+    if (!is.null(usearch_ncpu)) {
+      args <- c(args, "-threads", usearch_ncpu)
+    }
+    if (system2(usearch, "-version", stdout = NULL, stderr = NULL) != 0) {
+      stop("usearch could not be found at path: ", usearch)
+    }
+    system2(usearch, args, wait = FALSE)
+    return(distmx_cluster_multi_best_threshold(
+      file = fifoname,
+      seqnames = names(seq_char),
+      which = which,
+      threshold_config = threshold_config,
+      method_config = clust_config,
+      parallel_config = parallel_config,
+      true_partitions = true_partitions,
+      measures = measures,
+      thresholds = map$thresholds,
+      threshold_order = map$threshold_order,
+      verbose = isTRUE(verbose) || verbose >= 1L,
+      by_name = FALSE
+    ))
+  }
+
+  seq_char <- seq_as_char(
+    seq,
+    seq_idx = seq_idx,
+    seq_file = seq_file,
+    as = "character"
+  )
+  verify_which(which, names(seq_char))
+  seq_cluster_multi_best_threshold(
+    seq = seq_char,
+    which = which,
+    dist_config = dist_config,
+    threshold_config = threshold_config,
+    clust_config = clust_config,
+    parallel_config = parallel_config,
+    true_partitions = true_partitions,
+    measures = measures,
+    thresholds = map$thresholds,
+    threshold_order = map$threshold_order,
+    verbose = as.integer(verbose),
+    clustering_memory_budget_mb = if (is.null(clustering_memory_budget_mb)) {
+      -1
+    } else {
+      clustering_memory_budget_mb
+    }
+  )
+}
+
 #' Calculate clustering quality measures
 #'
 #' This function is primarily intended for use in plotting the clustering
@@ -657,33 +816,21 @@ optimize_thresholds <- function(
     }
     result <- tryCatch(
       {
-        clust_args <- list(
+        best <- cluster_find_best_thresholds(
           seq = refseq,
           dist_config = dist_config,
           threshold_config = threshold_config,
           clust_config = clust_config,
           parallel_config = local_parallel_config,
-          output_type = "matrix",
           which = testset_select$seq_id[batch_idx],
+          true_partitions = testset_select$true_partition[batch_idx],
+          measures = measures,
           verbose = verbose,
           seq_idx = seq_idx,
-          seq_file = seq_file
+          seq_file = seq_file,
+          clustering_memory_budget_mb = clustering_memory_budget_mb
         )
-        if (!is.null(clustering_memory_budget_mb)) {
-          clust_args$clustering_memory_budget_mb <- clustering_memory_budget_mb
-        }
-        clust <- do.call(seq_cluster, clust_args)
-        out <- mapply(
-          find_best_threshold,
-          c = testset_select$true_partition[batch_idx],
-          k = clust,
-          MoreArgs = list(
-            threads = local_parallel_config$threads,
-            measures = measures
-          ),
-          SIMPLIFY = FALSE
-        )
-        out <- do.call(rbind, out)
+        out <- do.call(rbind, best)
         cbind(
           row_index = rep(batch_idx, each = length(measures)),
           rank = rep(testset_select$rank[batch_idx], each = length(measures)),

@@ -362,6 +362,17 @@ void ClusterMatrix<BM, F, A, V>::write_to_matrix(internal_matrix_t &out) {
   std::copy(clust_array.begin(), clust_array.end(), out.begin());
 }
 
+template <bool BM, int F, typename A, int V>
+void ClusterMatrix<BM, F, A, V>::write_threshold_row(d_t t, int *dest) const
+{
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
+  const std::size_t mm = static_cast<std::size_t>(this->m);
+  for (j_t j = 0; j < this->n; ++j)
+  {
+    dest[j] = clust_array[static_cast<std::size_t>(j) * mm + t];
+  }
+}
+
 #ifdef OPTIMOTU_R
 
 struct FwdOrderElement {

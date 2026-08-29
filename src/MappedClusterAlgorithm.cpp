@@ -105,6 +105,16 @@ void MCA::write_to_matrix(internal_matrix_t &out)
   get_inner().write_to_matrix(out);
 }
 
+void MCA::prepare_output()
+{
+  get_inner().prepare_output();
+}
+
+void MCA::write_threshold_row(d_t t, int *dest) const
+{
+  get_inner().write_threshold_row(t, dest);
+}
+
 bool MCA::accepts_unordered_pairs() const
 {
   return get_inner().accepts_unordered_pairs();

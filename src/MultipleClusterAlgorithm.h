@@ -125,6 +125,18 @@ public:
 
   void write_to_matrix(std::vector<internal_matrix_t> &matrix_list);
 
+  std::size_t n_subsets() const { return subsets.size(); }
+
+  j_t subset_n(std::size_t i) const
+  {
+    return (i < subsets.size() && subsets[i]) ? subsets[i]->n : 0;
+  }
+
+  void prepare_output();
+
+  // Fill dest[0..subset_n(i)) in original `which` order.
+  void write_threshold_row(std::size_t subset, d_t t, int *dest) const;
+
 #ifdef OPTIMOTU_R
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 

@@ -36,9 +36,12 @@ Native code:
   - distance workers, clustering algorithms, generators, and glue via Rcpp
   - `src/MemoryBudget.h` provides best-effort accounting for clustering-owned
     allocations, plumbed through `config.*`, `MultipleClusterAlgorithm.*`,
-    `seq_cluster.cpp`, and the cluster workers. Exceeding the budget raises
-    `MemoryBudgetExceeded`, which surfaces in R as an error whose message
-    begins `clustering memory budget exceeded`.
+    `seq_cluster.cpp`, `cluster_run.cpp`, and the cluster workers. Exceeding
+    the budget raises `MemoryBudgetExceeded`, which surfaces in R as an error
+    whose message begins `clustering memory budget exceeded`.
+  - `SingleClusterAlgorithm::write_threshold_row()` fills one threshold's
+    cluster-assignment vector without an `n x m` matrix. Tree and SLINK use
+    this in `optimize_thresholds()` so the result matrix is never allocated.
 
 ## 3) Public API surface (high-impact functions)
 
@@ -102,9 +105,13 @@ explicitly requests API changes.
 - `estimate_subset_memory_mb()` mirrors native `estimate_bytes()` (tree/SLINK
   `O(n)`, matrix/index `O(nm)`), then scales `parallel_merge` by
   `1 + threads * (2 / n_tiles)`. `include_result = TRUE` adds `4nm` for
-  tree/SLINK only.
-- `test-optimize_thresholds_memory.R` checks those formulas, `include_result`,
-  and the merge scale helper.
+  tree/SLINK only; `optimize_thresholds()` does not need this for tree/SLINK
+  because it scores via `write_threshold_row()` instead of materializing the
+  result matrix.
+- `test-optimize_thresholds_stream.R` checks that row-wise cluster IDs match
+  `write_to_matrix()`, and that streaming optima match
+  `seq_cluster()` + `find_best_threshold()`, including duplicate thresholds
+  and shuffled `which` order.
 - Interrupt regression coverage for `seq_cluster()` lives in
   `test-seq_cluster_interrupt.R` and is environment-guarded (opt-in) to avoid
   flaky default CI runs.

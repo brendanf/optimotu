@@ -49,6 +49,8 @@ public:
   double max_relevant(PairGenerator & pg, int thread = 0) const override = 0;
   bool accepts_unordered_pairs() const override;
   void write_to_matrix(internal_matrix_t &out) override;
+  void prepare_output() override;
+  void write_threshold_row(d_t t, int *dest) const override;
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 };
 

@@ -252,7 +252,8 @@ void ClusterTreeImpl<verbose, test>::operator()(j_t seq1, j_t seq2, d_t i, int t
   }
 }
 
-d_t ClusterTree::cluster::max_d() {
+d_t ClusterTree::cluster::max_d() const
+{
   if (parent == nullptr) return NO_DIST;
   return parent->min_d;
 }
@@ -778,6 +779,25 @@ void ClusterTree::write_to_matrix(internal_matrix_t &out) {
       }
       if (i2 < m) shift_to_parent(c, c1p);
     }
+  }
+}
+
+void ClusterTree::prepare_output()
+{
+  this->assign_ids();
+}
+
+void ClusterTree::write_threshold_row(d_t t, int *dest) const
+{
+  std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
+  for (j_t i = 0; i < this->n; ++i)
+  {
+    const cluster *c = get_cluster(i);
+    while (c->parent && c->max_d() <= t)
+    {
+      c = c->parent;
+    }
+    dest[i] = static_cast<int>(c->id);
   }
 }
 

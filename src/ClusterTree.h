@@ -30,7 +30,7 @@ protected:
     cluster *parent = nullptr, *first_child = nullptr, *last_child = nullptr,
       *prev_sib = nullptr, *next_sib = nullptr;
     bool allocated = false;
-    d_t max_d();
+    d_t max_d() const;
   };
 
   struct cluster_int {
@@ -110,6 +110,9 @@ public:
 
   void write_to_matrix(internal_matrix_t &out) override;
 
+  void prepare_output() override;
+
+  void write_threshold_row(d_t t, int *dest) const override;
 };
 
 

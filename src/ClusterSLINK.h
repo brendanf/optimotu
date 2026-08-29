@@ -54,6 +54,10 @@ public:
 
   void write_to_matrix(internal_matrix_t &out) override;
 
+  void prepare_output() override;
+
+  void write_threshold_row(d_t t, int *dest) const override;
+
 #ifdef OPTIMOTU_R
   Rcpp::List as_hclust(const Rcpp::CharacterVector &seqnames) const override;
 #endif // OPTIMOTU_R

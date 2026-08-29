@@ -201,6 +201,14 @@ public:
   
   // write results to the provided clustering matrix
   virtual void write_to_matrix(internal_matrix_t &out)=0;
+
+  // Assign cluster IDs and any other output-only state. Call after
+  // finalize() and before write_threshold_row(). Default is a no-op.
+  virtual void prepare_output() {}
+
+  // Fill dest[0..n) with cluster IDs at threshold index t. dest must have
+  // length n. Thread-safe after prepare_output() / finalize().
+  virtual void write_threshold_row(d_t t, int *dest) const = 0;
 };
 
 #endif //OPTIMOTU_CLUSTERALGORITHM_H_INCLUDED

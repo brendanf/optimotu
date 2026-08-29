@@ -715,6 +715,40 @@ bool MCA::accepts_unordered_pairs() const {
   return true;
 }
 
+void MCA::prepare_output()
+{
+  for (auto *s : this->subsets)
+  {
+    if (s)
+    {
+      s->prepare_output();
+    }
+  }
+}
+
+void MCA::write_threshold_row(std::size_t subset, d_t t, int *dest) const
+{
+  if (subset >= this->subsets.size() || !this->subsets[subset])
+  {
+    OPTIMOTU_STOP(
+        "MultipleClusterAlgorithm::write_threshold_row: invalid subset");
+  }
+  const auto &perm = routing_sorted_to_which()[subset];
+  const j_t nn = this->subsets[subset]->n;
+  if (is_identity_perm(perm))
+  {
+    this->subsets[subset]->write_threshold_row(t, dest);
+    return;
+  }
+  thread_local std::vector<int> tmp;
+  tmp.resize(nn);
+  this->subsets[subset]->write_threshold_row(t, tmp.data());
+  for (j_t j = 0; j < nn; ++j)
+  {
+    dest[perm[j]] = tmp[j];
+  }
+}
+
 void MCA::write_to_matrix(std::vector<internal_matrix_t> &matrix_list) {
   const auto &perm_all = routing_sorted_to_which();
   for (size_t i = 0; i < this->subsets.size(); i++) {

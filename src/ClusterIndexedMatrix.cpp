@@ -659,6 +659,16 @@ void ClusterIndexedMatrix<A, V>::write_to_matrix(internal_matrix_t &out) {
   std::copy(clust_array.begin(), clust_array.end(), out.begin());
 }
 
+template <class A, int V>
+void ClusterIndexedMatrix<A, V>::write_threshold_row(d_t t, int *dest) const
+{
+  const std::size_t mm = static_cast<std::size_t>(this->m);
+  for (j_t j = 0; j < this->n; ++j)
+  {
+    dest[j] = clust_array[static_cast<std::size_t>(j) * mm + t];
+  }
+}
+
 #ifdef OPTIMOTU_R
 
 struct FwdOrderElement {

@@ -1,5 +1,9 @@
 # optimotu (development version)
 
+* `optimize_thresholds()` no longer materializes the `n x m` integer cluster
+matrix for tree and SLINK clustering. Quality measures are scored from
+on-the-fly threshold rows, so peak memory follows clustering-owned state
+rather than `4nm` extra integers per subset.
 * Fix `seq_cluster()` with multiple overlapping `which` subsets so each subset
 matches clustering that subset on its own.
 * Fix a crash with parallel concurrency for multiple subset clustering with Hamming distance.
