@@ -19,18 +19,24 @@ class ClusterSLINK : public SingleClusterAlgorithm {
   template<int> friend class ClusterSLINK;
   friend class MappedClusterAlgorithm;
 protected:
-  std::vector<j_t> Pi; // first higher-numbered leaf which is joined
-  std::vector<d_t> Lambda; // level at which Pi[i] is joined
-  std::vector<d_t> M;
-  j_t slink_seq1 = 0;
-  j_t slink_seq2 = 0;
-  ClusterTreeImpl<verbose, 0> delegate;
+  struct SlinkState
+  {
+    std::vector<j_t> Pi;     // first higher-numbered leaf which is joined
+    std::vector<d_t> Lambda; // level at which Pi[i] is joined
+    std::vector<d_t> M;
+    j_t slink_seq1 = 0;
+    j_t slink_seq2 = 0;
+  };
+  std::unique_ptr<SlinkState> slink;
+  std::unique_ptr<ClusterTreeImpl<verbose, 0>> delegate;
   // Set when any child has been created, and never cleared. Results then live
   // in `delegate` rather than in this object's own Pi/Lambda. This cannot be
   // derived from `children`, because children are erased by release_child()
   // once they have merged.
   bool uses_delegate = false;
 
+  void ensure_slink();
+  void ensure_delegate();
   void init_iter();
   void update();
   void finish_iter();

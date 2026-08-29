@@ -76,7 +76,7 @@ estimate_subset_memory_mb <- function(
   algo_bytes <- switch(
     clust_method,
     tree = n_seq * u64_bytes * 32,
-    slink = n_seq * u64_bytes * 24,
+    slink = n_seq * u64_bytes * 32,
     matrix = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 8,
     index = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 12,
     n_seq * n_thresholds * int_bytes

@@ -102,6 +102,8 @@ explicitly requests API changes.
 - `MappedClusterAlgorithm` intersection constructors bind `Surrogate` to
   `this->fwd_map` (not the ctor parameter) so merge forwards stable parent
   indices.
+- `ClusterSLINK` defers allocation: each instance holds either the SLINK
+  pointer representation or the delegate `ClusterTree`, not both.
 - `estimate_subset_memory_mb()` mirrors native `estimate_bytes()` (tree/SLINK
   `O(n)`, matrix/index `O(nm)`), then scales `parallel_merge` by
   `1 + threads * (2 / n_tiles)`. `include_result = TRUE` adds `4nm` for

@@ -96,7 +96,8 @@ std::unique_ptr<SingleClusterAlgorithm> CSF::create(init_matrix_t & im, int verb
 
 std::size_t CSF::estimate_bytes(j_t n) const {
   const std::size_t ns = static_cast<std::size_t>(n);
-  // SLINK vectors + delegate tree storage.
-  return ns * sizeof(std::uint64_t) * 24;
+  // Upper bound: each instance allocates either SLINK vectors or the delegate
+  // tree, never both. Tree storage dominates.
+  return ns * sizeof(std::uint64_t) * 32;
 }
 

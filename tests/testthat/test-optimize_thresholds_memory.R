@@ -4,7 +4,7 @@ algo_bytes <- function(n_seq, n_thresholds, clust_method) {
   switch(
     clust_method,
     tree = n_seq * u64_bytes * 32,
-    slink = n_seq * u64_bytes * 24,
+    slink = n_seq * u64_bytes * 32,
     matrix = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 8,
     index = n_seq * n_thresholds * int_bytes + n_seq * int_bytes * 12,
     n_seq * n_thresholds * int_bytes
