@@ -1,5 +1,9 @@
 # optimotu (development version)
 
+* Fix a segfault in multi-threaded `dist_wfa2()` clustering: sequence lookup
+used tile-local pair indices instead of global `i0`/`j0`, so offset and
+bipartite tiles indexed out of range. Single-thread runs were unaffected
+(one full-range tile).
 * Speed up Hamming merge/concurrent clustering by eliminating virtual
 calls, and by checking R interrupts in batches rather than every pair.
 * `MultipleClusterAlgorithm::make_child()` no longer holds the parent mutex

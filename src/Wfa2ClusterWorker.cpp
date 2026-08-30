@@ -45,8 +45,10 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
       );
 
       bool is_seqj_longer = seq[j0].size() > seq[i0].size();
-      size_t s1 = is_seqj_longer ? i : j;
-      size_t s2 = is_seqj_longer ? j : i;
+      // Use global indices (i0/j0) into seq; tile-local i/j only match
+      // when the generator offset is 0 (single full-range tile).
+      size_t s1 = is_seqj_longer ? i0 : j0;
+      size_t s2 = is_seqj_longer ? j0 : i0;
       double l1 = seq[s1].size(), l2 = seq[s2].size();
       OPTIMOTU_DEBUG(
         4,
@@ -115,8 +117,8 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
         << std::endl
       );
       bool is_seqj_longer = seq[j0].size() > seq[i0].size();
-      size_t s1 = is_seqj_longer ? i : j;
-      size_t s2 = is_seqj_longer ? j : i;
+      size_t s1 = is_seqj_longer ? i0 : j0;
+      size_t s2 = is_seqj_longer ? j0 : i0;
       double l1 = seq[s1].size(), l2 = seq[s2].size();
       OPTIMOTU_DEBUG(
         4,
