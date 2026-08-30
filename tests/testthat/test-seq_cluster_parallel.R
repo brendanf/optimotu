@@ -279,6 +279,35 @@ testthat::test_that("parallel_merge does not deadlock for tree+hamming", {
   }
 })
 
+testthat::test_that("wfa2 multi-tile clustering uses global sequence indices", {
+  # Regression: Wfa2ClusterWorker indexed seq[] with tile-local i/j, which
+  # only equals i0/j0 for the single full-range tile (threads == 1).
+  ref <- seq_cluster(
+    seq = fixture$seq,
+    dist_config = dist_wfa2(),
+    threshold_config = fixture$threshold_cfg,
+    clust_config = clust_tree(),
+    parallel_config = parallel_concurrent(1L),
+    output_type = "matrix",
+    verbose = FALSE
+  )
+  for (pc in list(parallel_concurrent(4L), parallel_merge(4L))) {
+    msg <- deparse(pc$call)
+    out <- testthat::expect_no_error(
+      seq_cluster(
+        seq = fixture$seq,
+        dist_config = dist_wfa2(),
+        threshold_config = fixture$threshold_cfg,
+        clust_config = clust_tree(),
+        parallel_config = pc,
+        output_type = "matrix",
+        verbose = FALSE
+      )
+    )
+    testthat::expect_equal(out, ref, info = msg)
+  }
+})
+
 testthat::test_that("parallel_merge handles slink+hamming on hierarchical sequences", {
   seq_full <- simulate_hierarchical_sequences(seed = 1L)
   set.seed(1)
