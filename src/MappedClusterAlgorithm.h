@@ -172,6 +172,9 @@ public:
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override;
   double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
   double max_relevant(PairGenerator & pg, int thread = 0) const override;
+  // Bypass rev_map; i/j are already inner (tile-local) indices.
+  double max_relevant_local(j_t i, j_t j, int thread = 0) const override;
+  void apply_local(j_t i, j_t j, double dist, int thread = 0) override;
 };
 
 #endif // OPTIMOTU_MAPPEDCLUSTERALGORITHM_H_INCLUDED

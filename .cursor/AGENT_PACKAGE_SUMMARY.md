@@ -63,6 +63,11 @@ Native code:
     without holding the parent MCA mutex for the whole construction; only
     `children.push_back` is locked so `parallel_merge` tile init can run
     concurrently (per-subset `make_child` locks remain).
+  - Hamming merge/concurrent cluster workers iterate each
+    `AllPairGenerator` / `BipartitePairGenerator` tile as nested index
+    ranges (not per-pair `PairGenerator++`), use
+    `max_relevant_local` / `apply_local` on mapped tile children, and
+    check R interrupts in batches rather than every pair.
 
 ## 3) Public API surface (high-impact functions)
 

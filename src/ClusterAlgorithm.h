@@ -124,6 +124,17 @@ public:
     return this->max_relevant(pg.i0(), pg.j0(), thread);
   }
 
+  // Tile-local indices for MappedClusterAlgorithm children. Default treats
+  // i/j as the same space as max_relevant / operator().
+  virtual double max_relevant_local(j_t i, j_t j, int thread = 0) const
+  {
+    return max_relevant(i, j, thread);
+  }
+  virtual void apply_local(j_t i, j_t j, double dist, int thread = 0)
+  {
+    (*this)(i, j, dist, thread);
+  }
+
   // update clustering based on pairwise distance index between seq1 and seq2
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0)=0;
   virtual void operator()(PairGenerator & pg, d_t i, int thread = 0) {

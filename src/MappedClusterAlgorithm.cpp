@@ -590,6 +590,20 @@ double MappedClusterAlgorithmImpl<verbose>::max_relevant(PairGenerator &pg, int 
   }
 }
 
+template <int verbose>
+double MappedClusterAlgorithmImpl<verbose>::max_relevant_local(
+    j_t i, j_t j, int thread) const
+{
+  return inner->max_relevant(i, j, thread);
+}
+
+template <int verbose>
+void MappedClusterAlgorithmImpl<verbose>::apply_local(
+    j_t i, j_t j, double dist, int thread)
+{
+  (*inner)(i, j, dist, thread);
+}
+
 template class MappedClusterAlgorithmImpl<0>;
 template class MappedClusterAlgorithmImpl<1>;
 template class MappedClusterAlgorithmImpl<2>;
