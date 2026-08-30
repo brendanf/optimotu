@@ -20,6 +20,12 @@ public:
     const std::size_t end_j
   );
 
+  // Half-open global index ranges for the two blocks.
+  std::size_t seq_begin_i() const { return begin_i; }
+  std::size_t seq_end_i() const { return end_i; }
+  std::size_t seq_begin_j() const { return begin_j; }
+  std::size_t seq_end_j() const { return end_j; }
+
   BipartitePairGenerator& operator++() override;
 
   std::size_t forward_map(const std::size_t value) const override;

@@ -1,5 +1,7 @@
 # optimotu (development version)
 
+* Speed up Hamming merge/concurrent clustering by eliminating virtual
+calls, and by checking R interrupts in batches rather than every pair.
 * `MultipleClusterAlgorithm::make_child()` no longer holds the parent mutex
 for the full tile/child construction. Construction runs unlocked (subset
 locks and the memory budget tracker still protect their own state); only

@@ -15,6 +15,11 @@ public:  // constructor for use in divide() which begins with i > 1
   AllPairGenerator(const std::size_t n, const std::size_t offset = 0) :
     DivisiblePairGenerator(n), offset(offset) {};
 
+  // Global index of the first sequence in this diagonal tile.
+  std::size_t seq_offset() const { return offset; }
+  // Number of sequences in this diagonal tile.
+  std::size_t seq_count() const { return n; }
+
   std::size_t forward_map(const std::size_t value) const override;
 
   std::size_t reverse_map(const std::size_t value) const override;
