@@ -729,6 +729,9 @@ void ClusterTree::merge_into(ClusterAlgorithm &consumer) {
 }
 
 double ClusterTree::max_relevant(j_t seq1, j_t seq2, int thread) const {
+  if (optimotu_disable_max_relevant()) {
+    return this->dconv.inverse(this->m - 1);
+  }
   RcppThread::checkUserInterrupt();
   std::shared_lock<std::shared_timed_mutex> lock(this->mutex);
   cluster* c1 = this->get_cluster(seq1);

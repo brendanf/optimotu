@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "ClusterSLINK.h"
+#include "optimotu.h"
 #include <algorithm>
 #include <cstdint>
 
@@ -415,6 +416,9 @@ void ClusterSLINK<verbose>::merge_into_parent() {
 
 template<int verbose>
 double ClusterSLINK<verbose>::max_relevant(j_t seq1, j_t seq2, int thread) const {
+  if (optimotu_disable_max_relevant()) {
+    return dconv.inverse(this->m - 1);
+  }
   if (uses_cache && !slink)
   {
     return dconv.inverse(this->m - 1);
