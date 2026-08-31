@@ -1,4 +1,5 @@
 #ifndef OPTIMOTU_H_INCLUDED
+#define OPTIMOTU_H_INCLUDED
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -34,5 +35,19 @@
 } while (false)
 
 #endif // OPTIMOTU_R
+
+#include <cstdlib>
+
+// OPTIMOTU_DISABLE_MAX_RELEVANT=1 makes max_relevant() always return the
+// global max threshold (used by ClusterSLINK / ClusterTree).
+inline bool optimotu_disable_max_relevant()
+{
+  static const int cached = []()
+  {
+    const char *e = std::getenv("OPTIMOTU_DISABLE_MAX_RELEVANT");
+    return (e != nullptr && e[0] == '1') ? 1 : 0;
+  }();
+  return cached == 1;
+}
 
 #endif // OPTIMOTU_H_INCLUDED
