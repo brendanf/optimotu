@@ -119,10 +119,13 @@ on the edit distance score.}
 
 \item{constrain}{(\code{logical} flag) if \code{TRUE}, the alignment algorithm will
 use optimizations that will cause it to exit early if all possible alignments
-have a distance greater than the distance threshold. This should not change
-the correctness of distance calculations below the threshold, and results in
-a large speedup for WFA2 and edlib. It is recommended to use
-\code{constrain=FALSE} only to verify that the results do not change.}
+have a distance greater than the distance threshold. For WFA2 this includes
+an identity-feasible diagonal band and a score cap that is valid for edit,
+affine, and dual-affine penalties (see \code{docs/wfa-identity-score-bound.md}).
+This should not change the correctness of distance calculations below the
+threshold, and results in a large speedup for WFA2 and edlib. It is
+recommended to use \code{constrain=FALSE} only to verify that the results do not
+change.}
 
 \item{threshold}{(\code{numeric} scalar) maximum distance to consider a match, in
 [0, 1] where 0 is identical.}

@@ -68,6 +68,12 @@ Native code:
     ranges (not per-pair `PairGenerator++`), use
     `max_relevant_local` / `apply_local` on mapped tile children, and
     check R interrupts in batches rather than every pair.
+  - Constrained WFA2 uses `wfa_identity_bound()` (`src/wfa_identity_bound.h`)
+    for the diagonal band and `setMaxAlignmentSteps` cap. The cap is the
+    maximum affine/dual-affine score of any CIGAR with identity distance
+    at most the threshold, so it stays sound when penalties are not
+    edit-shaped. Derivation: `docs/wfa-identity-score-bound.md`. Catch
+    tests live in `src/test-wfa_identity_bound.cpp`.
 
 ## 3) Public API surface (high-impact functions)
 

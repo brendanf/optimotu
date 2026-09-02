@@ -2,6 +2,7 @@
 #include "Wfa2SearchWorker.h"
 #include <bindings/cpp/WFAligner.hpp>
 #include "pairwise_alignment.h"
+#include "wfa_identity_bound.h"
 
 template<int verbose, bool do_cigar, enum AlignmentSpan span>
 void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin, std::size_t end) {
@@ -60,19 +61,13 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
         if (l1/l2 < sim_threshold) continue;
       }
       ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - threshold;
-      double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-      int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-      int min_k;
-      if constexpr (span == AlignmentSpan::GLOBAL) {
-        min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-      } else if constexpr (span == AlignmentSpan::EXTEND) {
-        min_k = -(int)ceil(l1 * sim_threshold);
-      } else {
-        // static_assert(span != span, "Instatiation of non-implemented AlignmentSpan");
-      }
-      wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-      wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
+      WfaIdentityBound bound = wfa_identity_bound(
+          l1, l2, max_dist, match, mismatch,
+          gap_open, gap_extend, gap_open2, gap_extend2,
+          span == AlignmentSpan::EXTEND
+      );
+      wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+      wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
       double d;
       std::string cigar;
       if constexpr (do_cigar) {

@@ -5,13 +5,14 @@
 #include "pairwise_alignment.h"
 #include "SparseDistanceMatrix.h"
 #include "ClusterIndexedMatrix.h"
+#include "wfa_identity_bound.h"
 #include <cstdint>
 
 struct PrealignAlignWorker : public RcppParallel::Worker {
   const std::vector<std::string> &seq;
   const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
-  const bool do_prealign, is_constrained, is_score_constrained;
+  const bool do_prealign, is_constrained;
   const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
@@ -36,15 +37,6 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
   sim_threshold_plus_1(1.0 + sim_threshold), do_prealign(do_prealign),
   is_constrained(constrain),
-  is_score_constrained(
-    constrain &&
-      match == 0 &&
-      mismatch == 1 &&
-      gap == 0 &&
-      extend == 1 &&
-      gap2 == 0 &&
-      (extend2 == 0 || extend2 == 1)
-  ),
   threads(threads),
   sdm(sdm), prealigned(prealigned), aligned(aligned) {};
 
@@ -91,33 +83,26 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
         //             << j << " (l2=" << l2 <<")####" << std::endl;
 
         if (l1/l2 < sim_threshold) continue;
-        double maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
-        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-        int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
+        double maxd1 = wfa_identity_max_edits(l1, l2, dist_threshold);
+        WfaIdentityBound bound = wfa_identity_bound(
+            l1, l2, dist_threshold, match, mismatch, gap, extend, gap2,
+            extend2
+        );
 
         std::pair<int, double> d1 = {0, 0};
         if (do_prealign) {
-          // std::cout << "Setting max score to " << min_k << ", " << max_k << std::endl;
-          prealigner.setMaxAlignmentSteps((int) maxd1 + 1);
-          // std::cout << "Setting band heuristics to " << min_k << ", " << max_k << std::endl;
-          prealigner.setHeuristicBandedStatic(min_k, max_k);
-          // std::cout << "Prealigning..." << std::endl;
+          prealigner.setMaxAlignmentSteps((int)maxd1 + 1);
+          prealigner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
           auto status = prealigner.alignEnd2End(seq[s1], seq[s2]);
-          // std::cout << "Prealignment finished." << std::endl;
           ++my_prealigned;
           if (status != wfa::WFAligner::AlignmentStatus::StatusAlgCompleted) continue;
-          // std::cout << "Prealignment successful." << std::endl;
           int sc1 = prealigner.getAlignmentScore();
           if (sc1 > maxd1) continue;
           d1 = {sc1, (double)sc1*sim_threshold_plus_1 / (l1 + l2)};
         }
         if (is_constrained) {
-          // std::cout << "Setting band heuristics to " << min_k << ", " << max_k << std::endl;
-          aligner.setHeuristicBandedStatic(min_k, max_k);
-          if (is_score_constrained) {
-            // std::cout << "Setting max score to " << (int)maxd1 + 1 << std::endl;
-            aligner.setMaxAlignmentSteps((int)maxd1 + 1);
-          }
+          aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+          aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
         }
         // std::cout << "Aligning..." << std::endl;
         auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);

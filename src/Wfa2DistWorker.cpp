@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "pairwise_alignment.h"
 #include "optimotu.h"
+#include "wfa_identity_bound.h"
 
 Wfa2DistWorker::Wfa2DistWorker(
   const std::vector<std::string> &seq,
@@ -98,18 +99,13 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
       }
       ++my_prealigned;
       if constexpr (is_constrained) {
-        double max_d1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
-        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-        int min_k;
-        if constexpr (span == AlignmentSpan::GLOBAL) {
-          min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-        } else if constexpr (span == AlignmentSpan::EXTEND) {
-          min_k = -(int)ceil(l1 * sim_threshold);
-        } else {
-          static_assert(span != span, "Instatiation of non-implemented AlignmentSpan");
-        }
-        wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-        wfa_aligner.setMaxAlignmentSteps((int)max_d1 + 1);
+        WfaIdentityBound bound = wfa_identity_bound(
+            l1, l2, dist_threshold, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            span == AlignmentSpan::EXTEND
+        );
+        wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+        wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
       }
 
       std::string cigar = cigar_wfa2<span>(seq[s1], seq[s2], wfa_aligner);

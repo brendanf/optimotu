@@ -1,5 +1,8 @@
 # optimotu (development version)
 
+* Constrained WFA2 alignments use an identity-feasible affine (or dual-affine)
+score cap instead of the edit-distance `maxd1` limit. The diagonal band is
+unchanged. See `docs/wfa-identity-score-bound.md`.
 * Fix a segfault in multi-threaded `dist_wfa2()` clustering: sequence lookup
 used tile-local pair indices instead of global `i0`/`j0`, so offset and
 bipartite tiles indexed out of range. Single-thread runs were unaffected

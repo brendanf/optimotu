@@ -13,7 +13,9 @@ test_that("seq_distmx_internal works", {
     for (threshold in c(0.1, 0.3, 0.55)) {
       for (threads in c(1, 4)) {
         for (detail in c("cigar", "gapstats", "none")) {
-          if (method == "hamming" && detail == "cigar") next
+          if (method == "hamming" && detail == "cigar") {
+            next
+          }
           # cat("\nmethod =", method, ", threshold =", threshold, ", threads =", threads, ", detail =", detail, "\n")
 
           distmx <- seq_distmx(
@@ -48,4 +50,27 @@ test_that("seq_distmx_internal works", {
       }
     }
   }
+})
+
+test_that("constrained affine WFA keeps identity-feasible mismatch pairs", {
+  # 4/20 mismatches: identity 0.2. Affine score 24 exceeds the old edit-shaped
+  # cap (~6) but is under the identity-feasible affine cap.
+  a <- paste(rep("A", 20L), collapse = "")
+  b <- paste(c(rep("A", 16L), rep("C", 4L)), collapse = "")
+  seq <- c(a = a, b = b)
+  dist_config <- dist_wfa2(
+    match = 0L,
+    mismatch = 6L,
+    gap_open = 4L,
+    gap_extend = 2L
+  )
+  hits_con <- seq_distmx(
+    seq,
+    threshold = 0.25,
+    dist_config = dist_config,
+    constrain = TRUE,
+    parallel_config = parallel_concurrent(1L)
+  )
+  expect_equal(nrow(hits_con), 1L)
+  expect_equal(hits_con$dist2, 0.2)
 })

@@ -6,6 +6,7 @@
 #include "SparseDistanceMatrix.h"
 
 #include "kmer.h"
+#include "wfa_identity_bound.h"
 
 // for a given kmer (implicit),
 // what sequence was it found in (i),
@@ -161,7 +162,6 @@ struct KmerAlignWorker : public RcppParallel::Worker {
                                  wfa::WFAligner::Alignment};
 
     double sim_threshold = 1.0 - dist_threshold;
-    double sim_threshold_plus_1 = 1.0 + sim_threshold;
 
     if (begin == 0) {
       begin_i = 1;
@@ -211,13 +211,13 @@ struct KmerAlignWorker : public RcppParallel::Worker {
           size_t s2 = is_seqj_longer ? match.first : i;
           double l1 = seq[s1].size(), l2 = seq[s2].size();
           if (l1/l2 < sim_threshold) continue;
-          int min_k = -(int)ceil((l1 - l2 * sim_threshold) /
-            sim_threshold_plus_1);
-          int max_k = (int)ceil((l2 - l1 * sim_threshold) /
-            sim_threshold_plus_1);
-          int max_score = (int)ceil((l1 + l2) * sim_threshold_plus_1);
-          aligner.setMaxAlignmentSteps(max_score);
-          aligner.setHeuristicBandedStatic(min_k, max_k);
+          WfaIdentityBound bound = wfa_identity_bound(
+              l1, l2, dist_threshold,
+              this->match, this->mismatch, this->gap, this->extend,
+              this->gap2, this->extend2
+          );
+          aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
+          aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
 
           auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);
           if (d2.second <= dist_threshold) {

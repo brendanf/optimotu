@@ -1,6 +1,7 @@
 #include "Wfa2ClusterWorker.h"
 #include <bindings/cpp/WFAligner.hpp>
 #include "pairwise_alignment.h"
+#include "wfa_identity_bound.h"
 
 Wfa2ClusterWorker::Wfa2ClusterWorker(
   const SequenceSet &seq,
@@ -59,12 +60,12 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
       if (l1/l2 >= sim_threshold) {
         ++my_prealigned;
-        double sim_threshold_plus_1 = 2.0 - threshold;
-        double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-        int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-        wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-        wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
+        WfaIdentityBound bound = wfa_identity_bound(
+            l1, l2, threshold, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+        );
+        wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+        wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
         double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
         if (d < 1.0) ++my_aligned;
 
@@ -129,17 +130,17 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
       double sim_threshold = 1.0 - threshold; // compiler can probably do this?
       if (l1/l2 >= sim_threshold) {
         ++my_prealigned;
-        double sim_threshold_plus_1 = 2.0 - threshold;
-        double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-        int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-        wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-        wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
+        WfaIdentityBound bound = wfa_identity_bound(
+            l1, l2, threshold, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2
+        );
+        wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+        wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
         OPTIMOTU_DEBUG(
           4,
-          << "wfa_aligner min_k=" << min_k
-          << " max_k=" << max_k
-          << " max score=" << (int)maxd1 + 1
+          << "wfa_aligner min_k=" << bound.min_k
+          << " max_k=" << bound.max_k
+          << " max score=" << bound.max_alignment_steps
           << std::endl
         );
         double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);

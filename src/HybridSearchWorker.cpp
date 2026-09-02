@@ -3,6 +3,7 @@
 #include <bindings/cpp/WFAligner.hpp>
 #include <edlib.h>
 #include "pairwise_alignment.h"
+#include "wfa_identity_bound.h"
 
 template<int verbose>
 void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end) {
@@ -53,15 +54,15 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
       double sim_threshold = 1.0 - max_dist; // compiler can probably do this?
       if (l1/l2 < sim_threshold) continue;
       ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - threshold;
-      double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+      double maxd1 = wfa_identity_max_edits(l1, l2, max_dist);
       bool is_close = breakpoint >= 1 ? maxd1 < breakpoint : max_dist < breakpoint;
       double d;
       if (is_close) {
-        int max_k = (int)ceil((l2 - l1 * sim_threshold) / sim_threshold_plus_1);
-        int min_k = -(int)ceil((l1 - l2 * sim_threshold) / sim_threshold_plus_1);
-        wfa_aligner.setHeuristicBandedStatic(min_k, max_k);
-        wfa_aligner.setMaxAlignmentSteps((int)maxd1 + 1);
+        WfaIdentityBound bound = wfa_identity_bound(
+            l1, l2, max_dist, 0, 1, 0, 1, 0, 1
+        );
+        wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+        wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
         d = distance_wfa2(s1, s2, wfa_aligner);
       } else {
         ed_aligner.k = (int)maxd1 + 1;
