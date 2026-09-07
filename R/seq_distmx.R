@@ -17,22 +17,21 @@
 #' @param span (`character` string) the span of the alignment; currently
 #' accepted values are "global" and "extension".  The default is "global".
 #' @param constrain (`logical` flag) if `TRUE`, the alignment algorithm will
-#' use optimizations that will cause it to exit early if all possible alignments
-#' have a distance greater than the distance threshold. For WFA2 this includes
-#' an identity-feasible diagonal band and a score cap that is valid for edit,
-#' affine, and dual-affine penalties (see `docs/wfa-identity-score-bound.md`).
+#' calculate the maximum band width for feasible alignments given the threshold.
+#' Additionally for WFA2 and edlib, the maximum feasible alignment score given
+#' the threshold is calculated and used to exit early if not achievable.
 #' This should not change the correctness of distance calculations below the
-#' threshold, and results in a large speedup for WFA2 and edlib. It is
-#' recommended to use `constrain=FALSE` only to verify that the results do not
-#' change.
+#' threshold, and can result in large speedups for WFA2 and edlib,, especially
+#' with low thresholds, and more moderate speedups for KSW2. It is recommended
+#' to use `constrain=FALSE` only to verify that the results do not change.
 #' @param id_is_int (`logical` scalar) if `TRUE`, the sequence IDs are
 #' parsed as integers, and the returned IDs are integers.
 #' The default is `FALSE`.
 #' @param seq_idx optional 1-based indices into records (files, index-backed
-#'   inputs) or rows / elements for tabular and in-memory inputs; see
-#'   [seq_as_char()].
+#' inputs) or rows / elements for tabular and in-memory inputs; see
+#' [seq_as_char()].
 #' @param seq_file optional path override for `fastqindexr_index` or `.fqi`
-#'   inputs only; see [seq_as_char()].
+#' inputs only; see [seq_as_char()].
 #' @param ... passed to methods
 #' @return (`data.frame`) with columns "seq_id1" and "seq_id2" (`character`),
 #' or "seq_idx1" and "seq_idx2" (`integer`) if `id_is_integer` is `TRUE`,
@@ -243,6 +242,44 @@ seq_distmx_wfa2 <- function(
   call <- match.call()
   call[[1]] <- quote(optimotu::seq_distmx)
   call$dist_config <- dist_wfa2(
+    match = match,
+    mismatch = mismatch,
+    gap_open = gap_open,
+    gap_extend = gap_extend,
+    gap_open2 = gap_open2,
+    gap_extend2 = gap_extend2
+  )
+  call$parallel_config <- parallel_concurrent(threads)
+  call$match <- NULL
+  call$mismatch <- NULL
+  call$gap_open <- NULL
+  call$gap_extend <- NULL
+  call$gap_open2 <- NULL
+  call$gap_extend2 <- NULL
+  call$threads <- NULL
+  eval(call, envir = parent.frame())
+}
+
+
+#' @export
+#' @rdname seq_distmx
+seq_distmx_ksw2 <- function(
+  seq,
+  threshold,
+  match = -1L,
+  mismatch = 2L,
+  gap_open = 10L,
+  gap_extend = 1L,
+  gap_open2 = 0L,
+  gap_extend2 = 0L,
+  constrain = TRUE,
+  threads = 1L,
+  verbose = 0L,
+  ...
+) {
+  call <- match.call()
+  call[[1]] <- quote(optimotu::seq_distmx)
+  call$dist_config <- dist_ksw2(
     match = match,
     mismatch = mismatch,
     gap_open = gap_open,

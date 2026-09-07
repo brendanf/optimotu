@@ -7,6 +7,7 @@
 \alias{seq_distmx_edlib}
 \alias{seq_distmx_hamming}
 \alias{seq_distmx_wfa2}
+\alias{seq_distmx_ksw2}
 \title{Search for the closest match(es) to sequences in a reference database}
 \usage{
 seq_distmx_kmer(
@@ -87,6 +88,21 @@ seq_distmx_wfa2(
   verbose = 0L,
   ...
 )
+
+seq_distmx_ksw2(
+  seq,
+  threshold,
+  match = -1L,
+  mismatch = 2L,
+  gap_open = 10L,
+  gap_extend = 1L,
+  gap_open2 = 0L,
+  gap_extend2 = 0L,
+  constrain = TRUE,
+  threads = 1L,
+  verbose = 0L,
+  ...
+)
 }
 \arguments{
 \item{seq}{(\code{character}, \code{data.frame}, or \code{XStringSet}) DNA sequences to
@@ -118,14 +134,13 @@ in a pairwise distance which is equal to or greater than an alignment based
 on the edit distance score.}
 
 \item{constrain}{(\code{logical} flag) if \code{TRUE}, the alignment algorithm will
-use optimizations that will cause it to exit early if all possible alignments
-have a distance greater than the distance threshold. For WFA2 this includes
-an identity-feasible diagonal band and a score cap that is valid for edit,
-affine, and dual-affine penalties (see \code{docs/wfa-identity-score-bound.md}).
+calculate the maximum band width for feasible alignments given the threshold.
+Additionally for WFA2 and edlib, the maximum feasible alignment score given
+the threshold is calculated and used to exit early if not achievable.
 This should not change the correctness of distance calculations below the
-threshold, and results in a large speedup for WFA2 and edlib. It is
-recommended to use \code{constrain=FALSE} only to verify that the results do not
-change.}
+threshold, and can result in large speedups for WFA2 and edlib,, especially
+with low thresholds, and more moderate speedups for KSW2. It is recommended
+to use \code{constrain=FALSE} only to verify that the results do not change.}
 
 \item{threshold}{(\code{numeric} scalar) maximum distance to consider a match, in
 [0, 1] where 0 is identical.}

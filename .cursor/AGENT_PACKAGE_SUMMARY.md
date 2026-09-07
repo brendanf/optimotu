@@ -8,7 +8,7 @@ It focuses on package-level architecture and maintenance conventions.
 `optimotu` is the algorithmic core for clustering and threshold optimization.
 It provides:
 
-- distance computation backends (`wfa2`, `edlib`, `hamming`, `usearch`, etc.)
+- distance computation backends (`wfa2`, `edlib`, `ksw2`, `hamming`, `usearch`, etc.)
 - single-linkage clustering across many thresholds
 - threshold optimization against known taxonomy
 - clustering quality metrics (MCC, ARI, AMI, FMI, FM, etc.)
@@ -80,7 +80,7 @@ Native code:
 Core exported API families include:
 
 - config helpers:
-  - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_hamming()`,
+  - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_ksw2()`, `dist_hamming()`,
     `dist_usearch()`, `dist_file()`, `dist_hybrid()`
   - `clust_config()` + `clust_tree()`, `clust_matrix()`, `clust_index()`,
     `clust_slink()`
@@ -170,8 +170,8 @@ explicitly requests API changes.
   flaky default CI runs.
 - Header changes do not trigger recompiles, because `R CMD INSTALL` tracks only
   `.cpp` timestamps. After editing anything in `src/*.h`, remove the package's
-  own objects (`rm -f src/*.o src/optimotu.so`, keeping the `WFA2-lib/` and
-  `edlib/` submodule objects) before rebuilding, or you can get link errors or
+  own objects (`rm -f src/*.o src/optimotu.so`, keeping the `WFA2-lib/`,
+  `edlib/`, and `ksw2/` submodule objects) before rebuilding, or you can get link errors or
   silently stale code.
 - Prefer running tests in the project container/environment used by the wider
   OptimOTU ecosystem, not only ad hoc local setups.

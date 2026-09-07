@@ -154,7 +154,7 @@ testthat::test_that("seq_cluster handles one-sequence inputs across methods", {
   seq_one <- c("ACGTACGTACGT")
   names(seq_one) <- "seq1"
 
-  for (method in c("wfa2", "edlib", "hamming")) {
+  for (method in c("wfa2", "edlib", "ksw2", "hamming")) {
     for (threads in c(1L, 4L)) {
       msg <- sprintf("method=%s threads=%s", method, threads)
       out <- testthat::expect_no_error(
@@ -179,7 +179,7 @@ testthat::test_that("seq_cluster handles one-sequence inputs across methods", {
 testthat::test_that("seq_cluster handles zero-sequence inputs across methods", {
   threshold_cfg <- threshold_set(c(0.1, 0.2))
 
-  for (method in c("wfa2", "edlib", "hamming")) {
+  for (method in c("wfa2", "edlib", "ksw2", "hamming")) {
     for (threads in c(1L, 4L)) {
       msg <- sprintf("method=%s threads=%s", method, threads)
       out <- testthat::expect_no_error(
@@ -206,6 +206,7 @@ testthat::test_that("seq_distmx backends agree for simulated substitutions", {
   dist_cfg <- list(
     wfa2 = dist_config(method = "wfa2"),
     edlib = dist_config(method = "edlib"),
+    ksw2 = dist_config(method = "ksw2"),
     hamming = dist_config(method = "hamming")
   )
 
@@ -227,6 +228,14 @@ testthat::test_that("seq_distmx backends agree for simulated substitutions", {
   testthat::expect_equal(out$wfa2$seq_idx2, out$edlib$seq_idx2)
   testthat::expect_equal(
     out$wfa2$dist,
+    out$edlib$dist,
+    tolerance = 1e-12
+  )
+
+  testthat::expect_equal(out$ksw2$seq_idx1, out$edlib$seq_idx1)
+  testthat::expect_equal(out$ksw2$seq_idx2, out$edlib$seq_idx2)
+  testthat::expect_equal(
+    out$ksw2$dist,
     out$edlib$dist,
     tolerance = 1e-12
   )

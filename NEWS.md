@@ -1,5 +1,10 @@
 # optimotu (development version)
 
+* Add `dist_ksw2()` / `method = "ksw2"` distance and alignment backend based on
+the [KSW2](https://github.com/lh3/ksw2) dynamic-programming library (Suzuki–
+Kasahara / minimap2). Supports global and extension alignment, optional
+dual-affine gaps, and banded search via the shared identity-feasibility
+helpers. Vendored as git submodule `src/ksw2`.
 * Constrained WFA2 alignments use an identity-feasible affine (or dual-affine)
 score cap instead of the edit-distance `maxd1` limit. The diagonal band is
 unchanged. See `docs/wfa-identity-score-bound.md`.

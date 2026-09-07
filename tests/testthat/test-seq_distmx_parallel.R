@@ -43,6 +43,12 @@ testthat::test_that("seq_distmx handles one-sequence inputs across methods", {
       constrain = TRUE
     ),
     list(
+      method = "ksw2",
+      spans = c("global", "extension"),
+      details = c("none", "gapstats", "cigar"),
+      constrain = TRUE
+    ),
+    list(
       method = "hamming",
       spans = c("global"),
       details = c("none", "gapstats"),
@@ -56,7 +62,10 @@ testthat::test_that("seq_distmx handles one-sequence inputs across methods", {
         for (thr in c(1L, 4L)) {
           msg <- sprintf(
             "method=%s span=%s details=%s threads=%s",
-            tc$method, sp, det, thr
+            tc$method,
+            sp,
+            det,
+            thr
           )
           out <- testthat::expect_no_error(
             seq_distmx(
@@ -95,6 +104,12 @@ testthat::test_that("seq_distmx handles zero-sequence inputs across methods", {
       constrain = TRUE
     ),
     list(
+      method = "ksw2",
+      spans = c("global", "extension"),
+      details = c("none", "gapstats", "cigar"),
+      constrain = TRUE
+    ),
+    list(
       method = "hamming",
       spans = c("global"),
       details = c("none", "gapstats"),
@@ -108,7 +123,10 @@ testthat::test_that("seq_distmx handles zero-sequence inputs across methods", {
         for (thr in c(1L, 4L)) {
           msg <- sprintf(
             "method=%s span=%s details=%s threads=%s",
-            tc$method, sp, det, thr
+            tc$method,
+            sp,
+            det,
+            thr
           )
           out <- testthat::expect_no_error(
             seq_distmx(
@@ -144,6 +162,12 @@ testthat::test_that("seq_distmx tiny two-sequence inputs match serial in paralle
     list(
       method = "edlib",
       spans = c("global"),
+      details = c("none", "gapstats", "cigar"),
+      constrain = TRUE
+    ),
+    list(
+      method = "ksw2",
+      spans = c("global", "extension"),
       details = c("none", "gapstats", "cigar"),
       constrain = TRUE
     ),
@@ -184,7 +208,11 @@ testthat::test_that("seq_distmx tiny two-sequence inputs match serial in paralle
           )
         )
 
-        testthat::expect_equal(normalize_distmx(parallel), normalize_distmx(serial), info = msg)
+        testthat::expect_equal(
+          normalize_distmx(parallel),
+          normalize_distmx(serial),
+          info = msg
+        )
       }
     }
   }
@@ -303,7 +331,12 @@ testthat::test_that("seq_distmx wfa2 cigar is stable with multithreading", {
     )
     out <- normalize_distmx(out)
     testthat::expect_identical(nrow(out), nrow(baseline), info = msg)
-    testthat::expect_equal(out, baseline, tolerance = 0, info = msg,
-     ignore_attr = TRUE)
+    testthat::expect_equal(
+      out,
+      baseline,
+      tolerance = 0,
+      info = msg,
+      ignore_attr = TRUE
+    )
   }
 })

@@ -1,0 +1,52 @@
+// SPDX-FileCopyrightText: 2026 Brendan Furneaux
+// SPDX-License-Identifier: MIT
+
+#ifndef OPTIMOTU_KSW2SEARCHWORKER_H
+#define OPTIMOTU_KSW2SEARCHWORKER_H
+
+#include "SearchWorker.h"
+#include "alignment_enums.h"
+
+class Ksw2SearchWorker : public SearchWorker {
+protected:
+  int match = 0, mismatch = 1,
+    gap_open = 0, gap_extend = 1,
+    gap_open2 = 0, gap_extend2 = 1;
+public:
+  Ksw2SearchWorker(
+    const std::vector<std::string> &query,
+    const std::vector<std::string> &ref,
+    const double threshold,
+    const std::uint8_t threads,
+    const int match = 0, const int mismatch = 1,
+    const int gap_open = 0, const int gap_extend = 1,
+    const int gap_open2 = 0, const int gap_extend2 = 1
+  ) : SearchWorker(query, ref, threshold, threads),
+  match(match), mismatch(mismatch), gap_open(gap_open),
+  gap_extend(gap_extend), gap_open2(gap_open2), gap_extend2(gap_extend2) {}
+};
+
+template<int verbose, bool do_cigar, enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+class Ksw2SearchWorkerImpl : public Ksw2SearchWorker {
+  using SearchWorker::query;
+  using SearchWorker::ref;
+  using SearchWorker::threshold;
+  using SearchWorker::threads;
+  using SearchWorker::mutex;
+  using SearchWorker::_prealigned;
+  using SearchWorker::_aligned;
+  using SearchWorker::hits;
+
+  using Ksw2SearchWorker::match;
+  using Ksw2SearchWorker::mismatch;
+  using Ksw2SearchWorker::gap_open;
+  using Ksw2SearchWorker::gap_extend;
+  using Ksw2SearchWorker::gap_open2;
+  using Ksw2SearchWorker::gap_extend2;
+
+public:
+  using Ksw2SearchWorker::Ksw2SearchWorker;
+  void operator()(std::size_t begin, std::size_t end) override;
+};
+
+#endif

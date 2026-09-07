@@ -4,20 +4,24 @@
 #include "EdlibClusterWorker.h"
 #include "HybridClusterWorker.h"
 #include "HammingClusterWorker.h"
+#include "Ksw2ClusterWorker.h"
 
 #include "Wfa2SearchWorker.h"
 #include "EdlibSearchWorker.h"
 #include "HybridSearchWorker.h"
 #include "HammingSearchWorker.h"
+#include "Ksw2SearchWorker.h"
 
 #include "Wfa2DistWorker.h"
 #include "EdlibDistWorker.h"
 #include "HammingDistWorker.h"
+#include "Ksw2DistWorker.h"
 
 #include "AllPairGenerator.h"
 
 #include <algorithm>
 #include <cmath>
+#include <type_traits>
 
 namespace
 {
@@ -742,7 +746,88 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
-  } else if (dist_method == "edlib") {
+  }
+  else if (dist_method == "ksw2")
+  {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    if (par_method == "merge")
+    {
+      if (v == 0)
+      {
+        return std::make_unique<Ksw2SplitClusterWorker<0>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else if (v == 1)
+      {
+        return std::make_unique<Ksw2SplitClusterWorker<1>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else if (v == 2)
+      {
+        return std::make_unique<Ksw2SplitClusterWorker<2>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else if (v == 3)
+      {
+        return std::make_unique<Ksw2SplitClusterWorker<3>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else
+      {
+        return std::make_unique<Ksw2SplitClusterWorker<4>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+    }
+    else if (par_method == "concurrent")
+    {
+      if (v == 0)
+      {
+        return std::make_unique<Ksw2ConcurrentClusterWorker<0>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else if (v == 1)
+      {
+        return std::make_unique<Ksw2ConcurrentClusterWorker<1>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else if (v == 2)
+      {
+        return std::make_unique<Ksw2ConcurrentClusterWorker<2>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else if (v == 3)
+      {
+        return std::make_unique<Ksw2ConcurrentClusterWorker<3>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+      else
+      {
+        return std::make_unique<Ksw2ConcurrentClusterWorker<4>>(
+            seq, cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+      }
+    }
+    else
+    {
+      OPTIMOTU_STOP("unknown parallelization method");
+    }
+  }
+  else if (dist_method == "edlib")
+  {
     if (par_method == "merge") {
       if (v == 0) {
         return std::make_unique<EdlibSplitClusterWorker<0>>(
@@ -800,7 +885,9 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
-  } else if (dist_method == "hybrid") {
+  }
+  else if (dist_method == "hybrid")
+  {
     double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
     if (par_method == "merge") {
       if (v == 0) {
@@ -859,7 +946,9 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
-  } else if (dist_method == "hamming") {
+  }
+  else if (dist_method == "hamming")
+  {
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
     if (par_method == "merge") {
@@ -919,7 +1008,9 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
     }
-  } else {
+  }
+  else
+  {
     OPTIMOTU_STOP("unknown sequence-cluster method");
   }
 }
@@ -1128,7 +1219,64 @@ std::unique_ptr<SearchWorker> create_search_worker(
       }
       break;
     }
-  } else if (dist_method == "edlib") {
+  }
+  else if (dist_method == "ksw2")
+  {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    auto make_ksw2_search = [&](auto verbose_tag) -> std::unique_ptr<SearchWorker>
+    {
+      constexpr int vv = decltype(verbose_tag)::value;
+      if (return_cigar)
+      {
+        if (span == 0)
+        {
+          return std::make_unique<Ksw2SearchWorkerImpl<vv, true>>(
+              query, ref, threshold, threads, match, mismatch,
+              gap_open, gap_extend, gap_open2, gap_extend2);
+        }
+        if (span == 1)
+        {
+          return std::make_unique<Ksw2SearchWorkerImpl<vv, true, AlignmentSpan::EXTEND>>(
+              query, ref, threshold, threads, match, mismatch,
+              gap_open, gap_extend, gap_open2, gap_extend2);
+        }
+        OPTIMOTU_STOP("span must be 0 or 1");
+      }
+      if (span == 0)
+      {
+        return std::make_unique<Ksw2SearchWorkerImpl<vv, false>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2);
+      }
+      if (span == 1)
+      {
+        return std::make_unique<Ksw2SearchWorkerImpl<vv, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2);
+      }
+      OPTIMOTU_STOP("span must be 0 or 1");
+    };
+    switch (v)
+    {
+    case 0:
+      return make_ksw2_search(std::integral_constant<int, 0>{});
+    case 1:
+      return make_ksw2_search(std::integral_constant<int, 1>{});
+    case 2:
+      return make_ksw2_search(std::integral_constant<int, 2>{});
+    case 3:
+      return make_ksw2_search(std::integral_constant<int, 3>{});
+    default:
+      return make_ksw2_search(std::integral_constant<int, 4>{});
+    }
+  }
+  else if (dist_method == "edlib")
+  {
     if (span > 0) {
       OPTIMOTU_STOP("span is not implemented for edlib distance");
     }
@@ -1153,7 +1301,9 @@ std::unique_ptr<SearchWorker> create_search_worker(
       return std::make_unique<EdlibSearchWorkerImpl<4>>(query, ref, threshold,
                                                         threads);
     }
-  } else if (dist_method == "hybrid") {
+  }
+  else if (dist_method == "hybrid")
+  {
     if (span > 0) {
       OPTIMOTU_STOP("span is not implemented for hybrid distance");
     }
@@ -1179,7 +1329,9 @@ std::unique_ptr<SearchWorker> create_search_worker(
       return std::make_unique<HybridSearchWorkerImpl<4>>(query, ref, threshold,
                                                          threads, breakpoint);
     }
-  } else if (dist_method == "hamming") {
+  }
+  else if (dist_method == "hamming")
+  {
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
     if (span > 0) {
@@ -1211,7 +1363,9 @@ std::unique_ptr<SearchWorker> create_search_worker(
                                                           threads, min_overlap,
                                                           ignore_gaps);
     }
-  } else {
+  }
+  else
+  {
     OPTIMOTU_STOP("search is not implemented for distance method '%s'",
                   dist_method.c_str());
   }
@@ -1259,9 +1413,23 @@ std::unique_ptr<DistWorker> create_dist_worker(
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
     return create_wfa2_dist_worker(seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, span_enum, constrain);
-  } else if (dist_method == "edlib") {
+  }
+  else if (dist_method == "ksw2")
+  {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    return create_ksw2_dist_worker(seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, span_enum, constrain);
+  }
+  else if (dist_method == "edlib")
+  {
     return create_edlib_dist_worker(seq, threshold, pgb, sdm, verbose, span_enum, constrain);
-  } else if (dist_method == "hamming") {
+  }
+  else if (dist_method == "hamming")
+  {
     if (constrain == false) {
       RcppThread::Rcerr << "Note: Constrained alignment is not relevant for Hamming distance" << std::endl;
     }
@@ -1269,7 +1437,9 @@ std::unique_ptr<DistWorker> create_dist_worker(
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
     return create_hamming_dist_worker(seq, threshold, pgb, sdm,
       min_overlap, ignore_gaps, verbose);
-  } else {
+  }
+  else
+  {
     OPTIMOTU_STOP("unknown distance method: %s", dist_method.c_str());
   }
 }

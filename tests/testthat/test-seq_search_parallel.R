@@ -54,8 +54,17 @@ testthat::test_that("seq_search handles empty inputs across methods", {
   )
 
   method_cases <- list(
-    list(method = "wfa2", spans = c("global", "extension"), return_cigar = c(FALSE, TRUE)),
+    list(
+      method = "wfa2",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
     list(method = "edlib", spans = c("global"), return_cigar = c(FALSE)),
+    list(
+      method = "ksw2",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
     list(method = "hamming", spans = c("global"), return_cigar = c(FALSE))
   )
 
@@ -66,7 +75,11 @@ testthat::test_that("seq_search handles empty inputs across methods", {
           for (ic in input_cases) {
             msg <- sprintf(
               "method=%s span=%s cigar=%s threads=%s case=%s",
-              mc$method, sp, cig, threads, ic$name
+              mc$method,
+              sp,
+              cig,
+              threads,
+              ic$name
             )
             out <- testthat::expect_no_error(
               seq_search(
@@ -97,8 +110,17 @@ testthat::test_that("seq_search tiny inputs match serial in parallel", {
   names(ref) <- "r1"
 
   method_cases <- list(
-    list(method = "wfa2", spans = c("global", "extension"), return_cigar = c(FALSE, TRUE)),
+    list(
+      method = "wfa2",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
     list(method = "edlib", spans = c("global"), return_cigar = c(FALSE)),
+    list(
+      method = "ksw2",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
     list(method = "hamming", spans = c("global"), return_cigar = c(FALSE))
   )
 
@@ -128,7 +150,11 @@ testthat::test_that("seq_search tiny inputs match serial in parallel", {
             span = sp
           )
         )
-        testthat::expect_equal(normalize_search(parallel), normalize_search(serial), info = msg)
+        testthat::expect_equal(
+          normalize_search(parallel),
+          normalize_search(serial),
+          info = msg
+        )
       }
     }
   }

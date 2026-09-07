@@ -290,6 +290,42 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cigar_ksw2_global
+std::string cigar_ksw2_global(const std::string& a, const std::string& b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
+RcppExport SEXP _optimotu_cigar_ksw2_global(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type b(bSEXP);
+    Rcpp::traits::input_parameter< int >::type match(matchSEXP);
+    Rcpp::traits::input_parameter< int >::type mismatch(mismatchSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    rcpp_result_gen = Rcpp::wrap(cigar_ksw2_global(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cigar_ksw2_extend
+std::string cigar_ksw2_extend(const std::string& a, const std::string& b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
+RcppExport SEXP _optimotu_cigar_ksw2_extend(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type b(bSEXP);
+    Rcpp::traits::input_parameter< int >::type match(matchSEXP);
+    Rcpp::traits::input_parameter< int >::type mismatch(mismatchSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    rcpp_result_gen = Rcpp::wrap(cigar_ksw2_extend(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    return rcpp_result_gen;
+END_RCPP
+}
 // align_wfa2_global
 double align_wfa2_global(const std::string a, const std::string b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
 RcppExport SEXP _optimotu_align_wfa2_global(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
@@ -347,6 +383,42 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::string >::type a(aSEXP);
     Rcpp::traits::input_parameter< const std::string >::type b(bSEXP);
     rcpp_result_gen = Rcpp::wrap(align_edlib_extend(a, b));
+    return rcpp_result_gen;
+END_RCPP
+}
+// align_ksw2_global
+double align_ksw2_global(const std::string a, const std::string b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
+RcppExport SEXP _optimotu_align_ksw2_global(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type b(bSEXP);
+    Rcpp::traits::input_parameter< int >::type match(matchSEXP);
+    Rcpp::traits::input_parameter< int >::type mismatch(mismatchSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    rcpp_result_gen = Rcpp::wrap(align_ksw2_global(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// align_ksw2_extend
+double align_ksw2_extend(const std::string a, const std::string b, int match, int mismatch, int gap_open, int gap_extend, int gap_open2, int gap_extend2);
+RcppExport SEXP _optimotu_align_ksw2_extend(SEXP aSEXP, SEXP bSEXP, SEXP matchSEXP, SEXP mismatchSEXP, SEXP gap_openSEXP, SEXP gap_extendSEXP, SEXP gap_open2SEXP, SEXP gap_extend2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type b(bSEXP);
+    Rcpp::traits::input_parameter< int >::type match(matchSEXP);
+    Rcpp::traits::input_parameter< int >::type mismatch(mismatchSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open(gap_openSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend(gap_extendSEXP);
+    Rcpp::traits::input_parameter< int >::type gap_open2(gap_open2SEXP);
+    Rcpp::traits::input_parameter< int >::type gap_extend2(gap_extend2SEXP);
+    rcpp_result_gen = Rcpp::wrap(align_ksw2_extend(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -559,10 +631,14 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_cigar_wfa2_extend", (DL_FUNC) &_optimotu_cigar_wfa2_extend, 8},
     {"_optimotu_cigar_edlib_global", (DL_FUNC) &_optimotu_cigar_edlib_global, 2},
     {"_optimotu_cigar_edlib_extend", (DL_FUNC) &_optimotu_cigar_edlib_extend, 2},
+    {"_optimotu_cigar_ksw2_global", (DL_FUNC) &_optimotu_cigar_ksw2_global, 8},
+    {"_optimotu_cigar_ksw2_extend", (DL_FUNC) &_optimotu_cigar_ksw2_extend, 8},
     {"_optimotu_align_wfa2_global", (DL_FUNC) &_optimotu_align_wfa2_global, 8},
     {"_optimotu_align_wfa2_extend", (DL_FUNC) &_optimotu_align_wfa2_extend, 8},
     {"_optimotu_align_edlib_global", (DL_FUNC) &_optimotu_align_edlib_global, 2},
     {"_optimotu_align_edlib_extend", (DL_FUNC) &_optimotu_align_edlib_extend, 2},
+    {"_optimotu_align_ksw2_global", (DL_FUNC) &_optimotu_align_ksw2_global, 8},
+    {"_optimotu_align_ksw2_extend", (DL_FUNC) &_optimotu_align_ksw2_extend, 8},
     {"_optimotu_add_gapstats", (DL_FUNC) &_optimotu_add_gapstats, 2},
     {"_optimotu_seq_distmx_prealign", (DL_FUNC) &_optimotu_seq_distmx_prealign, 11},
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},

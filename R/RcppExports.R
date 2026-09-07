@@ -150,6 +150,20 @@ cigar_edlib_extend <- function(a, b) {
     .Call(`_optimotu_cigar_edlib_extend`, a, b)
 }
 
+#' @describeIn pairwise_alignment Compute pairwise global alignment CIGAR with KSW2
+#' @export
+#' @keywords internal
+cigar_ksw2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 1L) {
+    .Call(`_optimotu_cigar_ksw2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+}
+
+#' @describeIn pairwise_alignment Compute pairwise extension alignment CIGAR with KSW2
+#' @export
+#' @keywords internal
+cigar_ksw2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 1L) {
+    .Call(`_optimotu_cigar_ksw2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+}
+
 #' @describeIn pairwise_alignment Compute pairwise alignment distance with WFA2
 #' @export
 #' @keywords internal
@@ -176,6 +190,20 @@ align_edlib_global <- function(a, b) {
 #' @keywords internal
 align_edlib_extend <- function(a, b) {
     .Call(`_optimotu_align_edlib_extend`, a, b)
+}
+
+#' @describeIn pairwise_alignment Compute pairwise alignment distance with KSW2
+#' @export
+#' @keywords internal
+align_ksw2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
+    .Call(`_optimotu_align_ksw2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+}
+
+#' @describeIn pairwise_alignment Compute pairwise extension alignment distance with KSW2
+#' @export
+#' @keywords internal
+align_ksw2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
+    .Call(`_optimotu_align_ksw2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
 }
 
 #' Add gap statistics to a DataFrame containing CIGAR strings

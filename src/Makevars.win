@@ -1,10 +1,11 @@
 CXX_STD = CXX17
-PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./edlib
+PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./edlib -I./ksw2
 PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
 PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()") -lz
 
 SOURCES=$(shell find . -name "*.cpp")
-CSOURCES=$(shell find . -name "*.c")
+# Exclude ksw2/cli.c (has main) and unused ksw2 variants
+CSOURCES=$(shell find . -name "*.c" ! -name "cli.c" ! -name "kalloc.c" ! -name "ksw2_gg*" ! -name "ksw2_extf*" ! -name "ksw2_exts*")
 
 # Obtain the object files
 OBJECTS=$(SOURCES:.cpp=.o) $(CSOURCES:.c=.o)

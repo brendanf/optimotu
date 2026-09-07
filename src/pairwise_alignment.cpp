@@ -483,6 +483,105 @@ double align_edlib_extend(const std::string a, const std::string b) {
   return distance_edlib(a, b, config);
 }
 
+template<enum AlignmentSpan span>
+double distance_ksw2(const std::string &a, const std::string &b, Ksw2Aligner &aligner) {
+  if (!aligner.align(a, b, span)) return 1.0;
+  std::string cigar = aligner.getCIGAR();
+  if (cigar.empty()) return 1.0;
+  if constexpr (span == AlignmentSpan::EXTEND) {
+    return distance_from_cigar_extend(cigar);
+  } else {
+    return distance_from_cigar(cigar);
+  }
+}
+
+template double distance_ksw2<AlignmentSpan::GLOBAL>(
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+template double distance_ksw2<AlignmentSpan::EXTEND>(
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+
+template<enum AlignmentSpan span>
+double distance_ksw2(const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner) {
+  if (!aligner.align(a, b, span)) return 1.0;
+  std::string cigar = aligner.getCIGAR();
+  if (cigar.empty()) return 1.0;
+  if constexpr (span == AlignmentSpan::EXTEND) {
+    return distance_from_cigar_extend(cigar);
+  } else {
+    return distance_from_cigar(cigar);
+  }
+}
+
+template double distance_ksw2<AlignmentSpan::GLOBAL>(
+    const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner);
+template double distance_ksw2<AlignmentSpan::EXTEND>(
+    const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner);
+
+template<enum AlignmentSpan span>
+std::string cigar_ksw2(const std::string &a, const std::string &b,
+                       Ksw2Aligner &aligner) {
+  if (!aligner.align(a, b, span)) return "";
+  return aligner.getCIGAR();
+}
+
+template std::string cigar_ksw2<AlignmentSpan::GLOBAL>(
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+template std::string cigar_ksw2<AlignmentSpan::EXTEND>(
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+
+std::string cigar_ksw2_global(const std::string &a, const std::string &b,
+                              int match, int mismatch,
+                              int gap_open, int gap_extend,
+                              int gap_open2, int gap_extend2) {
+  Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
+  return cigar_ksw2<AlignmentSpan::GLOBAL>(a, b, aligner);
+}
+
+std::string cigar_ksw2_extend(const std::string &a, const std::string &b,
+                              int match, int mismatch,
+                              int gap_open, int gap_extend,
+                              int gap_open2, int gap_extend2) {
+  Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
+  return cigar_ksw2<AlignmentSpan::EXTEND>(a, b, aligner);
+}
+
+template<enum AlignmentSpan span>
+std::pair<double, std::string> distance_and_cigar_ksw2(
+    const std::string &a,
+    const std::string &b,
+    Ksw2Aligner &aligner
+) {
+  if (!aligner.align(a, b, span)) return {1.0, ""};
+  std::string cigar = aligner.getCIGAR();
+  if (cigar.empty()) return {1.0, ""};
+  if constexpr (span == AlignmentSpan::EXTEND) {
+    return {distance_from_cigar_extend(cigar), cigar};
+  } else {
+    return {distance_from_cigar(cigar), cigar};
+  }
+}
+
+template std::pair<double, std::string> distance_and_cigar_ksw2<AlignmentSpan::GLOBAL>(
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+template std::pair<double, std::string> distance_and_cigar_ksw2<AlignmentSpan::EXTEND>(
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+
+double align_ksw2_global(const std::string a, const std::string b,
+             int match, int mismatch,
+             int gap_open, int gap_extend,
+             int gap_open2, int gap_extend2) {
+  Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
+  return distance_ksw2<AlignmentSpan::GLOBAL>(a, b, aligner);
+}
+
+double align_ksw2_extend(const std::string a, const std::string b,
+             int match, int mismatch,
+             int gap_open, int gap_extend,
+             int gap_open2, int gap_extend2) {
+  Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
+  return distance_ksw2<AlignmentSpan::EXTEND>(a, b, aligner);
+}
+
 std::vector<std::string> align_from_cigar(
     const std::string & a,
     const std::string & b,
@@ -613,6 +712,32 @@ std::vector<std::string> pairwise_alignment(
       return align_from_compressed_cigar(a, b, cigar_edlib_global(a, b));
     } else if (span == 1) {
       return align_from_compressed_cigar(a, b, cigar_edlib_extend(a, b));
+    } else {
+      OPTIMOTU_STOP(
+        "Unknown alignment span: '" + std::to_string(span) + "'"
+      );
+    }
+  } else if (dist_method == "ksw2") {
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
+    int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    if (span == 0) {
+      return align_from_compressed_cigar(
+        a, b,
+        cigar_ksw2_global(
+          a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2
+        )
+      );
+    } else if (span == 1) {
+      return align_from_compressed_cigar(
+        a, b,
+        cigar_ksw2_extend(
+          a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2
+        )
+      );
     } else {
       OPTIMOTU_STOP(
         "Unknown alignment span: '" + std::to_string(span) + "'"

@@ -18,27 +18,36 @@
 #'  - GapAffine2Pieces : parameters do not meet requirements for `Edit`,
 #'    `Indel`, `GapLinear`, or `GapAffine`.
 #'
+#' KSW2 has equivalent implementations of the GapLinear, GapAffine, and
+#' GapAffine2Pieces strategies, but does not support the Edit or Indel
+#' strategies.
+#'
+#' WFA2 is generally the fastest method for very similar sequences, but Edlib
+#' and KSW2 are generally faster for more divergent sequences.
+#'
 #' @param a (`character` string) first string to align
 #' @param b (`character` string) second string to align
 #' @param match (`integer` scalar) match score; positive is a bonus.
 #' @param mismatch (`integer` scalar) mismatch score; positive is a penalty.
-#' @param gap_open (`integer` scalar) per-gap opening score; positive is a penalty.
-#' This penalty is applied once per run of consecutive gap characters
-#' @param gap_extend (`integer` scalar) gap extension score; positive is a penalty.
-#' This penalty is applied for each gap character. This is the appropriate
-#' parameter to use for a linear gap penalty.
+#' @param gap_open (`integer` scalar) per-gap opening score; positive is a
+#' penalty. This penalty is applied once per run of consecutive gap characters
+#' @param gap_extend (`integer` scalar) gap extension score; positive is a
+#' penalty. This penalty is applied for each gap character. This is the
+#' appropriate parameter to use for a linear gap penalty.
 #' @param gap_open2 (`integer` scalar) alternate gap opening score for two-piece
 #' affine gap penalty; positive is penalty.
 #' @param gap_extend2 (`integer` scalar) alternate gap extension score for
 #' two-piece affine gap penalty; positive is penalty.
-#' @param method (`character` scalar) alignment method to use; one of "wfa2"
-#' or "edlib".
+#' @param method (`character` scalar) alignment method to use; one of "wfa2",
+#' "edlib", or "ksw2".
 #' @param span (`character` scalar) alignment span; one of "global" or "extend".
-#' In "global" mode, the entire sequences are aligned and end gaps are penalized.
-#' "extend" mode is slightly between methods: in both cases, left end gaps are
-#' penalized. For WFA2, right end gaps in both sequences are not penalized.
-#' For Edlib, right end gaps in the *second* sequence are not penalized, but
-#' end gaps in the *first* sequence are penalized.
+#' In "global" mode, the entire sequences are aligned and end gaps are
+#' penalized. "extend" mode is slightly between methods: in both cases, left
+#' end gaps are penalized. For WFA2, right end gaps in both sequences are not
+#' penalized. For Edlib, right end gaps in the *second* sequence are not
+#' penalized, but end gaps in the *first* sequence are penalized. KSW2
+#' extension uses `KSW_EZ_EXTZ_ONLY` and may differ slightly from WFA2/Edlib on
+#' edge cases.
 #' @export
 #' @rdname pairwise_alignment
 align <- function(
@@ -50,7 +59,7 @@ align <- function(
   gap_extend = 1,
   gap_open2 = 0,
   gap_extend2 = 0,
-  method = c("wfa2", "edlib"),
+  method = c("wfa2", "edlib", "ksw2"),
   span = c("global", "extend")
 ) {
   # Check that the inputs are valid
@@ -78,13 +87,38 @@ align <- function(
         gap_extend2 != 0
     ) {
       warning(
-        "Edlib only supports match = 0, mismatch = 1, open = 0, extend = 1, open2 = 0, extend2 = 0"
+        "Edlib only supports match = 0, mismatch = 1, open = 0, extend = 1, ",
+        "open2 = 0, extend2 = 0"
       )
     }
     switch(
       span,
       global = align_edlib_global(a, b),
       extend = align_edlib_extend(a, b)
+    )
+  } else if (method == "ksw2") {
+    switch(
+      span,
+      global = align_ksw2_global(
+        a,
+        b,
+        match,
+        mismatch,
+        gap_open,
+        gap_extend,
+        gap_open2,
+        gap_extend2
+      ),
+      extend = align_ksw2_extend(
+        a,
+        b,
+        match,
+        mismatch,
+        gap_open,
+        gap_extend,
+        gap_open2,
+        gap_extend2
+      )
     )
   } else {
     switch(
@@ -179,5 +213,57 @@ cigar_edlib <- function(a, b, span = c("global", "extend")) {
     span,
     global = cigar_edlib_global(a, b),
     extend = cigar_edlib_extend(a, b)
+  )
+}
+
+#' @return (`character(1)`) CIGAR string
+#' @export
+#' @keywords internal
+#' @describeIn pairwise_alignment Generate alignment CIGAR with KSW2
+cigar_ksw2 <- function(
+  a,
+  b,
+  match = 0,
+  mismatch = 1,
+  gap_open = 0,
+  gap_extend = 1,
+  gap_open2 = 0,
+  gap_extend2 = 0,
+  span = c("global", "extend")
+) {
+  checkmate::assert_string(a)
+  checkmate::assert_string(b)
+  checkmate::assert_integerish(match)
+  checkmate::assert_integerish(mismatch)
+  checkmate::assert_integerish(gap_open)
+  checkmate::assert_integerish(gap_extend)
+  checkmate::assert_integerish(gap_open2)
+  checkmate::assert_integerish(gap_extend2)
+  checkmate::assert_character(span)
+  span <- match.arg(span)
+  checkmate::assert_choice(span, c("global", "extend"))
+
+  switch(
+    span,
+    global = cigar_ksw2_global(
+      a,
+      b,
+      match,
+      mismatch,
+      gap_open,
+      gap_extend,
+      gap_open2,
+      gap_extend2
+    ),
+    extend = cigar_ksw2_extend(
+      a,
+      b,
+      match,
+      mismatch,
+      gap_open,
+      gap_extend,
+      gap_open2,
+      gap_extend2
+    )
   )
 }

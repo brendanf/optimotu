@@ -100,6 +100,8 @@ Rcpp::RObject seq_cluster_single(
   if (verbose) {
     OPTIMOTU_CERR << "done" << std::endl;
   }
+  output.attr("n_prealigned") = static_cast<double>(n_prealigned);
+  output.attr("n_aligned") = static_cast<double>(n_aligned);
   return output;
 }
 

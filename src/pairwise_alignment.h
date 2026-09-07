@@ -8,6 +8,7 @@
 #include <edlib.h>
 #include "alignment_enums.h"
 #include "SequenceView.h"
+#include "Ksw2Aligner.h"
 
 #ifdef OPTIMOTU_R
 #include <Rcpp.h>
@@ -25,6 +26,12 @@ double distance_edlib(const SequenceView &a, const SequenceView &b, EdlibAlignCo
 
 template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 double distance_edlib(const std::string &a, const std::string &b);
+
+template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+double distance_ksw2(const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+
+template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+double distance_ksw2(const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner);
 
 template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 std::string cigar_wfa2(const std::string &a, const std::string &b,
@@ -79,6 +86,35 @@ std::pair<double, std::string> distance_and_cigar_edlib(
 );
 
 template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+std::string cigar_ksw2(const std::string &a, const std::string &b,
+                       Ksw2Aligner &aligner);
+
+//' @describeIn pairwise_alignment Compute pairwise global alignment CIGAR with KSW2
+//' @export
+//' @keywords internal
+// [[Rcpp::export]]
+std::string cigar_ksw2_global(const std::string &a, const std::string &b,
+                       int match = 0, int mismatch = 1,
+                       int gap_open = 0, int gap_extend = 1,
+                       int gap_open2 = 0, int gap_extend2 = 1);
+
+//' @describeIn pairwise_alignment Compute pairwise extension alignment CIGAR with KSW2
+//' @export
+//' @keywords internal
+// [[Rcpp::export]]
+std::string cigar_ksw2_extend(const std::string &a, const std::string &b,
+                       int match = 0, int mismatch = 1,
+                       int gap_open = 0, int gap_extend = 1,
+                       int gap_open2 = 0, int gap_extend2 = 1);
+
+template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+std::pair<double, std::string> distance_and_cigar_ksw2(
+    const std::string &a,
+    const std::string &b,
+    Ksw2Aligner &aligner
+);
+
+template<enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 std::pair<int, double> score_and_distance_wfa2(
     const std::string &a,
     const std::string &b,
@@ -114,6 +150,24 @@ double align_edlib_global(const std::string a, const std::string b);
 //' @keywords internal
 // [[Rcpp::export]]
 double align_edlib_extend(const std::string a, const std::string b);
+
+//' @describeIn pairwise_alignment Compute pairwise alignment distance with KSW2
+//' @export
+//' @keywords internal
+// [[Rcpp::export]]
+double align_ksw2_global(const std::string a, const std::string b,
+             int match = 0, int mismatch = 1,
+             int gap_open = 0, int gap_extend = 1,
+             int gap_open2 = 0, int gap_extend2 = 0);
+
+//' @describeIn pairwise_alignment Compute pairwise extension alignment distance with KSW2
+//' @export
+//' @keywords internal
+// [[Rcpp::export]]
+double align_ksw2_extend(const std::string a, const std::string b,
+                          int match = 0, int mismatch = 1,
+                          int gap_open = 0, int gap_extend = 1,
+                          int gap_open2 = 0, int gap_extend2 = 0);
 
 double distance_from_cigar(const std::string &cigar);
 double distance_from_cigar_extend(const std::string &cigar);

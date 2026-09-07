@@ -15,6 +15,7 @@ autom4te.cache
 config.log
 config.status
 benchmark
+tests/testthat/_benchmarks
 *bak
 *.Rproj
 manuscript

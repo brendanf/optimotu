@@ -57,6 +57,9 @@ use a wider negative band (`min_k = -\lceil l_1 \sigma \rceil`) because
 leading gaps in the shorter sequence are scored but trailing end gaps are
 stripped from \(d\).
 
+KSW2 only supports a symmetric band width parameter, so in constrained mode
+it uses \(\max(k_\max, -k_\min)\).
+
 ## Score cap
 
 `setMaxAlignmentSteps(S)` aborts when the WFA **score** is \(\ge S\). A
@@ -119,4 +122,4 @@ Constrained WFA in `Wfa2ClusterWorker`, `Wfa2DistWorker`,
 `kmer.cpp`, and `prealign_dist_matrix.cpp` uses `wfa_identity_bound()`.
 Edlib’s `k` remains an edit-distance limit (`maxd1`). The edit prealigner
 in `seq_distmx_prealign()` also still uses `maxd1`; only the final WFA
-aligner uses the affine cap.
+aligner uses the affine cap.  

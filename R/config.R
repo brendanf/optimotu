@@ -492,6 +492,62 @@ parallel_hierarchical <- function(threads, shards) {
 
 #' Configuration helper for pairwise distance methods
 #'
+#' Several pairwise distance methods are supported, all of which are based on
+#' pre-existing implementations which are either integrated into the package or
+#' called as external programs.
+#'
+#' # WFA2
+#'
+#' WFA2 (Marco-Sola et al., 2021) is a fast pairwise alignment method based on
+#' the wavefront algorithm. It is the default method for similarity distances,
+#' and is the fastest method for very similar sequences. It supports edit and
+#' indel distances, as well as models with linear, affine, and dual-affine gap
+#' penalties.
+#'
+#' # Edlib
+#'
+#' Edlib (Šošić & Šikić, 2017) is a fast pairwise alignment method based on the
+#' edit distance only. It is faster than WFA2 for divergent sequences.
+#'
+#' # Hybrid
+#'
+#' The hybrid method is a combination of WFA2 and Edlib. It is used with edit
+#' distance, dispatching to WFA2 for distances smaller than a cutoff threshold,
+#' and to Edlib for distances greater than or equal to the cutoff threshold.
+#'
+#' # KSW2
+#'
+#' KSW2 is the library used by minimap2 (Li, 2018) for pairwise alignment,
+#' based on the diagonal formulation of Suzuki & Kasahara (2018). It supports
+#' linear, affine, and dual-affine gap penalties, and is faster than WFA2 for
+#' these models for divergent sequences.
+#'
+#' # Hamming
+#'
+#' Hamming distance does not perform alignment, it simply counts the number of
+#' mismatches. It is extremely fast, but only applicable to sequences which are
+#' already aligned, for instance using HMM or CM alignment to a common model.
+#' The implementation is modified from the optimized CPU version of Protax (Li
+#' et al., 2024).
+#'
+#' # USEARCH
+#'
+#' USEARCH (Edgar, 2010) is an external program for sequence similarity search
+#' and other amplicon sequence analysis tasks. In OptimOTU, it is used to
+#' calculate a sparse similarity matrix. It is accelerated by using kmer
+#' profile similarity both to filter sequence pairs and to generate an anchor
+#' for subsequent extension alignment. Because of the kmer filtering step, it
+#' is not guaranteed to return all sequence pairs with distances less than the
+#' distance threshold, but it is also much faster than full alignment methods.
+#' Through gap parameters, it can be used to calculate edit distance, as well
+#' as linear and affine gap penalties.
+#'
+#' # File
+#'
+#' Pairwise distances can also be precomputed by any other method and loaded
+#' from a file. The file format is a tab-separated table with the IDs of two
+#' sequences in the first two columns, and the distance in the third column.
+#'
 #' @param method (`character` string) method to use for distance calculations
 #' @param ... passed on to variants
 #'
@@ -509,16 +565,32 @@ parallel_hierarchical <- function(threads, shards) {
 #' Šošić, M., Šikić, M., 2017. Edlib: a C/C ++ library for fast, exact sequence
 #'  alignment using edit distance. Bioinformatics 33, 1394–1395.
 #'   https://doi.org/10.1093/bioinformatics/btw753
+#'
+#' Suzuki, H. and Kasahara, M. (2018). Introducing difference recurrence
+#'  relations for faster semi-global alignment of long sequences. BMC
+#'  Bioinformatics, 19:45.
+#'  https://doi.org/10.1186/s12859-018-2014-8
+#'
+#' Li, H (2018) Minimap2: pairwise alignment for nucleotide sequences.
+#'  Bioinformatics, 34:3094-3100.
+#'  https://doi.org/10.1093/bioinformatics/bty191
+#'
+#' Li, R., Ratnasingham, S., Zarubiieva, I., Somervuo, P., & Taylor, G. W.
+#'  (2024). PROTAX-GPU: a scalable probabilistic taxonomic classification
+#'  system for DNA barcodes. Philosophical transactions of the Royal Society of
+#'  London. Series B, Biological sciences, 379(1904), 20230124.
+#'  https://doi.org/10.1098/rstb.2023.0124
 
 dist_config <- function(
-  method = c("wfa2", "edlib", "hybrid", "hamming", "file", "usearch"),
+  method = c("wfa2", "edlib", "ksw2", "hybrid", "hamming", "file", "usearch"),
   ...
 ) {
-  method = match.arg(method)
+  method <- match.arg(method)
   dc <- switch(
     method,
     wfa2 = dist_wfa2(...),
     edlib = dist_edlib(...),
+    ksw2 = dist_ksw2(...),
     file = dist_file(...),
     hybrid = dist_hybrid(...),
     hamming = dist_hamming(...),
@@ -574,6 +646,37 @@ dist_edlib <- function() {
   structure(
     list(
       method = "edlib",
+      call = match.call()
+    ),
+    class = "optimotu_dist_config"
+  )
+}
+
+#' @export
+#' @describeIn dist_config helper function for method `"ksw2"`
+dist_ksw2 <- function(
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
+  gap_open2 = gap_open,
+  gap_extend2 = gap_extend
+) {
+  checkmate::assert_count(match)
+  checkmate::assert_count(mismatch, positive = TRUE)
+  checkmate::assert_count(gap_open)
+  checkmate::assert_count(gap_extend, positive = TRUE)
+  checkmate::assert_count(gap_open2)
+  checkmate::assert_count(gap_extend2, positive = TRUE)
+  structure(
+    list(
+      method = "ksw2",
+      match = as.integer(match),
+      mismatch = as.integer(mismatch),
+      gap_open = as.integer(gap_open),
+      gap_extend = as.integer(gap_extend),
+      gap_open2 = as.integer(gap_open2),
+      gap_extend2 = as.integer(gap_extend2),
       call = match.call()
     ),
     class = "optimotu_dist_config"

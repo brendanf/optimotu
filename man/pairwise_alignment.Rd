@@ -5,12 +5,17 @@
 \alias{cigar_wfa2_extend}
 \alias{cigar_edlib_global}
 \alias{cigar_edlib_extend}
+\alias{cigar_ksw2_global}
+\alias{cigar_ksw2_extend}
 \alias{align_wfa2_global}
 \alias{align_wfa2_extend}
 \alias{align_edlib_global}
 \alias{align_edlib_extend}
+\alias{align_ksw2_global}
+\alias{align_ksw2_extend}
 \alias{align}
 \alias{cigar_wfa2}
+\alias{cigar_ksw2}
 \title{Align two sequences and return the pairwise distance or CIGAR string}
 \usage{
 cigar_wfa2_global(
@@ -39,6 +44,28 @@ cigar_edlib_global(a, b)
 
 cigar_edlib_extend(a, b)
 
+cigar_ksw2_global(
+  a,
+  b,
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
+  gap_open2 = 0L,
+  gap_extend2 = 1L
+)
+
+cigar_ksw2_extend(
+  a,
+  b,
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
+  gap_open2 = 0L,
+  gap_extend2 = 1L
+)
+
 align_wfa2_global(
   a,
   b,
@@ -65,6 +92,28 @@ align_edlib_global(a, b)
 
 align_edlib_extend(a, b)
 
+align_ksw2_global(
+  a,
+  b,
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
+  gap_open2 = 0L,
+  gap_extend2 = 0L
+)
+
+align_ksw2_extend(
+  a,
+  b,
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
+  gap_open2 = 0L,
+  gap_extend2 = 0L
+)
+
 align(
   a,
   b,
@@ -74,11 +123,23 @@ align(
   gap_extend = 1,
   gap_open2 = 0,
   gap_extend2 = 0,
-  method = c("wfa2", "edlib"),
+  method = c("wfa2", "edlib", "ksw2"),
   span = c("global", "extend")
 )
 
 cigar_wfa2(
+  a,
+  b,
+  match = 0,
+  mismatch = 1,
+  gap_open = 0,
+  gap_extend = 1,
+  gap_open2 = 0,
+  gap_extend2 = 0,
+  span = c("global", "extend")
+)
+
+cigar_ksw2(
   a,
   b,
   match = 0,
@@ -99,12 +160,12 @@ cigar_wfa2(
 
 \item{mismatch}{(\code{integer} scalar) mismatch score; positive is a penalty.}
 
-\item{gap_open}{(\code{integer} scalar) per-gap opening score; positive is a penalty.
-This penalty is applied once per run of consecutive gap characters}
+\item{gap_open}{(\code{integer} scalar) per-gap opening score; positive is a
+penalty. This penalty is applied once per run of consecutive gap characters}
 
-\item{gap_extend}{(\code{integer} scalar) gap extension score; positive is a penalty.
-This penalty is applied for each gap character. This is the appropriate
-parameter to use for a linear gap penalty.}
+\item{gap_extend}{(\code{integer} scalar) gap extension score; positive is a
+penalty. This penalty is applied for each gap character. This is the
+appropriate parameter to use for a linear gap penalty.}
 
 \item{gap_open2}{(\code{integer} scalar) alternate gap opening score for two-piece
 affine gap penalty; positive is penalty.}
@@ -112,17 +173,21 @@ affine gap penalty; positive is penalty.}
 \item{gap_extend2}{(\code{integer} scalar) alternate gap extension score for
 two-piece affine gap penalty; positive is penalty.}
 
-\item{method}{(\code{character} scalar) alignment method to use; one of "wfa2"
-or "edlib".}
+\item{method}{(\code{character} scalar) alignment method to use; one of "wfa2",
+"edlib", or "ksw2".}
 
 \item{span}{(\code{character} scalar) alignment span; one of "global" or "extend".
-In "global" mode, the entire sequences are aligned and end gaps are penalized.
-"extend" mode is slightly between methods: in both cases, left end gaps are
-penalized. For WFA2, right end gaps in both sequences are not penalized.
-For Edlib, right end gaps in the \emph{second} sequence are not penalized, but
-end gaps in the \emph{first} sequence are penalized.}
+In "global" mode, the entire sequences are aligned and end gaps are
+penalized. "extend" mode is slightly between methods: in both cases, left
+end gaps are penalized. For WFA2, right end gaps in both sequences are not
+penalized. For Edlib, right end gaps in the \emph{second} sequence are not
+penalized, but end gaps in the \emph{first} sequence are penalized. KSW2
+extension uses \code{KSW_EZ_EXTZ_ONLY} and may differ slightly from WFA2/Edlib on
+edge cases.}
 }
 \value{
+(\code{character(1)}) CIGAR string
+
 (\code{character(1)}) CIGAR string
 }
 \description{
@@ -141,6 +206,13 @@ meet requirements for "Edit", "Indel", or "GapLinear".
 \item GapAffine2Pieces : parameters do not meet requirements for \code{Edit},
 \code{Indel}, \code{GapLinear}, or \code{GapAffine}.
 }
+
+KSW2 has equivalent implementations of the GapLinear, GapAffine, and
+GapAffine2Pieces strategies, but does not support the Edit or Indel
+strategies.
+
+WFA2 is generally the fastest method for very similar sequences, but Edlib
+and KSW2 are generally faster for more divergent sequences.
 }
 \section{Functions}{
 \itemize{
@@ -152,6 +224,10 @@ meet requirements for "Edit", "Indel", or "GapLinear".
 
 \item \code{cigar_edlib_extend()}: Compute pairwise extension alignment CIGAR with Edlib
 
+\item \code{cigar_ksw2_global()}: Compute pairwise global alignment CIGAR with KSW2
+
+\item \code{cigar_ksw2_extend()}: Compute pairwise extension alignment CIGAR with KSW2
+
 \item \code{align_wfa2_global()}: Compute pairwise alignment distance with WFA2
 
 \item \code{align_wfa2_extend()}: Compute pairwise alignment distance with WFA2
@@ -160,7 +236,13 @@ meet requirements for "Edit", "Indel", or "GapLinear".
 
 \item \code{align_edlib_extend()}: Compute pairwise extension alignment distance with Edlib
 
+\item \code{align_ksw2_global()}: Compute pairwise alignment distance with KSW2
+
+\item \code{align_ksw2_extend()}: Compute pairwise extension alignment distance with KSW2
+
 \item \code{cigar_wfa2()}: Generate alignment CIGAR with WFA2
+
+\item \code{cigar_ksw2()}: Generate alignment CIGAR with KSW2
 
 }}
 \keyword{internal}
