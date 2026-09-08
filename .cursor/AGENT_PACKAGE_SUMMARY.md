@@ -59,6 +59,9 @@ Native code:
     tiles see taxa as contiguous index blocks. Permutation is of character
     vector entries only (no CHARSXP copy). Skipped for
     `dist_file(by_name = FALSE)`.
+  - `optimize_thresholds(seq_names = ...)` overrides FASTA/index header names
+    for the taxonomy join after materialization (annotated SINTAX-style
+    headers). Same length/order as `seq_idx` when subsetting.
   - `MultipleClusterAlgorithm::make_child()` builds tile/copy children
     without holding the parent MCA mutex for the whole construction; only
     `children.push_back` is locked so `parallel_merge` tile init can run

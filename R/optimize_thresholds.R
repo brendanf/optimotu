@@ -790,6 +790,15 @@ find_best_threshold <- function(
 #' @param seq_idx optional 1-based subset indices for `refseq`; see [seq_as_char()].
 #' @param seq_file optional path overrides for index-backed `refseq` only; see
 #'   [seq_as_char()]. Taxonomy rows must match the selected sequence IDs.
+#' @param seq_names optional character vector of sequence IDs to use for the
+#'   taxonomy join instead of FASTA/index headers. When `seq_idx` is set,
+#'   `seq_names` must have the same length and order as `seq_idx`; otherwise
+#'   one ID per record in `refseq`. IDs must be unique and match
+#'   `taxonomy[[id_col]]` as a set. After sequences are materialized, these
+#'   names replace header-derived names. For `dist_file(by_name = TRUE)`,
+#'   distance-file lookups use these IDs (the matrix must be keyed the same
+#'   way, not by full FASTA headers). For `dist_file(by_name = FALSE)`,
+#'   `seq_names` is used only for the taxonomy join.
 #' @param ranks (`character` vector) the taxonomic ranks in `taxonomy`
 #' @param dist_config (`op timotu_dist_config`) specification of the pairwise
 #' distance algorithm to use, as created by `dist_config()` or its helpers
@@ -875,6 +884,7 @@ optimize_thresholds <- function(
   verbose = FALSE,
   seq_idx = NULL,
   seq_file = NULL,
+  seq_names = NULL,
   clustering_memory_budget_mb = NULL,
   retry_on_memory_exhaustion = TRUE,
   retry_split_strategy = c("overlap", "balanced"),
@@ -888,7 +898,22 @@ optimize_thresholds <- function(
   checkmate::assert_string(id_col)
   checkmate::assert_data_frame(taxonomy)
   checkmate::assert_names(names(taxonomy), must.include = c(id_col, ranks))
-  refseq_names <- seq_input_seq_ids(refseq, seq_idx, seq_file)
+  if (!is.null(seq_names)) {
+    expected_len <- if (!is.null(seq_idx)) {
+      length(seq_idx)
+    } else {
+      seq_input_n_records(refseq, seq_file)
+    }
+    checkmate::assert_character(
+      seq_names,
+      len = expected_len,
+      unique = TRUE,
+      any.missing = FALSE
+    )
+    refseq_names <- seq_names
+  } else {
+    refseq_names <- seq_input_seq_ids(refseq, seq_idx, seq_file)
+  }
   checkmate::assert_set_equal(taxonomy[[id_col]], refseq_names)
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(dist_config, "optimotu_dist_config")
@@ -941,6 +966,9 @@ optimize_thresholds <- function(
       seq_file = seq_file,
       as = "character"
     )
+    if (!is.null(seq_names)) {
+      names(refseq) <- seq_names
+    }
     seq_idx <- NULL
     seq_file <- NULL
     if (length(refseq) > 0L) {

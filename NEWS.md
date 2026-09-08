@@ -1,5 +1,11 @@
 # optimotu (development version)
 
+* `optimize_thresholds()` gains optional `seq_names` so callers can join
+  taxonomy to annotated FASTA/index inputs whose headers are not bare
+  `seq_id` values (for example SINTAX `id;tax=...`). When set, these IDs
+  replace header-derived names after sequences are materialized and must
+  match `taxonomy[[id_col]]` as a set. For `dist_file(by_name = TRUE)`
+  the distance matrix must be keyed by the same IDs.
 * Add `dist_ksw2()` / `method = "ksw2"` distance and alignment backend based on
 the [KSW2](https://github.com/lh3/ksw2) dynamic-programming library (Suzuki–
 Kasahara / minimap2). Supports global and extension alignment, optional

@@ -19,6 +19,7 @@ optimize_thresholds(
   verbose = FALSE,
   seq_idx = NULL,
   seq_file = NULL,
+  seq_names = NULL,
   clustering_memory_budget_mb = NULL,
   retry_on_memory_exhaustion = TRUE,
   retry_split_strategy = c("overlap", "balanced"),
@@ -74,6 +75,16 @@ messages; values greater than 1 (or TRUE) print more}
 
 \item{seq_file}{optional path overrides for index-backed \code{refseq} only; see
 \code{\link[=seq_as_char]{seq_as_char()}}. Taxonomy rows must match the selected sequence IDs.}
+
+\item{seq_names}{optional character vector of sequence IDs to use for the
+taxonomy join instead of FASTA/index headers. When \code{seq_idx} is set,
+\code{seq_names} must have the same length and order as \code{seq_idx}; otherwise
+one ID per record in \code{refseq}. IDs must be unique and match
+\code{taxonomy[[id_col]]} as a set. After sequences are materialized, these
+names replace header-derived names. For \code{dist_file(by_name = TRUE)},
+distance-file lookups use these IDs (the matrix must be keyed the same
+way, not by full FASTA headers). For \code{dist_file(by_name = FALSE)},
+\code{seq_names} is used only for the taxonomy join.}
 
 \item{clustering_memory_budget_mb}{(\code{numeric(1)}, \code{"auto"}, or \code{NULL})
 Best-effort memory budget for clustering-owned native structures, in MB.
