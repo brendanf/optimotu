@@ -778,16 +778,29 @@ dist_file <- function(filename, by_name = TRUE) {
 #' dissimilarity thresholds greater than about 0.1, it cannot guarantee that all
 #' relevant sequence pairs are considered.
 #'
-#' @param method (`character` string) prealignment method to use
+#' @param method (`character` string) prealignment method to use.
 #' @param ... passed on to variants
 #'
 #' @return an object representing the prealignment method
 #' @export
 prealign_config <- function(
-  method = c("kmer", "wfa2", "edlib", "sneakysnake"),
+  method = c("kmer", "wfa2", "edlib"),
   ...
 ) {
-  method = match.arg(method)
+  if (!missing(method) && identical(as.character(method), "sneakysnake")) {
+    .Deprecated(
+      msg = paste(
+        "prealign_config method \"sneakysnake\" is deprecated;",
+        "the SneakySnake library was removed for license",
+        "incompatibility and is no longer supported."
+      )
+    )
+    stop(
+      "prealign_config method \"sneakysnake\" is no longer supported.",
+      call. = FALSE
+    )
+  }
+  method <- match.arg(method)
   pc <- switch(
     method,
     kmer = prealign_kmer(...),

@@ -7,7 +7,7 @@
 \alias{prealign_edlib}
 \title{Config helper for prealignment methods}
 \usage{
-prealign_config(method = c("kmer", "wfa2", "edlib", "sneakysnake"), ...)
+prealign_config(method = c("kmer", "wfa2", "edlib"), ...)
 
 prealign_kmer(udist_threshold = 1)
 
@@ -16,7 +16,7 @@ prealign_wfa2()
 prealign_edlib()
 }
 \arguments{
-\item{method}{(\code{character} string) prealignment method to use}
+\item{method}{(\code{character} string) prealignment method to use.}
 
 \item{...}{passed on to variants}
 

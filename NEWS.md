@@ -1,5 +1,7 @@
 # optimotu (development version)
 
+* `prealign_config(method = "sneakysnake")` now emits a deprecation warning
+  and then errors.
 * `optimize_thresholds()` gains optional `seq_names` so callers can join
   taxonomy to annotated FASTA/index inputs whose headers are not bare
   `seq_id` values (for example SINTAX `id;tax=...`). When set, these IDs
