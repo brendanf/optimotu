@@ -1,4 +1,4 @@
-# optimotu (development version)
+# optimotu 0.10.0
 
 * Fix over-counting of aligned/prealigned sequences in multithreaded clustering.
 * `prealign_config(method = "sneakysnake")` now emits a deprecation warning
