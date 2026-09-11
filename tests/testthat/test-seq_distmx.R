@@ -9,7 +9,14 @@ test_that("seq_distmx_internal works", {
       "AGCA"
     )
   names(testseqs) <- paste0("seq", seq_along(seqs))
-  for (method in c("usearch", "wfa2", "hamming", "edlib", "ksw2")) {
+  # USEARCH is a proprietary external binary. GitHub Actions does not
+  # install it, so include that backend only when it is on PATH.
+  methods <- c("wfa2", "hamming", "edlib", "ksw2")
+  usearch <- unname(Sys.which("usearch"))
+  if (nzchar(usearch) && file.access(usearch, 1L) == 0L) {
+    methods <- c("usearch", methods)
+  }
+  for (method in methods) {
     for (threshold in c(0.1, 0.3, 0.55)) {
       for (threads in c(1, 4)) {
         for (detail in c("cigar", "gapstats", "none")) {
