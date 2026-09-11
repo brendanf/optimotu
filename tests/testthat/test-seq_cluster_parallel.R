@@ -313,6 +313,12 @@ testthat::test_that("wfa2 multi-tile clustering uses global sequence indices", {
         verbose = FALSE
       )
     )
+    # Parallel tiles prune less than a single full-range pass, so
+    # n_aligned / n_prealigned can differ; cluster IDs must match.
+    attr(out, "n_aligned") <- NULL
+    attr(out, "n_prealigned") <- NULL
+    attr(ref, "n_aligned") <- NULL
+    attr(ref, "n_prealigned") <- NULL
     testthat::expect_equal(out, ref, info = msg)
   }
 })

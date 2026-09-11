@@ -165,12 +165,12 @@ void Ksw2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
       ++(*pg);
       RcppThread::checkUserInterrupt();
     }
-    mutex.lock();
-    _aligned += my_aligned;
-    _prealigned += my_prealigned;
     OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
-    mutex.unlock();
   }
+  mutex.lock();
+  _aligned += my_aligned;
+  _prealigned += my_prealigned;
+  mutex.unlock();
 }
 
 template class Ksw2SplitClusterWorker<0>;

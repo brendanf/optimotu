@@ -6,9 +6,6 @@
 template <int verbose>
 void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
 
-  size_t my_prealigned = 0;
-  size_t my_aligned = 0;
-
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
 
   for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
@@ -24,6 +21,8 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
     {
       continue;
     }
+    size_t my_prealigned = 0;
+    size_t my_aligned = 0;
     // iterate over all pairs in the pair generator
     while (*pg) {
       // i, j are the indices of the pair in the cluster algorithm
