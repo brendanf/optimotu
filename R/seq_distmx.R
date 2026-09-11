@@ -6,6 +6,10 @@
 #' are already named, this will replace the names.
 #' @param threshold (`numeric` scalar) maximum distance to consider a match, in
 #' \[0, 1\] where 0 is identical.
+#' @param dist_threshold (`numeric` scalar) maximum distance to consider a
+#' match, in \[0, 1\] where 0 is identical. Used by `seq_distmx_kmer()` and
+#' `seq_distmx_prealign()`.
+#' @param threads (`integer` count) number of parallel threads to use.
 #' @param dist_config (`optimotu_dist_config`) configuration for calculating
 #' distances, as returned by `dist_config()` or its helpers.
 #' @param parallel_config (`optimotu_parallel_config`) configuration for

@@ -108,6 +108,10 @@ seq_distmx_ksw2(
 \item{seq}{(\code{character}, \code{data.frame}, or \code{XStringSet}) DNA sequences to
 calculate distances for}
 
+\item{dist_threshold}{(\code{numeric} scalar) maximum distance to consider a
+match, in [0, 1] where 0 is identical. Used by \code{seq_distmx_kmer()} and
+\code{seq_distmx_prealign()}.}
+
 \item{udist_threshold}{(\code{numeric} scalar between 0 and 1) maximum udist
 (number of shared kmers / number of kmers in the shorter sequence) for full
 alignment.}
@@ -125,6 +129,8 @@ opening}
 
 \item{gap_extend2}{(positive \code{integer} scalar) alternate penalty for gap
 extension}
+
+\item{threads}{(\code{integer} count) number of parallel threads to use.}
 
 \item{prealign}{(\code{logical} flag) if \code{TRUE}, do a prealignment using
 edit-distance as alignment score (\verb{match = 0, mismatch = 1, gap_open = 0, gap_extend = 1, gap_open2 = 0, gap_extend2 = 1}) to test feasibility before

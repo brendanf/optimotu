@@ -134,6 +134,8 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   }
 };
 
+//' @param dist_threshold (`numeric` scalar) maximum distance to consider a
+//' match, in \[0, 1\] where 0 is identical.
 //' @param match (`integer` scalar) score for a match, default: 1
 //' @param mismatch (`integer` scalar) score for a mismatch, default: 2
 //' @param gap_open (`integer` scalar) score for opening a gap, default: 10
@@ -149,6 +151,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
 //' is defined using edit distance, any other set of scores will always result
 //' in a pairwise distance which is equal to or greater than an alignment based
 //' on the edit distance score.
+//' @param threads (`integer` count) number of parallel threads to use.
 //' @export
 //' @rdname seq_distmx
 // [[Rcpp::export]]

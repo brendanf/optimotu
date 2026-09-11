@@ -85,9 +85,12 @@ fmeasure_matrix <- function(k, c, ncpu = 1L) {
     .Call(`_optimotu_fmeasure_matrix`, k, c, ncpu)
 }
 
+#' @param dist_threshold (`numeric` scalar) maximum distance to consider a
+#' match, in \[0, 1\] where 0 is identical.
 #' @param udist_threshold (`numeric` scalar between 0 and 1) maximum udist
 #' (number of shared kmers / number of kmers in the shorter sequence) for full
 #' alignment.
+#' @param threads (`integer` count) number of parallel threads to use.
 #' @export
 #' @rdname seq_distmx
 seq_distmx_kmer <- function(seq, dist_threshold, udist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
@@ -215,6 +218,8 @@ add_gapstats <- function(df, cigar_column) {
     .Call(`_optimotu_add_gapstats`, df, cigar_column)
 }
 
+#' @param dist_threshold (`numeric` scalar) maximum distance to consider a
+#' match, in \[0, 1\] where 0 is identical.
 #' @param match (`integer` scalar) score for a match, default: 1
 #' @param mismatch (`integer` scalar) score for a mismatch, default: 2
 #' @param gap_open (`integer` scalar) score for opening a gap, default: 10
@@ -230,6 +235,7 @@ add_gapstats <- function(df, cigar_column) {
 #' is defined using edit distance, any other set of scores will always result
 #' in a pairwise distance which is equal to or greater than an alignment based
 #' on the edit distance score.
+#' @param threads (`integer` count) number of parallel threads to use.
 #' @export
 #' @rdname seq_distmx
 seq_distmx_prealign <- function(seq, dist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {

@@ -264,9 +264,12 @@ uint8_t lookup(char c) {
   }
 }
 
+//' @param dist_threshold (`numeric` scalar) maximum distance to consider a
+//' match, in \[0, 1\] where 0 is identical.
 //' @param udist_threshold (`numeric` scalar between 0 and 1) maximum udist
 //' (number of shared kmers / number of kmers in the shorter sequence) for full
 //' alignment.
+//' @param threads (`integer` count) number of parallel threads to use.
 //' @export
 //' @rdname seq_distmx
 // [[Rcpp::export]]
