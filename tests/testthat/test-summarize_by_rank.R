@@ -438,9 +438,11 @@ test_that("summarize_by_rank() works", {
 })
 
 test_that("summarize_by_rank() accepts non-default ID column name", {
+  tax <- test_tax
+  names(tax)[names(tax) == "seq_id"] <- "id"
   expect_equal(
     optimotu:::summarize_by_rank(
-      dplyr::rename(test_tax, id = seq_id),
+      tax,
       c("kingdom", "phylum", "class", "order", "family", "genus", "species"),
       id_col = "id"
     ),

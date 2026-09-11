@@ -1005,21 +1005,27 @@ optimize_thresholds <- function(
       "total thresholds to optimize.\n"
     )
     if (verbose >= 2L) {
-      rank <- NULL
-      superrank <- NULL
-      dplyr::count(testset_select, rank, superrank) |>
-        dplyr::mutate(
-          dplyr::across(
-            c(rank, superrank),
-            \(x) rank2factor(x, ranks)
-          )
-        ) |>
-        dplyr::arrange(rank, superrank) |>
-        glue::glue_data(
-          "  - {rank} within {n} {superrank}-rank taxa\n",
-          .trim = FALSE
-        ) |>
-        cat(sep = "")
+      counts <- as.data.frame(
+        table(
+          rank = testset_select$rank,
+          superrank = testset_select$superrank
+        ),
+        stringsAsFactors = FALSE
+      )
+      names(counts)[3] <- "n"
+      counts <- counts[counts$n > 0, , drop = FALSE]
+      counts$rank <- rank2factor(counts$rank, ranks)
+      counts$superrank <- rank2factor(counts$superrank, ranks)
+      counts <- counts[order(counts$rank, counts$superrank), , drop = FALSE]
+      cat(
+        sprintf(
+          "  - %s within %s %s-rank taxa\n",
+          counts$rank,
+          counts$n,
+          counts$superrank
+        ),
+        sep = ""
+      )
     }
   }
 
