@@ -12,7 +12,7 @@ if [ ! -e "src/WFA2-lib/bindings/cpp/WFAligner.hpp" ]
 then
   git clone http://github.com/brendanf/WFA2-lib src/WFA2-lib &&
   cd src/WFA2-lib &&
-  git checkout 782823644ad1ef11d6c2a66ead9ca3fec8601f1d &&
+  git checkout af33983096560108ac56623f9480f2daace5ee6b &&
   cd ../..
 fi
 
