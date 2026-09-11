@@ -15,7 +15,7 @@ Description: OptimOTU calculates single-linkage clusters at multiple thresholds
     meaning that it can operate on very large matrices which do not fit in RAM.
     Routines for quickly counting the measure of the intersection of sorted
     sets, and for calculating the multiclass F-measure, are also included.
-License: MIT
+License: MIT + file LICENSE
 SystemRequirements: GNU make, C++17
 Imports:
    checkmate,
