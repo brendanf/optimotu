@@ -20,7 +20,7 @@ void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::si
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     mode = EdlibAlignMode::EDLIB_MODE_SHW;
   } else {
-    static_assert(span != span, "Invalid alignment span");
+    static_assert(always_false_v<span>, "Invalid alignment span");
   }
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
 

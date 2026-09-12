@@ -47,7 +47,7 @@ void EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     mode = EdlibAlignMode::EDLIB_MODE_SHW;
   } else {
-    static_assert(span != span, "Invalid alignment span");
+    static_assert(always_false_v<span>, "Invalid alignment span");
   }
 
   EdlibAlignConfig aligner =

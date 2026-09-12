@@ -135,7 +135,7 @@ double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner 
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     status = aligner.alignExtension(a, b);
   } else {
-    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+    static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
   if (status != wfa::WFAligner::StatusAlgCompleted &&
       status != wfa::WFAligner::StatusAlgPartial) return 1.0;
@@ -175,7 +175,7 @@ double distance_wfa2(const SequenceView &a, const SequenceView &b, wfa::WFAligne
       b.data(), static_cast<int>(b.size())
     );
   } else {
-    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+    static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
   if (status != wfa::WFAligner::StatusAlgCompleted &&
       status != wfa::WFAligner::StatusAlgPartial) return 1.0;
@@ -231,7 +231,7 @@ double distance_edlib(const std::string &a, const std::string &b) {
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     mode = EDLIB_MODE_SHW;
   } else {
-    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+    static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
   auto aligner = edlibNewAlignConfig(-1, mode, EDLIB_TASK_PATH, NULL, 0);
   return distance_edlib(a, b, aligner);
@@ -252,7 +252,7 @@ std::string cigar_wfa2(const std::string &a, const std::string &b,
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     status = aligner.alignExtension(a, b);
   } else {
-    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+    static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
   if (status != wfa::WFAligner::StatusAlgCompleted) return "";
   return aligner.getCIGAR(true);
@@ -303,7 +303,7 @@ std::pair<double, std::string> distance_and_cigar_wfa2(
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     status = aligner.alignExtension(a, b);
   } else {
-    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+    static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
 
   if (status != wfa::WFAligner::StatusAlgCompleted) return {1.0, ""};
@@ -339,7 +339,7 @@ std::string cigar_edlib(const std::string &a, const std::string &b) {
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     mode = EDLIB_MODE_SHW;
   } else {
-    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+    static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
   auto config = edlibNewAlignConfig(-1, mode, EDLIB_TASK_PATH, NULL, 0);
 
@@ -424,7 +424,7 @@ std::pair<int, double> score_and_distance_wfa2(
   } else if constexpr (span == AlignmentSpan::EXTEND) {
     status = aligner.alignExtension(a, b);
   } else {
-    static_assert(span != span, "Instantiation of unimplemented AlignmentSpan");
+    static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
   // } else {
   //   status = aligner.alignEnd2End(b, a);
