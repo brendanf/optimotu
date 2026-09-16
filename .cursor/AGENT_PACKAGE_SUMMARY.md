@@ -66,11 +66,15 @@ Native code:
     without holding the parent MCA mutex for the whole construction; only
     `children.push_back` is locked so `parallel_merge` tile init can run
     concurrently (per-subset `make_child` locks remain).
-  - Hamming merge/concurrent cluster workers iterate each
-    `AllPairGenerator` / `BipartitePairGenerator` tile as nested index
-    ranges (not per-pair `PairGenerator++`), use
-    `max_relevant_local` / `apply_local` on mapped tile children, and
-    check R interrupts in batches rather than every pair.
+  - All-pairs DistWorkers (`seq_distmx`) and DistClusterWorkers share
+    `src/tile_pairs.h` (`for_each_tile_pair` /
+    `for_each_assigned_tile`): nested index ranges over
+    `AllPairGenerator` / `BipartitePairGenerator` tiles (not per-pair
+    `PairGenerator++` for dense tiles; sparse generators still fall
+    back to `++`). DistWorker thread count is capped at
+    `min(requested, n_generators)` like DistClusterWorker. Split
+    cluster workers use `max_relevant_local` / `apply_local` on mapped
+    tile children; Hamming batches R interrupt checks.
   - Constrained WFA2 uses `wfa_identity_bound()` (`src/wfa_identity_bound.h`)
     for the diagonal band and `setMaxAlignmentSteps` cap. The cap is the
     maximum affine/dual-affine score of any CIGAR with identity distance

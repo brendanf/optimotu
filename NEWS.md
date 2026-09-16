@@ -1,8 +1,14 @@
 # optimotu development version
 
+* `seq_distmx` DistWorkers now walk the same tiled
+  `AllPairGenerator` / `BipartitePairGenerator` partition as clustering
+  (instead of a row-wise triangle formula). Thread count is capped at
+  the number of tiles, matching DistClusterWorker. Alignment cluster
+  backends (Edlib / WFA2 / KSW2 / Hybrid) share the nested tile visitor
+  with Hamming (`src/tile_pairs.h`).
 * Fix a heap-buffer-overflow in Hamming `seq_search()` when query or
   reference sequences contain lowercase insertions.
-  
+
 # optimotu 0.10.0
 
 * Fix over-counting of aligned/prealigned sequences in multithreaded clustering.

@@ -22,7 +22,8 @@ public:
     SparseDistanceMatrix &sdm,
     const int min_overlap,
     const bool ignore_gap,
-    int verbose = 0
+    int verbose = 0,
+    std::size_t worker_threads = 0
   );
 };
 
@@ -31,6 +32,7 @@ class HammingDistWorkerImpl : public HammingDistWorker {
   using DistWorker::seq;
   using DistWorker::dist_threshold;
   using DistWorker::pair_generators;
+  using DistWorker::threads;
   using DistWorker::sdm;
 
   using HammingDistWorker::pss;
@@ -44,9 +46,12 @@ public:
     DivisiblePairGenerator::Builder & pgb,
     SparseDistanceMatrix &sdm,
     const int min_overlap,
-    const bool ignore_gap
-  ) : HammingDistWorker(seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap,
-    verbose) {};
+    const bool ignore_gap,
+    std::size_t worker_threads = 0
+  ) : HammingDistWorker(
+        seq, dist_threshold, pgb, sdm, min_overlap, ignore_gap, verbose,
+        worker_threads
+      ) {};
   void operator()(std::size_t begin, std::size_t end) override;
 };
 
@@ -57,7 +62,8 @@ std::unique_ptr<HammingDistWorker> create_hamming_dist_worker(
   SparseDistanceMatrix &sdm,
   const int min_overlap,
   const bool ignore_gap,
-  int verbose = 0
+  int verbose = 0,
+  std::size_t worker_threads = 0
 );
 
 #endif //OPTIMOTU_R

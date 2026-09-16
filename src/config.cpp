@@ -1412,7 +1412,11 @@ std::unique_ptr<DistWorker> create_dist_worker(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
-    return create_wfa2_dist_worker(seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, span_enum, constrain);
+    return create_wfa2_dist_worker(
+      seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
+      gap_open2, gap_extend2, verbose, span_enum, constrain,
+      static_cast<std::size_t>(threads)
+    );
   }
   else if (dist_method == "ksw2")
   {
@@ -1422,11 +1426,18 @@ std::unique_ptr<DistWorker> create_dist_worker(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
-    return create_ksw2_dist_worker(seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, span_enum, constrain);
+    return create_ksw2_dist_worker(
+      seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
+      gap_open2, gap_extend2, verbose, span_enum, constrain,
+      static_cast<std::size_t>(threads)
+    );
   }
   else if (dist_method == "edlib")
   {
-    return create_edlib_dist_worker(seq, threshold, pgb, sdm, verbose, span_enum, constrain);
+    return create_edlib_dist_worker(
+      seq, threshold, pgb, sdm, verbose, span_enum, constrain,
+      static_cast<std::size_t>(threads)
+    );
   }
   else if (dist_method == "hamming")
   {
@@ -1435,8 +1446,10 @@ std::unique_ptr<DistWorker> create_dist_worker(
     }
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
-    return create_hamming_dist_worker(seq, threshold, pgb, sdm,
-      min_overlap, ignore_gaps, verbose);
+    return create_hamming_dist_worker(
+      seq, threshold, pgb, sdm, min_overlap, ignore_gaps, verbose,
+      static_cast<std::size_t>(threads)
+    );
   }
   else
   {

@@ -19,19 +19,23 @@ struct EdlibDistWorkerImpl : public EdlibDistWorker {
   using DistWorker::sim_threshold;
   using DistWorker::sim_threshold_plus_1;
   using DistWorker::threads;
+  using DistWorker::pair_generators;
   using DistWorker::sdm;
   using DistWorker::_prealigned;
   using DistWorker::_aligned;
-  
+
   public:
   EdlibDistWorkerImpl(
     const std::vector<std::string> &seq,
     const double dist_threshold,
     DivisiblePairGenerator::Builder & pgb,
-    SparseDistanceMatrix &sdm
-  ) : EdlibDistWorker(seq, dist_threshold, pgb, sdm, verbose) {};
+    SparseDistanceMatrix &sdm,
+    std::size_t worker_threads = 0
+  ) : EdlibDistWorker(
+        seq, dist_threshold, pgb, sdm, verbose, worker_threads
+      ) {};
 
-  void operator()(std::size_t begin, std::size_t end) override; 
+  void operator()(std::size_t begin, std::size_t end) override;
 };
 
 std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
@@ -41,7 +45,8 @@ std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
   SparseDistanceMatrix &sdm,
   int verbose = 0,
   AlignmentSpan span = AlignmentSpan::GLOBAL,
-  bool constrain = true
+  bool constrain = true,
+  std::size_t worker_threads = 0
 );
 
 #endif

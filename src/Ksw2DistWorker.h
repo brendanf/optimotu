@@ -20,7 +20,8 @@ public:
     int match, int mismatch,
     int gap_open, int gap_extend,
     int gap_open2, int gap_extend2,
-    int verbose = 0
+    int verbose = 0,
+    std::size_t worker_threads = 0
   );
 };
 
@@ -29,8 +30,11 @@ class Ksw2DistWorkerImpl : public Ksw2DistWorker {
   using DistWorker::seq;
   using DistWorker::dist_threshold;
   using DistWorker::threads;
+  using DistWorker::pair_generators;
   using DistWorker::sdm;
   using DistWorker::sim_threshold;
+  using DistWorker::_prealigned;
+  using DistWorker::_aligned;
   using Ksw2DistWorker::match;
   using Ksw2DistWorker::mismatch;
   using Ksw2DistWorker::gap_open;
@@ -45,8 +49,12 @@ public:
     SparseDistanceMatrix &sdm,
     int match, int mismatch,
     int gap_open, int gap_extend,
-    int gap_open2, int gap_extend2
-  ) : Ksw2DistWorker(seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose) {};
+    int gap_open2, int gap_extend2,
+    std::size_t worker_threads = 0
+  ) : Ksw2DistWorker(
+        seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
+        gap_open2, gap_extend2, verbose, worker_threads
+      ) {};
 
   virtual void operator()(std::size_t begin, std::size_t end) override;
 };
@@ -64,7 +72,8 @@ std::unique_ptr<Ksw2DistWorker> create_ksw2_dist_worker(
   int gap_extend2 = 1,
   int verbose = 0,
   enum AlignmentSpan span = AlignmentSpan::GLOBAL,
-  bool constrain = true
+  bool constrain = true,
+  std::size_t worker_threads = 0
 );
 
 #endif //OPTIMOTU_R

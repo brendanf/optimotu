@@ -1,4 +1,6 @@
 #include "Wfa2ClusterWorker.h"
+#include "MappedClusterAlgorithm.h"
+#include "tile_pairs.h"
 #include <bindings/cpp/WFAligner.hpp>
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
@@ -18,153 +20,167 @@ gap_open2(gap_open2), gap_extend2(gap_extend2) {};
 
 template<int verbose>
 void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
+  (void)end;
   wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
                                    gap_open2, gap_extend2, wfa::WFAligner::Alignment};
-  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
-    auto & pg = pair_generators[pg_index];
-    ClusterAlgorithm *my_algo = tile_algo(pg.get());
-    if (!my_algo)
-    {
-      continue;
-    }
-    OPTIMOTU_DEBUG(2, << "Wfa2SplitClusterWorker thread " << pg_index << " entered" << std::endl);
-    size_t my_prealigned = 0;
-    size_t my_aligned = 0;
-    while (*pg) {
-      size_t i = pg->i();
-      size_t j = pg->j();
-      size_t i0 = pg->i0();
-      size_t j0 = pg->j0();
-      double threshold = my_algo->max_relevant(*pg);
-      OPTIMOTU_DEBUG(
-        4,
-        << "thread" << pg_index
-        << ": seqs " << j << " (j0=" << j0 << ")"
-        << " and " << i << " (i0=" << i0 << ")"
-        << " max relevant=" << threshold
-        << std::endl
-      );
+  for_each_assigned_tile(
+    pair_generators, begin, threads,
+    [&](std::size_t pg_index, PairGenerator &pg) {
+      ClusterAlgorithm *my_algo = tile_algo(&pg);
+      if (!my_algo) {
+        return;
+      }
+      OPTIMOTU_DEBUG(2, << "Wfa2SplitClusterWorker thread " << pg_index << " entered" << std::endl);
+      size_t my_prealigned = 0;
+      size_t my_aligned = 0;
+      const bool use_local =
+          dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
 
-      bool is_seqj_longer = seq[j0].size() > seq[i0].size();
-      // Use global indices (i0/j0) into seq; tile-local i/j only match
-      // when the generator offset is 0 (single full-range tile).
-      size_t s1 = is_seqj_longer ? i0 : j0;
-      size_t s2 = is_seqj_longer ? j0 : i0;
-      double l1 = seq[s1].size(), l2 = seq[s2].size();
-      OPTIMOTU_DEBUG(
-        4,
-        << "#### seq " << i0 << " (l1=" << l1 << ") and "
-        << j0 << " (l2=" << l2 <<")####" << std::endl
-      );
-
-      double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 >= sim_threshold) {
-        ++my_prealigned;
-        WfaIdentityBound bound = wfa_identity_bound(
-            l1, l2, threshold, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
-        );
-        wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
-        wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
-        double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
-        if (d < 1.0) ++my_aligned;
-
+      for_each_tile_pair(pg, [&](
+        std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
+      ) {
+        double threshold = use_local
+            ? my_algo->max_relevant_local(
+                  static_cast<j_t>(li), static_cast<j_t>(lj))
+            : my_algo->max_relevant(
+                  static_cast<j_t>(i0), static_cast<j_t>(j0));
         OPTIMOTU_DEBUG(
           4,
-          << " distance=" << d
+          << "thread" << pg_index
+          << ": seqs " << lj << " (j0=" << j0 << ")"
+          << " and " << li << " (i0=" << i0 << ")"
+          << " max relevant=" << threshold
           << std::endl
         );
-        if (d < threshold) (*my_algo)(*pg, d);
-      }
-      ++(*pg);
-      RcppThread::checkUserInterrupt();
+
+        bool is_seqj_longer = seq[j0].size() > seq[i0].size();
+        size_t s1 = is_seqj_longer ? i0 : j0;
+        size_t s2 = is_seqj_longer ? j0 : i0;
+        double l1 = seq[s1].size(), l2 = seq[s2].size();
+        OPTIMOTU_DEBUG(
+          4,
+          << "#### seq " << i0 << " (l1=" << l1 << ") and "
+          << j0 << " (l2=" << l2 <<")####" << std::endl
+        );
+
+        double sim_threshold = 1.0 - threshold;
+        if (l1/l2 >= sim_threshold) {
+          ++my_prealigned;
+          WfaIdentityBound bound = wfa_identity_bound(
+              l1, l2, threshold, match, mismatch,
+              gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+          wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
+          double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
+          if (d < 1.0) ++my_aligned;
+
+          OPTIMOTU_DEBUG(
+            4,
+            << " distance=" << d
+            << std::endl
+          );
+          if (d < threshold) {
+            if (use_local) {
+              my_algo->apply_local(
+                  static_cast<j_t>(li), static_cast<j_t>(lj), d);
+            } else {
+              (*my_algo)(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
+            }
+          }
+        }
+        RcppThread::checkUserInterrupt();
+      });
+      mutex.lock();
+      OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
+      _aligned += my_aligned;
+      _prealigned += my_prealigned;
+      mutex.unlock();
+      finish_tile(my_algo);
+      OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
     }
-    mutex.lock();
-    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
-    _aligned += my_aligned;
-    _prealigned += my_prealigned;
-    mutex.unlock();
-    finish_tile(my_algo);
-    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
-  }
+  );
 }
 
 template <int verbose>
 void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
+  (void)end;
   size_t my_prealigned = 0;
   size_t my_aligned = 0;
 
   wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
                                    gap_open2, gap_extend2, wfa::WFAligner::Alignment};
-  for (size_t pg_index = begin; pg_index < pair_generators.size(); pg_index += threads) {
-    auto & pg = pair_generators[pg_index];
-    OPTIMOTU_DEBUG(
-      2,
-      << "Wfa2ConcurrentClusterWorker thread " << pg_index
-      << " entered" << std::endl
-    );
-    while (*pg) {
-      size_t i = pg->i();
-      size_t j = pg->j();
-      size_t i0 = pg->i0();
-      size_t j0 = pg->j0();
-      double threshold = clust_algo.max_relevant(*pg);
+  for_each_assigned_tile(
+    pair_generators, begin, threads,
+    [&](std::size_t pg_index, PairGenerator &pg) {
       OPTIMOTU_DEBUG(
-        4,
-        << "thread" << pg_index
-        << ": seqs " << j << " (j0=" << j0 << ")"
-        << " and " << i << " (i0=" << i0 << ")"
-        << " max relevant=" << threshold
-        << std::endl
+        2,
+        << "Wfa2ConcurrentClusterWorker thread " << pg_index
+        << " entered" << std::endl
       );
-      bool is_seqj_longer = seq[j0].size() > seq[i0].size();
-      size_t s1 = is_seqj_longer ? i0 : j0;
-      size_t s2 = is_seqj_longer ? j0 : i0;
-      double l1 = seq[s1].size(), l2 = seq[s2].size();
-      OPTIMOTU_DEBUG(
-        4,
-        << "#### seq " << s1 << " (l1=" << l1 << ") and "
-        << s2 << " (l2=" << l2 <<")####" << std::endl
-      );
+      for_each_tile_pair(pg, [&](
+        std::size_t i0, std::size_t j0, std::size_t, std::size_t
+      ) {
+        double threshold = clust_algo.max_relevant(
+            static_cast<j_t>(i0), static_cast<j_t>(j0));
+        OPTIMOTU_DEBUG(
+          4,
+          << "thread" << pg_index
+          << ": seqs " << j0 << " (j0=" << j0 << ")"
+          << " and " << i0 << " (i0=" << i0 << ")"
+          << " max relevant=" << threshold
+          << std::endl
+        );
+        bool is_seqj_longer = seq[j0].size() > seq[i0].size();
+        size_t s1 = is_seqj_longer ? i0 : j0;
+        size_t s2 = is_seqj_longer ? j0 : i0;
+        double l1 = seq[s1].size(), l2 = seq[s2].size();
+        OPTIMOTU_DEBUG(
+          4,
+          << "#### seq " << s1 << " (l1=" << l1 << ") and "
+          << s2 << " (l2=" << l2 <<")####" << std::endl
+        );
 
-      double sim_threshold = 1.0 - threshold; // compiler can probably do this?
-      if (l1/l2 >= sim_threshold) {
-        ++my_prealigned;
-        WfaIdentityBound bound = wfa_identity_bound(
-            l1, l2, threshold, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
-        );
-        wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
-        wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
+        double sim_threshold = 1.0 - threshold;
+        if (l1/l2 >= sim_threshold) {
+          ++my_prealigned;
+          WfaIdentityBound bound = wfa_identity_bound(
+              l1, l2, threshold, match, mismatch,
+              gap_open, gap_extend, gap_open2, gap_extend2
+          );
+          wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
+          wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
+          OPTIMOTU_DEBUG(
+            4,
+            << "wfa_aligner min_k=" << bound.min_k
+            << " max_k=" << bound.max_k
+            << " max score=" << bound.max_alignment_steps
+            << std::endl
+          );
+          double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
+          if (d < 1.0) ++my_aligned;
+          OPTIMOTU_DEBUG(
+            4,
+            << "Thread " << begin
+            << " distance=" << d
+            << std::endl
+          );
+          if (d < threshold) {
+            clust_algo(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
+          }
+        }
         OPTIMOTU_DEBUG(
           4,
-          << "wfa_aligner min_k=" << bound.min_k
-          << " max_k=" << bound.max_k
-          << " max score=" << bound.max_alignment_steps
-          << std::endl
+          << "Thread " << pg_index
+          << ": finished " << j0 << " (j0=" << j0 << ")"
+          << " and " << i0 << " (i0=" << i0 << ")"
+          << "\n" << std::endl
         );
-        double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
-        if (d < 1.0) ++my_aligned;
-        OPTIMOTU_DEBUG(
-          4,
-          << "Thread " << begin
-          << " distance=" << d
-          << std::endl
-        );
-        if (d < threshold) clust_algo(*pg, d);
-      }
-      OPTIMOTU_DEBUG(
-        4,
-        << "Thread " << pg_index
-        << ": finished " << j << " (j0=" << j0 << ")"
-        << " and " << i << " (i0=" << i0 << ")"
-        << "\n" << std::endl
-      );
-      ++(*pg);
-      RcppThread::checkUserInterrupt();
+        RcppThread::checkUserInterrupt();
+      });
+      OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
     }
-    OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
-  }
+  );
   mutex.lock();
   _aligned += my_aligned;
   _prealigned += my_prealigned;

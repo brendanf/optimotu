@@ -340,3 +340,47 @@ testthat::test_that("seq_distmx wfa2 cigar is stable with multithreading", {
     )
   }
 })
+
+testthat::test_that("seq_distmx covers full lower triangle below threshold", {
+  # Fixed short sequences so Hamming (and alignment) hits every pair when
+  # threshold is 1. Guards against tile round-robin / thread-cap gaps.
+  set.seed(42L)
+  n <- 12L
+  seqs <- make_test_sequences(n = n, len = 40L, max_mutations = 3L)
+  expected_pairs <- n * (n - 1L) / 2L
+
+  for (method in c("hamming", "edlib", "wfa2", "ksw2")) {
+    for (thr in c(1L, 4L, 8L)) {
+      msg <- sprintf("method=%s threads=%s", method, thr)
+      out <- testthat::expect_no_error(
+        seq_distmx(
+          seq = seqs,
+          threshold = 1.0,
+          dist_config = dist_config(method = method),
+          parallel_config = parallel_concurrent(thr),
+          details = "none",
+          span = "global",
+          constrain = TRUE,
+          id_is_int = TRUE
+        )
+      )
+      out <- normalize_distmx(out)
+      testthat::expect_equal(nrow(out), expected_pairs, info = msg)
+      pair_keys <- paste(out$seq_idx1, out$seq_idx2, sep = ":")
+      testthat::expect_equal(
+        length(unique(pair_keys)),
+        expected_pairs,
+        info = msg
+      )
+      for (i in seq_len(n)) {
+        for (j in seq_len(i - 1L)) {
+          key <- paste(j, i, sep = ":")
+          testthat::expect_true(
+            key %in% pair_keys,
+            info = paste(msg, "missing", key)
+          )
+        }
+      }
+    }
+  }
+})

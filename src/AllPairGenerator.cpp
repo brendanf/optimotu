@@ -5,6 +5,7 @@
 #include "AllPairGenerator.h"
 #include "BipartitePairGenerator.h"
 #include "MappedClusterAlgorithm.h"
+#include "tile_pairs.h"
 #include <cmath>
 
 AllPairGenerator& AllPairGenerator::operator++() {
@@ -221,6 +222,50 @@ context("DivisiblePairGenerator::Builder") {
     expect_true(b1.build(0).size() >= 1u);
     B b5(100, 5);
     expect_true(b5.build(0).size() >= 5u);
+  }
+}
+
+context("for_each_tile_pair") {
+
+  test_that("visitor over Builder tiles covers the lower triangle") {
+    for (std::size_t n : {2u, 5u, 10u}) {
+      for (std::size_t min_gen : {1u, 4u, 8u}) {
+        AllPairGenerator::Builder b(n, min_gen);
+        auto gens = b.build(0);
+        std::set<std::pair<std::size_t, std::size_t>> from_visitor;
+        for (auto &g : gens) {
+          for_each_tile_pair(*g, [&](
+            std::size_t i0, std::size_t j0, std::size_t, std::size_t
+          ) {
+            from_visitor.insert({i0, j0});
+          });
+        }
+        expect_true(from_visitor.size() == n * (n - 1) / 2);
+        for (std::size_t i = 1; i < n; ++i) {
+          for (std::size_t j = 0; j < i; ++j) {
+            expect_true(from_visitor.count({i, j}));
+          }
+        }
+      }
+    }
+  }
+
+  test_that("for_each_assigned_tile round-robins without overlap") {
+    AllPairGenerator::Builder b(10, 4);
+    auto gens = b.build(0);
+    const std::size_t n_workers = 3;
+    std::vector<std::size_t> seen(gens.size(), 0);
+    for (std::size_t begin = 0; begin < n_workers; ++begin) {
+      for_each_assigned_tile(
+        gens, begin, n_workers,
+        [&](std::size_t pg_index, PairGenerator &) {
+          ++seen[pg_index];
+        }
+      );
+    }
+    for (std::size_t c : seen) {
+      expect_true(c == 1u);
+    }
   }
 }
 #endif
