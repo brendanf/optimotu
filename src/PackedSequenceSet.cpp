@@ -5,6 +5,34 @@ extern "C" {
 #include "defs.h"
 }
 
+namespace {
+
+// Count columns packed by nucleotide2binary (everything except lowercase
+// insertions).
+int packed_width(const SequenceView &s) {
+  int n = 0;
+  for (std::size_t k = 0; k < s.size(); ++k) {
+    const char c = s[k];
+    if (c < 'a' || c > 'z') {
+      ++n;
+    }
+  }
+  return n;
+}
+
+void packed_word_sizes(int alen, int *ulen, int *mulen) {
+  *ulen = alen / NUCLEOTIDES_IN_WORD;
+  if (alen > *ulen * NUCLEOTIDES_IN_WORD) {
+    (*ulen)++;
+  }
+  *mulen = alen / NUCLEOTIDES_IN_WORD / 4;
+  if (alen > *mulen * NUCLEOTIDES_IN_WORD / 4) {
+    (*mulen)++;
+  }
+}
+
+}  // namespace
+
 std::size_t PackedSequenceSet::estimate_bytes(std::size_t n, int alen) {
   if (n == 0 || alen <= 0) {
     return 0;
@@ -24,47 +52,8 @@ std::size_t PackedSequenceSet::estimate_bytes(std::size_t n, int alen) {
   );
 }
 
-PackedSequenceSet::PackedSequenceSet(const SequenceSet &seq) {
-  num_seqs = static_cast<int>(seq.size());
-  if (num_seqs == 0) return;
-  packed_seq.reserve(seq.size());
-  mask.reserve(seq.size());
-  start.reserve(seq.size());
-  end.reserve(seq.size());
-  alen = -1;
-  for (int i = 0; i < num_seqs; i++) {
-    const SequenceView &s = seq[static_cast<std::size_t>(i)];
-    int alen_s = 0;
-    for (std::size_t k = 0; k < s.size(); ++k) {
-      char c = s[k];
-      if ((c < 'a') || (c > 'z')) {
-        alen_s++;
-      }
-    }
-    if (alen == -1) {
-      alen = alen_s;
-    } else if (alen_s != alen) {
-      std::stringstream ss;
-      ss << "PackedSequenceSet:"
-         << " All sequences must have the same length " << alen << ", but sequence "
-         << i + 1 << " has length " << alen_s;
-      OPTIMOTU_STOP(ss.str());
-    }
-    ulen = alen / NUCLEOTIDES_IN_WORD;
-    if (alen > ulen * NUCLEOTIDES_IN_WORD)
-      ulen++;
-    mulen = alen / NUCLEOTIDES_IN_WORD / 4;
-    if (alen > mulen * NUCLEOTIDES_IN_WORD / 4)
-      mulen++;
-    packed_seq.emplace_back(ulen, 0LL);
-    mask.emplace_back(mulen, 0LL);
-    start.emplace_back(0);
-    end.emplace_back(0);
-    nucleotide2binary(s.c_str(), alen, packed_seq.back().data(),
-                      mask.back().data(), &(start.back()), &(end.back()));
-  }
-  verify(seq);
-}
+PackedSequenceSet::PackedSequenceSet(const SequenceSet &seq)
+  : PackedSequenceSet(seq, SequenceSet{}) {}
 
 bool PackedSequenceSet::verify(const SequenceSet & seq) const {
   bool valid = true;
@@ -225,44 +214,53 @@ PackedSequenceSet::PackedSequenceSet(
   const SequenceSet & seq2
 ) {
   num_seqs = static_cast<int>(seq1.size() + seq2.size());
-  if (num_seqs == 0) return;
+  if (num_seqs == 0) {
+    return;
+  }
   packed_seq.reserve(static_cast<std::size_t>(num_seqs));
   mask.reserve(static_cast<std::size_t>(num_seqs));
   start.reserve(static_cast<std::size_t>(num_seqs));
   end.reserve(static_cast<std::size_t>(num_seqs));
 
-  for (const auto &s : seq1) {
-    alen = static_cast<int>(s.size());
-    ulen = alen / NUCLEOTIDES_IN_WORD;
-    if (alen > ulen * NUCLEOTIDES_IN_WORD)
-      ulen++;
-    mulen = alen / NUCLEOTIDES_IN_WORD / 4;
-    if (alen > mulen * NUCLEOTIDES_IN_WORD / 4)
-      mulen++;
-    packed_seq.emplace_back(ulen);
-    mask.emplace_back(mulen);
-    start.emplace_back(0);
-    end.emplace_back(0);
-    nucleotide2binary(s.c_str(), alen, &packed_seq.back()[0],
-                      &mask.back()[0], &start.back(), &end.back());
-  }
+  alen = -1;
+  int seq_i = 0;
+  auto pack_set = [&](const SequenceSet &seq) {
+    for (const SequenceView &s : seq) {
+      ++seq_i;
+      const int alen_s = packed_width(s);
+      if (alen == -1) {
+        alen = alen_s;
+        packed_word_sizes(alen, &ulen, &mulen);
+      } else if (alen_s != alen) {
+        std::stringstream ss;
+        ss << "PackedSequenceSet:"
+           << " All sequences must have the same length " << alen
+           << ", but sequence " << seq_i << " has length " << alen_s;
+        OPTIMOTU_STOP(ss.str());
+      }
+      packed_seq.emplace_back(static_cast<std::size_t>(ulen), 0ULL);
+      mask.emplace_back(static_cast<std::size_t>(mulen), 0ULL);
+      start.emplace_back(0);
+      end.emplace_back(0);
+      nucleotide2binary(
+        s.data(),
+        static_cast<int>(s.size()),
+        alen,
+        packed_seq.back().data(),
+        mask.back().data(),
+        &start.back(),
+        &end.back()
+      );
+    }
+  };
+  pack_set(seq1);
+  pack_set(seq2);
 
-  for (const auto &s : seq2) {
-    alen = static_cast<int>(s.size());
-    ulen = alen / NUCLEOTIDES_IN_WORD;
-    if (alen > ulen * NUCLEOTIDES_IN_WORD)
-      ulen++;
-    mulen = alen / NUCLEOTIDES_IN_WORD / 4;
-    if (alen > mulen * NUCLEOTIDES_IN_WORD / 4)
-      mulen++;
-    packed_seq.emplace_back(ulen);
-    mask.emplace_back(mulen);
-    start.emplace_back(0);
-    end.emplace_back(0);
-    nucleotide2binary(s.c_str(), alen, &packed_seq.back()[0],
-                      &mask.back()[0], &start.back(), &end.back());
-  }
-
+  SequenceSet all;
+  all.reserve(seq1.size() + seq2.size());
+  all.insert(all.end(), seq1.begin(), seq1.end());
+  all.insert(all.end(), seq2.begin(), seq2.end());
+  verify(all);
 }
 
 PackedSequenceSet::PackedSequenceSet(const std::vector<std::string> &seq)

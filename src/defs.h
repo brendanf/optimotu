@@ -9,7 +9,17 @@
 
 #define NUCLEOTIDES_IN_WORD 16
 
-int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int *start, int *end);
+// Pack n non-lowercase columns from s[0, slen). Lowercase is skipped
+// (insertions). Never reads s[i] for i >= slen.
+int nucleotide2binary(
+  const char *s,
+  const int slen,
+  const int n,
+  uint64_t *b,
+  uint64_t *m,
+  int *start,
+  int *end
+);
 
 // Original from ProtaxA
 // *a: first 4-bit encoded sequence

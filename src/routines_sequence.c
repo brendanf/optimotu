@@ -15,7 +15,23 @@
 #define debugprintf(...)
 #endif
 
-int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int *start, int *end) {
+// Advance i past lowercase insertions. Returns the new index.
+static int skip_inserts(const char *s, const int slen, int i) {
+  while (i < slen && s[i] >= 'a' && s[i] <= 'z') {
+    i++;
+  }
+  return i;
+}
+
+int nucleotide2binary(
+  const char *s,
+  const int slen,
+  const int n,
+  uint64_t *b,
+  uint64_t *m,
+  int *start,
+  int *end
+) {
   uint64_t a, am;
   int i, // index in input sequence
       j, // index of output word
@@ -28,32 +44,46 @@ int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int 
   /* sequence content, 4 bits for one character */
 
   n2 = n / NUCLEOTIDES_IN_WORD;
-  i=0;
-  for (j=0; j<n2; j++) {
+  i = 0;
+  for (j = 0; j < n2; j++) {
     a = 0;
-    for (k=0; k<NUCLEOTIDES_IN_WORD; k++) {
+    for (k = 0; k < NUCLEOTIDES_IN_WORD; k++) {
       a <<= 4;
-      while ((s[i] >= 'a') && (s[i] <= 'z')) i++;
-      if (s[i] == 'A') {a += 1;}
-      else if (s[i] == 'C') {a += 2;}
-      else if (s[i] == 'G') {a += 4;}
-      else if (s[i] == 'T') {a += 8;}
-      i++;
+      i = skip_inserts(s, slen, i);
+      if (i < slen) {
+        if (s[i] == 'A') {
+          a += 1;
+        } else if (s[i] == 'C') {
+          a += 2;
+        } else if (s[i] == 'G') {
+          a += 4;
+        } else if (s[i] == 'T') {
+          a += 8;
+        }
+        i++;
+      }
     }
     b[j] = a;
   }
 
-  n_remaining = n - n2*NUCLEOTIDES_IN_WORD;
+  n_remaining = n - n2 * NUCLEOTIDES_IN_WORD;
   if (n_remaining) {
     a = 0;
-    for (k=0; k<n_remaining; k++) {
+    for (k = 0; k < n_remaining; k++) {
       a <<= 4;
-      while ((s[i] >= 'a') && (s[i] <= 'z')) i++;
-      if (s[i] == 'A') {a += 1;}
-      else if (s[i] == 'C') {a += 2;}
-      else if (s[i] == 'G') {a += 4;}
-      else if (s[i] == 'T') {a += 8;}
-      i++;
+      i = skip_inserts(s, slen, i);
+      if (i < slen) {
+        if (s[i] == 'A') {
+          a += 1;
+        } else if (s[i] == 'C') {
+          a += 2;
+        } else if (s[i] == 'G') {
+          a += 4;
+        } else if (s[i] == 'T') {
+          a += 8;
+        }
+        i++;
+      }
     }
     a <<= (4 * (NUCLEOTIDES_IN_WORD - n_remaining));
     b[j] = a;
@@ -61,48 +91,50 @@ int nucleotide2binary(const char *s, const int n, uint64_t *b, uint64_t *m, int 
 
   /* mask, 1 bit for character: 1 ok, 0 not */
 
-  n2 = n / (NUCLEOTIDES_IN_WORD*4);
-  i=0;
-  l=0;
-  for (j=0; j<n2; j++) {
+  n2 = n / (NUCLEOTIDES_IN_WORD * 4);
+  i = 0;
+  l = 0;
+  for (j = 0; j < n2; j++) {
     am = 0;
-    for (k=0; k<NUCLEOTIDES_IN_WORD*4; k++) {
+    for (k = 0; k < NUCLEOTIDES_IN_WORD * 4; k++) {
       am <<= 1;
-      while ((s[i] >= 'a') && (s[i] <= 'z')) {
+      i = skip_inserts(s, slen, i);
+      if (i < slen) {
+        if ((s[i] == 'A') || (s[i] == 'C') || (s[i] == 'G') || (s[i] == 'T')) {
+          if (!found_start) {
+            found_start = 1;
+            *start = l;
+          }
+          *end = l + 1;
+          am += 1;
+        }
         i++;
       }
-      if ((s[i] == 'A') || (s[i] == 'C') || (s[i] == 'G') || (s[i] == 'T')) {
-        if (!found_start) {
-          found_start = 1;
-          *start=l;
-        }
-        *end=l+1;
-        am += 1;
-      }
-      i++;
       l++;
     }
     m[j] = am;
   }
 
-  n_remaining = n - n2*NUCLEOTIDES_IN_WORD*4;
+  n_remaining = n - n2 * NUCLEOTIDES_IN_WORD * 4;
   if (n_remaining) {
     am = 0;
-    for (k=0; k<n_remaining; k++) {
+    for (k = 0; k < n_remaining; k++) {
       am <<= 1;
-      while ((s[i] >= 'a') && (s[i] <= 'z')) i++;
-      if ((s[i] == 'A') || (s[i] == 'C') || (s[i] == 'G') || (s[i] == 'T')) {
-        if (!found_start) {
-          found_start = 1;
-          *start=l;
+      i = skip_inserts(s, slen, i);
+      if (i < slen) {
+        if ((s[i] == 'A') || (s[i] == 'C') || (s[i] == 'G') || (s[i] == 'T')) {
+          if (!found_start) {
+            found_start = 1;
+            *start = l;
+          }
+          *end = l + 1;
+          am += 1;
         }
-        *end=l+1;
-        am += 1;
+        i++;
       }
-      i++;
       l++;
     }
-    am <<= (NUCLEOTIDES_IN_WORD*4 - n_remaining);
+    am <<= (NUCLEOTIDES_IN_WORD * 4 - n_remaining);
     m[j] = am;
   }
 

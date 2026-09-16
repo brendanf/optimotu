@@ -1,3 +1,8 @@
+# optimotu development version
+
+* Fix a heap-buffer-overflow in Hamming `seq_search()` when query or
+  reference sequences contain lowercase insertions.
+  
 # optimotu 0.10.0
 
 * Fix over-counting of aligned/prealigned sequences in multithreaded clustering.
