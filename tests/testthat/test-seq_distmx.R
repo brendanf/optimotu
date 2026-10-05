@@ -81,3 +81,55 @@ test_that("constrained affine WFA keeps identity-feasible mismatch pairs", {
   expect_equal(nrow(hits_con), 1L)
   expect_equal(hits_con$dist2, 0.2)
 })
+
+test_that("seq_distmx character ids match 1-based indices", {
+  # Names are not the index strings, so a shifted lookup cannot pass by
+  # accident. "a" and "e" are identical. Threshold 1 keeps every pair,
+  # including the last sequence, so an extra +1 becomes NA.
+  seqs <- c(
+    a = "ACGT",
+    b = "ACGA",
+    c = "ACGG",
+    d = "ACGC",
+    e = "ACGT",
+    f = "AGCA"
+  )
+  for (method in c("wfa2", "hamming", "edlib", "ksw2")) {
+    by_name <- seq_distmx(
+      seqs,
+      threshold = 1,
+      dist_config = dist_config(method = method),
+      parallel_config = parallel_concurrent(1L),
+      id_is_int = FALSE
+    )
+    by_idx <- seq_distmx(
+      seqs,
+      threshold = 1,
+      dist_config = dist_config(method = method),
+      parallel_config = parallel_concurrent(1L),
+      id_is_int = TRUE
+    )
+    expect_true(nrow(by_idx) > 0L, info = method)
+    expect_false(anyNA(by_name$seq_id1), info = method)
+    expect_false(anyNA(by_name$seq_id2), info = method)
+    name_ord <- order(by_name$seq_id1, by_name$seq_id2)
+    idx_ord <- order(by_idx$seq_idx1, by_idx$seq_idx2)
+    expect_equal(
+      by_name$seq_id1[name_ord],
+      names(seqs)[by_idx$seq_idx1[idx_ord]],
+      info = method
+    )
+    expect_equal(
+      by_name$seq_id2[name_ord],
+      names(seqs)[by_idx$seq_idx2[idx_ord]],
+      info = method
+    )
+    zero <- which(by_name$dist2 == 0)
+    expect_length(zero, 1L)
+    expect_equal(
+      sort(c(by_name$seq_id1[zero], by_name$seq_id2[zero])),
+      c("a", "e"),
+      info = method
+    )
+  }
+})

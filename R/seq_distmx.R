@@ -156,8 +156,9 @@ seq_distmx <- function(
         constrain = constrain
       )
       if (isFALSE(id_is_int)) {
-        out$seq_idx1 <- names(seq)[out$seq_idx1 + 1]
-        out$seq_idx2 <- names(seq)[out$seq_idx2 + 1]
+        # seq_distmx_internal() already returns 1-based positions.
+        out$seq_idx1 <- names(seq)[out$seq_idx1]
+        out$seq_idx2 <- names(seq)[out$seq_idx2]
         names(out)[1:2] <- c("seq_id1", "seq_id2")
       }
       class(out) <- "data.frame"

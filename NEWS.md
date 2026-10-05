@@ -8,6 +8,8 @@
   with Hamming (`src/tile_pairs.h`).
 * Fix a heap-buffer-overflow in Hamming `seq_search()` when query or
   reference sequences contain lowercase insertions.
+* Fix an off-by-one error with character `seq_id`s in the results from
+  `seq_distmx()`.
 
 # optimotu 0.10.0
 
