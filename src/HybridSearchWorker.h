@@ -2,6 +2,7 @@
 #define OPTIMOTU_HYBRIDSEARCHWORKER_H
 
 #include "SearchWorker.h"
+#include "alignment_enums.h"
 
 class HybridSearchWorker : public SearchWorker {
 protected:
@@ -17,7 +18,11 @@ public :
   breakpoint(breakpoint) {};
 };
 
-template<int verbose>
+template<
+  int verbose,
+  bool do_cigar,
+  enum AlignmentSpan span = AlignmentSpan::GLOBAL
+>
 class HybridSearchWorkerImpl : public HybridSearchWorker {
   using SearchWorker::query;
   using SearchWorker::ref;

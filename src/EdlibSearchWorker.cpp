@@ -3,8 +3,10 @@
 #include <edlib.h>
 #include "pairwise_alignment.h"
 
-template<int verbose, enum AlignmentSpan span>
-void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::size_t end) {
+template<int verbose, bool do_cigar, enum AlignmentSpan span>
+void EdlibSearchWorkerImpl<verbose, do_cigar, span>::operator()(
+  std::size_t begin, std::size_t end
+) {
   std::size_t begin_i = (begin * query.size()) / threads;
   std::size_t end_i = (end * query.size()) / threads;
   OPTIMOTU_DEBUG(
@@ -22,12 +24,18 @@ void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::si
   } else {
     static_assert(always_false_v<span>, "Invalid alignment span");
   }
-  EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
+  EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
+    -1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0
+  );
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
     if (!hits[i]) {
-      hits[i] = std::make_unique<SearchHit>();
+      if constexpr (do_cigar) {
+        hits[i] = std::make_unique<SearchCigarHit>();
+      } else {
+        hits[i] = std::make_unique<SearchHit>();
+      }
     }
     SearchHit & hit = *hits[i];
     for (std::size_t j = 0; j < ref.size(); j++) {
@@ -56,13 +64,21 @@ void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::si
         << " (l2=" << l2 <<")####" << std::endl
       );
 
-      double sim_threshold = 1.0 - max_dist; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
+      double sim_threshold = 1.0 - max_dist;
+      if constexpr (span == AlignmentSpan::GLOBAL) {
+        if (l1/l2 < sim_threshold) continue;
+      }
       ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - threshold;
-      double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+      double sim_threshold_plus_1 = 2.0 - max_dist;
+      double maxd1 = max_dist * (l1 + l2) / sim_threshold_plus_1;
       ed_aligner.k = (int)maxd1 + 1;
-      double d = distance_edlib(s1, s2, ed_aligner);
+      double d;
+      std::string cigar;
+      if constexpr (do_cigar) {
+        std::tie(d, cigar) = distance_and_cigar_edlib<span>(s1, s2, ed_aligner);
+      } else {
+        d = distance_edlib(s1, s2, ed_aligner);
+      }
       OPTIMOTU_DEBUG(
         4,
         << "Thread " << begin
@@ -81,6 +97,10 @@ void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::si
         hit.best_dist = d;
         hit.best_ref.clear();
         hit.best_ref.push_back(j);
+        if constexpr (do_cigar) {
+          hit.best_cigar().clear();
+          hit.best_cigar().push_back(cigar);
+        }
       } else if (d == hit.best_dist) {
         OPTIMOTU_DEBUG(
           4,
@@ -89,6 +109,9 @@ void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::si
           << std::endl
         );
         hit.best_ref.push_back(j);
+        if constexpr (do_cigar) {
+          hit.best_cigar().push_back(cigar);
+        }
       }
       RcppThread::checkUserInterrupt();
     }
@@ -101,8 +124,23 @@ void EdlibSearchWorkerImpl<verbose, span>::operator()(std::size_t begin, std::si
   OPTIMOTU_DEBUG(2, << "Exiting thread " << begin << std::endl);
 }
 
-template class EdlibSearchWorkerImpl<0>;
-template class EdlibSearchWorkerImpl<1>;
-template class EdlibSearchWorkerImpl<2>;
-template class EdlibSearchWorkerImpl<3>;
-template class EdlibSearchWorkerImpl<4>;
+template class EdlibSearchWorkerImpl<0, true, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<1, true, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<2, true, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<3, true, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<4, true, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<0, false, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<1, false, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<2, false, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<3, false, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<4, false, AlignmentSpan::GLOBAL>;
+template class EdlibSearchWorkerImpl<0, true, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<1, true, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<2, true, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<3, true, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<4, true, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<0, false, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<1, false, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<2, false, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<3, false, AlignmentSpan::EXTEND>;
+template class EdlibSearchWorkerImpl<4, false, AlignmentSpan::EXTEND>;

@@ -68,11 +68,29 @@ void Ksw2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
           gap_open, gap_extend, gap_open2, gap_extend2,
           span == AlignmentSpan::EXTEND
       );
-      aligner.setBandWidth(std::max(bound.max_k, -bound.min_k));
+      // Bandwidth 0 after an exact hit drops later identical refs.
+      // Extension also needs room for the length difference: KSW2's
+      // symmetric band is tighter than WFA's [min_k, max_k] and can miss
+      // a perfect short-query prefix of a longer reference.
+      int band = std::max(bound.max_k, -bound.min_k);
+      if constexpr (span == AlignmentSpan::EXTEND) {
+        const int len_diff = (l2 > l1)
+          ? static_cast<int>(l2 - l1)
+          : static_cast<int>(l1 - l2);
+        band = std::max(band, len_diff);
+      }
+      aligner.setBandWidth(std::max(1, band));
       double d;
       std::string cigar;
-      // Longer as query, shorter as target
-      if constexpr (do_cigar) {
+      // Global: longer as query, shorter as target. Extension: shorter
+      // first so a short query can match a prefix of a longer reference.
+      if constexpr (span == AlignmentSpan::EXTEND) {
+        if constexpr (do_cigar) {
+          std::tie(d, cigar) = distance_and_cigar_ksw2<span>(s1, s2, aligner);
+        } else {
+          d = distance_ksw2<span>(s1, s2, aligner);
+        }
+      } else if constexpr (do_cigar) {
         std::tie(d, cigar) = distance_and_cigar_ksw2<span>(s2, s1, aligner);
       } else {
         d = distance_ksw2<span>(s2, s1, aligner);

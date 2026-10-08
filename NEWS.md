@@ -1,5 +1,21 @@
 # optimotu development version
 
+* KSW2 traceback always uses `KSW_EZ_RIGHT` so equal-score alignments
+  prefer right-aligned gaps and, on mismatch-vs-indel ties, the longer
+  more-match CIGAR used by WFA2.
+* `seq_search()` with `dist_edlib()` or `dist_hybrid()` now supports
+  `return_cigar` and `span = "extension"`, matching WFA2 and KSW2.
+  Extension skips the global length screen so a short query can hit a
+  prefix of a longer reference.
+* `seq_search()` with `dist_usearch()` honors `return_cigar` (USEARCH
+  `caln` as column `cigar`) and errors if `span = "extension"`.
+* Fix `seq_search()` with `dist_file(by_name = FALSE)` so 0-based
+  sequence indices are mapped to names (the distance table was read but
+  not assigned).
+* Constrained KSW2 `seq_search()` keeps a minimum band of 1 after an
+  exact hit so later identical references are still reported, and
+  extension alignments pass the shorter sequence first with enough
+  bandwidth for the length difference.
 * `is_placeholder()` no longer rejects the valid genus Nonea. (#6, @vmikk)
 * `seq_distmx` DistWorkers now walk the same tiled
   `AllPairGenerator` / `BipartitePairGenerator` partition as clustering

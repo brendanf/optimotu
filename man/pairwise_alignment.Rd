@@ -209,7 +209,9 @@ meet requirements for "Edit", "Indel", or "GapLinear".
 
 KSW2 has equivalent implementations of the GapLinear, GapAffine, and
 GapAffine2Pieces strategies, but does not support the Edit or Indel
-strategies.
+strategies. Traceback always uses \code{KSW_EZ_RIGHT} (right-aligned gaps on
+score ties) so equal-score mismatch vs indel paths prefer the longer,
+more-match CIGAR used by WFA2.
 
 WFA2 is generally the fastest method for very similar sequences, but Edlib
 and KSW2 are generally faster for more divergent sequences.

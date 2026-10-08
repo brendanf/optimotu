@@ -75,6 +75,9 @@ Native code:
     `min(requested, n_generators)` like DistClusterWorker. Split
     cluster workers use `max_relevant_local` / `apply_local` on mapped
     tile children; Hamming batches R interrupt checks.
+  - KSW2 (`Ksw2Aligner`) always sets `KSW_EZ_RIGHT` so score ties
+    right-align gaps and, on mismatch-vs-indel ties, prefer the longer
+    more-match CIGAR used by WFA2. Not an R option.
   - Constrained WFA2 uses `wfa_identity_bound()` (`src/wfa_identity_bound.h`)
     for the diagonal band and `setMaxAlignmentSteps` cap. The cap is the
     maximum affine/dual-affine score of any CIGAR with identity distance

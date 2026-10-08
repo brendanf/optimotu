@@ -9,7 +9,7 @@ public :
   using SearchWorker::SearchWorker;
 };
 
-template<int verbose, enum AlignmentSpan span = AlignmentSpan::GLOBAL>
+template<int verbose, bool do_cigar, enum AlignmentSpan span = AlignmentSpan::GLOBAL>
 class EdlibSearchWorkerImpl : public EdlibSearchWorker {
   using SearchWorker::query;
   using SearchWorker::ref;

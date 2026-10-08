@@ -42,6 +42,44 @@ test_that("wfa2 matches edlib when the first mismatch is past 4 bytes", {
   )
 })
 
+test_that("ksw2 right-aligns gaps on affine score ties", {
+  # 2 matches + 2 gap opens vs 3 mismatches: same affine score
+  # (a=2, x=4, o=6, e=2). Without KSW_EZ_RIGHT this is 3X.
+  expect_equal(
+    cigar_ksw2(
+      "ACA",
+      "CAC",
+      match = 2,
+      mismatch = 4,
+      gap_open = 6,
+      gap_extend = 2
+    ),
+    "D2=I"
+  )
+  expect_equal(
+    align(
+      "ACA",
+      "CAC",
+      method = "ksw2",
+      match = 2,
+      mismatch = 4,
+      gap_open = 6,
+      gap_extend = 2
+    ),
+    align(
+      "ACA",
+      "CAC",
+      method = "wfa2",
+      match = 2,
+      mismatch = 4,
+      gap_open = 6,
+      gap_extend = 2
+    )
+  )
+  # Extra bases in the longer (query) sequence go to the 3' end.
+  expect_equal(cigar_ksw2("AAAA", "AAA"), "3=I")
+})
+
 test_that("ksw2 agrees with edlib under edit-distance defaults", {
   a <- "AAACGCGTCG"
   b <- "AAACGCGT"

@@ -64,9 +64,14 @@ seq_search <- function(
   mycall <- match.call()
 
   if (identical(dist_config$method, "usearch")) {
+    if (span != 0L) {
+      stop("Span is not supported for USEARCH search.", call. = FALSE)
+    }
     mycall[[1]] <- quote(optimotu::seq_search_usearch)
     mycall$dist_config <- NULL
     mycall$usearch <- dist_config$usearch
+    mycall$return_cigar <- return_cigar
+    mycall$span <- NULL
     mycall$query_seq_idx <- query_seq_idx
     mycall$query_seq_file <- query_seq_file
     mycall$ref_seq_idx <- ref_seq_idx
@@ -120,7 +125,7 @@ seq_search <- function(
           stringsAsFactors = FALSE
         )
       } else {
-        utils::read.table(
+        out <- utils::read.table(
           file = dist_config$filename,
           header = FALSE,
           col.names = c("seq_id", "ref_id", "dist"),

@@ -1277,57 +1277,93 @@ std::unique_ptr<SearchWorker> create_search_worker(
   }
   else if (dist_method == "edlib")
   {
-    if (span > 0) {
-      OPTIMOTU_STOP("span is not implemented for edlib distance");
-    }
-    if (return_cigar) {
-      OPTIMOTU_STOP("cigar is not implemented for edlib distance");
-    }
-    switch (v) {
+    auto make_edlib_search = [&](auto verbose_tag) -> std::unique_ptr<SearchWorker>
+    {
+      constexpr int vv = decltype(verbose_tag)::value;
+      if (return_cigar)
+      {
+        if (span == 0)
+        {
+          return std::make_unique<EdlibSearchWorkerImpl<vv, true>>(
+              query, ref, threshold, threads);
+        }
+        if (span == 1)
+        {
+          return std::make_unique<EdlibSearchWorkerImpl<vv, true, AlignmentSpan::EXTEND>>(
+              query, ref, threshold, threads);
+        }
+        OPTIMOTU_STOP("span must be 0 or 1");
+      }
+      if (span == 0)
+      {
+        return std::make_unique<EdlibSearchWorkerImpl<vv, false>>(
+            query, ref, threshold, threads);
+      }
+      if (span == 1)
+      {
+        return std::make_unique<EdlibSearchWorkerImpl<vv, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads);
+      }
+      OPTIMOTU_STOP("span must be 0 or 1");
+    };
+    switch (v)
+    {
     case 0:
-      return std::make_unique<EdlibSearchWorkerImpl<0>>(query, ref, threshold,
-                                                        threads);
+      return make_edlib_search(std::integral_constant<int, 0>{});
     case 1:
-      return std::make_unique<EdlibSearchWorkerImpl<1>>(query, ref, threshold,
-                                                        threads);
+      return make_edlib_search(std::integral_constant<int, 1>{});
     case 2:
-      return std::make_unique<EdlibSearchWorkerImpl<2>>(query, ref, threshold,
-                                                        threads);
+      return make_edlib_search(std::integral_constant<int, 2>{});
     case 3:
-      return std::make_unique<EdlibSearchWorkerImpl<3>>(query, ref, threshold,
-                                                        threads);
-    case 4:
+      return make_edlib_search(std::integral_constant<int, 3>{});
     default:
-      return std::make_unique<EdlibSearchWorkerImpl<4>>(query, ref, threshold,
-                                                        threads);
+      return make_edlib_search(std::integral_constant<int, 4>{});
     }
   }
   else if (dist_method == "hybrid")
   {
-    if (span > 0) {
-      OPTIMOTU_STOP("span is not implemented for hybrid distance");
-    }
-    if (return_cigar) {
-      OPTIMOTU_STOP("cigar is not implemented for hybrid distance");
-    }
     double breakpoint = element_as_double(dist_config, "cutoff", "dist_config");
-    switch (v) {
+    auto make_hybrid_search = [&](auto verbose_tag) -> std::unique_ptr<SearchWorker>
+    {
+      constexpr int vv = decltype(verbose_tag)::value;
+      if (return_cigar)
+      {
+        if (span == 0)
+        {
+          return std::make_unique<HybridSearchWorkerImpl<vv, true>>(
+              query, ref, threshold, threads, breakpoint);
+        }
+        if (span == 1)
+        {
+          return std::make_unique<HybridSearchWorkerImpl<vv, true, AlignmentSpan::EXTEND>>(
+              query, ref, threshold, threads, breakpoint);
+        }
+        OPTIMOTU_STOP("span must be 0 or 1");
+      }
+      if (span == 0)
+      {
+        return std::make_unique<HybridSearchWorkerImpl<vv, false>>(
+            query, ref, threshold, threads, breakpoint);
+      }
+      if (span == 1)
+      {
+        return std::make_unique<HybridSearchWorkerImpl<vv, false, AlignmentSpan::EXTEND>>(
+            query, ref, threshold, threads, breakpoint);
+      }
+      OPTIMOTU_STOP("span must be 0 or 1");
+    };
+    switch (v)
+    {
     case 0:
-      return std::make_unique<HybridSearchWorkerImpl<0>>(query, ref, threshold,
-                                                         threads, breakpoint);
+      return make_hybrid_search(std::integral_constant<int, 0>{});
     case 1:
-      return std::make_unique<HybridSearchWorkerImpl<1>>(query, ref, threshold,
-                                                         threads, breakpoint);
+      return make_hybrid_search(std::integral_constant<int, 1>{});
     case 2:
-      return std::make_unique<HybridSearchWorkerImpl<2>>(query, ref, threshold,
-                                                         threads, breakpoint);
+      return make_hybrid_search(std::integral_constant<int, 2>{});
     case 3:
-      return std::make_unique<HybridSearchWorkerImpl<3>>(query, ref, threshold,
-                                                         threads, breakpoint);
-    case 4:
+      return make_hybrid_search(std::integral_constant<int, 3>{});
     default:
-      return std::make_unique<HybridSearchWorkerImpl<4>>(query, ref, threshold,
-                                                         threads, breakpoint);
+      return make_hybrid_search(std::integral_constant<int, 4>{});
     }
   }
   else if (dist_method == "hamming")

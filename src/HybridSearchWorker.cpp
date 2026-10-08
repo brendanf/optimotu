@@ -5,8 +5,10 @@
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
 
-template<int verbose>
-void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end) {
+template<int verbose, bool do_cigar, enum AlignmentSpan span>
+void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
+  std::size_t begin, std::size_t end
+) {
   std::size_t begin_i = (begin * query.size()) / threads;
   std::size_t end_i = (end * query.size()) / threads;
   OPTIMOTU_DEBUG(
@@ -16,13 +18,27 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
     << ", "<< end_i << ")" << std::endl
   );
 
-  EdlibAlignConfig ed_aligner = edlibNewAlignConfig(-1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
+  EdlibAlignMode mode;
+  if constexpr (span == AlignmentSpan::GLOBAL) {
+    mode = EdlibAlignMode::EDLIB_MODE_NW;
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    mode = EdlibAlignMode::EDLIB_MODE_SHW;
+  } else {
+    static_assert(always_false_v<span>, "Invalid alignment span");
+  }
+  EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
+    -1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0
+  );
   wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
     if (!hits[i]) {
-      hits[i] = std::make_unique<SearchHit>();
+      if constexpr (do_cigar) {
+        hits[i] = std::make_unique<SearchCigarHit>();
+      } else {
+        hits[i] = std::make_unique<SearchHit>();
+      }
     }
     SearchHit & hit = *hits[i];
     for (std::size_t j = 0; j < ref.size(); j++) {
@@ -51,22 +67,36 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
         << " (l2=" << l2 <<")####" << std::endl
       );
 
-      double sim_threshold = 1.0 - max_dist; // compiler can probably do this?
-      if (l1/l2 < sim_threshold) continue;
+      double sim_threshold = 1.0 - max_dist;
+      if constexpr (span == AlignmentSpan::GLOBAL) {
+        if (l1/l2 < sim_threshold) continue;
+      }
       ++my_prealigned;
       double maxd1 = wfa_identity_max_edits(l1, l2, max_dist);
       bool is_close = breakpoint >= 1 ? maxd1 < breakpoint : max_dist < breakpoint;
       double d;
+      std::string cigar;
       if (is_close) {
         WfaIdentityBound bound = wfa_identity_bound(
-            l1, l2, max_dist, 0, 1, 0, 1, 0, 1
+            l1, l2, max_dist, 0, 1, 0, 1, 0, 1,
+            span == AlignmentSpan::EXTEND
         );
         wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
         wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
-        d = distance_wfa2(s1, s2, wfa_aligner);
+        if constexpr (do_cigar) {
+          std::tie(d, cigar) =
+            distance_and_cigar_wfa2<span>(s1, s2, wfa_aligner);
+        } else {
+          d = distance_wfa2<span>(s1, s2, wfa_aligner);
+        }
       } else {
         ed_aligner.k = (int)maxd1 + 1;
-        d = distance_edlib(s1, s2, ed_aligner);
+        if constexpr (do_cigar) {
+          std::tie(d, cigar) =
+            distance_and_cigar_edlib<span>(s1, s2, ed_aligner);
+        } else {
+          d = distance_edlib(s1, s2, ed_aligner);
+        }
       }
       OPTIMOTU_DEBUG(
         4,
@@ -86,6 +116,10 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
         hit.best_dist = d;
         hit.best_ref.clear();
         hit.best_ref.push_back(j);
+        if constexpr (do_cigar) {
+          hit.best_cigar().clear();
+          hit.best_cigar().push_back(cigar);
+        }
       } else if (d == hit.best_dist) {
         OPTIMOTU_DEBUG(
           4,
@@ -94,6 +128,9 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
           << std::endl
         );
         hit.best_ref.push_back(j);
+        if constexpr (do_cigar) {
+          hit.best_cigar().push_back(cigar);
+        }
       }
       RcppThread::checkUserInterrupt();
     }
@@ -106,8 +143,23 @@ void HybridSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t 
   OPTIMOTU_DEBUG(2, << "Exiting thread " << begin << std::endl);
 }
 
-template class HybridSearchWorkerImpl<0>;
-template class HybridSearchWorkerImpl<1>;
-template class HybridSearchWorkerImpl<2>;
-template class HybridSearchWorkerImpl<3>;
-template class HybridSearchWorkerImpl<4>;
+template class HybridSearchWorkerImpl<0, true, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<1, true, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<2, true, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<3, true, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<4, true, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<0, false, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<1, false, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<2, false, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<3, false, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<4, false, AlignmentSpan::GLOBAL>;
+template class HybridSearchWorkerImpl<0, true, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<1, true, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<2, true, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<3, true, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<4, true, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<0, false, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<1, false, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<2, false, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<3, false, AlignmentSpan::EXTEND>;
+template class HybridSearchWorkerImpl<4, false, AlignmentSpan::EXTEND>;

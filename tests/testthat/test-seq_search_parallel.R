@@ -59,9 +59,18 @@ testthat::test_that("seq_search handles empty inputs across methods", {
       spans = c("global", "extension"),
       return_cigar = c(FALSE, TRUE)
     ),
-    list(method = "edlib", spans = c("global"), return_cigar = c(FALSE)),
+    list(
+      method = "edlib",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
     list(
       method = "ksw2",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
+    list(
+      method = "hybrid",
       spans = c("global", "extension"),
       return_cigar = c(FALSE, TRUE)
     ),
@@ -115,9 +124,18 @@ testthat::test_that("seq_search tiny inputs match serial in parallel", {
       spans = c("global", "extension"),
       return_cigar = c(FALSE, TRUE)
     ),
-    list(method = "edlib", spans = c("global"), return_cigar = c(FALSE)),
+    list(
+      method = "edlib",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
     list(
       method = "ksw2",
+      spans = c("global", "extension"),
+      return_cigar = c(FALSE, TRUE)
+    ),
+    list(
+      method = "hybrid",
       spans = c("global", "extension"),
       return_cigar = c(FALSE, TRUE)
     ),

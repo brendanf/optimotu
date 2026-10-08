@@ -147,7 +147,9 @@ bool Ksw2Aligner::align(
   const int w = band_width;
   const int zdrop = -1;
   const int end_bonus = 0;
-  int flag = 0;
+  // Right-align gaps on score ties so mismatch-vs-indel ties prefer the
+  // longer, more-match path used by WFA2. Not exposed; always on.
+  int flag = KSW_EZ_RIGHT;
   if (span == AlignmentSpan::EXTEND) {
     flag |= KSW_EZ_EXTZ_ONLY;
   }

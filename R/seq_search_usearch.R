@@ -14,11 +14,14 @@
 #' they are already named, this will replace the names.  Has no effect if `seq`
 #' is a filename.
 #' @param usearch (`character` scalar) path to USEARCH executable
+#' @param return_cigar (`logical` scalar) if `TRUE`, return the CIGAR string
+#' from USEARCH field `caln` in a column named `cigar`.
 #' @param ... passed to methods (currently inactive)
 #'
 #' @return (`data.frame`) with columns "seq_id" (`character`),
 #' "ref_id" (`character`), and "dist" (`numeric`) giving the distance between
-#' the query and reference.
+#' the query and reference. If `return_cigar` is `TRUE`, also includes
+#' "cigar" (`character`).
 #'
 #' @export
 seq_search_usearch <- function(
@@ -30,12 +33,14 @@ seq_search_usearch <- function(
   parallel_config = parallel_concurrent(1),
   usearch = find_usearch(),
   verbose = FALSE,
+  return_cigar = FALSE,
   query_seq_idx = NULL,
   query_seq_file = NULL,
   ref_seq_idx = NULL,
   ref_seq_file = NULL,
   ...
 ) {
+  checkmate::assert_flag(return_cigar)
   tq <- seq_usearch_fasta_file(query, query_id, query_seq_idx, query_seq_file)
   tquery <- tq$path
   if (tq$unlink) {
@@ -49,6 +54,21 @@ seq_search_usearch <- function(
   tout <- tempfile(fileext = ".dat")
   file.create(tout)
   on.exit(unlink(tout), add = TRUE)
+  userfields <- if (isTRUE(return_cigar)) {
+    "query+target+id+caln"
+  } else {
+    "query+target+id"
+  }
+  colnames <- if (isTRUE(return_cigar)) {
+    c("seq_id", "ref_id", "dist", "cigar")
+  } else {
+    c("seq_id", "ref_id", "dist")
+  }
+  coltypes <- if (isTRUE(return_cigar)) {
+    c("character", "character", "numeric", "character")
+  } else {
+    c("character", "character", "numeric")
+  }
   args <- c(
     "-usearch_global",
     tquery,
@@ -70,7 +90,7 @@ seq_search_usearch <- function(
     "-userout",
     tout,
     "-userfields",
-    "query+target+id"
+    userfields
   )
   extra_args <- list(...)
   if (length(extra_args) > 0) {
@@ -91,8 +111,8 @@ seq_search_usearch <- function(
   out <- utils::read.table(
     tout,
     header = FALSE,
-    col.names = c("seq_id", "ref_id", "dist"),
-    colClasses = c("character", "character", "numeric")
+    col.names = colnames,
+    colClasses = coltypes,
   )
   out$dist <- 1 - out$dist / 100
   attr(out, "class") <- c("tbl_df", "tbl", "data.frame")

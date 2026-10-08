@@ -41,6 +41,7 @@ public:
 
   // Align a (query) vs b (target). Callers should pass the longer sequence as
   // query and the shorter as target when following the WFA2 worker convention.
+  // Traceback always sets KSW_EZ_RIGHT (right-aligned gaps on score ties).
   // Returns true on a completed path; false if z-dropped / incomplete.
   bool align(
     const char *a,

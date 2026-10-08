@@ -14,6 +14,7 @@ seq_search_usearch(
   parallel_config = parallel_concurrent(1),
   usearch = find_usearch(),
   verbose = FALSE,
+  return_cigar = FALSE,
   query_seq_idx = NULL,
   query_seq_file = NULL,
   ref_seq_idx = NULL,
@@ -45,6 +46,9 @@ processing, as returned by \code{parallel_config()} or its helpers.}
 
 \item{verbose}{(\code{logical} or \code{integer} scalar) print progress messages.}
 
+\item{return_cigar}{(\code{logical} scalar) if \code{TRUE}, return the CIGAR string
+from USEARCH field \code{caln} in a column named \code{cigar}.}
+
 \item{query_seq_idx, query_seq_file}{optional subsetting for \code{query}; see
 \code{\link[=seq_as_char]{seq_as_char()}}.}
 
@@ -56,7 +60,8 @@ processing, as returned by \code{parallel_config()} or its helpers.}
 \value{
 (\code{data.frame}) with columns "seq_id" (\code{character}),
 "ref_id" (\code{character}), and "dist" (\code{numeric}) giving the distance between
-the query and reference.
+the query and reference. If \code{return_cigar} is \code{TRUE}, also includes
+"cigar" (\code{character}).
 }
 \description{
 This function uses a unix pipe to read the output of the
