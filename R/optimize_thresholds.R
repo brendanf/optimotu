@@ -10,7 +10,7 @@ is_placeholder <- function(taxon) {
   checkmate::assert_character(taxon)
   is.na(taxon) |
     grepl(
-      "^(dummy|unclassified|unknown|uncultured|environmental|unassigned|none)",
+      "^(dummy|unclassified|unknown|uncultured|environmental|unassigned|none)($|[^[:alpha:]])",
       taxon,
       ignore.case = TRUE
     ) |
