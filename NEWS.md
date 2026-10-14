@@ -1,5 +1,6 @@
 # optimotu development version
 
+* `is_placeholder()` no longer rejects the valid genus Nonea. (#6, @vmikk)
 * `seq_distmx` DistWorkers now walk the same tiled
   `AllPairGenerator` / `BipartitePairGenerator` partition as clustering
   (instead of a row-wise triangle formula). Thread count is capped at
