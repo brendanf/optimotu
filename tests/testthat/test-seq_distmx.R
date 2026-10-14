@@ -82,6 +82,21 @@ test_that("constrained affine WFA keeps identity-feasible mismatch pairs", {
   expect_equal(hits_con$dist2, 0.2)
 })
 
+test_that("seq_distmx dist_wfa2 match bonus does not abort", {
+  # WFA2 requires match <= 0. dist_wfa2(match = a) is a bonus; passing +a
+  # used to abort ("Match score must be negative or zero").
+  seqs <- c(a = "ACGT", b = "ACGA")
+  cfg <- dist_wfa2(match = 2L, mismatch = 4L, gap_open = 6L, gap_extend = 2L)
+  out <- seq_distmx(
+    seqs,
+    threshold = 1,
+    dist_config = cfg,
+    parallel_config = parallel_concurrent(1L)
+  )
+  expect_equal(nrow(out), 1L)
+  expect_equal(out$dist2, 0.25)
+})
+
 test_that("seq_distmx character ids match 1-based indices", {
   # Names are not the index strings, so a shifted lookup cannot pass by
   # accident. "a" and "e" are identical. Threshold 1 keeps every pair,

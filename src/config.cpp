@@ -669,79 +669,71 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    // dist_wfa2() match is a non-negative bonus; WFA2 requires <= 0.
+    match = -match;
     if (par_method == "merge") {
       if (v == 0) {
         return std::make_unique<Wfa2SplitClusterWorker<0>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else if (v == 1) {
         return std::make_unique<Wfa2SplitClusterWorker<1>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else if (v == 2) {
         return std::make_unique<Wfa2SplitClusterWorker<2>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else if (v == 3) {
         return std::make_unique<Wfa2SplitClusterWorker<3>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else {
         return std::make_unique<Wfa2SplitClusterWorker<4>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<0>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else if (v == 1) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<1>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else if (v == 2) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<2>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else if (v == 3) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<3>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       } else {
         return std::make_unique<Wfa2ConcurrentClusterWorker<4>>(
-          seq,
-          cluster, pgb, -match, mismatch,
-          gap_open, gap_extend, gap_open2, gap_extend2,
-          worker_threads
-        );
+            seq,
+            cluster, pgb, match, mismatch,
+            gap_open, gap_extend, gap_open2, gap_extend2,
+            worker_threads);
       }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
@@ -1045,6 +1037,8 @@ std::unique_ptr<SearchWorker> create_search_worker(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    // dist_wfa2() match is a non-negative bonus; WFA2 requires <= 0.
+    match = -match;
     switch (v) {
     case 0:
       if (return_cigar) {
@@ -1448,6 +1442,8 @@ std::unique_ptr<DistWorker> create_dist_worker(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    // dist_wfa2() match is a non-negative bonus; WFA2 requires <= 0.
+    match = -match;
     return create_wfa2_dist_worker(
       seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
       gap_open2, gap_extend2, verbose, span_enum, constrain,

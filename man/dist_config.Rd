@@ -49,7 +49,9 @@ dist_file(filename, by_name = TRUE)
 
 \item{...}{passed on to variants}
 
-\item{match}{(non-negative \code{integer} scalar) score for a match}
+\item{match}{(non-negative \code{integer} scalar) bonus for a match. For
+\code{"wfa2"} this is negated before calling WFA2, which requires match
+\verb{<= 0}. For \code{"ksw2"} it is used as a positive match bonus.}
 
 \item{mismatch}{(positive \code{integer} scalar) penalty for a mismatch}
 

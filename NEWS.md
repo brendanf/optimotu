@@ -1,5 +1,10 @@
 # optimotu development version
 
+* `dist_wfa2(match = a)` now treats `a` as a match bonus on
+  `seq_distmx()`, `seq_search()`, and `pairwise_alignment()`, matching
+  clustering and `align()` / `cigar_wfa2()`. Previously those paths
+  passed `+a` into WFA2, which requires match `<= 0` and aborted when
+  `a > 0`.
 * KSW2 traceback always uses `KSW_EZ_RIGHT` so equal-score alignments
   prefer right-aligned gaps and, on mismatch-vs-indel ties, the longer
   more-match CIGAR used by WFA2.

@@ -698,6 +698,8 @@ std::vector<std::string> pairwise_alignment(
     int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
     int gap_open2 = element_as_int(dist_config, "gap_open2", "dist_config");
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
+    // dist_wfa2() match is a non-negative bonus; WFA2 requires <= 0.
+    match = -match;
     if (span == 0) {
       return align_from_compressed_cigar(a, b, cigar_wfa2_global(a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2));
     } else if (span == 1) {

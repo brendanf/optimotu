@@ -600,7 +600,9 @@ dist_config <- function(
   dc
 }
 
-#' @param match (non-negative `integer` scalar) score for a match
+#' @param match (non-negative `integer` scalar) bonus for a match. For
+#' `"wfa2"` this is negated before calling WFA2, which requires match
+#' `<= 0`. For `"ksw2"` it is used as a positive match bonus.
 #' @param mismatch (positive `integer` scalar) penalty for a mismatch
 #' @param gap_open (non-negative `integer` scalar) penalty for gap opening
 #' @param gap_extend (positive `integer` scalar) penalty for gap extension

@@ -425,3 +425,23 @@ test_that("seq_search usearch returns sequence names and optional cigar", {
     "Span"
   )
 })
+
+test_that("seq_search dist_wfa2 match bonus does not abort", {
+  query <- c(q = "ACGT")
+  ref <- c(r = "ACGA")
+  out <- seq_search(
+    query = query,
+    ref = ref,
+    threshold = 1,
+    dist_config = dist_wfa2(
+      match = 2L,
+      mismatch = 4L,
+      gap_open = 6L,
+      gap_extend = 2L
+    ),
+    parallel_config = parallel_concurrent(1L)
+  )
+  expect_identical(out$seq_id, "q")
+  expect_identical(out$ref_id, "r")
+  expect_equal(out$dist, 0.25)
+})

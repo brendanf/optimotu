@@ -75,6 +75,10 @@ Native code:
     `min(requested, n_generators)` like DistClusterWorker. Split
     cluster workers use `max_relevant_local` / `apply_local` on mapped
     tile children; Hamming batches R interrupt checks.
+  - `dist_wfa2()` match is a non-negative bonus. All WFA2 factories
+    (`create_*_worker`, `pairwise_alignment`) negate it before
+    constructing `WFAligner`. Low-level `cigar_wfa2_*` / `align_wfa2_*`
+    still take WFA2-native match (`<= 0`); the R wrappers negate.
   - KSW2 (`Ksw2Aligner`) always sets `KSW_EZ_RIGHT` so score ties
     right-align gaps and, on mismatch-vs-indel ties, prefer the longer
     more-match CIGAR used by WFA2. Not an R option.
