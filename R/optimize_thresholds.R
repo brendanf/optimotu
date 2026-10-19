@@ -147,6 +147,58 @@ estimate_hamming_packed_mb <- function(n_union, seq_len) {
   bytes / (1024 * 1024)
 }
 
+# Clustering N for memory planning: dereplicated subset size when present.
+subset_cluster_n <- function(testset_select) {
+  if (!is.null(testset_select$n_cluster)) {
+    return(testset_select$n_cluster)
+  }
+  testset_select$n_seq
+}
+
+thresholds_allow_identical_collapse <- function(threshold_config) {
+  map <- clustering_threshold_map(threshold_config)
+  th <- map$thresholds
+  length(th) > 0L && min(th) >= 0 && max(th) > 0
+}
+
+apply_identical_refseq_collapse <- function(
+  refseq,
+  taxonomy,
+  ranks,
+  testset_select
+) {
+  if (is.null(names(refseq))) {
+    names(refseq) <- as.character(seq_along(refseq))
+  }
+  grouped <- group_identical_seq_tax(refseq, taxonomy[ranks])
+  n_rep <- length(grouped$representative)
+  if (n_rep == length(refseq)) {
+    testset_select$n_cluster <- testset_select$n_seq
+    return(list(
+      refseq = refseq,
+      testset_select = testset_select,
+      collapsed = FALSE
+    ))
+  }
+  refseq <- refseq[grouped$representative]
+  remapped <- remap_testset_representatives(
+    testset_select$seq_index,
+    testset_select$true_partition,
+    grouped$map,
+    names(refseq)
+  )
+  testset_select$seq_index <- remapped$seq_index
+  testset_select$true_partition <- remapped$true_partition
+  testset_select$seq_id <- remapped$seq_id
+  testset_select$multiplicity <- remapped$multiplicity
+  testset_select$n_cluster <- remapped$n_cluster
+  list(
+    refseq = refseq,
+    testset_select = testset_select,
+    collapsed = TRUE
+  )
+}
+
 # Prefer 1-based seq_index lists; synthesize from seq_id when absent
 # (tests / older callers).
 testset_seq_indices <- function(testset_select) {
@@ -199,7 +251,7 @@ estimate_batch_memory_mb <- function(
   threads <- parallel_config$threads
 
   per_subset <- vapply(
-    testset_select$n_seq[batch_idx],
+    subset_cluster_n(testset_select)[batch_idx],
     estimate_subset_memory_mb,
     numeric(1),
     n_thresholds = n_thresholds,
@@ -290,7 +342,7 @@ make_initial_batches <- function(
   state <- reset_membership()
   for (idx in ordered_idx) {
     subset_mb <- estimate_subset_memory_mb(
-      testset_select$n_seq[idx],
+      subset_cluster_n(testset_select)[idx],
       n_thresholds = n_thresholds,
       clust_method = clust_method,
       parallel_method = parallel_method,
@@ -332,9 +384,10 @@ split_batch_indices <- function(
       drop = TRUE
     )
     if (length(groups) > 1L) {
+      n_clust <- subset_cluster_n(testset_select)
       group_sizes <- vapply(
         groups,
-        function(g) sum(testset_select$n_seq[g]),
+        function(g) sum(n_clust[g]),
         numeric(1)
       )
       group_order <- names(sort(group_sizes, decreasing = TRUE))
@@ -344,7 +397,7 @@ split_batch_indices <- function(
       right_size <- 0
       for (gname in group_order) {
         grp <- groups[[gname]]
-        grp_size <- sum(testset_select$n_seq[grp])
+        grp_size <- sum(n_clust[grp])
         if (left_size <= right_size) {
           left <- c(left, grp)
           left_size <- left_size + grp_size
@@ -358,7 +411,11 @@ split_batch_indices <- function(
       }
     }
   }
-  o <- order(testset_select$n_seq[batch_idx], decreasing = TRUE, batch_idx)
+  o <- order(
+    subset_cluster_n(testset_select)[batch_idx],
+    decreasing = TRUE,
+    batch_idx
+  )
   sorted <- batch_idx[o]
   mid <- length(sorted) %/% 2L
   list(left = sorted[seq_len(mid)], right = sorted[-seq_len(mid)])
@@ -412,9 +469,15 @@ cluster_find_best_thresholds <- function(
   verbose,
   seq_idx,
   seq_file,
-  clustering_memory_budget_mb
+  clustering_memory_budget_mb,
+  multiplicity = NULL
 ) {
   map <- clustering_threshold_map(threshold_config)
+  weights_arg <- if (is.null(multiplicity)) {
+    list()
+  } else {
+    multiplicity
+  }
   which_is_index <- is.list(which) &&
     length(which) > 0L &&
     is.numeric(which[[1]])
@@ -440,7 +503,8 @@ cluster_find_best_thresholds <- function(
       thresholds = map$thresholds,
       threshold_order = map$threshold_order,
       verbose = isTRUE(verbose) || verbose >= 1L,
-      by_name = isTRUE(dist_config$by_name) || isTRUE(dist_config$by_names)
+      by_name = isTRUE(dist_config$by_name) || isTRUE(dist_config$by_names),
+      weights = weights_arg
     ))
   }
 
@@ -509,7 +573,8 @@ cluster_find_best_thresholds <- function(
       thresholds = map$thresholds,
       threshold_order = map$threshold_order,
       verbose = isTRUE(verbose) || verbose >= 1L,
-      by_name = FALSE
+      by_name = FALSE,
+      weights = weights_arg
     ))
   }
 
@@ -556,7 +621,8 @@ cluster_find_best_thresholds <- function(
       -1
     } else {
       clustering_memory_budget_mb
-    }
+    },
+    weights = weights_arg
   )
 }
 
@@ -853,6 +919,13 @@ find_best_threshold <- function(
 #' for `dist_file(by_name = FALSE)`, where integer IDs in the distance file
 #' follow the original sequence order.
 #'
+#' After subset selection, byte-identical sequences that agree on every
+#' column in `ranks` are collapsed to one clustering representative when
+#' the threshold grid has `min(thresholds) >= 0` and `max(thresholds) > 0`.
+#' Cluster-quality metrics are weighted by the dropped copies so values
+#' match the unreduced data. `min_refseq` and `min_taxa` still use original
+#' row counts. This pass is skipped for `dist_file()`.
+#'
 #' @return (`data.frame`) a data frame with the following columns:
 #'   - `rank` (`character`) the rank being optimized
 #'   - `superrank` (`character`) the containing rank for optimization
@@ -998,6 +1071,32 @@ optimize_thresholds <- function(
     (testset_select$n_seq >= min_refseq & testset_select$n_taxa >= min_taxa) |
       testset_select$supertaxon %in% taxonomy[[ranks[1]]],
   ]
+  if (
+    !identical(dist_config$method, "file") &&
+      thresholds_allow_identical_collapse(threshold_config)
+  ) {
+    n_before <- length(refseq)
+    collapsed <- apply_identical_refseq_collapse(
+      refseq,
+      taxonomy,
+      ranks,
+      testset_select
+    )
+    refseq <- collapsed$refseq
+    testset_select <- collapsed$testset_select
+    if ((isTRUE(verbose) || verbose >= 1L) && isTRUE(collapsed$collapsed)) {
+      cat(
+        "Dereplicated identical sequences:",
+        n_before,
+        "->",
+        length(refseq),
+        "\n"
+      )
+    }
+  } else {
+    testset_select$n_cluster <- testset_select$n_seq
+  }
+
   if (isTRUE(verbose) || verbose >= 1L) {
     cat(
       " done\n  Found",
@@ -1096,6 +1195,11 @@ optimize_thresholds <- function(
           parallel_config = local_parallel_config,
           which = testset_select$seq_index[batch_idx],
           true_partitions = testset_select$true_partition[batch_idx],
+          multiplicity = if (is.null(testset_select$multiplicity)) {
+            NULL
+          } else {
+            testset_select$multiplicity[batch_idx]
+          },
           measures = measures,
           verbose = verbose,
           seq_idx = seq_idx,
@@ -1204,8 +1308,9 @@ optimize_thresholds <- function(
         strategy = "balanced"
       )
     }
-    left_size <- sum(testset_select$n_seq[split$left])
-    right_size <- sum(testset_select$n_seq[split$right])
+    n_clust <- subset_cluster_n(testset_select)
+    left_size <- sum(n_clust[split$left])
+    right_size <- sum(n_clust[split$right])
     first <- if (left_size >= right_size) split$left else split$right
     second <- if (left_size >= right_size) split$right else split$left
     if (isTRUE(verbose) || verbose >= 1L) {

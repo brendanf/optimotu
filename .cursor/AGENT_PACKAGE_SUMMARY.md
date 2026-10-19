@@ -59,6 +59,12 @@ Native code:
     tiles see taxa as contiguous index blocks. Permutation is of character
     vector entries only (no CHARSXP copy). Skipped for
     `dist_file(by_name = FALSE)`.
+  - After `min_refseq` filtering, `optimize_thresholds()` collapses
+    byte-identical sequences that agree on every `ranks` column, then
+    weights MCC/RI/ARI/FMI/MI/AMI/FM by multiplicity so metric values
+    match the unreduced data. Applied when `min(thresholds) >= 0` and
+    `max(thresholds) > 0`; skipped for `dist_file()`. Memory batching
+    uses the dereplicated `n_cluster` / remapped `seq_index`.
   - `optimize_thresholds(seq_names = ...)` overrides FASTA/index header names
     for the taxonomy join after materialization (annotated SINTAX-style
     headers). Same length/order as `seq_idx` when subsetting.

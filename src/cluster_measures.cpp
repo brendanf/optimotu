@@ -59,20 +59,26 @@ struct ClusterCount {
   bool operator<(const ClusterCount &x) const { return size < x.size; }
 };
 
+inline size_t row_weight(const int *weights, size_t i) {
+  return weights ? static_cast<size_t>(weights[i]) : 1;
+}
+
 void initialize_c_counts(
   const Rcpp::IntegerVector &c,
   std::vector<std::pair<int, size_t>> &c_sort,
   std::unordered_map<int, size_t> &c_count,
-  size_t N
+  size_t n_unique,
+  const int *weights
 ) {
-  c_sort.reserve(N);
-  for (size_t i = 0; i < N; ++i) {
+  c_sort.reserve(n_unique);
+  for (size_t i = 0; i < n_unique; ++i) {
+    const size_t w = row_weight(weights, i);
     c_sort.emplace_back(c[i], i);
     auto it = c_count.find(c[i]);
     if (it == c_count.end()) {
-      c_count.emplace(c[i], 1);
+      c_count.emplace(c[i], w);
     } else {
-      ++it->second;
+      it->second += w;
     }
   }
   std::sort(c_sort.begin(), c_sort.end());
@@ -82,17 +88,20 @@ void initialize_c_entropy(
   const Rcpp::IntegerVector &c,
   std::vector<std::pair<int, size_t>> &c_sort,
   std::unordered_map<int, SizeAndEntropy> &c_count,
-  size_t N
+  size_t n_unique,
+  size_t n_objects,
+  const int *weights
 ) {
-  double Ninv = 1.0 / N;
-  c_sort.reserve(N);
-  for (size_t i = 0; i < N; ++i) {
+  double Ninv = 1.0 / static_cast<double>(n_objects);
+  c_sort.reserve(n_unique);
+  for (size_t i = 0; i < n_unique; ++i) {
+    const size_t w = row_weight(weights, i);
     c_sort.emplace_back(c[i], i);
     auto it = c_count.find(c[i]);
     if (it == c_count.end()) {
-      c_count.emplace(c[i], SizeAndEntropy{Ninv, 1});
+      c_count.emplace(c[i], SizeAndEntropy{w * Ninv, w});
     } else {
-      ++it->second.n;
+      it->second.n += w;
       it->second.H = it->second.n * Ninv;
     }
   }
@@ -101,7 +110,9 @@ void initialize_c_entropy(
 
 void confusion_row(
   const int *kj,
-  size_t N,
+  size_t n_unique,
+  size_t n_objects,
+  const int *weights,
   const std::vector<std::pair<int, size_t>> &c_sort,
   const std::unordered_map<int, size_t> &c_count,
   double &tp,
@@ -109,15 +120,17 @@ void confusion_row(
   double &fn,
   double &tn
 ) {
-  const size_t Npairs = N * (N - 1) / 2;
+  const double Npairs =
+    static_cast<double>(n_objects) * static_cast<double>(n_objects - 1) / 2.0;
   std::unordered_map<int, size_t> k_count;
   std::unordered_map<int, size_t> intersects;
-  for (size_t i = 0; i < N; ++i) {
+  for (size_t i = 0; i < n_unique; ++i) {
+    const size_t w = row_weight(weights, i);
     auto it = k_count.find(kj[i]);
     if (it == k_count.end()) {
-      k_count.emplace(kj[i], 1);
+      k_count.emplace(kj[i], w);
     } else {
-      ++it->second;
+      it->second += w;
     }
   }
   size_t tpj = 0, fpj = 0, fnj = 0;
@@ -127,12 +140,13 @@ void confusion_row(
     int c_clust = ci->first;
     intersects.clear();
     while (ci != c_end && ci->first == c_clust) {
+      const size_t w = row_weight(weights, ci->second);
       int k_clust = kj[ci->second];
       auto it = intersects.find(k_clust);
       if (it == intersects.end()) {
-        intersects.emplace(k_clust, 1);
+        intersects.emplace(k_clust, w);
       } else {
-        ++it->second;
+        it->second += w;
       }
       ++ci;
     }
@@ -145,23 +159,26 @@ void confusion_row(
   tp = tpj / 2.0;
   fp = fpj / 2.0;
   fn = fnj / 2.0;
-  tn = static_cast<double>(Npairs) - tp - fp - fn;
+  tn = Npairs - tp - fp - fn;
 }
 
 double fmeasure_row(
   const int *kj,
-  size_t N,
+  size_t n_unique,
+  size_t n_objects,
+  const int *weights,
   const std::vector<std::pair<int, size_t>> &c_sort,
   const std::unordered_map<int, size_t> &c_count
 ) {
   std::unordered_map<int, size_t> k_count;
   std::unordered_map<int, size_t> intersects;
-  for (size_t i = 0; i < N; ++i) {
+  for (size_t i = 0; i < n_unique; ++i) {
+    const size_t w = row_weight(weights, i);
     auto it = k_count.find(kj[i]);
     if (it == k_count.end()) {
-      k_count.emplace(kj[i], 1);
+      k_count.emplace(kj[i], w);
     } else {
-      ++it->second;
+      it->second += w;
     }
   }
   double result = 0.0;
@@ -171,12 +188,13 @@ double fmeasure_row(
     int c_clust = ci->first;
     intersects.clear();
     while (ci != c_end && ci->first == c_clust) {
+      const size_t w = row_weight(weights, ci->second);
       int k_clust = kj[ci->second];
       auto it = intersects.find(k_clust);
       if (it == intersects.end()) {
-        intersects.emplace(k_clust, 1);
+        intersects.emplace(k_clust, w);
       } else {
-        ++it->second;
+        it->second += w;
       }
       ++ci;
     }
@@ -188,12 +206,14 @@ double fmeasure_row(
     }
     result += c_count.at(c_clust) * m;
   }
-  return result * 2.0 / N;
+  return result * 2.0 / static_cast<double>(n_objects);
 }
 
 void ami_row(
   const int *kj,
-  size_t N,
+  size_t n_unique,
+  size_t n_objects,
+  const int *weights,
   const std::vector<std::pair<int, size_t>> &c_sort,
   const std::unordered_map<int, SizeAndEntropy> &c_count,
   double Hc,
@@ -202,16 +222,18 @@ void ami_row(
   std::deque<ClusterCount> &my_k_counts,
   size_t j
 ) {
-  std::vector<int> k_counts(N, 0);
+  std::vector<size_t> k_counts(n_unique, 0);
   std::deque<int> k_counts_used;
-  std::vector<int> intersects(N, 0);
+  std::vector<size_t> intersects(n_unique, 0);
   std::deque<int> intersects_used;
-  for (size_t i = 0; i < N; ++i) {
+  for (size_t i = 0; i < n_unique; ++i) {
     int id = kj[i];
-    if (id < 0 || static_cast<size_t>(id) >= N) {
+    if (id < 0 || static_cast<size_t>(id) >= n_unique) {
       OPTIMOTU_STOP("cluster id out of range in AMI calculation");
     }
-    if (++k_counts[id] == 1) k_counts_used.push_back(id);
+    const size_t w = row_weight(weights, i);
+    if (k_counts[id] == 0) k_counts_used.push_back(id);
+    k_counts[id] += w;
   }
   std::vector<size_t> cluster_sizes;
   cluster_sizes.reserve(k_counts_used.size());
@@ -222,6 +244,7 @@ void ami_row(
   double Hk = 0.0;
   auto cs_i = cluster_sizes.begin();
   auto cs_end = cluster_sizes.end();
+  const double N = static_cast<double>(n_objects);
   while (cs_i != cs_end) {
     auto cs_start = cs_i;
     while (cs_i != cs_end && *cs_i == *cs_start) ++cs_i;
@@ -236,7 +259,9 @@ void ami_row(
     int c_clust = ci->first;
     while (ci != c_end && ci->first == c_clust) {
       int id = kj[ci->second];
-      if (++intersects[id] == 1) intersects_used.push_back(id);
+      const size_t w = row_weight(weights, ci->second);
+      if (intersects[id] == 0) intersects_used.push_back(id);
+      intersects[id] += w;
       ++ci;
     }
     while (!intersects_used.empty()) {
@@ -493,7 +518,9 @@ public:
 struct ScoreWorker : public RcppParallel::Worker {
   MultipleClusterAlgorithm &algo;
   const std::size_t subset;
-  const std::size_t N;
+  const std::size_t n_unique;
+  const std::size_t n_objects;
+  const int *weights;
   const std::vector<std::pair<int, size_t>> &c_sort;
   const std::unordered_map<int, size_t> &c_count;
   const std::unordered_map<int, SizeAndEntropy> *c_entropy;
@@ -510,7 +537,9 @@ struct ScoreWorker : public RcppParallel::Worker {
   ScoreWorker(
     MultipleClusterAlgorithm &algo,
     std::size_t subset,
-    std::size_t N,
+    std::size_t n_unique,
+    std::size_t n_objects,
+    const int *weights,
     const std::vector<std::pair<int, size_t>> &c_sort,
     const std::unordered_map<int, size_t> &c_count,
     const std::unordered_map<int, SizeAndEntropy> *c_entropy,
@@ -527,28 +556,33 @@ struct ScoreWorker : public RcppParallel::Worker {
     std::vector<double> &fm,
     std::vector<ClusterCount> &all_k_counts
   ) :
-    algo(algo), subset(subset), N(N), c_sort(c_sort), c_count(c_count),
+    algo(algo), subset(subset), n_unique(n_unique), n_objects(n_objects),
+    weights(weights), c_sort(c_sort), c_count(c_count),
     c_entropy(c_entropy), Hc(Hc),
     need_confusion(need_confusion), need_ami(need_ami), need_fm(need_fm),
     tp(tp), fp(fp), fn(fn), tn(tn), mi(mi), Hmax(Hmax), fm(fm),
     all_k_counts(all_k_counts) {}
 
   void operator()(std::size_t begin, std::size_t end) {
-    std::vector<int> buf(N);
+    std::vector<int> buf(n_unique);
     std::deque<ClusterCount> my_k_counts;
     for (std::size_t j = begin; j < end; ++j) {
       algo.write_threshold_row(subset, static_cast<d_t>(j), buf.data());
       if (need_confusion) {
         confusion_row(
-          buf.data(), N, c_sort, c_count, tp[j], fp[j], fn[j], tn[j]
+          buf.data(), n_unique, n_objects, weights,
+          c_sort, c_count, tp[j], fp[j], fn[j], tn[j]
         );
       }
       if (need_fm) {
-        fm[j] = fmeasure_row(buf.data(), N, c_sort, c_count);
+        fm[j] = fmeasure_row(
+          buf.data(), n_unique, n_objects, weights, c_sort, c_count
+        );
       }
       if (need_ami) {
         ami_row(
-          buf.data(), N, c_sort, *c_entropy, Hc,
+          buf.data(), n_unique, n_objects, weights,
+          c_sort, *c_entropy, Hc,
           mi[j], Hmax[j], my_k_counts, j
         );
       }
@@ -587,14 +621,32 @@ Rcpp::DataFrame find_best_threshold_from_algo(
   const std::vector<std::string> &measures,
   const Rcpp::NumericVector &thresholds,
   const Rcpp::IntegerVector &threshold_order,
-  int threads
+  int threads,
+  const Rcpp::IntegerVector &weights
 ) {
-  const size_t N = static_cast<size_t>(c.size());
+  const size_t n_unique = static_cast<size_t>(c.size());
   const d_t m = algo.m;
-  if (N != static_cast<size_t>(algo.subset_n(subset))) {
+  if (n_unique != static_cast<size_t>(algo.subset_n(subset))) {
     OPTIMOTU_STOP(
       "true partition length does not match subset size"
     );
+  }
+  const int *wptr = nullptr;
+  size_t n_objects = n_unique;
+  if (weights.size() > 0) {
+    if (static_cast<size_t>(weights.size()) != n_unique) {
+      OPTIMOTU_STOP(
+        "weights length does not match true partition length"
+      );
+    }
+    n_objects = 0;
+    for (R_xlen_t i = 0; i < weights.size(); ++i) {
+      if (weights[i] == NA_INTEGER || weights[i] < 1) {
+        OPTIMOTU_STOP("weights must be positive integers");
+      }
+      n_objects += static_cast<size_t>(weights[i]);
+    }
+    wptr = weights.begin();
   }
   bool need_mcc = false, need_ri = false, need_ari = false, need_fmi = false;
   bool need_mi = false, need_ami = false, need_fm = false;
@@ -631,13 +683,15 @@ Rcpp::DataFrame find_best_threshold_from_algo(
 
   std::vector<std::pair<int, size_t>> c_sort;
   std::unordered_map<int, size_t> c_count;
-  initialize_c_counts(c, c_sort, c_count, N);
+  initialize_c_counts(c, c_sort, c_count, n_unique, wptr);
 
   std::unordered_map<int, SizeAndEntropy> c_entropy;
   std::vector<std::pair<int, size_t>> c_sort_ami;
   double Hc = 0.0;
   if (need_ami_any) {
-    initialize_c_entropy(c, c_sort_ami, c_entropy, N);
+    initialize_c_entropy(
+      c, c_sort_ami, c_entropy, n_unique, n_objects, wptr
+    );
     for (const auto &ci : c_entropy) {
       Hc -= ci.second.H * std::log(ci.second.H);
     }
@@ -648,7 +702,7 @@ Rcpp::DataFrame find_best_threshold_from_algo(
   std::vector<ClusterCount> all_k_counts;
 
   ScoreWorker worker(
-    algo, subset, N,
+    algo, subset, n_unique, n_objects, wptr,
     need_ami_any ? c_sort_ami : c_sort,
     c_count,
     need_ami_any ? &c_entropy : nullptr,
@@ -666,7 +720,9 @@ Rcpp::DataFrame find_best_threshold_from_algo(
   if (need_ami_any) {
     std::sort(all_k_counts.begin(), all_k_counts.end());
     std::vector<double> emi(m, NEGINF);
-    AmiWorker2 worker2(emi, all_k_counts, c_entropy, N, threads <= 1 ? 1 : threads);
+    AmiWorker2 worker2(
+      emi, all_k_counts, c_entropy, n_objects, threads <= 1 ? 1 : threads
+    );
     if (threads <= 1) {
       worker2(0, 1);
     } else {

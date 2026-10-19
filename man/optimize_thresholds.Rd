@@ -137,4 +137,11 @@ taxonomy order (\code{ranks}, then \code{id_col}) before clustering so that
 merge-mode pair tiles hit fewer taxonomic subsets. Reordering is skipped
 for \code{dist_file(by_name = FALSE)}, where integer IDs in the distance file
 follow the original sequence order.
+
+After subset selection, byte-identical sequences that agree on every
+column in \code{ranks} are collapsed to one clustering representative when
+the threshold grid has \code{min(thresholds) >= 0} and \code{max(thresholds) > 0}.
+Cluster-quality metrics are weighted by the dropped copies so values
+match the unreduced data. \code{min_refseq} and \code{min_taxa} still use original
+row counts. This pass is skipped for \code{dist_file()}.
 }

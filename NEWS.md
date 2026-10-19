@@ -1,5 +1,11 @@
 # optimotu development version
 
+* `optimize_thresholds()` collapses byte-identical reference sequences
+  that share all rank labels before clustering, and weights cluster
+  metrics by the dropped copies so reported values match the unreduced
+  data. Collapse is skipped for `dist_file()` and for threshold grids
+  that cannot merge distance-0 pairs (`min(thresholds) < 0` or
+  `max(thresholds) == 0`).
 * `dist_wfa2(match = a)` now treats `a` as a match bonus on
   `seq_distmx()`, `seq_search()`, and `pairwise_alignment()`, matching
   clustering and `align()` / `cigar_wfa2()`. Previously those paths

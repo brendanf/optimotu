@@ -42,8 +42,8 @@ distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method
     .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type, verbose, by_name)
 }
 
-distmx_cluster_multi_best_threshold <- function(file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = FALSE, by_name = FALSE) {
-    .Call(`_optimotu_distmx_cluster_multi_best_threshold`, file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, by_name)
+distmx_cluster_multi_best_threshold <- function(file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = FALSE, by_name = FALSE, weights = NULL) {
+    .Call(`_optimotu_distmx_cluster_multi_best_threshold`, file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, by_name, weights)
 }
 
 #' Get the names of reads in a FASTQ file
@@ -51,6 +51,34 @@ distmx_cluster_multi_best_threshold <- function(file, seqnames, which, threshold
 #' @return (`character`) Read names.
 fastq_names <- function(x) {
     .Call(`_optimotu_fastq_names`, x)
+}
+
+#' Group byte-identical sequences that share all rank labels
+#'
+#' @param seq (`character`) reference sequences
+#' @param ranks (`data.frame`) rank columns aligned with `seq`
+#' @return a list with `representative` (1-based original indices of
+#'   first-seen group members) and `map` (1-based index into
+#'   `representative` for every original row)
+#' @keywords internal
+#' @export
+group_identical_seq_tax <- function(seq, ranks) {
+    .Call(`_optimotu_group_identical_seq_tax`, seq, ranks)
+}
+
+#' Remap subset membership onto sequence representatives
+#'
+#' @param seq_index (`list` of `integer`) 1-based original row indices
+#' @param true_partition (`list` of `integer`) true labels parallel to
+#'   `seq_index`
+#' @param map (`integer`) 1-based representative index per original row
+#' @param seq_names (`character`) names of the compacted sequences
+#' @return a list with remapped `seq_index`, `true_partition`,
+#'   `seq_id`, `multiplicity`, and `n_cluster`
+#' @keywords internal
+#' @export
+remap_testset_representatives <- function(seq_index, true_partition, map, seq_names) {
+    .Call(`_optimotu_remap_testset_representatives`, seq_index, true_partition, map, seq_names)
 }
 
 #' Size of the intersection between two sorted sets
@@ -254,8 +282,8 @@ seq_cluster_multi_via_rows <- function(seq, which, dist_config, threshold_config
     .Call(`_optimotu_seq_cluster_multi_via_rows`, seq, which, dist_config, threshold_config, clust_config, parallel_config, verbose, clustering_memory_budget_mb)
 }
 
-seq_cluster_multi_best_threshold <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = 0L, clustering_memory_budget_mb = -1.0) {
-    .Call(`_optimotu_seq_cluster_multi_best_threshold`, seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, clustering_memory_budget_mb)
+seq_cluster_multi_best_threshold <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = 0L, clustering_memory_budget_mb = -1.0, weights = NULL) {
+    .Call(`_optimotu_seq_cluster_multi_best_threshold`, seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, clustering_memory_budget_mb, weights)
 }
 
 seq_cluster_profile_output <- function(seq, dist_config, threshold_config, clust_config, parallel_config, row_repeats = 5L, verbose = 0L) {

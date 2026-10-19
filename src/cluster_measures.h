@@ -21,7 +21,8 @@ Rcpp::DataFrame find_best_threshold_from_algo(
   const std::vector<std::string> &measures,
   const Rcpp::NumericVector &thresholds,
   const Rcpp::IntegerVector &threshold_order,
-  int threads
+  int threads,
+  const Rcpp::IntegerVector &weights = Rcpp::IntegerVector()
 );
 
 // Fill an m x n IntegerMatrix for one subset via write_threshold_row.

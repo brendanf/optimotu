@@ -128,11 +128,18 @@ Rcpp::List distmx_cluster_multi_best_threshold(
     const Rcpp::NumericVector &thresholds,
     const Rcpp::IntegerVector &threshold_order,
     const bool verbose = false,
-    const bool by_name = false)
+    const bool by_name = false,
+    Rcpp::List weights = R_NilValue)
 {
   if (true_partitions.size() != which.size())
   {
     OPTIMOTU_STOP("true_partitions and which must have the same length");
+  }
+  const bool has_weights =
+      !Rf_isNull(SEXP(weights)) && weights.size() > 0;
+  if (has_weights && weights.size() != which.size())
+  {
+    OPTIMOTU_STOP("weights and which must have the same length");
   }
   std::ifstream infile(file);
   if (!infile.is_open())
@@ -146,6 +153,9 @@ Rcpp::List distmx_cluster_multi_best_threshold(
   Rcpp::List output(which.size());
   for (int i = 0; i < which.size(); ++i)
   {
+    Rcpp::IntegerVector w = has_weights
+      ? Rcpp::IntegerVector(weights[i])
+      : Rcpp::IntegerVector();
     output[i] = find_best_threshold_from_algo(
         *job.algo,
         static_cast<std::size_t>(i),
@@ -153,7 +163,8 @@ Rcpp::List distmx_cluster_multi_best_threshold(
         measures,
         thresholds,
         threshold_order,
-        threads);
+        threads,
+        w);
   }
   output.names() = which.names();
   return output;
