@@ -123,6 +123,9 @@ public:
   // Distance-matrix workers send every pair; do not per-subset-filter.
   void operator()(DistanceElement d, int thread = 0) override;
 
+  // Root instances with threads > 1 run subset finalize() concurrently,
+  // largest subset first. Children stay serial: they already run inside
+  // distance-worker threads.
   virtual void finalize() override;
 
   double max_relevant(j_t seq1, j_t seq2, int thread) const override;

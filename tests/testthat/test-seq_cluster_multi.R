@@ -123,6 +123,11 @@ testthat::test_that("multi-subset clustering matches independent subset clusteri
       dist = dist_hamming(),
       clust = clust_slink(),
       par = parallel_merge(2L)
+    ),
+    list(
+      dist = dist_hamming(),
+      clust = clust_slink(),
+      par = parallel_merge(4L)
     )
   )
 
@@ -174,6 +179,11 @@ testthat::test_that("crossing subsets do not change clustering of the full set",
       dist = dist_hamming(),
       clust = clust_slink(),
       par = parallel_merge(2L)
+    ),
+    list(
+      dist = dist_hamming(),
+      clust = clust_slink(),
+      par = parallel_merge(4L)
     ),
     list(dist = dist_edlib(), par = parallel_concurrent(1L)),
     list(dist = dist_edlib(), par = parallel_concurrent(4L))

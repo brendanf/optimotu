@@ -168,6 +168,10 @@ explicitly requests API changes.
   never appear as `seq1` in the cached edges still get a Pi self-link.
   `distmx_cluster()` single-matrix merge must call `algo->finalize()` after
   the worker (same as `seq_cluster()` / multi) so that cache is replayed.
+  Root `MultipleClusterAlgorithm::finalize()` runs those subset replays
+  concurrently when `threads > 1`, largest subset first. Tile and merge
+  children stay serial because they already run inside worker threads.
+  Tree, matrix, and index inherit the empty `finalize()`.
 - `estimate_bytes(n, role, n_tiles)` takes `ClusterInstanceRole::Leaf` or
   `Parent`. SLINK leaf instances use `n * 8 * 4` bytes; parent peak is
   `n * 8 * 4 + 16 * n * T` where `T` is the merge tile count (`~sqrt(threads)`)
