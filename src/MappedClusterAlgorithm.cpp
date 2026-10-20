@@ -100,6 +100,26 @@ void MCA::finalize()
   get_inner().finalize();
 }
 
+bool MCA::uses_prim() const
+{
+  return get_inner().uses_prim();
+}
+
+void MCA::prepare_merge_slots(std::size_t n_slots)
+{
+  get_inner().prepare_merge_slots(n_slots);
+}
+
+void MCA::set_merge_slot(std::size_t slot)
+{
+  get_inner().set_merge_slot(slot);
+}
+
+void MCA::receive_mst(std::size_t slot, std::vector<MstEdge> edges)
+{
+  get_inner().receive_mst(slot, std::move(edges));
+}
+
 void MCA::write_to_matrix(internal_matrix_t &out)
 {
   get_inner().write_to_matrix(out);
@@ -205,6 +225,32 @@ template <int verbose>
 void MappedClusterAlgorithmImpl<verbose>::Surrogate::merge_into_parent()
 {
   OPTIMOTU_STOP("MappedClusterAlgorithm::Surrogate::merge_into_parent() is not implemented");
+}
+template <int verbose>
+void MappedClusterAlgorithmImpl<verbose>::Surrogate::receive_mst(
+    std::size_t slot, std::vector<MstEdge> edges)
+{
+  std::vector<MstEdge> mapped;
+  mapped.reserve(edges.size());
+  for (MstEdge e : edges)
+  {
+    if (e.u < 0 || e.v < 0 ||
+        static_cast<std::size_t>(e.u) >= fwd_map.size() ||
+        static_cast<std::size_t>(e.v) >= fwd_map.size())
+    {
+      OPTIMOTU_STOP(
+          "MappedClusterAlgorithm::Surrogate: inner index out of range "
+          "for mapped MST merge");
+    }
+    e.u = static_cast<j_t>(fwd_map[e.u]);
+    e.v = static_cast<j_t>(fwd_map[e.v]);
+    if (e.u > e.v)
+    {
+      std::swap(e.u, e.v);
+    }
+    mapped.push_back(e);
+  }
+  parent->receive_mst(slot, std::move(mapped));
 }
 template <int verbose>
 ClusterAlgorithm *MappedClusterAlgorithmImpl<verbose>::Surrogate::make_child()
@@ -609,6 +655,13 @@ void MappedClusterAlgorithmImpl<verbose>::apply_local(
     j_t i, j_t j, d_t bin, int thread)
 {
   (*inner)(i, j, bin, thread);
+}
+
+template <int verbose>
+const std::vector<std::size_t> *
+MappedClusterAlgorithmImpl<verbose>::fwd_map_ptr() const
+{
+  return &fwd_map;
 }
 
 template class MappedClusterAlgorithmImpl<0>;

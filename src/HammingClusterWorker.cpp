@@ -1,6 +1,7 @@
 #include "HammingClusterWorker.h"
 #include "MappedClusterAlgorithm.h"
 #include "MultipleClusterAlgorithm.h"
+#include "prim_tile.h"
 #include "tile_pairs.h"
 extern "C" {
 #include "defs.h"
@@ -74,25 +75,56 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
   std::size_t pairs_since_check = 0;
 
   for_each_assigned_tile(
-    pair_generators, begin, end,
-    [&](std::size_t pg_index, PairGenerator &pg) {
-      ClusterAlgorithm *my_algo = tile_algo(&pg);
-      if (!my_algo) {
-        return;
-      }
-      OPTIMOTU_DEBUG(
-        2,
-        << "HammingSplitClusterWorker thread " << pg_index
-        << " entered" << std::endl
-      );
+      pair_generators, begin, end,
+      [&](std::size_t pg_index, PairGenerator &pg)
+      {
+        ClusterAlgorithm *my_algo = tile_algo(&pg);
+        if (!my_algo)
+        {
+          finish_tile(nullptr, pg_index);
+          return;
+        }
+        my_algo->set_merge_slot(pg_index);
+        if (try_grow_prim(
+                my_algo, pg,
+                [&](j_t gi, j_t gj, double cutoff)
+                {
+                  (void)cutoff;
+                  ++my_prealigned;
+                  double d = pss.dist(
+                      static_cast<int>(gi),
+                      static_cast<int>(gj),
+                      min_overlap,
+                      ignore_gaps);
+                  if (d < 1.0)
+                  {
+                    ++my_aligned;
+                  }
+                  hamming_maybe_interrupt(pairs_since_check);
+                  return d;
+                }))
+        {
+          mutex.lock();
+          _aligned += my_aligned;
+          _prealigned += my_prealigned;
+          mutex.unlock();
+          my_aligned = 0;
+          my_prealigned = 0;
+          finish_tile(my_algo, pg_index);
+          return;
+        }
+        OPTIMOTU_DEBUG(
+            2,
+            << "HammingSplitClusterWorker thread " << pg_index
+            << " entered" << std::endl);
 
-      // Mapped tile children want tile-local indices; MCA / root want global.
-      const bool use_local =
-          dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
+        // Mapped tile children want tile-local indices; MCA / root want global.
+        const bool use_local =
+            dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
 
-      for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
-      ) {
+        for_each_tile_pair(pg, [&](
+                                   std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj)
+                           {
         ++my_prealigned;
         double d = pss.dist(
             static_cast<int>(i0),
@@ -139,25 +171,23 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
           if (d <= threshold)
             (*my_algo)(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
         }
-        hamming_maybe_interrupt(pairs_since_check);
-      });
+        hamming_maybe_interrupt(pairs_since_check); });
 
 #ifdef OPTIMOTU_R
-      RcppThread::checkUserInterrupt();
+        RcppThread::checkUserInterrupt();
 #endif
-      pairs_since_check = 0;
+        pairs_since_check = 0;
 
-      mutex.lock();
-      OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
-      _aligned += my_aligned;
-      _prealigned += my_prealigned;
-      mutex.unlock();
-      my_aligned = 0;
-      my_prealigned = 0;
-      finish_tile(my_algo);
-      OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
-    }
-  );
+        mutex.lock();
+        OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
+        _aligned += my_aligned;
+        _prealigned += my_prealigned;
+        mutex.unlock();
+        my_aligned = 0;
+        my_prealigned = 0;
+        finish_tile(my_algo, pg_index);
+        OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
+      });
 }
 
 template<int verbose>

@@ -43,6 +43,13 @@ public:
   void merge_into(ClusterAlgorithm &consumer) override = 0;
   void merge_into_parent() override;
   void finalize() override;
+  bool uses_prim() const override;
+  void prepare_merge_slots(std::size_t n_slots) override;
+  void set_merge_slot(std::size_t slot) override;
+  void receive_mst(std::size_t slot, std::vector<MstEdge> edges) override;
+  SingleClusterAlgorithm &inner_algorithm() { return get_inner(); }
+  const SingleClusterAlgorithm &inner_algorithm() const { return get_inner(); }
+  virtual const std::vector<std::size_t> *fwd_map_ptr() const { return nullptr; }
   SingleClusterAlgorithm * make_child() override = 0;
   MappedClusterAlgorithm * make_child(PairGenerator * pg) override = 0;
   double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override = 0;
@@ -88,6 +95,7 @@ protected:
     void merge_into(DistanceConsumer &consumer) override;
     void merge_into(ClusterAlgorithm &consumer) override;
     void merge_into_parent() override;
+    void receive_mst(std::size_t slot, std::vector<MstEdge> edges) override;
     ClusterAlgorithm * make_child() override;
     ClusterAlgorithm * make_child(PairGenerator * pg) override;
     double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
@@ -176,6 +184,7 @@ public:
   double max_relevant_local(j_t i, j_t j, int thread = 0) const override;
   void apply_local(j_t i, j_t j, double dist, int thread = 0) override;
   void apply_local(j_t i, j_t j, d_t bin, int thread = 0) override;
+  const std::vector<std::size_t> *fwd_map_ptr() const override;
 };
 
 #endif // OPTIMOTU_MAPPEDCLUSTERALGORITHM_H_INCLUDED

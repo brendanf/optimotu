@@ -6,9 +6,10 @@
 \alias{clust_matrix}
 \alias{clust_index}
 \alias{clust_slink}
+\alias{clust_prim}
 \title{Configuration for clustering algorithms}
 \usage{
-clust_config(method = c("tree", "matrix", "index", "slink"), ...)
+clust_config(method = c("tree", "matrix", "index", "slink", "prim"), ...)
 
 clust_tree(verbose = FALSE, test = FALSE)
 
@@ -20,10 +21,12 @@ clust_matrix(
 clust_index()
 
 clust_slink()
+
+clust_prim()
 }
 \arguments{
 \item{method}{(\code{character} string) The clustering algorithm to use. Options
-are \code{"tree"}, \code{"matrix"}, and \code{"index"}}
+are \code{"tree"}, \code{"matrix"}, \code{"index"}, \code{"slink"}, and \code{"prim"}}
 
 \item{...}{passed on to variants}
 
@@ -60,6 +63,8 @@ Configuration for clustering algorithms
 \item \code{clust_index()}: helper function for method \code{"index"}
 
 \item \code{clust_slink()}: helper function for method \code{"slink"}
+
+\item \code{clust_prim()}: helper function for method \code{"prim"}
 
 }}
 \section{Tree method}{
@@ -98,8 +103,24 @@ such as kmer indexing (e.g., usearch/vsearch) or methods where multiple
 asynchronous workers are feeding a single instance of SLINK.
 }
 
+\section{Prim method}{
+Prim grows a minimum spanning tree on each all-pairs tile, then Kruskal
+unions those trees (Hendrix et al. 2013, PINK). Single-linkage clusters at
+each threshold are the MST components after dropping heavier edges. Prim
+needs distances in grow order, which differs among overlapping subsets, so
+it \strong{does not support multi-subset clustering} (\code{optimize_thresholds()}
+or \code{seq_cluster(..., which = ...)}). Use it for single-subset
+\code{seq_cluster()} (final clustering) when benchmarks show it beating SLINK.
+\code{parallel_concurrent()} with more than one thread is not supported.
+}
+
 \references{
 R. Sibson, SLINK: An optimally efficient algorithm for the
 single-link cluster method, The Computer Journal, Volume 16, Issue 1, 1973,
 Pages 30–34, \doi{10.1093/comjnl/16.1.30}
+
+W. Hendrix, D. Palsetia, M. M. A. Patwary, A. Agrawal, W.-k. Liao, and
+A. Choudhary, A scalable algorithm for single-linkage hierarchical
+clustering on distributed-memory architectures, in IEEE Symposium on
+Large-Scale Data Analysis and Visualization (LDAV), 2013.
 }

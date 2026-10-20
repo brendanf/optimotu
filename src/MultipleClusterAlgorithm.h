@@ -60,6 +60,7 @@ protected:
   std::vector<std::pair<SingleClusterAlgorithm*, ClusterAlgorithm*>> borrowed_subsets;
   std::vector<std::size_t> tracked_allocations;
   std::size_t tracked_base_allocation = 0;
+  std::size_t merge_slot_ = 0;
 
   // When set, names and subset tables come from the parent (tile merge
   // child). Pair routes live on this instance.
@@ -162,6 +163,11 @@ public:
   virtual void merge_into(MultipleClusterAlgorithm &consumer);
 
   void merge_into_parent() override;
+
+  bool uses_prim() const override;
+  void prepare_merge_slots(std::size_t n_slots) override;
+  void set_merge_slot(std::size_t slot) override;
+  void receive_mst(std::size_t slot, std::vector<MstEdge> edges) override;
 
   MultipleClusterAlgorithm * make_child() override;
 

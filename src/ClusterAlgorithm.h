@@ -7,6 +7,7 @@
 #include "single_linkage.h"
 #include "DistanceConverter.h"
 #include "PairGenerator.h"
+#include <cstddef>
 #include <vector>
 #include <mutex>
 #include <shared_mutex>
@@ -52,6 +53,21 @@ public:
   virtual ~DistanceConsumer()=default;
 };
 
+struct MstEdge {
+  j_t u;
+  j_t v;
+  d_t bin;
+  bool operator<(const MstEdge &other) const {
+    if (bin != other.bin) {
+      return bin < other.bin;
+    }
+    if (u != other.u) {
+      return u < other.u;
+    }
+    return v < other.v;
+  }
+};
+
 class ClusterAlgorithm : public DistanceConsumer {
 public:
   const DistanceConverter &dconv;
@@ -69,6 +85,19 @@ public:
   using DistanceConsumer::operator();
 
   virtual void finalize() {};
+
+  // Prim/Kruskal merge tiles: no-ops except on ClusterPrim and MCA.
+  virtual bool uses_prim() const { return false; }
+  virtual void prepare_merge_slots(std::size_t) {}
+  virtual void set_merge_slot(std::size_t) {}
+  virtual void receive_mst(std::size_t, std::vector<MstEdge> edges) {
+    for (const MstEdge &e : edges) {
+      if (e.u == e.v) {
+        continue;
+      }
+      (*this)(e.u, e.v, e.bin);
+    }
+  }
 
   // construct a ClusterAlgorithm with the given DistanceConverter
   ClusterAlgorithm(const DistanceConverter &dconv) :

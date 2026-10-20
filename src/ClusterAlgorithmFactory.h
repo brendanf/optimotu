@@ -88,4 +88,17 @@ public:
       std::size_t n_tiles = 0) const override;
 };
 
+class ClusterPrimFactory : public ClusterAlgorithmFactory
+{
+public:
+  ClusterPrimFactory(const DistanceConverter &dconv);
+
+  std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const override;
+  std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t &im, int verbose = 0) const override;
+  std::size_t estimate_bytes(
+      j_t n,
+      ClusterInstanceRole role = ClusterInstanceRole::Parent,
+      std::size_t n_tiles = 0) const override;
+};
+
 #endif //OPTIMOTU_CLUSTERALGORITHMFACTORY_H_INCLUDED

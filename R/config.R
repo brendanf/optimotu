@@ -169,8 +169,19 @@ verify_precision <- function(precision) {
 #' such as kmer indexing (e.g., usearch/vsearch) or methods where multiple
 #' asynchronous workers are feeding a single instance of SLINK.
 #'
+#' # Prim method
+#'
+#' Prim grows a minimum spanning tree on each all-pairs tile, then Kruskal
+#' unions those trees (Hendrix et al. 2013, PINK). Single-linkage clusters at
+#' each threshold are the MST components after dropping heavier edges. Prim
+#' needs distances in grow order, which differs among overlapping subsets, so
+#' it **does not support multi-subset clustering** (`optimize_thresholds()`
+#' or `seq_cluster(..., which = ...)`). Use it for single-subset
+#' `seq_cluster()` (final clustering) when benchmarks show it beating SLINK.
+#' `parallel_concurrent()` with more than one thread is not supported.
+#'
 #' @param method (`character` string) The clustering algorithm to use. Options
-#' are `"tree"`, `"matrix"`, and `"index"`
+#' are `"tree"`, `"matrix"`, `"index"`, `"slink"`, and `"prim"`
 #' @param ... passed on to variants
 #'
 #' @return an object describing the clustering algorithm, to pass to
@@ -178,16 +189,25 @@ verify_precision <- function(precision) {
 #' @references R. Sibson, SLINK: An optimally efficient algorithm for the
 #' single-link cluster method, The Computer Journal, Volume 16, Issue 1, 1973,
 #' Pages 30–34, \doi{10.1093/comjnl/16.1.30}
-
+#'
+#' W. Hendrix, D. Palsetia, M. M. A. Patwary, A. Agrawal, W.-k. Liao, and
+#' A. Choudhary, A scalable algorithm for single-linkage hierarchical
+#' clustering on distributed-memory architectures, in IEEE Symposium on
+#' Large-Scale Data Analysis and Visualization (LDAV), 2013.
+#'
 #' @export
-clust_config <- function(method = c("tree", "matrix", "index", "slink"), ...) {
-  method = match.arg(method)
+clust_config <- function(
+  method = c("tree", "matrix", "index", "slink", "prim"),
+  ...
+) {
+  method <- match.arg(method)
   cc <- switch(
     method,
     tree = clust_tree(...),
     matrix = clust_matrix(...),
     index = clust_index(...),
-    slink = clust_slink(...)
+    slink = clust_slink(...),
+    prim = clust_prim(...)
   )
   cc$call <- match.call()
   cc
@@ -268,6 +288,29 @@ clust_slink <- function() {
     ),
     class = "optimotu_cluster_config"
   )
+}
+
+#' @export
+#' @describeIn clust_config helper function for method `"prim"`
+clust_prim <- function() {
+  structure(
+    list(
+      method = "prim",
+      call = match.call()
+    ),
+    class = "optimotu_cluster_config"
+  )
+}
+
+# Prim cannot consume a shared unordered pair stream.
+reject_clust_prim_multi <- function(clust_config) {
+  if (identical(clust_config$method, "prim")) {
+    stop(
+      "clust_prim() does not support multi-subset clustering ",
+      "(seq_cluster(..., which = ...) or optimize_thresholds()).",
+      call. = FALSE
+    )
+  }
 }
 
 #' Configuration for threshold representations

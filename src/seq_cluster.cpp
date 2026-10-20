@@ -75,7 +75,7 @@ Rcpp::RObject seq_cluster_single(
   Rcpp::RObject output = R_NilValue;
   if (output_type == "matrix") {
     auto method = element_as_string(clust_config, "method", "clust_config");
-    if (method == "tree" || method == "slink") {
+    if (method == "tree" || method == "slink" || method == "prim") {
       internal_matrix_t m(im);
       algo->write_to_matrix(m);
     }

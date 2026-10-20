@@ -46,7 +46,7 @@ public :
   // One-thread merge has a single full-range tile; work on the root so
   // ClusterSLINK never allocates the unused delegate tree.
   ClusterAlgorithm *tile_algo(PairGenerator *pg);
-  void finish_tile(ClusterAlgorithm *my_algo);
+  void finish_tile(ClusterAlgorithm *my_algo, std::size_t pg_index);
 };
 
 #endif //OPTIMOTU_ALIGNCLUSTERWORKER_H_INCLUDED

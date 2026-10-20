@@ -1,5 +1,6 @@
 #include "EdlibClusterWorker.h"
 #include "MappedClusterAlgorithm.h"
+#include "prim_tile.h"
 #include "tile_pairs.h"
 #include <edlib.h>
 #include <algorithm>
@@ -24,10 +25,44 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
 
       ClusterAlgorithm *my_algo = tile_algo(&pg);
       if (!my_algo) {
+        finish_tile(nullptr, pg_index);
         return;
       }
       size_t my_prealigned = 0;
       size_t my_aligned = 0;
+      my_algo->set_merge_slot(pg_index);
+      if (try_grow_prim(
+              my_algo, pg,
+              [&](j_t gi, j_t gj, double threshold)
+              {
+                bool is_seqj_longer = seq[gj].size() > seq[gi].size();
+                size_t s1 = is_seqj_longer ? gi : gj;
+                size_t s2 = is_seqj_longer ? gj : gi;
+                double l1 = seq[s1].size(), l2 = seq[s2].size();
+                double sim_threshold = 1.0 - threshold;
+                if (l1 / l2 < sim_threshold)
+                {
+                  return 1.0;
+                }
+                ++my_prealigned;
+                double sim_threshold_plus_1 = 2.0 - threshold;
+                double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+                ed_aligner.k = (int)maxd1 + 1;
+                double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
+                if (d < 1.0)
+                {
+                  ++my_aligned;
+                }
+                return d;
+              }))
+      {
+        mutex.lock();
+        _aligned += my_aligned;
+        _prealigned += my_prealigned;
+        mutex.unlock();
+        finish_tile(my_algo, pg_index);
+        return;
+      }
       const bool use_local =
           dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
 
@@ -89,7 +124,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
       _aligned += my_aligned;
       _prealigned += my_prealigned;
       mutex.unlock();
-      finish_tile(my_algo);
+      finish_tile(my_algo, pg_index);
       OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
     }
   );

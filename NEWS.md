@@ -1,5 +1,10 @@
 # optimotu development version
 
+* Add `clust_prim()`: single-linkage via Prim on each tile and a Kruskal
+  binary merge (PINK-style). Multi-subset clustering
+  (`optimize_thresholds()`, `seq_cluster(..., which = ...)`) errors;
+  intended for single-subset `seq_cluster()`.
+  `parallel_concurrent()` with more than one thread is not supported.
 * Increase multithread efficiency of clustering over multiple subsets
   in `seq_cluster()` and `optimize_thresholds()`.
 * `optimize_thresholds()` collapses byte-identical reference sequences

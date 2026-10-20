@@ -39,6 +39,16 @@ namespace
     return ClusterInstanceRole::Parent;
   }
 
+  void reject_prim_multi(const ClusterAlgorithmFactory &factory)
+  {
+    if (dynamic_cast<const ClusterPrimFactory *>(&factory) != nullptr)
+    {
+      OPTIMOTU_STOP(
+          "clust_prim() does not support multi-subset clustering "
+          "(seq_cluster(..., which = ...) or optimize_thresholds())");
+    }
+  }
+
   // Tile/edge multiplicity for SLINK parent merge-cache estimates.
   // Tiled merge: T ~ sqrt(threads). Full-copy hierarchical: T = threads.
   std::size_t parent_n_tiles_from_parallel_method(
@@ -98,7 +108,13 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     return std::make_unique<ClusterTreeFactory>(*dconv, test);
   } else if (method == "slink") {
     return std::make_unique<ClusterSLINKFactory>(*dconv);
-  } else {
+  }
+  else if (method == "prim")
+  {
+    return std::make_unique<ClusterPrimFactory>(*dconv);
+  }
+  else
+  {
     OPTIMOTU_STOP("unknown cluster method");
   }
 }
@@ -112,6 +128,7 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     std::size_t clustering_memory_budget_bytes,
     const std::string &parallel_method)
 {
+  reject_prim_multi(factory);
   auto memory_budget = clustering_memory_budget_bytes > 0
     ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
     : nullptr;
@@ -155,6 +172,7 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     std::size_t clustering_memory_budget_bytes,
     const std::string &parallel_method)
 {
+  reject_prim_multi(factory);
   auto memory_budget = clustering_memory_budget_bytes > 0
     ? std::make_shared<MemoryBudgetTracker>(clustering_memory_budget_bytes)
     : nullptr;
@@ -199,6 +217,18 @@ std::unique_ptr<ClusterWorker> create_cluster_worker(
     const bool by_name,
     const std::vector<std::string> & seqnames
 ) {
+  if (algo && algo->uses_prim())
+  {
+    if (method == "concurrent" && threads > 1)
+    {
+      OPTIMOTU_STOP(
+          "clust_prim() does not support parallel_concurrent() with threads > 1");
+    }
+    if (method == "hierarchical")
+    {
+      OPTIMOTU_STOP("clust_prim() does not support parallel_hierarchical()");
+    }
+  }
   if (method == "merge") {
     if (by_name) {
       return std::make_unique<MergeClusterWorker<distmx_t, std::string>>(
@@ -255,19 +285,44 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
   AllPairGenerator::Builder pgb(seq.size(), threads);
   std::size_t worker_threads = threads;
   int v = (verbose > 4) ? 4 : verbose;
-  if (type == "split") {
-    if (v == 0) {
+  std::string kind = type;
+  if (cluster.uses_prim())
+  {
+    if (kind == "concurrent" && threads > 1)
+    {
+      OPTIMOTU_STOP(
+          "clust_prim() does not support parallel_concurrent() with threads > 1");
+    }
+    if (kind == "concurrent")
+    {
+      kind = "split";
+    }
+  }
+  if (kind == "split")
+  {
+    if (v == 0)
+    {
       return std::make_unique<HybridSplitClusterWorker<0>>(seq, cluster, pgb, breakpoint, worker_threads);
-    } else if (v == 1) {
+    }
+    else if (v == 1)
+    {
       return std::make_unique<HybridSplitClusterWorker<1>>(seq, cluster, pgb, breakpoint, worker_threads);
-    } else if (v == 2) {
+    }
+    else if (v == 2)
+    {
       return std::make_unique<HybridSplitClusterWorker<2>>(seq, cluster, pgb, breakpoint, worker_threads);
-    } else if (v == 3) {
+    }
+    else if (v == 3)
+    {
       return std::make_unique<HybridSplitClusterWorker<3>>(seq, cluster, pgb, breakpoint, worker_threads);
-    } else {
+    }
+    else
+    {
       return std::make_unique<HybridSplitClusterWorker<4>>(seq, cluster, pgb, breakpoint, worker_threads);
     }
-  } else if (type == "concurrent") {
+  }
+  else if (kind == "concurrent")
+  {
     if (v == 0) {
       return std::make_unique<HybridConcurrentClusterWorker<0>>(seq, cluster, pgb, breakpoint, worker_threads);
     } else if (v == 1) {
@@ -279,7 +334,9 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     } else {
       return std::make_unique<HybridConcurrentClusterWorker<4>>(seq, cluster, pgb, breakpoint, worker_threads);
     }
-  } else {
+  }
+  else
+  {
     Rcpp::stop("invalid parallel type");
   }
 }
@@ -452,7 +509,13 @@ std::unique_ptr<ClusterAlgorithmFactory> create_cluster_algorithm(
     return std::make_unique<ClusterTreeFactory>(*dconv, test);
   } else if (method == "slink") {
     return std::make_unique<ClusterSLINKFactory>(*dconv);
-  } else {
+  }
+  else if (method == "prim")
+  {
+    return std::make_unique<ClusterPrimFactory>(*dconv);
+  }
+  else
+  {
     OPTIMOTU_STOP("unknown cluster method");
   }
 }
@@ -465,6 +528,7 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     int verbose,
     std::size_t clustering_memory_budget_bytes
 ) {
+  reject_prim_multi(factory);
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
   std::string parallel_method = element_as_string(
       parallel_config, "method", "parallel_config");
@@ -512,6 +576,7 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     int verbose,
     std::size_t clustering_memory_budget_bytes
 ) {
+  reject_prim_multi(factory);
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
   std::string parallel_method = element_as_string(
       parallel_config, "method", "parallel_config");
@@ -650,6 +715,22 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
   std::string par_method = element_as_string(parallel_config, "method", "parallel_config");
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
+  if (cluster.uses_prim())
+  {
+    if (par_method == "concurrent" && threads > 1)
+    {
+      OPTIMOTU_STOP(
+          "clust_prim() does not support parallel_concurrent() with threads > 1");
+    }
+    if (par_method == "hierarchical")
+    {
+      OPTIMOTU_STOP("clust_prim() does not support parallel_hierarchical()");
+    }
+    if (par_method == "concurrent")
+    {
+      par_method = "merge";
+    }
+  }
   int subproblems = threads;
   if (parallel_config.containsElementNamed("subproblems")) {
     Rcpp::RObject item = parallel_config["subproblems"];

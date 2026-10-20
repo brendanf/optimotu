@@ -249,6 +249,7 @@ do_usearch_singlelink <- function(
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
   if (is.list(which)) {
+    reject_clust_prim_multi(clust_config)
     verify_which(which, seq_id)
   }
   checkmate::assert(

@@ -25,6 +25,10 @@ void DistClusterWorker::run() {
   {
     return;
   }
+  if (threads > 1)
+  {
+    clust_algo.prepare_merge_slots(n);
+  }
   if (threads <= 1)
   {
     (*this)(0, n);
@@ -42,16 +46,18 @@ ClusterAlgorithm *DistClusterWorker::tile_algo(PairGenerator *pg)
   return clust_algo.make_child(pg);
 }
 
-void DistClusterWorker::finish_tile(ClusterAlgorithm *my_algo)
+void DistClusterWorker::finish_tile(ClusterAlgorithm *my_algo, std::size_t pg_index)
 {
-  if (!my_algo)
-  {
-    return;
-  }
   if (threads == 1)
   {
     return;
   }
+  if (!my_algo)
+  {
+    clust_algo.receive_mst(pg_index, {});
+    return;
+  }
+  my_algo->set_merge_slot(pg_index);
   my_algo->finalize();
   my_algo->merge_into_parent();
   clust_algo.release_child(my_algo);

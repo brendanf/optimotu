@@ -186,6 +186,7 @@ seq_cluster.character <- function(
       as.integer(verbose)
     )
   } else {
+    reject_clust_prim_multi(clust_config)
     checkmate::assert(
       checkmate::check_list(
         which,

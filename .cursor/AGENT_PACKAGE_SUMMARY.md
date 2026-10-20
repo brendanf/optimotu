@@ -87,6 +87,14 @@ Native code:
     `min(requested, n_generators)` like DistClusterWorker. Split
     cluster workers use `max_relevant_local` / `apply_local` on mapped
     tile children; Hamming batches R interrupt checks.
+  - `clust_prim()` grows an MST with Prim on each all-pairs tile
+    (complete or bipartite) and Kruskal-unions those trees in a
+    binary tournament (last arriving thread merges). Multi-subset
+    `optimize_thresholds()` / `seq_cluster(..., which = ...)` errors
+    (Prim grow order cannot share a streamed pair). Use for
+    single-subset `seq_cluster()`. Concurrent Prim with `threads > 1`
+    errors; `parallel_concurrent(1)` is remapped to the merge/split
+    worker so Prim can grow.
   - `MultipleClusterAlgorithm` pair updates use per-sequence routes
     `(subset, local index)` and intersect those lists. Tile children
     store shard-local indices, so `apply_pair` calls `apply_local`
@@ -123,7 +131,7 @@ Core exported API families include:
   - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_ksw2()`, `dist_hamming()`,
     `dist_usearch()`, `dist_file()`, `dist_hybrid()`
   - `clust_config()` + `clust_tree()`, `clust_matrix()`, `clust_index()`,
-    `clust_slink()`
+    `clust_slink()`, `clust_prim()`
   - `threshold_config()` + `threshold_uniform()`, `threshold_set()`,
     `threshold_lookup()`
   - `parallel_config()` + `parallel_concurrent()`, `parallel_merge()`,

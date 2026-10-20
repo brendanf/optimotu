@@ -931,10 +931,49 @@ void MCA::merge_into(MCA &consumer) {
 }
 
 void MCA::merge_into_parent() {
-  for (auto & ss : this->subsets) {
+  for (auto &ss : this->subsets)
+  {
     if (ss)
     {
       ss->merge_into_parent();
+    }
+  }
+}
+
+bool MCA::uses_prim() const {
+  for (auto *ss : this->subsets) {
+    if (ss && ss->uses_prim())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void MCA::prepare_merge_slots(std::size_t n_slots) {
+  for (auto *ss : this->subsets) {
+    if (ss)
+    {
+      ss->prepare_merge_slots(n_slots);
+    }
+  }
+}
+
+void MCA::set_merge_slot(std::size_t slot) {
+  merge_slot_ = slot;
+  for (auto *ss : this->subsets) {
+    if (ss)
+    {
+      ss->set_merge_slot(slot);
+    }
+  }
+}
+
+void MCA::receive_mst(std::size_t slot, std::vector<MstEdge> edges) {
+  for (auto *ss : this->subsets) {
+    if (ss)
+    {
+      ss->receive_mst(slot, edges);
     }
   }
 }

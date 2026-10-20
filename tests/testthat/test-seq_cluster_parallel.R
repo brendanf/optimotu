@@ -373,6 +373,7 @@ testthat::test_that("parallel_merge handles slink+hamming with multiple threads"
 algorithms <- list(
   tree = clust_tree(),
   slink = clust_slink(),
+  prim = clust_prim(),
   matrix_binary = clust_matrix(binary_search = TRUE, fill_method = "binary"),
   index = clust_index()
 )
@@ -388,6 +389,10 @@ for (algorithm_name in names(algorithms)) {
   for (parallel_name in names(parallels)) {
     # SLINK requires a single ordered pair stream; concurrent(>1) is invalid.
     if (algorithm_name == "slink" && parallel_name == "concurrent4") {
+      next
+    }
+    # Prim grow is single-threaded; concurrent(>1) is invalid.
+    if (algorithm_name == "prim" && parallel_name == "concurrent4") {
       next
     }
     testthat::test_that(

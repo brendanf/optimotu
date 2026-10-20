@@ -6,6 +6,7 @@
 #include "ClusterIndexedMatrix.h"
 #include "ClusterTree.h"
 #include "ClusterSLINK.h"
+#include "ClusterPrim.h"
 #include <cstdint>
 
 using CAF = ClusterAlgorithmFactory;
@@ -114,4 +115,34 @@ std::size_t CSF::estimate_bytes(
   const std::size_t t = n_tiles == 0 ? 1 : n_tiles;
   const std::size_t slink_bytes = ns * sizeof(std::uint64_t) * 4;
   return slink_bytes + ns * t * 16;
+}
+
+using CPF = ClusterPrimFactory;
+
+CPF::ClusterPrimFactory(const DistanceConverter &dconv) : CAF{dconv} {}
+
+std::unique_ptr<SingleClusterAlgorithm> CPF::create(j_t n, int verbose) const
+{
+  return create_cluster_prim(this->dconv, n, verbose);
+}
+
+std::unique_ptr<SingleClusterAlgorithm> CPF::create(init_matrix_t &im, int verbose) const
+{
+  return create_cluster_prim(this->dconv, im, verbose);
+}
+
+std::size_t CPF::estimate_bytes(
+    j_t n,
+    ClusterInstanceRole role,
+    std::size_t n_tiles) const
+{
+  const std::size_t ns = static_cast<std::size_t>(n);
+  // Keys, parent, MST (~24n) plus parent merge buffer like SLINK.
+  const std::size_t prim_bytes = ns * 24;
+  if (role == ClusterInstanceRole::Leaf)
+  {
+    return prim_bytes;
+  }
+  const std::size_t t = n_tiles == 0 ? 1 : n_tiles;
+  return prim_bytes + ns * t * 16;
 }

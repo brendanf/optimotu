@@ -88,7 +88,8 @@ estimate_subset_memory_mb <- function(
     n_seq * n_thresholds * int_bytes
   )
   slink_leaf <- n_seq * u64_bytes * 4
-  # Parent peak: SLINK state + merge-cache (~16B/edge, ~n*T edges).
+  prim_leaf <- n_seq * 24
+  # Parent peak: SLINK/Prim state + merge-cache (~16B/edge, ~n*T edges).
   slink_parent <- if (parallel_method == "merge" && threads > 1) {
     n_blocks <- ceiling(sqrt(threads))
     slink_leaf + n_seq * (2 * n_blocks) * 16
@@ -113,22 +114,27 @@ estimate_subset_memory_mb <- function(
     hierarchical = max(1, threads / 2),
     1
   )
-  total_bytes <- if (clust_method == "slink") {
+  total_bytes <- if (clust_method %in% c("slink", "prim")) {
+    leaf <- if (clust_method == "prim") prim_leaf else slink_leaf
     root <- if (
       parallel_method == "concurrent" ||
         (parallel_method == "merge" && threads <= 1)
     ) {
-      slink_leaf
+      leaf
     } else {
-      slink_parent
+      if (clust_method == "prim") {
+        prim_leaf + (slink_parent - slink_leaf)
+      } else {
+        slink_parent
+      }
     }
-    child <- slink_leaf
+    child <- leaf
     root + (method_scale - 1) * child
   } else {
     algo_bytes * method_scale
   }
-  # Tree/SLINK do not keep the n x m output; matrix/index already include it.
-  if (isTRUE(include_result) && clust_method %in% c("tree", "slink")) {
+  # Tree/SLINK/Prim do not keep the n x m output; matrix/index already include it.
+  if (isTRUE(include_result) && clust_method %in% c("tree", "slink", "prim")) {
     total_bytes <- total_bytes + n_seq * n_thresholds * int_bytes
   }
   max(1, total_bytes / (1024 * 1024))
@@ -991,6 +997,7 @@ optimize_thresholds <- function(
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(dist_config, "optimotu_dist_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")
+  reject_clust_prim_multi(clust_config)
   checkmate::assert_integerish(min_refseq, lower = 1L)
   checkmate::assert_integerish(min_taxa, lower = 1L)
   checkmate::assert_character(measures)
