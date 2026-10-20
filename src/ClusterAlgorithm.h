@@ -134,6 +134,10 @@ public:
   {
     (*this)(i, j, dist, thread);
   }
+  virtual void apply_local(j_t i, j_t j, d_t bin, int thread = 0)
+  {
+    (*this)(i, j, bin, thread);
+  }
 
   // update clustering based on pairwise distance index between seq1 and seq2
   virtual void operator()(j_t seq1, j_t seq2, d_t i, int thread = 0)=0;

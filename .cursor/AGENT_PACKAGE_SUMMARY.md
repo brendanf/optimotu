@@ -77,10 +77,23 @@ Native code:
     `for_each_assigned_tile`): nested index ranges over
     `AllPairGenerator` / `BipartitePairGenerator` tiles (not per-pair
     `PairGenerator++` for dense tiles; sparse generators still fall
-    back to `++`). DistWorker thread count is capped at
+    back to `++`). `AllPairGenerator::Builder` uses a square of
+    `n_blocks = ceil(sqrt(subproblems))` blocks: diagonal tiles plus
+    each rectangle split into two equal-work pieces (`n_blocks^2`
+    tiles). `for_each_assigned_tile` walks `[begin, end)`;
+    `DistClusterWorker::run()` / `DistWorker::run()` launch
+    `parallelFor(0, n_tiles, grain=1, n_threads)` so idle threads can
+    steal. DistWorker thread count is capped at
     `min(requested, n_generators)` like DistClusterWorker. Split
     cluster workers use `max_relevant_local` / `apply_local` on mapped
     tile children; Hamming batches R interrupt checks.
+  - `MultipleClusterAlgorithm` pair updates use per-sequence routes
+    `(subset, local index)` and intersect those lists. Tile children
+    store shard-local indices, so `apply_pair` calls `apply_local`
+    without `fwd_map` / `tile_subset_locals` lookups. Adjacent
+    sequences with the same membership share one interned list. The
+    MCA mutex is not held during `apply_pair`; subset algorithms lock
+    themselves.
   - `dist_wfa2()` match is a non-negative bonus. All WFA2 factories
     (`create_*_worker`, `pairwise_alignment`) negate it before
     constructing `WFAligner`. Low-level `cigar_wfa2_*` / `align_wfa2_*`
@@ -150,7 +163,8 @@ explicitly requests API changes.
   `parallel_concurrent()` with multiple threads.
   `test-seq_cluster_parallel.R` builds overlapping subsets in a fixture but
   only calls `seq_cluster(..., which = TRUE)`, so it does not cover this.
-- Multi-subset `parallel_merge()` tile children share parent routing via
+- Multi-subset `parallel_merge()` tile children keep their own pair
+  routes (shard-local indices) and share names/subset tables via
   `tile_routing_parent`. Subset shards (tree/matrix/index/SLINK) use
   `subset_tile_fwd_map()` intersection children sized to `|subset ∩ tile|`.
   Parent-subset-local ids are the rank of each sequence in global input
@@ -174,8 +188,9 @@ explicitly requests API changes.
   Tree, matrix, and index inherit the empty `finalize()`.
 - `estimate_bytes(n, role, n_tiles)` takes `ClusterInstanceRole::Leaf` or
   `Parent`. SLINK leaf instances use `n * 8 * 4` bytes; parent peak is
-  `n * 8 * 4 + 16 * n * T` where `T` is the merge tile count (`~sqrt(threads)`)
-  or `threads` for hierarchical full-copy merge (`T = 1` if unknown).
+  `n * 8 * 4 + 16 * n * T` where `T` is the merge tile multiplicity
+  (`~2*ceil(sqrt(threads))` for square all-pairs tiles) or `threads`
+  for hierarchical full-copy merge (`T = 1` if unknown).
   Tree/matrix/index ignore `role` / `n_tiles`.
 - `estimate_subset_memory_mb()` mirrors native `estimate_bytes()` (tree/SLINK
   `O(n)`, matrix/index `O(nm)`). Merge with `threads = 1` matches concurrent

@@ -6,6 +6,7 @@
 
 #include "AllPairGenerator.h"
 #include "BipartitePairGenerator.h"
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <utility>
@@ -53,19 +54,21 @@ void for_each_tile_pair(PairGenerator &pg, Fn &&fn) {
   }
 }
 
-// Round-robin over tiles assigned to this worker: begin, begin+n_workers, ...
+// Walk tiles in the half-open range [begin, end). parallelFor grain-1
+// over n_tiles lets idle threads steal remaining tiles.
 template <typename Fn>
 void for_each_assigned_tile(
   const std::vector<std::unique_ptr<PairGenerator>> &generators,
   std::size_t begin,
-  std::size_t n_workers,
+  std::size_t end,
   Fn &&fn
 ) {
-  if (n_workers == 0) {
+  const std::size_t n = generators.size();
+  if (begin >= n) {
     return;
   }
-  for (std::size_t pg_index = begin; pg_index < generators.size();
-       pg_index += n_workers) {
+  const std::size_t stop = std::min(end, n);
+  for (std::size_t pg_index = begin; pg_index < stop; ++pg_index) {
     fn(pg_index, *generators[pg_index]);
   }
 }

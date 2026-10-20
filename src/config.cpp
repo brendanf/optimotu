@@ -51,8 +51,11 @@ namespace
     }
     if (method == "merge")
     {
-      return static_cast<std::size_t>(
-          std::ceil(0.5 * (std::sqrt(1.0 + 8.0 * threads) - 1.0)));
+      // Square tiling: one diagonal plus two pieces of each other
+      // block, so T ~= 2 * n_blocks.
+      const double n_blocks = std::ceil(
+          std::sqrt(static_cast<double>(std::max(threads, 1))));
+      return static_cast<std::size_t>(2.0 * n_blocks);
     }
     return static_cast<std::size_t>(std::max(threads, 1));
   }

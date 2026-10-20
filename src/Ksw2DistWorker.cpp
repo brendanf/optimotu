@@ -88,11 +88,12 @@ void Ksw2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
   };
 
   for_each_assigned_tile(
-    pair_generators, begin, threads,
-    [&](std::size_t /*pg_index*/, PairGenerator &pg) {
-      for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t, std::size_t
-      ) {
+      pair_generators, begin, end,
+      [&](std::size_t /*pg_index*/, PairGenerator &pg)
+      {
+        for_each_tile_pair(pg, [&](
+                                   std::size_t i0, std::size_t j0, std::size_t, std::size_t)
+                           {
         const size_t i = i0;
         const size_t j = j0;
 
@@ -144,10 +145,8 @@ void Ksw2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
           my_max_delete.push_back(max_del);
         }
         flush_if_full();
-        RcppThread::checkUserInterrupt();
+        RcppThread::checkUserInterrupt(); });
       });
-    }
-  );
   if (my_seq1.size() > 0) {
     if constexpr (std::is_same_v<SparseDistanceMatrixType, SparseDistanceMatrixCigar>) {
       sdm.append(

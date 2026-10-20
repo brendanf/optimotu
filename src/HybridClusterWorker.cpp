@@ -29,7 +29,7 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
   );
   wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       OPTIMOTU_DEBUG(
         2,
@@ -136,7 +136,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
   );
   wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       OPTIMOTU_DEBUG(
         2,

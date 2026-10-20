@@ -14,7 +14,7 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
   );
 
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       OPTIMOTU_DEBUG(
         2,
@@ -110,7 +110,7 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
   );
 
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       OPTIMOTU_DEBUG(
         2,

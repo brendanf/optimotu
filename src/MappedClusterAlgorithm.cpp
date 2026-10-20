@@ -604,6 +604,13 @@ void MappedClusterAlgorithmImpl<verbose>::apply_local(
   (*inner)(i, j, dist, thread);
 }
 
+template <int verbose>
+void MappedClusterAlgorithmImpl<verbose>::apply_local(
+    j_t i, j_t j, d_t bin, int thread)
+{
+  (*inner)(i, j, bin, thread);
+}
+
 template class MappedClusterAlgorithmImpl<0>;
 template class MappedClusterAlgorithmImpl<1>;
 template class MappedClusterAlgorithmImpl<2>;

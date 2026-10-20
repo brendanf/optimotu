@@ -33,8 +33,7 @@ public:  // constructor for use in divide() which begins with i > 1
   protected:
     std::size_t offset = 0;
   public:
-    Builder(const std::size_t n, const std::size_t min_n_subgenerators = 1) :
-      DivisiblePairGenerator::Builder(n, min_n_subgenerators) {};
+    Builder(const std::size_t n, const std::size_t min_n_subgenerators = 1);
     
     void set_offset(const std::size_t offset) { this->offset = offset; }
 

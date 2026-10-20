@@ -90,8 +90,8 @@ estimate_subset_memory_mb <- function(
   slink_leaf <- n_seq * u64_bytes * 4
   # Parent peak: SLINK state + merge-cache (~16B/edge, ~n*T edges).
   slink_parent <- if (parallel_method == "merge" && threads > 1) {
-    n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
-    slink_leaf + n_seq * n_tiles * 16
+    n_blocks <- ceiling(sqrt(threads))
+    slink_leaf + n_seq * (2 * n_blocks) * 16
   } else if (parallel_method == "hierarchical") {
     slink_leaf + n_seq * threads * 16
   } else {
@@ -105,8 +105,8 @@ estimate_subset_memory_mb <- function(
       if (threads <= 1) {
         1.1
       } else {
-        n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
-        1 + threads * (2 / n_tiles)
+        n_blocks <- ceiling(sqrt(threads))
+        1 + threads * (2 / n_blocks)
       }
     },
     concurrent = 1.1,

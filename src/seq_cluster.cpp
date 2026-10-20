@@ -58,12 +58,7 @@ Rcpp::RObject seq_cluster_single(
     if (verbose) {
       OPTIMOTU_CERR << "done\nclustering..." << std::endl;
     }
-    int threads = worker->n_threads();
-    if (threads == 1) {
-      (*worker)(0, 1);
-    } else {
-      RcppParallel::parallelFor(0, threads, *worker, 1, threads);
-    }
+    worker->run();
     n_prealigned = worker->prealigned();
     n_aligned = worker->aligned();
   } else if (verbose) {
@@ -328,15 +323,7 @@ Rcpp::DataFrame seq_cluster_profile_output(
   {
     auto worker = create_dist_cluster_worker(
         dist_config, parallel_config, seq_views, *algo, verbose);
-    int wthreads = worker->n_threads();
-    if (wthreads == 1)
-    {
-      (*worker)(0, 1);
-    }
-    else
-    {
-      RcppParallel::parallelFor(0, wthreads, *worker, 1, wthreads);
-    }
+    worker->run();
   }
   auto t_cluster1 = std::chrono::steady_clock::now();
 

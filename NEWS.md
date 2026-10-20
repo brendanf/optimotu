@@ -1,5 +1,7 @@
 # optimotu development version
 
+* Increase multithread efficiency of clustering over multiple subsets
+  in `seq_cluster()` and `optimize_thresholds()`.
 * `optimize_thresholds()` collapses byte-identical reference sequences
   that share all rank labels before clustering, and weights cluster
   metrics by the dropped copies so reported values match the unreduced

@@ -175,6 +175,7 @@ public:
   // Bypass rev_map; i/j are already inner (tile-local) indices.
   double max_relevant_local(j_t i, j_t j, int thread = 0) const override;
   void apply_local(j_t i, j_t j, double dist, int thread = 0) override;
+  void apply_local(j_t i, j_t j, d_t bin, int thread = 0) override;
 };
 
 #endif // OPTIMOTU_MAPPEDCLUSTERALGORITHM_H_INCLUDED

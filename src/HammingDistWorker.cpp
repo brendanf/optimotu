@@ -81,7 +81,7 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(
   }
 
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t /*pg_index*/, PairGenerator &pg) {
       for_each_tile_pair(pg, [&](
         std::size_t i0, std::size_t j0, std::size_t, std::size_t

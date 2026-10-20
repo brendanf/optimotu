@@ -71,13 +71,7 @@ MultiClusterJob run_seq_cluster_multi(
       if (verbose) {
         OPTIMOTU_CERR << "done\nclustering..." << std::endl;
       }
-      if (worker->n_threads() == 1) {
-        (*worker)(0, 1);
-      } else {
-        RcppParallel::parallelFor(
-          0, worker->n_threads(), *worker, 1, worker->n_threads()
-        );
-      }
+      worker->run();
     } else if (verbose) {
       OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << seq.size()
                     << " input sequence(s)" << std::endl;
@@ -142,13 +136,7 @@ MultiClusterJob run_seq_cluster_multi(
       if (verbose) {
         OPTIMOTU_CERR << "done\nclustering..." << std::endl;
       }
-      if (worker->n_threads() == 1) {
-        (*worker)(0, 1);
-      } else {
-        RcppParallel::parallelFor(
-          0, worker->n_threads(), *worker, 1, worker->n_threads()
-        );
-      }
+      worker->run();
     } else if (verbose) {
       OPTIMOTU_CERR << "done\nskipping ClusterWorker for " << seq.size()
                     << " input sequence(s)" << std::endl;

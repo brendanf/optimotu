@@ -15,6 +15,24 @@ std::size_t DistClusterWorker::n_threads() {
   return threads;
 }
 
+std::size_t DistClusterWorker::n_tiles() {
+  return pair_generators.size();
+}
+
+void DistClusterWorker::run() {
+  const std::size_t n = pair_generators.size();
+  if (n == 0)
+  {
+    return;
+  }
+  if (threads <= 1)
+  {
+    (*this)(0, n);
+    return;
+  }
+  RcppParallel::parallelFor(0, n, *this, 1, threads);
+}
+
 ClusterAlgorithm *DistClusterWorker::tile_algo(PairGenerator *pg)
 {
   if (threads == 1)

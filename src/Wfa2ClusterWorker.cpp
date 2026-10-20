@@ -24,7 +24,7 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
   wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
                                    gap_open2, gap_extend2, wfa::WFAligner::Alignment};
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       ClusterAlgorithm *my_algo = tile_algo(&pg);
       if (!my_algo) {
@@ -111,7 +111,7 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
   wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
                                    gap_open2, gap_extend2, wfa::WFAligner::Alignment};
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       OPTIMOTU_DEBUG(
         2,

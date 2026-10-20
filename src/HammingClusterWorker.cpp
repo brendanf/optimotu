@@ -74,7 +74,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
   std::size_t pairs_since_check = 0;
 
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       ClusterAlgorithm *my_algo = tile_algo(&pg);
       if (!my_algo) {
@@ -179,7 +179,7 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
   std::size_t pairs_since_check = 0;
 
   for_each_assigned_tile(
-    pair_generators, begin, threads,
+    pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
       OPTIMOTU_DEBUG(
         2,

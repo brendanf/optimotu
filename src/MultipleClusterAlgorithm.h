@@ -7,8 +7,8 @@
 #include "ClusterAlgorithmFactory.h"
 #include "ClusterTree.h"
 #include "MemoryBudget.h"
+#include <memory>
 #include <unordered_map>
-#include <unordered_set>
 
 class MultipleClusterAlgorithm : public ClusterAlgorithm {
 protected:
@@ -23,13 +23,27 @@ protected:
   const int threads;
   const ClusterInstanceRole root_role;
   // Edge-tile count for SLINK parent merge-cache estimates (0 = unknown,
-  // treated as T = 1). Tiled merge uses ~sqrt(threads); hierarchical uses
-  // threads.
+  // treated as T = 1). Tiled merge uses ~2*ceil(sqrt(threads)); hierarchical
+  // uses threads.
   const std::size_t parent_n_tiles;
   std::shared_ptr<MemoryBudgetTracker> memory_budget;
 
   // for each element, which subsets does it belong to? sorted
   std::vector<std::vector<j_t>> subset_key;
+
+  // Pair-loop route: subset id plus the index that subset leaf expects.
+  // Root stores parent-local rank; merge tile children store shard-local
+  // rank. Adjacent sequences with the same membership share one list.
+  struct SubsetRoute
+  {
+    j_t subset;
+    j_t local;
+    bool operator==(const SubsetRoute &other) const
+    {
+      return subset == other.subset && local == other.local;
+    }
+  };
+  std::vector<std::shared_ptr<const std::vector<SubsetRoute>>> seq_routes;
 
   // for each subset, map from universal index to index in the subset
   // (rank among subset members in global sequence order)
@@ -47,11 +61,9 @@ protected:
   std::vector<std::size_t> tracked_allocations;
   std::size_t tracked_base_allocation = 0;
 
-  // When set, routing tables and names come from the parent (tile merge child).
+  // When set, names and subset tables come from the parent (tile merge
+  // child). Pair routes live on this instance.
   const MultipleClusterAlgorithm *tile_routing_parent = nullptr;
-
-  // Parent-subset-local indices present in each tile shard (empty if none).
-  std::vector<std::unordered_set<j_t>> tile_subset_locals;
 
   const std::vector<std::vector<j_t>> &routing_subset_key() const;
   const std::vector<std::unordered_map<j_t, j_t>> &routing_fwd_map() const;
@@ -60,10 +72,17 @@ protected:
   const std::vector<std::vector<j_t>> &routing_subset_indices() const;
   const std::vector<std::vector<j_t>> &routing_sorted_to_which() const;
 
-  // Last-pair overlap cache is thread_local inside ensure_whichsets so
-  // concurrent workers do not share a slot. Returns the subsets that
-  // contain both sequences.
-  const std::vector<j_t> & ensure_whichsets(j_t seq1, j_t seq2) const;
+  std::vector<std::vector<SubsetRoute>> build_root_routes() const;
+  void intern_seq_routes(std::vector<std::vector<SubsetRoute>> &&tmp);
+  struct RouteHit
+  {
+    j_t subset;
+    j_t local1;
+    j_t local2;
+  };
+  // Overlap of the two sequence routes, cached per OS thread so
+  // max_relevant then apply_pair skip a second intersection.
+  const std::vector<RouteHit> &ensure_overlap(j_t seq1, j_t seq2) const;
   void apply_pair(
     j_t seq1,
     j_t seq2,

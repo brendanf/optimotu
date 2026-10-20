@@ -40,6 +40,8 @@ public :
   size_t aligned();
 
   std::size_t n_threads();
+  std::size_t n_tiles();
+  void run();
 
   // One-thread merge has a single full-range tile; work on the root so
   // ClusterSLINK never allocates the unused delegate tree.

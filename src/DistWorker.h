@@ -50,6 +50,20 @@ public:
 
   std::size_t n_threads() const { return threads; }
 
+  std::size_t n_tiles() const { return pair_generators.size(); }
+
+  void run() {
+    const std::size_t n = pair_generators.size();
+    if (n == 0) {
+      return;
+    }
+    if (threads <= 1) {
+      (*this)(0, n);
+      return;
+    }
+    RcppParallel::parallelFor(0, n, *this, 1, threads);
+  }
+
   std::size_t prealigned() const { return _prealigned; }
 
   std::size_t aligned() const { return _aligned; }

@@ -73,12 +73,7 @@ Rcpp::RObject seq_distmx_internal(
       span,
       constrain
     );
-    int threads = align_worker->n_threads();
-    if (threads == 1) {
-      (*align_worker)(0, 1);
-    } else {
-      RcppParallel::parallelFor(0, threads, *align_worker, 1, threads);
-    }
+    align_worker->run();
 
     if (verbose >= 1) {
       Rcpp::Rcerr << "Prealigned: " << align_worker->prealigned()

@@ -219,6 +219,7 @@ MCA::MultipleClusterAlgorithm(
                                   parent_n_tiles(parent_n_tiles),
                                   memory_budget(memory_budget),
                                   subset_key(names.size()),
+                                  seq_routes(),
                                   fwd_map(subset_names.size()),
                                   sorted_to_which(subset_names.size()),
                                   subsets(),
@@ -246,6 +247,7 @@ MCA::MultipleClusterAlgorithm(
                                   parent_n_tiles(parent_n_tiles),
                                   memory_budget(memory_budget),
                                   subset_key(static_cast<std::size_t>(n_seq)),
+                                  seq_routes(),
                                   fwd_map(subset_which.size()),
                                   sorted_to_which(subset_which.size()),
                                   subsets(),
@@ -345,6 +347,7 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
       sorted_to_which[i][rank_it->second] = which_pos;
     }
   }
+  intern_seq_routes(build_root_routes());
 }
 
 template <int verbose>
@@ -397,6 +400,7 @@ MultipleClusterAlgorithmImpl<verbose>::MultipleClusterAlgorithmImpl(
       sorted_to_which[i][rank_it->second] = which_pos;
     }
   }
+  intern_seq_routes(build_root_routes());
 }
 
 // // Subset the names of the sequences to only the names of the sequences
@@ -473,6 +477,7 @@ MCA::MultipleClusterAlgorithm(MCA *parent) : ClusterAlgorithm(parent),
                                              parent_n_tiles(parent->parent_n_tiles),
                                              memory_budget(parent->memory_budget),
                                              subset_key(parent->subset_key),
+                                             seq_routes(parent->seq_routes),
                                              fwd_map(parent->fwd_map),
                                              sorted_to_which(parent->sorted_to_which),
                                              borrowed_subsets(),
@@ -504,6 +509,7 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
                                                                 parent_n_tiles(parent->parent_n_tiles),
                                                                 memory_budget(parent->memory_budget),
                                                                 subset_key(),
+                                                                seq_routes(),
                                                                 fwd_map(),
                                                                 sorted_to_which(),
                                                                 borrowed_subsets(),
@@ -511,7 +517,8 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
                                                                 tile_routing_parent(parent)
 {
   subsets.resize(parent->subsets.size(), nullptr);
-  tile_subset_locals.resize(parent->subsets.size());
+  const std::size_t n_seq = parent->subset_key.size();
+  std::vector<std::vector<SubsetRoute>> tmp(n_seq);
 
   for (j_t j = 0; j < static_cast<j_t>(parent->subsets.size()); ++j)
   {
@@ -519,10 +526,6 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
     if (intersection_fwd.size() < 2)
     {
       continue;
-    }
-    for (std::size_t local : intersection_fwd)
-    {
-      tile_subset_locals[j].insert(static_cast<j_t>(local));
     }
     const std::size_t subset_bytes =
         factory.estimate_bytes(
@@ -543,7 +546,15 @@ MCA::MultipleClusterAlgorithm(MCA *parent, PairGenerator *pg) : ClusterAlgorithm
     subsets[j] = static_cast<SingleClusterAlgorithm *>(child_subset);
     borrowed_subsets.emplace_back(parent->subsets[j], child_subset);
     tracked_allocations.push_back(subset_bytes);
+    for (std::size_t shard = 0; shard < intersection_fwd.size(); ++shard)
+    {
+      const j_t parent_local = static_cast<j_t>(intersection_fwd[shard]);
+      const j_t global = parent->subset_indices[j][parent_local];
+      tmp[static_cast<std::size_t>(global)].push_back(
+          {j, static_cast<j_t>(shard)});
+    }
   }
+  intern_seq_routes(std::move(tmp));
 }
 
 MCA::~MultipleClusterAlgorithm() {
@@ -561,43 +572,95 @@ void MCA::release_memory(std::size_t bytes) {
   budget_release(memory_budget, bytes);
 }
 
-// Overlapping subsets for (seq1, seq2), cached per OS thread and MCA
-// instance so max_relevant then apply_pair on the same pair skips a
-// second set_intersection. Concurrent workers must not share this
-// storage: they all pass thread=0, and tile indexes are not a valid
-// thread id.
-const std::vector<j_t> & MCA::ensure_whichsets(j_t seq1, j_t seq2) const {
-  const auto &key = routing_subset_key();
-  if (seq1 >= key.size() || seq2 >= key.size())
+std::vector<std::vector<MCA::SubsetRoute>> MCA::build_root_routes() const
+{
+  std::vector<std::vector<SubsetRoute>> tmp(subset_key.size());
+  for (j_t j = 0; j < static_cast<j_t>(subsets.size()); ++j)
   {
-    OPTIMOTU_STOP("MultipleClusterAlgorithm: sequence index out of range (seq1=" + std::to_string(seq1) + ", seq2=" + std::to_string(seq2) + ", names.size()=" + std::to_string(key.size()) + ")");
+    for (j_t rank = 0; rank < static_cast<j_t>(subset_indices[j].size());
+         ++rank)
+    {
+      tmp[static_cast<std::size_t>(subset_indices[j][rank])].push_back(
+          {j, rank});
+    }
   }
-  thread_local const MCA * cached_algo = nullptr;
+  return tmp;
+}
+
+void MCA::intern_seq_routes(std::vector<std::vector<SubsetRoute>> &&tmp)
+{
+  seq_routes.resize(tmp.size());
+  auto empty = std::make_shared<const std::vector<SubsetRoute>>();
+  for (std::size_t i = 0; i < tmp.size(); ++i)
+  {
+    if (tmp[i].empty())
+    {
+      seq_routes[i] = empty;
+      continue;
+    }
+    if (
+        i > 0 &&
+        seq_routes[i - 1] &&
+        *seq_routes[i - 1] == tmp[i])
+    {
+      seq_routes[i] = seq_routes[i - 1];
+      continue;
+    }
+    seq_routes[i] = std::make_shared<const std::vector<SubsetRoute>>(
+        std::move(tmp[i]));
+  }
+}
+
+const std::vector<MCA::RouteHit> &MCA::ensure_overlap(
+    j_t seq1, j_t seq2) const
+{
+  if (
+      seq1 < 0 || seq2 < 0 ||
+      static_cast<std::size_t>(seq1) >= seq_routes.size() ||
+      static_cast<std::size_t>(seq2) >= seq_routes.size())
+  {
+    OPTIMOTU_STOP(
+        "MultipleClusterAlgorithm: sequence index out of range (seq1=" +
+        std::to_string(seq1) + ", seq2=" + std::to_string(seq2) +
+        ", n=" + std::to_string(seq_routes.size()) + ")");
+  }
+  thread_local const MCA *cached_algo = nullptr;
   thread_local j_t cached_seq1 = std::numeric_limits<j_t>::max();
   thread_local j_t cached_seq2 = std::numeric_limits<j_t>::max();
-  thread_local std::vector<j_t> whichsets;
+  thread_local std::vector<RouteHit> hits;
   if (
-    cached_algo == this &&
-    cached_seq1 == seq1 &&
-    cached_seq2 == seq2
-  ) {
-    return whichsets;
-  }
-  whichsets.clear();
-  if (whichsets.capacity() < routing_subset_names().size())
+      cached_algo == this &&
+      cached_seq1 == seq1 &&
+      cached_seq2 == seq2)
   {
-    whichsets.reserve(routing_subset_names().size());
+    return hits;
   }
-  std::set_intersection(
-      key[seq1].begin(),
-      key[seq1].end(),
-      key[seq2].begin(),
-      key[seq2].end(),
-      std::back_inserter(whichsets));
+  hits.clear();
+  const auto &a = *seq_routes[static_cast<std::size_t>(seq1)];
+  const auto &b = *seq_routes[static_cast<std::size_t>(seq2)];
+  std::size_t i = 0;
+  std::size_t k = 0;
+  while (i < a.size() && k < b.size())
+  {
+    if (a[i].subset < b[k].subset)
+    {
+      ++i;
+    }
+    else if (b[k].subset < a[i].subset)
+    {
+      ++k;
+    }
+    else
+    {
+      hits.push_back({a[i].subset, a[i].local, b[k].local});
+      ++i;
+      ++k;
+    }
+  }
   cached_algo = this;
   cached_seq1 = seq1;
   cached_seq2 = seq2;
-  return whichsets;
+  return hits;
 }
 
 // Forward a pair only to subsets for which it is still relevant. The worker
@@ -614,41 +677,21 @@ void MCA::apply_pair(
   bool filter_irrelevant
 ) {
   if (seq1 == seq2) return;
-  std::unique_lock<std::shared_timed_mutex> lock(this->mutex);
-  const std::vector<j_t> & which = ensure_whichsets(seq1, seq2);
-  const auto &maps = routing_fwd_map();
-  for (j_t j : which) {
-    if (!subsets[j])
+  const std::vector<RouteHit> &hits = ensure_overlap(seq1, seq2);
+  for (const RouteHit &hit : hits)
+  {
+    SingleClusterAlgorithm *ss = subsets[hit.subset];
+    if (!ss)
     {
       continue;
-    }
-    const auto it1 = maps[j].find(seq1);
-    const auto it2 = maps[j].find(seq2);
-    if (it1 == maps[j].end() || it2 == maps[j].end())
-    {
-      continue;
-    }
-    j_t s1 = it1->second;
-    j_t s2 = it2->second;
-    if (
-        tile_routing_parent &&
-        subsets[j]->n < tile_routing_parent->subsets[j]->n)
-    {
-      if (
-          j >= static_cast<j_t>(tile_subset_locals.size()) ||
-          !tile_subset_locals[j].count(s1) ||
-          !tile_subset_locals[j].count(s2))
-      {
-        continue;
-      }
     }
     if (
         filter_irrelevant &&
-        !(dist < subsets[j]->max_relevant(s1, s2, thread)))
+        !(dist < ss->max_relevant_local(hit.local1, hit.local2, thread)))
     {
       continue;
     }
-    (*subsets[j])(s1, s2, i, thread);
+    ss->apply_local(hit.local1, hit.local2, i, thread);
   }
 }
 
@@ -837,44 +880,18 @@ void MCA::finalize() {
 // does not lock anything directly!
 // relies on locks inside subset algorithms for thread safety.
 double MCA::max_relevant(j_t seq1, j_t seq2, int thread) const {
-  const auto &key = routing_subset_key();
-  if (seq1 >= key.size() || seq2 >= key.size())
-  {
-    OPTIMOTU_STOP("MultipleClusterAlgorithm::max_relevant: sequence index out of range");
-  }
+  const std::vector<RouteHit> &hits = ensure_overlap(seq1, seq2);
   double max = -1.0;
-  const std::vector<j_t> & which = ensure_whichsets(seq1, seq2);
-  const auto &maps = routing_fwd_map();
-  for (j_t j : which) {
-    if (!subsets[j])
+  for (const RouteHit &hit : hits)
+  {
+    SingleClusterAlgorithm *ss = subsets[hit.subset];
+    if (!ss)
     {
       continue;
     }
-    const auto it1 = maps[j].find(seq1);
-    const auto it2 = maps[j].find(seq2);
-    if (it1 == maps[j].end() || it2 == maps[j].end())
-    {
-      continue;
-    }
-    j_t s1 = it1->second;
-    j_t s2 = it2->second;
-    if (
-        tile_routing_parent &&
-        subsets[j]->n < tile_routing_parent->subsets[j]->n)
-    {
-      if (
-          j >= static_cast<j_t>(tile_subset_locals.size()) ||
-          !tile_subset_locals[j].count(s1) ||
-          !tile_subset_locals[j].count(s2))
-      {
-        continue;
-      }
-    }
-    double maxj = subsets[j]->max_relevant(
-        s1,
-        s2,
-        thread);
-    max = std::max(max, maxj);
+    max = std::max(
+        max,
+        ss->max_relevant_local(hit.local1, hit.local2, thread));
   }
   return max;
 }
