@@ -99,7 +99,8 @@ Native code:
     the single-thread root). With `parallel_merge` / distmx shards,
     each tile submits its pointer-representation MST into a
     per-subset Kruskal tournament (`src/kruskal_tournament.h`, shared
-    with Prim). The parent keeps the unioned MST for
+    with Prim). Leaves are sorted on submit; internal nodes merge the
+    two sorted lists. The parent keeps the unioned MST for
     `write_to_matrix()`, `write_threshold_row()`, and `as_hclust()`.
     Tiles missing a subset submit an empty leaf. MCA subset
     `finalize()` is serial (`wait()` on the tournament).

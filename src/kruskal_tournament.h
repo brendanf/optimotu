@@ -9,7 +9,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
+#include <iterator>
 #include <mutex>
 #include <numeric>
 #include <vector>
@@ -19,11 +21,19 @@ inline std::vector<MstEdge> kruskal_union(
     const std::vector<MstEdge> &b,
     j_t n)
 {
+  if (a.empty())
+  {
+    return b;
+  }
+  if (b.empty())
+  {
+    return a;
+  }
+  assert(std::is_sorted(a.begin(), a.end()));
+  assert(std::is_sorted(b.begin(), b.end()));
   std::vector<MstEdge> all;
   all.reserve(a.size() + b.size());
-  all.insert(all.end(), a.begin(), a.end());
-  all.insert(all.end(), b.begin(), b.end());
-  std::sort(all.begin(), all.end());
+  std::merge(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(all));
   std::vector<j_t> parent(n);
   std::vector<j_t> rank(n, 0);
   std::iota(parent.begin(), parent.end(), 0);
@@ -281,6 +291,14 @@ class KruskalTournament {
 
   void submit_leaf(std::size_t leaf_id, std::vector<MstEdge> edges)
   {
+    for (MstEdge &e : edges)
+    {
+      if (e.u > e.v)
+      {
+        std::swap(e.u, e.v);
+      }
+    }
+    std::sort(edges.begin(), edges.end());
     std::size_t idx = n_pad_ + leaf_id;
     nodes_[idx].edges = std::move(edges);
     while (idx > 1)
