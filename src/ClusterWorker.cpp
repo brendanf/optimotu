@@ -159,6 +159,14 @@ MergeClusterWorker<distmx_t, id_t>::MergeClusterWorker(
       algo_list.push_back(algo->make_child());
     }
   }
+  if (threads > 1)
+  {
+    algo->prepare_merge_slots(static_cast<std::size_t>(threads));
+    for (int i = 0; i < threads; ++i)
+    {
+      algo_list[i]->set_merge_slot(static_cast<std::size_t>(i));
+    }
+  }
 }
 
 template<typename distmx_t, typename id_t>
@@ -177,6 +185,14 @@ MergeClusterWorker<distmx_t, id_t>::MergeClusterWorker(
     else
     {
       algo_list.push_back(algo->make_child());
+    }
+  }
+  if (threads > 1)
+  {
+    algo->prepare_merge_slots(static_cast<std::size_t>(threads));
+    for (int i = 0; i < threads; ++i)
+    {
+      algo_list[i]->set_merge_slot(static_cast<std::size_t>(i));
     }
   }
 }
@@ -229,6 +245,11 @@ thread_count(shards), shards(shards) {
     thread_count[i] = 0;
     algo_list.push_back(algo->make_child());
   }
+  algo->prepare_merge_slots(static_cast<std::size_t>(shards));
+  for (int i = 0; i < shards; ++i)
+  {
+    algo_list[i]->set_merge_slot(static_cast<std::size_t>(i));
+  }
   // OPTIMOTU_COUT << "done" << std::endl;
 }
 
@@ -246,6 +267,11 @@ thread_count(shards), shards(shards) {
   for (int i = 0; i < shards; ++i) {
     thread_count[i] = 0;
     algo_list.push_back(algo->make_child());
+  }
+  algo->prepare_merge_slots(static_cast<std::size_t>(shards));
+  for (int i = 0; i < shards; ++i)
+  {
+    algo_list[i]->set_merge_slot(static_cast<std::size_t>(i));
   }
   // OPTIMOTU_COUT << "done" << std::endl;
 }

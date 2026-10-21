@@ -95,6 +95,14 @@ Native code:
     single-subset `seq_cluster()`. Concurrent Prim with `threads > 1`
     errors; `parallel_concurrent(1)` is remapped to the merge/split
     worker so Prim can grow.
+  - `clust_slink()` still runs sequential SLINK on each tile (and on
+    the single-thread root). With `parallel_merge` / distmx shards,
+    each tile submits its pointer-representation MST into a
+    per-subset Kruskal tournament (`src/kruskal_tournament.h`, shared
+    with Prim). The parent keeps the unioned MST for
+    `write_to_matrix()`, `write_threshold_row()`, and `as_hclust()`.
+    Tiles missing a subset submit an empty leaf. MCA subset
+    `finalize()` is serial (`wait()` on the tournament).
   - `MultipleClusterAlgorithm` pair updates use per-sequence routes
     `(subset, local index)` and intersect those lists. Tile children
     store shard-local indices, so `apply_pair` calls `apply_local`

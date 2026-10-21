@@ -7,6 +7,7 @@
 #include "single_linkage.h"
 #include "ClusterAlgorithm.h"
 #include "MappedClusterAlgorithm.h"
+#include "kruskal_tournament.h"
 #include <memory>
 #include <vector>
 
@@ -27,18 +28,9 @@ protected:
     j_t slink_seq1 = 0;
     j_t slink_seq2 = 0;
   };
-  struct MergeEdge
-  {
-    j_t seq1;
-    j_t seq2;
-    d_t i;
-  };
   std::unique_ptr<SlinkState> slink;
-  // Unordered MST edges from children; sorted and replayed in finalize().
-  // Set when any child has been created. Cannot be derived from `children`
-  // because children are erased by release_child() after they merge.
-  std::vector<MergeEdge> merge_cache;
-  bool uses_cache = false;
+  KruskalTournament tourney_;
+  std::size_t merge_slot_ = 0;
 
   void ensure_slink();
   void apply_ordered(j_t seq1, j_t seq2, d_t i);
@@ -84,13 +76,17 @@ public:
 
   virtual void merge_into_parent() override;
 
+  void prepare_merge_slots(std::size_t n_slots) override;
+  void set_merge_slot(std::size_t slot) override;
+  void receive_mst(std::size_t slot, std::vector<MstEdge> edges) override;
+
   // calculate the maximum distance between seq1 and seq2 which would actually
   // cause an update
   virtual double max_relevant(j_t seq1, j_t seq2, int thread = 0) const override;
   virtual double max_relevant(PairGenerator & pg, int thread = 0) const override;
 
   bool accepts_unordered_pairs() const override {
-    return uses_cache;
+    return false;
   }
 };
 

@@ -1,6 +1,5 @@
 #include <cassert>
 #include <algorithm>
-#include <atomic>
 #include <limits>
 #include <mutex>
 #include <string>
@@ -729,76 +728,6 @@ void MCA::operator()(DistanceElement d, int thread) {
 namespace
 {
 
-#ifdef OPTIMOTU_R
-// parallelFor keeps the worker by reference. Queue and error state are
-// pointers so every task sees the same objects. Order is largest-first.
-struct SubsetFinalizeWorker : public RcppParallel::Worker
-{
-  const std::vector<SingleClusterAlgorithm *> *subsets;
-  const std::vector<std::size_t> *order;
-  std::atomic<std::size_t> *next;
-  std::atomic<bool> *failed;
-  std::mutex *err_mu;
-  std::string *err;
-
-  SubsetFinalizeWorker(
-      const std::vector<SingleClusterAlgorithm *> *subsets,
-      const std::vector<std::size_t> *order,
-      std::atomic<std::size_t> *next,
-      std::atomic<bool> *failed,
-      std::mutex *err_mu,
-      std::string *err)
-      : subsets(subsets),
-        order(order),
-        next(next),
-        failed(failed),
-        err_mu(err_mu),
-        err(err)
-  {
-  }
-
-  void operator()(std::size_t begin, std::size_t end)
-  {
-    (void)begin;
-    (void)end;
-    try
-    {
-      while (!failed->load(std::memory_order_relaxed))
-      {
-        const std::size_t k = next->fetch_add(1, std::memory_order_relaxed);
-        if (k >= order->size())
-        {
-          return;
-        }
-        SingleClusterAlgorithm *subset = (*subsets)[(*order)[k]];
-        if (subset)
-        {
-          subset->finalize();
-        }
-      }
-    }
-    catch (const std::exception &ex)
-    {
-      std::lock_guard<std::mutex> lock(*err_mu);
-      if (err->empty())
-      {
-        *err = ex.what();
-      }
-      failed->store(true, std::memory_order_release);
-    }
-    catch (...)
-    {
-      std::lock_guard<std::mutex> lock(*err_mu);
-      if (err->empty())
-      {
-        *err = "unknown exception during subset finalize";
-      }
-      failed->store(true, std::memory_order_release);
-    }
-  }
-};
-#endif // OPTIMOTU_R
-
 void finalize_subsets_serial(
     const std::vector<SingleClusterAlgorithm *> &subsets)
 {
@@ -814,67 +743,9 @@ void finalize_subsets_serial(
 } // namespace
 
 void MCA::finalize() {
-  // Tile and merge children are finalized inside worker threads. Only the
-  // root replay is outside that pool, and only SLINK does real work there.
-  if (parent != nullptr || threads <= 1)
-  {
-    finalize_subsets_serial(subsets);
-    return;
-  }
-  std::vector<std::size_t> order;
-  order.reserve(subsets.size());
-  for (std::size_t i = 0; i < subsets.size(); ++i)
-  {
-    if (subsets[i])
-    {
-      order.push_back(i);
-    }
-  }
-  if (order.size() <= 1)
-  {
-    finalize_subsets_serial(subsets);
-    return;
-  }
-#ifndef OPTIMOTU_R
+  // Tile children finalize in worker threads. Root SLINK wait()s on the
+  // Kruskal tournament; Tree is a no-op.
   finalize_subsets_serial(subsets);
-#else
-  std::sort(
-      order.begin(),
-      order.end(),
-      [&](std::size_t a, std::size_t b)
-      {
-        const j_t na = subsets[a]->n;
-        const j_t nb = subsets[b]->n;
-        if (na != nb)
-        {
-          return na > nb;
-        }
-        return a < b;
-      });
-  std::atomic<std::size_t> next{0};
-  std::atomic<bool> failed{false};
-  std::mutex err_mu;
-  std::string err;
-  SubsetFinalizeWorker worker(
-      &subsets,
-      &order,
-      &next,
-      &failed,
-      &err_mu,
-      &err);
-  const std::size_t n_tasks = std::min(
-      order.size(),
-      static_cast<std::size_t>(threads));
-  RcppParallel::parallelFor(0, n_tasks, worker, 1, static_cast<int>(n_tasks));
-  if (failed.load(std::memory_order_acquire))
-  {
-    if (err.empty())
-    {
-      OPTIMOTU_STOP("subset finalize failed");
-    }
-    OPTIMOTU_STOP("%s", err.c_str());
-  }
-#endif // OPTIMOTU_R
 }
 
 // does not lock anything directly!
@@ -931,11 +802,32 @@ void MCA::merge_into(MCA &consumer) {
 }
 
 void MCA::merge_into_parent() {
-  for (auto &ss : this->subsets)
+  if (!parent)
   {
-    if (ss)
+    return;
+  }
+  auto *parent_mca = dynamic_cast<MultipleClusterAlgorithm *>(parent);
+  if (!parent_mca)
+  {
+    for (auto *ss : this->subsets)
     {
-      ss->merge_into_parent();
+      if (ss)
+      {
+        ss->merge_into_parent();
+      }
+    }
+    return;
+  }
+  for (std::size_t i = 0; i < this->subsets.size(); ++i)
+  {
+    if (this->subsets[i])
+    {
+      this->subsets[i]->set_merge_slot(merge_slot_);
+      this->subsets[i]->merge_into_parent();
+    }
+    else if (parent_mca->subsets[i])
+    {
+      parent_mca->subsets[i]->receive_mst(merge_slot_, {});
     }
   }
 }

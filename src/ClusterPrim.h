@@ -7,13 +7,11 @@
 #include "single_linkage.h"
 #include "ClusterAlgorithm.h"
 #include "MappedClusterAlgorithm.h"
+#include "kruskal_tournament.h"
 #include "optimotu.h"
 
-#include <atomic>
-#include <condition_variable>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 #ifdef OPTIMOTU_R
@@ -24,21 +22,10 @@
 class ClusterPrim : public SingleClusterAlgorithm {
   friend class MappedClusterAlgorithm;
 
-  struct TournamentNode {
-    std::vector<MstEdge> edges;
-    std::atomic<int> arrived{0};
-  };
-
   std::vector<MstEdge> mst_;
   bool grown_ = false;
   std::size_t merge_slot_ = 0;
-
-  std::size_t n_leaves_ = 0;
-  std::size_t n_pad_ = 0;
-  std::vector<TournamentNode> nodes_;
-  std::atomic<bool> root_ready_{false};
-  std::mutex ready_mu_;
-  std::condition_variable ready_cv_;
+  KruskalTournament tourney_;
 
   ClusterPrim(ClusterAlgorithm *parent, j_t n);
 
@@ -46,11 +33,6 @@ class ClusterPrim : public SingleClusterAlgorithm {
 
   double key_cutoff(d_t key) const;
   void add_mst_edge(j_t u, j_t v, d_t bin);
-  void kruskal_from_edges(std::vector<MstEdge> edges);
-  void submit_leaf(std::size_t leaf_id, std::vector<MstEdge> edges);
-  void wait_root();
-  void union_until(d_t t, std::vector<j_t> &parent) const;
-  j_t uf_find(std::vector<j_t> &parent, j_t x) const;
 
   template <typename Dist>
   void grow_from_start(j_t n_vert, Dist dist, bool bipartite, j_t n_j);
