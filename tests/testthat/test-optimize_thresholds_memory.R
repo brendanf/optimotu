@@ -19,17 +19,34 @@ merge_n_blocks <- function(threads) {
   ceiling(sqrt(threads))
 }
 
-slink_parent_bytes <- function(n_seq, parallel_method = "merge", threads = 2L) {
-  leaf <- slink_leaf_bytes(n_seq)
+merge_n_slots <- function(parallel_method = "merge", threads = 2L) {
   if (parallel_method == "merge" && threads > 1) {
-    # Each sequence sits in about 2 * n_blocks tiles after rectangle splits.
-    t_mult <- 2 * merge_n_blocks(threads)
-    return(leaf + n_seq * t_mult * 16)
+    n_blocks <- merge_n_blocks(threads)
+    return(as.integer(n_blocks * n_blocks))
   }
   if (parallel_method == "hierarchical") {
-    return(leaf + n_seq * threads * 16)
+    return(as.integer(max(threads, 1L)))
   }
-  leaf + n_seq * max(threads, 1L) * 16
+  as.integer(max(threads, 1L))
+}
+
+kruskal_parent_bytes <- function(
+  n_seq,
+  parallel_method = "merge",
+  threads = 2L
+) {
+  n_slots <- merge_n_slots(parallel_method, threads)
+  n_pad <- 1
+  while (n_pad < n_slots) {
+    n_pad <- n_pad * 2
+  }
+  conc <- max(1L, n_slots %/% 2L)
+  2 *
+    n_pad *
+    32 +
+    n_slots * n_seq * 16 +
+    conc * (n_seq * 8 + 3 * n_seq * 16) +
+    n_seq * 16
 }
 
 estimate_subset_bytes <- function(
@@ -47,7 +64,7 @@ estimate_subset_bytes <- function(
     ) {
       slink_leaf_bytes(n_seq)
     } else {
-      slink_parent_bytes(n_seq, parallel_method, threads)
+      kruskal_parent_bytes(n_seq, parallel_method, threads)
     }
     child <- slink_leaf_bytes(n_seq)
     scale <- switch(
@@ -299,17 +316,16 @@ testthat::test_that("merge slink uses parent root and leaf tile shards", {
     threads
   )
   testthat::expect_lt(got, tree_merge)
-  # Parent cache peak at T=4 is 96n, below tree 256n.
+  # 2 threads -> n_blocks=2, n_slots=4, n_pad=4, conc=2.
   testthat::expect_equal(
-    slink_parent_bytes(n_seq, "merge", threads),
-    slink_leaf_bytes(n_seq) + n_seq * 4 * 16
+    kruskal_parent_bytes(n_seq, "merge", threads),
+    2 * 4 * 32 + 4 * n_seq * 16 + 2 * (n_seq * 8 + 3 * n_seq * 16) + n_seq * 16
   )
 })
 
-testthat::test_that("merge slink parent uses uncapped cache formula", {
+testthat::test_that("merge slink parent uses Kruskal tournament formula", {
   n_seq <- 10000L
   n_thresholds <- 40L
-  # T=12 at 32 threads: cache peak 224n < 256n tree.
   slink_32 <- optimotu:::estimate_subset_memory_mb(
     n_seq,
     n_thresholds,
@@ -325,15 +341,23 @@ testthat::test_that("merge slink parent uses uncapped cache formula", {
     32L
   )
   testthat::expect_lt(slink_32, tree_32)
-  # Above former tree-sized crossover (T > 14), estimate keeps growing.
-  # 120 threads -> n_blocks=11, T=22.
-  t_mult_120 <- 2 * merge_n_blocks(120L)
+  # 120 threads -> n_blocks=11, n_slots=121.
   testthat::expect_equal(
-    slink_parent_bytes(n_seq, "merge", 120L),
-    slink_leaf_bytes(n_seq) + n_seq * t_mult_120 * 16
+    kruskal_parent_bytes(n_seq, "merge", 120L),
+    {
+      n_slots <- 11L * 11L
+      n_pad <- 128L
+      conc <- n_slots %/% 2L
+      2 *
+        n_pad *
+        32 +
+        n_slots * n_seq * 16 +
+        conc * (n_seq * 8 + 3 * n_seq * 16) +
+        n_seq * 16
+    }
   )
   testthat::expect_gt(
-    slink_parent_bytes(n_seq, "merge", 120L),
+    kruskal_parent_bytes(n_seq, "merge", 120L),
     n_seq * 8 * 32
   )
 })

@@ -193,27 +193,26 @@ explicitly requests API changes.
   `this->fwd_map` (not the ctor parameter) so merge forwards stable parent
   indices.
 - `ClusterSLINK` defers allocation: leaf instances hold the SLINK pointer
-  representation; merge parents cache unordered child MST edges and replay
-  them through SLINK in `finalize()` (no `ClusterTree` delegate).
-  `finalize()` continues SLINK iterations through `n - 1` so sequences that
-  never appear as `seq1` in the cached edges still get a Pi self-link.
+  representation; merge parents keep a Kruskal tournament and never
+  allocate Pi/Lambda/M. `finalize()` on a prepared parent is `wait()`.
   `distmx_cluster()` single-matrix merge must call `algo->finalize()` after
-  the worker (same as `seq_cluster()` / multi) so that cache is replayed.
-  Root `MultipleClusterAlgorithm::finalize()` runs those subset replays
-  concurrently when `threads > 1`, largest subset first. Tile and merge
-  children stay serial because they already run inside worker threads.
-  Tree, matrix, and index inherit the empty `finalize()`.
+  the worker (same as `seq_cluster()` / multi) so the tournament finishes.
+  Root `MultipleClusterAlgorithm::finalize()` waits each subset serially.
+  Tile children still `finish_remaining()` so SLINK completes its last
+  iteration. Tree, matrix, and index inherit the empty `finalize()`.
 - `estimate_bytes(n, role, n_tiles)` takes `ClusterInstanceRole::Leaf` or
-  `Parent`. SLINK leaf instances use `n * 8 * 4` bytes; parent peak is
-  `n * 8 * 4 + 16 * n * T` where `T` is the merge tile multiplicity
-  (`~2*ceil(sqrt(threads))` for square all-pairs tiles) or `threads`
-  for hierarchical full-copy merge (`T = 1` if unknown).
+  `Parent`. SLINK leaf instances use `n * 8 * 4` bytes; Prim leaves use
+  `24n`. A merge/hierarchical parent is a Kruskal tournament
+  (`kruskal_tournament_estimate_bytes`): `2 * next_pow2(T)` nodes,
+  `T` leaf forests of `n` edges, `T/2` in-flight `kruskal_union`
+  scratch buffers, and one final MST. `T` is `n_blocks^2` for square
+  merge tiles or `threads` for hierarchical (`T = 1` if unknown).
   Tree/matrix/index ignore `role` / `n_tiles`.
 - `estimate_subset_memory_mb()` mirrors native `estimate_bytes()` (tree/SLINK
   `O(n)`, matrix/index `O(nm)`). Merge with `threads = 1` matches concurrent
   (one leaf instance; SLINK allocates pointer arrays only). With more threads,
-  merge is one parent root (merge-cache sized) plus leaf-sized tile shards for
-  SLINK. `include_result = TRUE` adds `4nm` for tree/SLINK only;
+  merge is one Kruskal parent plus leaf-sized tile shards for SLINK/Prim.
+  `include_result = TRUE` adds `4nm` for tree/SLINK only;
   `optimize_thresholds()` does not need this for tree/SLINK because it scores
   via `write_threshold_row()` instead of materializing the result matrix.
   Batch planning keeps a running integer sequence union (`seq_index` from

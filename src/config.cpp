@@ -49,8 +49,9 @@ namespace
     }
   }
 
-  // Tile/edge multiplicity for SLINK parent merge-cache estimates.
-  // Tiled merge: T ~ sqrt(threads). Full-copy hierarchical: T = threads.
+  // Kruskal tournament leaf slots for SLINK/Prim parents.
+  // Tiled merge: n_blocks^2 generators. Hierarchical: one shard per
+  // thread.
   std::size_t parent_n_tiles_from_parallel_method(
       const std::string &method,
       int threads)
@@ -61,11 +62,10 @@ namespace
     }
     if (method == "merge")
     {
-      // Square tiling: one diagonal plus two pieces of each other
-      // block, so T ~= 2 * n_blocks.
       const double n_blocks = std::ceil(
           std::sqrt(static_cast<double>(std::max(threads, 1))));
-      return static_cast<std::size_t>(2.0 * n_blocks);
+      const std::size_t nb = static_cast<std::size_t>(n_blocks);
+      return nb * nb;
     }
     return static_cast<std::size_t>(std::max(threads, 1));
   }

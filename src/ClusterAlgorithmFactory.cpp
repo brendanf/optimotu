@@ -110,11 +110,7 @@ std::size_t CSF::estimate_bytes(
     // Pi, Lambda, M vectors plus allocator overhead.
     return ns * sizeof(std::uint64_t) * 4;
   }
-  // Parent peak: SLINK state plus merge-cache edges (~16 bytes each, ~n*T
-  // edges for tiled merge). n_tiles == 0 means unknown; assume T = 1.
-  const std::size_t t = n_tiles == 0 ? 1 : n_tiles;
-  const std::size_t slink_bytes = ns * sizeof(std::uint64_t) * 4;
-  return slink_bytes + ns * t * 16;
+  return kruskal_tournament_estimate_bytes(n, n_tiles);
 }
 
 using CPF = ClusterPrimFactory;
@@ -137,12 +133,10 @@ std::size_t CPF::estimate_bytes(
     std::size_t n_tiles) const
 {
   const std::size_t ns = static_cast<std::size_t>(n);
-  // Keys, parent, MST (~24n) plus parent merge buffer like SLINK.
-  const std::size_t prim_bytes = ns * 24;
+  // Keys, parent, in_tree, and MST (~24n) on a growing leaf.
   if (role == ClusterInstanceRole::Leaf)
   {
-    return prim_bytes;
+    return ns * 24;
   }
-  const std::size_t t = n_tiles == 0 ? 1 : n_tiles;
-  return prim_bytes + ns * t * 16;
+  return kruskal_tournament_estimate_bytes(n, n_tiles);
 }

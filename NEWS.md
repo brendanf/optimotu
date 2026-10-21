@@ -1,5 +1,7 @@
 # optimotu development version
 
+* Clustering memory estimates for multi-thread `parallel_merge()` /
+  `parallel_hierarchical()` SLINK and Prim now match the Kruskal merge algorithm.
 * Add `clust_prim()`: single-linkage via Prim on each tile and a Kruskal
   binary merge (PINK-style). Multi-subset clustering
   (`optimize_thresholds()`, `seq_cluster(..., which = ...)`) errors;

@@ -366,4 +366,32 @@ public:
   }
 };
 
+// Peak for a parent KruskalTournament. MstEdge is 16B padded; Node is
+// vector plus atomic (~32B). Leaves may each hold an n-1 forest while
+// last-arrivers run kruskal_union (merge buffer, out, union-find).
+inline std::size_t kruskal_tournament_estimate_bytes(
+    j_t n,
+    std::size_t n_slots)
+{
+  const std::size_t ns = static_cast<std::size_t>(n);
+  constexpr std::size_t k_edge = 16;
+  constexpr std::size_t k_node = 32;
+  if (n_slots == 0)
+  {
+    n_slots = 1;
+  }
+  std::size_t n_pad = 1;
+  while (n_pad < n_slots)
+  {
+    n_pad *= 2;
+  }
+  const std::size_t skeleton = 2 * n_pad * k_node;
+  const std::size_t leaf_edges = n_slots * ns * k_edge;
+  const std::size_t conc = std::max<std::size_t>(1, n_slots / 2);
+  const std::size_t union_scratch =
+      conc * (ns * 8 + 3 * ns * k_edge);
+  const std::size_t final_mst = ns * k_edge;
+  return skeleton + leaf_edges + union_scratch + final_mst;
+}
+
 #endif

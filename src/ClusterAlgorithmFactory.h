@@ -24,8 +24,9 @@ public:
 
   virtual std::unique_ptr<SingleClusterAlgorithm> create(j_t n, int verbose = 0) const = 0;
   virtual std::unique_ptr<SingleClusterAlgorithm> create(init_matrix_t & im, int verbose = 0) const = 0;
-  // n_tiles is used by SLINK parents (merge-cache peak); ignored otherwise.
-  // 0 means "unknown / conservative tree-sized parent".
+  // n_tiles is Kruskal tournament slots for SLINK/Prim parents
+  // (n_blocks^2 merge tiles, or threads for hierarchical). 0 means one
+  // slot. Ignored for tree/matrix/index.
   virtual std::size_t estimate_bytes(
       j_t n,
       ClusterInstanceRole role = ClusterInstanceRole::Parent,

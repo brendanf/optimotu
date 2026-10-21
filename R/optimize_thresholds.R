@@ -89,15 +89,30 @@ estimate_subset_memory_mb <- function(
   )
   slink_leaf <- n_seq * u64_bytes * 4
   prim_leaf <- n_seq * 24
-  # Parent peak: SLINK/Prim state + merge-cache (~16B/edge, ~n*T edges).
-  slink_parent <- if (parallel_method == "merge" && threads > 1) {
-    n_blocks <- ceiling(sqrt(threads))
-    slink_leaf + n_seq * (2 * n_blocks) * 16
-  } else if (parallel_method == "hierarchical") {
-    slink_leaf + n_seq * threads * 16
-  } else {
-    # Unknown parallel method: assume full-copy style T = threads.
-    slink_leaf + n_seq * max(threads, 1L) * 16
+  # Parent peak: KruskalTournament (see kruskal_tournament_estimate_bytes).
+  merge_n_slots <- function(parallel_method, threads) {
+    if (identical(parallel_method, "merge") && threads > 1) {
+      n_blocks <- ceiling(sqrt(threads))
+      return(as.integer(n_blocks * n_blocks))
+    }
+    if (identical(parallel_method, "hierarchical")) {
+      return(as.integer(max(threads, 1L)))
+    }
+    as.integer(max(threads, 1L))
+  }
+  kruskal_parent <- {
+    n_slots <- merge_n_slots(parallel_method, threads)
+    n_pad <- 1
+    while (n_pad < n_slots) {
+      n_pad <- n_pad * 2
+    }
+    conc <- max(1L, n_slots %/% 2L)
+    2 *
+      n_pad *
+      32 +
+      n_slots * n_seq * 16 +
+      conc * (n_seq * 8 + 3 * n_seq * 16) +
+      n_seq * 16
   }
   method_scale <- switch(
     parallel_method,
@@ -122,11 +137,7 @@ estimate_subset_memory_mb <- function(
     ) {
       leaf
     } else {
-      if (clust_method == "prim") {
-        prim_leaf + (slink_parent - slink_leaf)
-      } else {
-        slink_parent
-      }
+      kruskal_parent
     }
     child <- leaf
     root + (method_scale - 1) * child

@@ -22,9 +22,8 @@ protected:
   // the number of threads
   const int threads;
   const ClusterInstanceRole root_role;
-  // Edge-tile count for SLINK parent merge-cache estimates (0 = unknown,
-  // treated as T = 1). Tiled merge uses ~2*ceil(sqrt(threads)); hierarchical
-  // uses threads.
+  // Kruskal tournament slots for SLINK/Prim parent estimates (0 = one
+  // slot). Tiled merge uses n_blocks^2; hierarchical uses threads.
   const std::size_t parent_n_tiles;
   std::shared_ptr<MemoryBudgetTracker> memory_budget;
 
