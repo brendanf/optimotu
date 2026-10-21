@@ -14,11 +14,17 @@ slink_leaf_bytes <- function(n_seq) {
   n_seq * 8 * 4
 }
 
+# Square all-pairs side length. AllPairGenerator builds n_blocks^2 tiles.
+merge_n_blocks <- function(threads) {
+  ceiling(sqrt(threads))
+}
+
 slink_parent_bytes <- function(n_seq, parallel_method = "merge", threads = 2L) {
   leaf <- slink_leaf_bytes(n_seq)
   if (parallel_method == "merge" && threads > 1) {
-    n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
-    return(leaf + n_seq * n_tiles * 16)
+    # Each sequence sits in about 2 * n_blocks tiles after rectangle splits.
+    t_mult <- 2 * merge_n_blocks(threads)
+    return(leaf + n_seq * t_mult * 16)
   }
   if (parallel_method == "hierarchical") {
     return(leaf + n_seq * threads * 16)
@@ -64,8 +70,8 @@ estimate_subset_bytes <- function(
 }
 
 merge_scale <- function(threads) {
-  n_tiles <- ceiling(0.5 * (sqrt(1 + 8 * threads) - 1))
-  1 + threads * (2 / n_tiles)
+  n_blocks <- merge_n_blocks(threads)
+  1 + threads * (2 / n_blocks)
 }
 
 testthat::test_that("estimate_subset_memory_mb matches estimate_bytes logic", {
@@ -293,17 +299,17 @@ testthat::test_that("merge slink uses parent root and leaf tile shards", {
     threads
   )
   testthat::expect_lt(got, tree_merge)
-  # Parent cache peak at T=2 is 64n, below tree 256n.
+  # Parent cache peak at T=4 is 96n, below tree 256n.
   testthat::expect_equal(
     slink_parent_bytes(n_seq, "merge", threads),
-    slink_leaf_bytes(n_seq) + n_seq * 2 * 16
+    slink_leaf_bytes(n_seq) + n_seq * 4 * 16
   )
 })
 
 testthat::test_that("merge slink parent uses uncapped cache formula", {
   n_seq <- 10000L
   n_thresholds <- 40L
-  # T=8 at 32 threads: cache peak 160n < 256n tree.
+  # T=12 at 32 threads: cache peak 224n < 256n tree.
   slink_32 <- optimotu:::estimate_subset_memory_mb(
     n_seq,
     n_thresholds,
@@ -320,10 +326,11 @@ testthat::test_that("merge slink parent uses uncapped cache formula", {
   )
   testthat::expect_lt(slink_32, tree_32)
   # Above former tree-sized crossover (T > 14), estimate keeps growing.
-  n_tiles_120 <- ceiling(0.5 * (sqrt(1 + 8 * 120) - 1))
+  # 120 threads -> n_blocks=11, T=22.
+  t_mult_120 <- 2 * merge_n_blocks(120L)
   testthat::expect_equal(
     slink_parent_bytes(n_seq, "merge", 120L),
-    slink_leaf_bytes(n_seq) + n_seq * n_tiles_120 * 16
+    slink_leaf_bytes(n_seq) + n_seq * t_mult_120 * 16
   )
   testthat::expect_gt(
     slink_parent_bytes(n_seq, "merge", 120L),
@@ -334,7 +341,7 @@ testthat::test_that("merge slink parent uses uncapped cache formula", {
 testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", {
   n_seq <- 10000L
   n_thresholds <- 40L
-  # threads=1 and threads=2 both use n_tiles such that the scale is 3.
+  # 2 threads: n_blocks=2, scale=3. 4 threads: n_blocks=2, scale=5.
   two <- optimotu:::estimate_subset_memory_mb(
     n_seq,
     n_thresholds,

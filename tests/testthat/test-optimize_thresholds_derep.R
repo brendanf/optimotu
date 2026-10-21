@@ -182,9 +182,9 @@ testthat::test_that("unweighted representatives differ from weighted oracle", {
     grouped$map,
     names(seq_rep)
   )
-  map <- clustering_threshold_map(args$threshold_config)
+  map <- optimotu:::clustering_threshold_map(args$threshold_config)
   which_idx <- lapply(remapped$seq_index, function(i) as.integer(i - 1L))
-  unweighted <- seq_cluster_multi_best_threshold(
+  unweighted <- optimotu:::seq_cluster_multi_best_threshold(
     seq = seq_rep,
     which = which_idx,
     dist_config = args$dist_config,
@@ -228,7 +228,7 @@ testthat::test_that("threshold grid of only 0 does not collapse copies", {
   fx <- make_dup_fixture()
   args <- common_args(fx, threshold_config = threshold_set(0))
   testthat::expect_false(
-    thresholds_allow_identical_collapse(args$threshold_config)
+    optimotu:::thresholds_allow_identical_collapse(args$threshold_config)
   )
   got <- do.call(optimize_thresholds, args)
   expected <- do.call(oracle_optima, args)

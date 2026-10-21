@@ -150,7 +150,7 @@ testthat::test_that("write_threshold_row matches write_to_matrix partitions", {
       which = which,
       verbose = FALSE
     )
-    via_rows <- seq_cluster_multi_via_rows(
+    via_rows <- optimotu:::seq_cluster_multi_via_rows(
       seq = fx$seq,
       which = which,
       dist_config = dist_config,
@@ -173,9 +173,9 @@ testthat::test_that("streaming optima match matrix find_best_threshold", {
   dist_config <- dist_hamming()
   threshold_config <- threshold_uniform(0, 0.2, 0.02)
   parallel_config <- parallel_concurrent(1L)
-  map <- clustering_threshold_map(threshold_config)
+  map <- optimotu:::clustering_threshold_map(threshold_config)
   for (clust_config in list(clust_tree(), clust_slink())) {
-    streamed <- seq_cluster_multi_best_threshold(
+    streamed <- optimotu:::seq_cluster_multi_best_threshold(
       seq = fx$seq,
       which = which_to_idx(ts$seq_id, fx$seq),
       dist_config = dist_config,
@@ -246,8 +246,8 @@ testthat::test_that("streaming optima handle duplicate thresholds and shuffled w
   clust_config <- clust_tree()
   parallel_config <- parallel_concurrent(1L)
   measures <- c("MCC", "RI")
-  map <- clustering_threshold_map(threshold_config)
-  streamed <- seq_cluster_multi_best_threshold(
+  map <- optimotu:::clustering_threshold_map(threshold_config)
+  streamed <- optimotu:::seq_cluster_multi_best_threshold(
     seq = fx$seq,
     which = which_to_idx(which, fx$seq),
     dist_config = dist_config,
