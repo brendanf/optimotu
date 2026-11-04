@@ -615,15 +615,16 @@ std::vector<double> expand_scores(
 } // namespace
 
 Rcpp::DataFrame find_best_threshold_from_algo(
-  MultipleClusterAlgorithm &algo,
-  std::size_t subset,
-  const Rcpp::IntegerVector &c,
-  const std::vector<std::string> &measures,
-  const Rcpp::NumericVector &thresholds,
-  const Rcpp::IntegerVector &threshold_order,
-  int threads,
-  const Rcpp::IntegerVector &weights
-) {
+    MultipleClusterAlgorithm &algo,
+    std::size_t subset,
+    const Rcpp::IntegerVector &c,
+    const std::vector<std::string> &measures,
+    const Rcpp::NumericVector &thresholds,
+    const Rcpp::IntegerVector &threshold_order,
+    int threads,
+    const Rcpp::IntegerVector &weights,
+    bool return_curves)
+{
   const size_t n_unique = static_cast<size_t>(c.size());
   const d_t m = algo.m;
   if (n_unique != static_cast<size_t>(algo.subset_n(subset))) {
@@ -741,16 +742,28 @@ Rcpp::DataFrame find_best_threshold_from_algo(
   Rcpp::CharacterVector out_measure(sorted_measures.size());
   Rcpp::NumericVector out_threshold(sorted_measures.size(), NA_REAL);
   Rcpp::NumericVector out_value(sorted_measures.size(), NA_REAL);
+  Rcpp::List out_curve(sorted_measures.size());
 
   auto set_best = [&](int i, const std::vector<double> &expanded) {
     std::size_t idx = pick_best_index(expanded);
     if (idx >= expanded.size()) {
       // Match R max(..., na.rm = TRUE) on an all-NA vector.
       out_value[i] = NEGINF;
-      return;
     }
-    out_threshold[i] = thresholds[idx];
-    out_value[i] = expanded[idx];
+    else
+    {
+      out_threshold[i] = thresholds[idx];
+      out_value[i] = expanded[idx];
+    }
+    if (return_curves)
+    {
+      Rcpp::NumericVector curve(expanded.size());
+      for (std::size_t j = 0; j < expanded.size(); ++j)
+      {
+        curve[j] = expanded[j];
+      }
+      out_curve[i] = curve;
+    }
   };
 
   int i = 0;
@@ -776,11 +789,17 @@ Rcpp::DataFrame find_best_threshold_from_algo(
     ++i;
   }
 
-  return Rcpp::DataFrame::create(
-    Rcpp::Named("measure") = out_measure,
-    Rcpp::Named("threshold") = out_threshold,
-    Rcpp::Named("value") = out_value
-  );
+  Rcpp::DataFrame out = Rcpp::DataFrame::create(
+      Rcpp::Named("measure") = out_measure,
+      Rcpp::Named("threshold") = out_threshold,
+      Rcpp::Named("value") = out_value);
+  if (return_curves)
+  {
+    // Assign after create so R does not treat the list of equal-length
+    // numeric vectors as extra data-frame columns.
+    out["curve"] = out_curve;
+  }
+  return out;
 }
 
 Rcpp::IntegerMatrix subset_matrix_via_rows(

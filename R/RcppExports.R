@@ -42,8 +42,8 @@ distmx_cluster_multi <- function(file, seqnames, which, threshold_config, method
     .Call(`_optimotu_distmx_cluster_multi`, file, seqnames, which, threshold_config, method_config, parallel_config, output_type, verbose, by_name)
 }
 
-distmx_cluster_multi_best_threshold <- function(file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = FALSE, by_name = FALSE, weights = NULL) {
-    .Call(`_optimotu_distmx_cluster_multi_best_threshold`, file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, by_name, weights)
+distmx_cluster_multi_best_threshold <- function(file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = FALSE, by_name = FALSE, weights = NULL, return_curves = FALSE) {
+    .Call(`_optimotu_distmx_cluster_multi_best_threshold`, file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, by_name, weights, return_curves)
 }
 
 #' Get the names of reads in a FASTQ file
@@ -282,8 +282,8 @@ seq_cluster_multi_via_rows <- function(seq, which, dist_config, threshold_config
     .Call(`_optimotu_seq_cluster_multi_via_rows`, seq, which, dist_config, threshold_config, clust_config, parallel_config, verbose, clustering_memory_budget_mb)
 }
 
-seq_cluster_multi_best_threshold <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = 0L, clustering_memory_budget_mb = -1.0, weights = NULL) {
-    .Call(`_optimotu_seq_cluster_multi_best_threshold`, seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, clustering_memory_budget_mb, weights)
+seq_cluster_multi_best_threshold <- function(seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose = 0L, clustering_memory_budget_mb = -1.0, weights = NULL, return_curves = FALSE) {
+    .Call(`_optimotu_seq_cluster_multi_best_threshold`, seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, clustering_memory_budget_mb, weights, return_curves)
 }
 
 seq_cluster_profile_output <- function(seq, dist_config, threshold_config, clust_config, parallel_config, row_repeats = 5L, verbose = 0L) {

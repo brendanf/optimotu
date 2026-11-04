@@ -165,6 +165,69 @@ testthat::test_that("optimize_thresholds matches unreduced oracle with duplicate
   expect_optima_equal(got, expected)
 })
 
+testthat::test_that("return_curves matches unreduced quality grid with duplicates", {
+  fx <- make_dup_fixture()
+  args <- common_args(fx)
+  got <- do.call(optimize_thresholds, c(args, list(return_curves = TRUE)))
+  expected <- do.call(oracle_optima, args)
+  expect_optima_equal(got, expected)
+  seq <- fx$seq
+  taxonomy <- fx$taxonomy[match(names(seq), fx$taxonomy$seq_id), , drop = FALSE]
+  ts <- summarize_by_rank(taxonomy, args$ranks, "seq_id")
+  ts <- ts[
+    (ts$n_seq >= args$min_refseq & ts$n_taxa >= args$min_taxa) |
+      ts$supertaxon %in% taxonomy[[args$ranks[1]]],
+  ]
+  clust <- seq_cluster(
+    seq = seq,
+    dist_config = args$dist_config,
+    threshold_config = args$threshold_config,
+    clust_config = args$clust_config,
+    parallel_config = args$parallel_config,
+    output_type = "matrix",
+    which = ts$seq_id,
+    verbose = FALSE
+  )
+  map <- optimotu:::clustering_threshold_map(args$threshold_config)
+  thresh_names <- as.character(map$thresholds)
+  got_key <- paste(
+    got$rank,
+    got$superrank,
+    got$supertaxon,
+    got$measure,
+    sep = "\r"
+  )
+  for (i in seq_along(clust)) {
+    df <- calculate_cluster_measures(
+      clust[[i]],
+      ts$true_partition[[i]],
+      args$parallel_config$threads,
+      args$measures
+    )
+    for (meas in unique(df$measure)) {
+      key <- paste(
+        ts$rank[i],
+        ts$superrank[i],
+        ts$supertaxon[i],
+        meas,
+        sep = "\r"
+      )
+      j <- match(key, got_key)
+      testthat::expect_false(is.na(j))
+      values <- df$value[as.character(df$measure) == meas]
+      values <- values[map$threshold_order]
+      names(values) <- thresh_names
+      curve <- got$curve[[j]]
+      testthat::expect_equal(names(curve), names(values))
+      testthat::expect_equal(
+        unname(curve),
+        unname(values),
+        tolerance = 1e-10
+      )
+    }
+  }
+})
+
 testthat::test_that("unweighted representatives differ from weighted oracle", {
   fx <- make_dup_fixture()
   args <- common_args(fx, measures = c("MCC", "ARI", "FM"))

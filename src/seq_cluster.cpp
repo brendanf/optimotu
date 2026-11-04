@@ -211,7 +211,8 @@ Rcpp::List seq_cluster_multi_best_threshold(
     const Rcpp::IntegerVector &threshold_order,
     const int verbose = 0,
     const double clustering_memory_budget_mb = -1.0,
-    Rcpp::List weights = R_NilValue)
+    Rcpp::List weights = R_NilValue,
+    const bool return_curves = false)
 {
   if (true_partitions.size() != which.size())
   {
@@ -248,7 +249,8 @@ Rcpp::List seq_cluster_multi_best_threshold(
         thresholds,
         threshold_order,
         threads,
-        w);
+        w,
+        return_curves);
   }
   output.names() = which.names();
   return output;

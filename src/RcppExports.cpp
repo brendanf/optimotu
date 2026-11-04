@@ -75,8 +75,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // distmx_cluster_multi_best_threshold
-Rcpp::List distmx_cluster_multi_best_threshold(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const Rcpp::ListOf<Rcpp::IntegerVector> true_partitions, const std::vector<std::string>& measures, const Rcpp::NumericVector& thresholds, const Rcpp::IntegerVector& threshold_order, const bool verbose, const bool by_name, Rcpp::List weights);
-RcppExport SEXP _optimotu_distmx_cluster_multi_best_threshold(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP whichSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP true_partitionsSEXP, SEXP measuresSEXP, SEXP thresholdsSEXP, SEXP threshold_orderSEXP, SEXP verboseSEXP, SEXP by_nameSEXP, SEXP weightsSEXP) {
+Rcpp::List distmx_cluster_multi_best_threshold(const std::string file, const Rcpp::CharacterVector seqnames, const Rcpp::ListOf<Rcpp::CharacterVector> which, const Rcpp::List threshold_config, const Rcpp::List method_config, const Rcpp::List parallel_config, const Rcpp::ListOf<Rcpp::IntegerVector> true_partitions, const std::vector<std::string>& measures, const Rcpp::NumericVector& thresholds, const Rcpp::IntegerVector& threshold_order, const bool verbose, const bool by_name, Rcpp::List weights, const bool return_curves);
+RcppExport SEXP _optimotu_distmx_cluster_multi_best_threshold(SEXP fileSEXP, SEXP seqnamesSEXP, SEXP whichSEXP, SEXP threshold_configSEXP, SEXP method_configSEXP, SEXP parallel_configSEXP, SEXP true_partitionsSEXP, SEXP measuresSEXP, SEXP thresholdsSEXP, SEXP threshold_orderSEXP, SEXP verboseSEXP, SEXP by_nameSEXP, SEXP weightsSEXP, SEXP return_curvesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -93,7 +93,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< const bool >::type by_name(by_nameSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type weights(weightsSEXP);
-    rcpp_result_gen = Rcpp::wrap(distmx_cluster_multi_best_threshold(file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, by_name, weights));
+    Rcpp::traits::input_parameter< const bool >::type return_curves(return_curvesSEXP);
+    rcpp_result_gen = Rcpp::wrap(distmx_cluster_multi_best_threshold(file, seqnames, which, threshold_config, method_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, by_name, weights, return_curves));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -537,8 +538,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // seq_cluster_multi_best_threshold
-Rcpp::List seq_cluster_multi_best_threshold(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::IntegerVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const Rcpp::ListOf<Rcpp::IntegerVector> true_partitions, const std::vector<std::string>& measures, const Rcpp::NumericVector& thresholds, const Rcpp::IntegerVector& threshold_order, const int verbose, const double clustering_memory_budget_mb, Rcpp::List weights);
-RcppExport SEXP _optimotu_seq_cluster_multi_best_threshold(SEXP seqSEXP, SEXP whichSEXP, SEXP dist_configSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP true_partitionsSEXP, SEXP measuresSEXP, SEXP thresholdsSEXP, SEXP threshold_orderSEXP, SEXP verboseSEXP, SEXP clustering_memory_budget_mbSEXP, SEXP weightsSEXP) {
+Rcpp::List seq_cluster_multi_best_threshold(const Rcpp::CharacterVector& seq, const Rcpp::ListOf<Rcpp::IntegerVector> which, const Rcpp::List dist_config, const Rcpp::List threshold_config, const Rcpp::List clust_config, const Rcpp::List parallel_config, const Rcpp::ListOf<Rcpp::IntegerVector> true_partitions, const std::vector<std::string>& measures, const Rcpp::NumericVector& thresholds, const Rcpp::IntegerVector& threshold_order, const int verbose, const double clustering_memory_budget_mb, Rcpp::List weights, const bool return_curves);
+RcppExport SEXP _optimotu_seq_cluster_multi_best_threshold(SEXP seqSEXP, SEXP whichSEXP, SEXP dist_configSEXP, SEXP threshold_configSEXP, SEXP clust_configSEXP, SEXP parallel_configSEXP, SEXP true_partitionsSEXP, SEXP measuresSEXP, SEXP thresholdsSEXP, SEXP threshold_orderSEXP, SEXP verboseSEXP, SEXP clustering_memory_budget_mbSEXP, SEXP weightsSEXP, SEXP return_curvesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -555,7 +556,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< const double >::type clustering_memory_budget_mb(clustering_memory_budget_mbSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type weights(weightsSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_cluster_multi_best_threshold(seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, clustering_memory_budget_mb, weights));
+    Rcpp::traits::input_parameter< const bool >::type return_curves(return_curvesSEXP);
+    rcpp_result_gen = Rcpp::wrap(seq_cluster_multi_best_threshold(seq, which, dist_config, threshold_config, clust_config, parallel_config, true_partitions, measures, thresholds, threshold_order, verbose, clustering_memory_budget_mb, weights, return_curves));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -644,7 +646,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_confusion_matrix2", (DL_FUNC) &_optimotu_confusion_matrix2, 3},
     {"_optimotu_distmx_cluster_single", (DL_FUNC) &_optimotu_distmx_cluster_single, 8},
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 9},
-    {"_optimotu_distmx_cluster_multi_best_threshold", (DL_FUNC) &_optimotu_distmx_cluster_multi_best_threshold, 13},
+    {"_optimotu_distmx_cluster_multi_best_threshold", (DL_FUNC) &_optimotu_distmx_cluster_multi_best_threshold, 14},
     {"_optimotu_fastq_names", (DL_FUNC) &_optimotu_fastq_names, 1},
     {"_optimotu_group_identical_seq_tax", (DL_FUNC) &_optimotu_group_identical_seq_tax, 2},
     {"_optimotu_remap_testset_representatives", (DL_FUNC) &_optimotu_remap_testset_representatives, 4},
@@ -674,7 +676,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_cluster_single", (DL_FUNC) &_optimotu_seq_cluster_single, 7},
     {"_optimotu_seq_cluster_multi", (DL_FUNC) &_optimotu_seq_cluster_multi, 9},
     {"_optimotu_seq_cluster_multi_via_rows", (DL_FUNC) &_optimotu_seq_cluster_multi_via_rows, 8},
-    {"_optimotu_seq_cluster_multi_best_threshold", (DL_FUNC) &_optimotu_seq_cluster_multi_best_threshold, 13},
+    {"_optimotu_seq_cluster_multi_best_threshold", (DL_FUNC) &_optimotu_seq_cluster_multi_best_threshold, 14},
     {"_optimotu_seq_cluster_profile_output", (DL_FUNC) &_optimotu_seq_cluster_profile_output, 7},
     {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},

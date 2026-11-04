@@ -1,5 +1,8 @@
 # optimotu development version
 
+* `optimize_thresholds(return_curves = TRUE)` adds a `curve` list column
+  of named numeric quality-vs-threshold vectors used to pick each
+  optimum. The default remains a data frame of optima only.
 * Clustering memory estimates for multi-thread `parallel_merge()` /
   `parallel_hierarchical()` SLINK and Prim now match the Kruskal merge algorithm.
 * Add `clust_prim()`: single-linkage via Prim on each tile and a Kruskal

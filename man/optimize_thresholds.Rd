@@ -26,7 +26,8 @@ optimize_thresholds(
   retry_reduce_threads = TRUE,
   retry_min_threads = 1L,
   retry_overpartition = TRUE,
-  retry_subproblem_factor = 2L
+  retry_subproblem_factor = 2L,
+  return_curves = FALSE
 )
 }
 \arguments{
@@ -116,6 +117,12 @@ subproblems than threads to reduce per-subproblem mapped state.}
 
 \item{retry_subproblem_factor}{(\code{integer(1)}) Multiplicative growth factor
 for subproblem count during overpartition retries.}
+
+\item{return_curves}{(\code{logical(1)}) if \code{TRUE}, add a \code{curve} list column
+with the quality-vs-threshold values used to pick each optimum. Each
+element is a numeric vector named by the tested thresholds, in grid
+order (including duplicate thresholds). Default \code{FALSE} omits the
+column.}
 }
 \value{
 (\code{data.frame}) a data frame with the following columns:
@@ -126,6 +133,8 @@ for subproblem count during overpartition retries.}
 \item \code{measure} (\code{character}) the clustering quality measure
 \item \code{threshold} (\code{numeric}) the threshold which maximizes the measure
 \item \code{value} (\code{numeric}) the value of the measure at the threshold
+\item \code{curve} (\code{list} of named \code{numeric}) when \code{return_curves = TRUE}, the
+quality values at every tested threshold for that row
 }
 }
 \description{

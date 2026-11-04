@@ -474,6 +474,28 @@ clustering_threshold_map <- function(threshold_config) {
   }
 }
 
+name_threshold_curves <- function(best, thresholds) {
+  if (!length(best)) {
+    return(best)
+  }
+  thresh_names <- as.character(thresholds)
+  has_curve <- "curve" %in% names(best[[1]])
+  lapply(best, function(df) {
+    out <- list(
+      measure = as.character(df$measure),
+      threshold = as.numeric(df$threshold),
+      value = as.numeric(df$value)
+    )
+    if (has_curve) {
+      out$curve <- lapply(unclass(df$curve), function(v) {
+        names(v) <- thresh_names
+        v
+      })
+    }
+    out
+  })
+}
+
 cluster_find_best_thresholds <- function(
   seq,
   dist_config,
@@ -487,7 +509,8 @@ cluster_find_best_thresholds <- function(
   seq_idx,
   seq_file,
   clustering_memory_budget_mb,
-  multiplicity = NULL
+  multiplicity = NULL,
+  return_curves = FALSE
 ) {
   map <- clustering_threshold_map(threshold_config)
   weights_arg <- if (is.null(multiplicity)) {
@@ -508,20 +531,24 @@ cluster_find_best_thresholds <- function(
       which <- lapply(which, function(i) names_vec[i])
     }
     verify_which(which, names_vec)
-    return(distmx_cluster_multi_best_threshold(
-      file = dist_config$filename,
-      seqnames = names_vec,
-      which = which,
-      threshold_config = threshold_config,
-      method_config = clust_config,
-      parallel_config = parallel_config,
-      true_partitions = true_partitions,
-      measures = measures,
-      thresholds = map$thresholds,
-      threshold_order = map$threshold_order,
-      verbose = isTRUE(verbose) || verbose >= 1L,
-      by_name = isTRUE(dist_config$by_name) || isTRUE(dist_config$by_names),
-      weights = weights_arg
+    return(name_threshold_curves(
+      distmx_cluster_multi_best_threshold(
+        file = dist_config$filename,
+        seqnames = names_vec,
+        which = which,
+        threshold_config = threshold_config,
+        method_config = clust_config,
+        parallel_config = parallel_config,
+        true_partitions = true_partitions,
+        measures = measures,
+        thresholds = map$thresholds,
+        threshold_order = map$threshold_order,
+        verbose = isTRUE(verbose) || verbose >= 1L,
+        by_name = isTRUE(dist_config$by_name) || isTRUE(dist_config$by_names),
+        weights = weights_arg,
+        return_curves = return_curves
+      ),
+      map$thresholds
     ))
   }
 
@@ -578,20 +605,24 @@ cluster_find_best_thresholds <- function(
       stop("usearch could not be found at path: ", usearch)
     }
     system2(usearch, args, wait = FALSE)
-    return(distmx_cluster_multi_best_threshold(
-      file = fifoname,
-      seqnames = names(seq_char),
-      which = which,
-      threshold_config = threshold_config,
-      method_config = clust_config,
-      parallel_config = parallel_config,
-      true_partitions = true_partitions,
-      measures = measures,
-      thresholds = map$thresholds,
-      threshold_order = map$threshold_order,
-      verbose = isTRUE(verbose) || verbose >= 1L,
-      by_name = FALSE,
-      weights = weights_arg
+    return(name_threshold_curves(
+      distmx_cluster_multi_best_threshold(
+        file = fifoname,
+        seqnames = names(seq_char),
+        which = which,
+        threshold_config = threshold_config,
+        method_config = clust_config,
+        parallel_config = parallel_config,
+        true_partitions = true_partitions,
+        measures = measures,
+        thresholds = map$thresholds,
+        threshold_order = map$threshold_order,
+        verbose = isTRUE(verbose) || verbose >= 1L,
+        by_name = FALSE,
+        weights = weights_arg,
+        return_curves = return_curves
+      ),
+      map$thresholds
     ))
   }
 
@@ -622,24 +653,28 @@ cluster_find_best_thresholds <- function(
     which_idx <- lapply(which_idx, function(x) as.integer(x - 1L))
     names(which_idx) <- names(which)
   }
-  seq_cluster_multi_best_threshold(
-    seq = seq_char,
-    which = which_idx,
-    dist_config = dist_config,
-    threshold_config = threshold_config,
-    clust_config = clust_config,
-    parallel_config = parallel_config,
-    true_partitions = true_partitions,
-    measures = measures,
-    thresholds = map$thresholds,
-    threshold_order = map$threshold_order,
-    verbose = as.integer(verbose),
-    clustering_memory_budget_mb = if (is.null(clustering_memory_budget_mb)) {
-      -1
-    } else {
-      clustering_memory_budget_mb
-    },
-    weights = weights_arg
+  name_threshold_curves(
+    seq_cluster_multi_best_threshold(
+      seq = seq_char,
+      which = which_idx,
+      dist_config = dist_config,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
+      true_partitions = true_partitions,
+      measures = measures,
+      thresholds = map$thresholds,
+      threshold_order = map$threshold_order,
+      verbose = as.integer(verbose),
+      clustering_memory_budget_mb = if (is.null(clustering_memory_budget_mb)) {
+        -1
+      } else {
+        clustering_memory_budget_mb
+      },
+      weights = weights_arg,
+      return_curves = return_curves
+    ),
+    map$thresholds
   )
 }
 
@@ -928,6 +963,11 @@ find_best_threshold <- function(
 #' for subproblem count during overpartition retries.
 #' @param verbose (`logical(1)` or `integer(1)`) whether to print progress
 #' messages; values greater than 1 (or TRUE) print more
+#' @param return_curves (`logical(1)`) if `TRUE`, add a `curve` list column
+#' with the quality-vs-threshold values used to pick each optimum. Each
+#' element is a numeric vector named by the tested thresholds, in grid
+#' order (including duplicate thresholds). Default `FALSE` omits the
+#' column.
 #'
 #' @details
 #' Sequences are reordered (without copying CHARSXP contents) into lexical
@@ -950,6 +990,8 @@ find_best_threshold <- function(
 #'   - `measure` (`character`) the clustering quality measure
 #'   - `threshold` (`numeric`) the threshold which maximizes the measure
 #'   - `value` (`numeric`) the value of the measure at the threshold
+#'   - `curve` (`list` of named `numeric`) when `return_curves = TRUE`, the
+#'     quality values at every tested threshold for that row
 #' @export
 optimize_thresholds <- function(
   taxonomy,
@@ -981,7 +1023,8 @@ optimize_thresholds <- function(
   retry_reduce_threads = TRUE,
   retry_min_threads = 1L,
   retry_overpartition = TRUE,
-  retry_subproblem_factor = 2L
+  retry_subproblem_factor = 2L,
+  return_curves = FALSE
 ) {
   # Check input
   checkmate::assert_character(ranks)
@@ -1031,6 +1074,7 @@ optimize_thresholds <- function(
     checkmate::check_flag(verbose),
     checkmate::check_integerish(verbose, lower = 0L)
   )
+  checkmate::assert_flag(return_curves)
 
   # SLINK will fail if the order of sequences is different in the testset and
   # the reference sequences
@@ -1222,10 +1266,10 @@ optimize_thresholds <- function(
           verbose = verbose,
           seq_idx = seq_idx,
           seq_file = seq_file,
-          clustering_memory_budget_mb = clustering_memory_budget_mb
+          clustering_memory_budget_mb = clustering_memory_budget_mb,
+          return_curves = return_curves
         )
-        out <- do.call(rbind, best)
-        cbind(
+        out <- data.frame(
           row_index = rep(batch_idx, each = length(measures)),
           rank = rep(testset_select$rank[batch_idx], each = length(measures)),
           superrank = rep(
@@ -1236,8 +1280,22 @@ optimize_thresholds <- function(
             testset_select$supertaxon[batch_idx],
             each = length(measures)
           ),
-          out
+          measure = unlist(lapply(best, `[[`, "measure"), use.names = FALSE),
+          threshold = unlist(
+            lapply(best, `[[`, "threshold"),
+            use.names = FALSE
+          ),
+          value = unlist(lapply(best, `[[`, "value"), use.names = FALSE),
+          stringsAsFactors = FALSE
         )
+        if (return_curves) {
+          out$curve <- I(unlist(
+            lapply(best, function(df) unclass(df$curve)),
+            recursive = FALSE,
+            use.names = FALSE
+          ))
+        }
+        out
       },
       error = identity
     )
@@ -1355,5 +1413,8 @@ optimize_thresholds <- function(
   out <- do.call(rbind, outputs)
   out <- out[order(out$row_index), , drop = FALSE]
   out$row_index <- NULL
+  if (return_curves && "curve" %in% names(out)) {
+    class(out$curve) <- "list"
+  }
   out
 }

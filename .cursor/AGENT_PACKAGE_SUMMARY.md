@@ -151,6 +151,8 @@ Core exported API families include:
   - `optimize_thresholds()`, `calc_taxon_thresholds()`,
     `calc_subtaxon_thresholds()`, `find_best_threshold()`,
     `calculate_cluster_measures()`
+  - `optimize_thresholds(return_curves = TRUE)` adds a `curve` list
+    column of named numeric quality-vs-threshold values per optimum.
 
 When changing behavior, prioritize preserving these interfaces unless the user
 explicitly requests API changes.
@@ -226,7 +228,8 @@ explicitly requests API changes.
 - `test-optimize_thresholds_stream.R` checks that row-wise cluster IDs match
   `write_to_matrix()`, and that streaming optima match
   `seq_cluster()` + `find_best_threshold()`, including duplicate thresholds
-  and shuffled `which` order.
+  and shuffled `which` order. `return_curves = TRUE` is checked against
+  `calculate_cluster_measures()` on the cluster matrix.
 - Interrupt regression coverage for `seq_cluster()` lives in
   `test-seq_cluster_interrupt.R` and is environment-guarded (opt-in) to avoid
   flaky default CI runs.
