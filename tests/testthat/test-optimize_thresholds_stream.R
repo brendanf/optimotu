@@ -226,6 +226,8 @@ testthat::test_that("optimize_thresholds returns one row per subset and measure"
   ))
   testthat::expect_gt(nrow(out), 0L)
   testthat::expect_true(all(out$measure %in% measures))
+  testthat::expect_false("curve" %in% names(out))
+  testthat::expect_type(out$value, "double")
 })
 
 testthat::test_that("streaming optima handle duplicate thresholds and shuffled which", {
@@ -273,4 +275,190 @@ testthat::test_that("streaming optima handle duplicate thresholds and shuffled w
   testthat::expect_equal(got$measure, expected$measure)
   testthat::expect_equal(got$threshold, expected$threshold)
   testthat::expect_equal(got$value, expected$value, tolerance = 1e-10)
+})
+
+curve_key <- function(rank, superrank, supertaxon, measure) {
+  paste(rank, superrank, supertaxon, measure, sep = "\r")
+}
+
+expected_optima_curves <- function(
+  seq,
+  taxonomy,
+  ranks,
+  dist_config,
+  threshold_config,
+  clust_config,
+  parallel_config,
+  min_taxa,
+  min_refseq,
+  measures
+) {
+  ts <- summarize_by_rank(taxonomy, ranks)
+  ts <- ts[
+    (ts$n_seq >= min_refseq & ts$n_taxa >= min_taxa) |
+      ts$supertaxon %in% taxonomy[[ranks[1]]],
+  ]
+  clust <- seq_cluster(
+    seq = seq,
+    dist_config = dist_config,
+    threshold_config = threshold_config,
+    clust_config = clust_config,
+    parallel_config = parallel_config,
+    output_type = "matrix",
+    which = ts$seq_id,
+    verbose = FALSE
+  )
+  map <- optimotu:::clustering_threshold_map(threshold_config)
+  thresh_names <- as.character(map$thresholds)
+  rows <- Map(
+    function(k, c, i) {
+      k <- k[!duplicated(rownames(k)), , drop = FALSE]
+      df <- calculate_cluster_measures(
+        k,
+        c,
+        parallel_config$threads,
+        measures
+      )
+      lapply(split(df, df$measure), function(mdf) {
+        values <- mdf$value[map$threshold_order]
+        names(values) <- thresh_names
+        data.frame(
+          rank = ts$rank[i],
+          superrank = ts$superrank[i],
+          supertaxon = ts$supertaxon[i],
+          measure = mdf$measure[1],
+          curve = I(list(values)),
+          stringsAsFactors = FALSE
+        )
+      })
+    },
+    clust,
+    ts$true_partition,
+    seq_along(clust)
+  )
+  do.call(rbind, unlist(rows, recursive = FALSE, use.names = FALSE))
+}
+
+expect_curves_match <- function(got, expected) {
+  testthat::expect_true("curve" %in% names(got))
+  testthat::expect_type(got$curve, "list")
+  testthat::expect_false(inherits(got$curve, "AsIs"))
+  got_key <- curve_key(got$rank, got$superrank, got$supertaxon, got$measure)
+  exp_key <- curve_key(
+    expected$rank,
+    expected$superrank,
+    expected$supertaxon,
+    expected$measure
+  )
+  testthat::expect_setequal(got_key, exp_key)
+  exp_curve <- expected$curve
+  names(exp_curve) <- exp_key
+  for (i in seq_len(nrow(got))) {
+    curve <- got$curve[[i]]
+    want <- exp_curve[[got_key[i]]]
+    testthat::expect_type(curve, "double")
+    testthat::expect_equal(names(curve), names(want))
+    testthat::expect_equal(unname(curve), unname(want), tolerance = 1e-10)
+    finite <- is.finite(unname(curve))
+    if (!any(finite)) {
+      testthat::expect_true(is.na(got$threshold[i]))
+      testthat::expect_equal(got$value[i], -Inf)
+    } else {
+      hits <- which(unname(curve) == max(unname(curve)[finite]))
+      best_idx <- strict_median(hits)
+      testthat::expect_equal(
+        got$threshold[i],
+        as.numeric(names(curve)[best_idx])
+      )
+      testthat::expect_equal(
+        got$value[i],
+        unname(curve)[best_idx],
+        tolerance = 1e-10
+      )
+    }
+  }
+}
+
+testthat::test_that("optimize_thresholds return_curves matches quality grid", {
+  fx <- make_stream_fixture()
+  ranks <- c("kingdom", "phylum", "class")
+  measures <- c("MCC", "ARI", "FM")
+  dist_config <- dist_hamming()
+  threshold_config <- threshold_uniform(0, 0.2, 0.02)
+  parallel_config <- parallel_concurrent(1L)
+  min_taxa <- 2L
+  min_refseq <- 4L
+  for (clust_config in list(clust_tree(), clust_slink())) {
+    got <- optimize_thresholds(
+      taxonomy = fx$taxonomy,
+      refseq = fx$seq,
+      ranks = ranks,
+      dist_config = dist_config,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
+      min_taxa = min_taxa,
+      min_refseq = min_refseq,
+      measures = measures,
+      verbose = FALSE,
+      return_curves = TRUE
+    )
+    expected <- expected_optima_curves(
+      seq = fx$seq,
+      taxonomy = fx$taxonomy,
+      ranks = ranks,
+      dist_config = dist_config,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
+      min_taxa = min_taxa,
+      min_refseq = min_refseq,
+      measures = measures
+    )
+    expect_curves_match(got, expected)
+  }
+})
+
+testthat::test_that("return_curves keeps duplicate threshold_set entries", {
+  fx <- make_stream_fixture()
+  ranks <- c("kingdom", "phylum", "class")
+  measures <- c("MCC", "RI")
+  threshold_config <- threshold_set(c(0.02, 0.02, 0.04, 0.08, 0.12))
+  map <- optimotu:::clustering_threshold_map(threshold_config)
+  got <- optimize_thresholds(
+    taxonomy = fx$taxonomy,
+    refseq = fx$seq,
+    ranks = ranks,
+    dist_config = dist_hamming(),
+    threshold_config = threshold_config,
+    clust_config = clust_tree(),
+    parallel_config = parallel_concurrent(1L),
+    min_taxa = 2L,
+    min_refseq = 4L,
+    measures = measures,
+    verbose = FALSE,
+    return_curves = TRUE
+  )
+  expected <- expected_optima_curves(
+    seq = fx$seq,
+    taxonomy = fx$taxonomy,
+    ranks = ranks,
+    dist_config = dist_hamming(),
+    threshold_config = threshold_config,
+    clust_config = clust_tree(),
+    parallel_config = parallel_concurrent(1L),
+    min_taxa = 2L,
+    min_refseq = 4L,
+    measures = measures
+  )
+  expect_curves_match(got, expected)
+  testthat::expect_true(all(vapply(
+    got$curve,
+    function(v) {
+      identical(length(v), length(map$thresholds)) &&
+        identical(names(v), as.character(map$thresholds))
+    },
+    logical(1)
+  )))
+  testthat::expect_true(anyDuplicated(map$thresholds) > 0L)
 })
