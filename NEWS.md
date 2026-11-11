@@ -1,5 +1,8 @@
 # optimotu development version
 
+* All-pairs tiles are ordered so taxonomically close (typically slower)
+  blocks start first under TBB, reducing the chance that the slowest
+  tile is left for a leftover wave.
 * `optimize_thresholds(return_curves = TRUE)` adds a `curve` list column
   of named numeric quality-vs-threshold vectors used to pick each
   optimum. The default remains a data frame of optima only.

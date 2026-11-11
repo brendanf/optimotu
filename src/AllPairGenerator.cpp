@@ -8,6 +8,7 @@
 #include "tile_pairs.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 AllPairGenerator::Builder::Builder(
     const std::size_t n,
@@ -68,6 +69,95 @@ namespace
       return;
     }
     push_rectangle(generators, begin_i, end_i, begin_j, end_j);
+  }
+
+  // Closer index ranges share more taxa after lexical taxonomy order.
+  // Smaller gap => heavier SLINK apply cost.
+  std::uint64_t tile_index_gap(const PairGenerator &pg)
+  {
+    if (dynamic_cast<const AllPairGenerator *>(&pg) != nullptr)
+    {
+      return 0;
+    }
+    if (auto *bip = dynamic_cast<const BipartitePairGenerator *>(&pg))
+    {
+      const std::uint64_t mid_i =
+          static_cast<std::uint64_t>(bip->seq_begin_i()) +
+          static_cast<std::uint64_t>(bip->seq_end_i());
+      const std::uint64_t mid_j =
+          static_cast<std::uint64_t>(bip->seq_begin_j()) +
+          static_cast<std::uint64_t>(bip->seq_end_j());
+      return mid_i > mid_j ? mid_i - mid_j : mid_j - mid_i;
+    }
+    return 0;
+  }
+
+  std::size_t bit_reverse(std::size_t x, std::size_t bits)
+  {
+    std::size_t y = 0;
+    for (std::size_t i = 0; i < bits; ++i)
+    {
+      y = (y << 1) | (x & 1);
+      x >>= 1;
+    }
+    return y;
+  }
+
+  // TBB auto_partitioner starts dyadic interval origins first and
+  // leftover unit siblings last. Map rank k -> that slot order.
+  std::vector<std::size_t> tbb_bitrev_slots(std::size_t n)
+  {
+    std::vector<std::size_t> dest(n);
+    if (n == 0)
+    {
+      return dest;
+    }
+    std::size_t bits = 0;
+    std::size_t n_pow = 1;
+    while (n_pow < n)
+    {
+      n_pow <<= 1;
+      ++bits;
+    }
+    std::size_t k = 0;
+    for (std::size_t i = 0; i < n_pow && k < n; ++i)
+    {
+      const std::size_t p = bit_reverse(i, bits);
+      if (p < n)
+      {
+        dest[k++] = p;
+      }
+    }
+    return dest;
+  }
+
+  void order_tiles_for_tbb(
+      std::vector<std::unique_ptr<PairGenerator>> &generators)
+  {
+    const std::size_t n = generators.size();
+    if (n <= 1)
+    {
+      return;
+    }
+    std::vector<std::uint64_t> gap(n);
+    std::vector<std::size_t> rank(n);
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      gap[i] = tile_index_gap(*generators[i]);
+      rank[i] = i;
+    }
+    std::stable_sort(
+        rank.begin(),
+        rank.end(),
+        [&](std::size_t a, std::size_t b)
+        { return gap[a] < gap[b]; });
+    const std::vector<std::size_t> slots = tbb_bitrev_slots(n);
+    std::vector<std::unique_ptr<PairGenerator>> ordered(n);
+    for (std::size_t k = 0; k < n; ++k)
+    {
+      ordered[slots[k]] = std::move(generators[rank[k]]);
+    }
+    generators = std::move(ordered);
   }
 
 } // namespace
@@ -163,6 +253,9 @@ std::vector<std::unique_ptr<PairGenerator>> AllPairGenerator::Builder::build(int
           offset + end_j);
     }
   }
+  // Heaviest tiles at TBB dyadic starts so a leftover wave is more
+  // likely a cheap distant off-diagonal, not the slowest tile.
+  order_tiles_for_tbb(generators);
   return generators;
 }
 
@@ -362,6 +455,39 @@ context("for_each_tile_pair") {
     expect_true(median > 0);
     expect_true(counts.back() <= median * 3);
     expect_true(counts.front() * 3 >= median);
+  }
+
+  test_that("Builder places close tiles at TBB dyadic starts")
+  {
+    AllPairGenerator::Builder b(40, 16);
+    auto gens = b.build(0);
+    expect_true(gens.size() == 16u);
+    auto gap = [](const PairGenerator &pg) -> std::uint64_t
+    {
+      if (dynamic_cast<const AllPairGenerator *>(&pg) != nullptr)
+      {
+        return 0;
+      }
+      auto *bip = dynamic_cast<const BipartitePairGenerator *>(&pg);
+      if (bip == nullptr)
+      {
+        return 0;
+      }
+      const std::uint64_t mid_i =
+          static_cast<std::uint64_t>(bip->seq_begin_i()) +
+          static_cast<std::uint64_t>(bip->seq_end_i());
+      const std::uint64_t mid_j =
+          static_cast<std::uint64_t>(bip->seq_begin_j()) +
+          static_cast<std::uint64_t>(bip->seq_end_j());
+      return mid_i > mid_j ? mid_i - mid_j : mid_j - mid_i;
+    };
+    // Bit-reversal of 0..15: 0, 8, 4, 12 get the four diagonals.
+    expect_true(gap(*gens[0]) == 0u);
+    expect_true(gap(*gens[8]) == 0u);
+    expect_true(gap(*gens[4]) == 0u);
+    expect_true(gap(*gens[12]) == 0u);
+    // Index 1 is the root thread's second unit / leftover sibling.
+    expect_true(gap(*gens[1]) > 0u);
   }
 }
 #endif

@@ -80,7 +80,12 @@ Native code:
     back to `++`). `AllPairGenerator::Builder` uses a square of
     `n_blocks = ceil(sqrt(subproblems))` blocks: diagonal tiles plus
     each rectangle split into two equal-work pieces (`n_blocks^2`
-    tiles). `for_each_assigned_tile` walks `[begin, end)`;
+    tiles). After construction, tiles are ranked by index-range
+    midpoint gap (closer blocks first; diagonals gap 0) and placed
+    in bit-reversal slots so TBB `auto_partitioner` starts heavy
+    tiles at dyadic interval origins rather than leaving the
+    slowest tile in a leftover wave. `for_each_assigned_tile`
+    walks `[begin, end)`;
     `DistClusterWorker::run()` / `DistWorker::run()` launch
     `parallelFor(0, n_tiles, grain=1, n_threads)` so idle threads can
     steal. DistWorker thread count is capped at
