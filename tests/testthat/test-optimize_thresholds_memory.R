@@ -390,6 +390,37 @@ testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", 
   testthat::expect_equal(four, expected_four)
 })
 
+testthat::test_that("estimate_subset_memory_mb uses resolved Hamming tiles", {
+  n_seq <- 10000L
+  n_thresholds <- 40L
+  threads <- 16L
+  hamming <- optimotu:::estimate_subset_memory_mb(
+    n_seq = n_seq,
+    n_thresholds = n_thresholds,
+    clust_method = "slink",
+    parallel_method = "merge",
+    threads = threads,
+    dist_method = "hamming"
+  )
+  ksw2 <- optimotu:::estimate_subset_memory_mb(
+    n_seq = n_seq,
+    n_thresholds = n_thresholds,
+    clust_method = "slink",
+    parallel_method = "merge",
+    threads = threads,
+    dist_method = "ksw2"
+  )
+  implicit <- optimotu:::estimate_subset_memory_mb(
+    n_seq = n_seq,
+    n_thresholds = n_thresholds,
+    clust_method = "slink",
+    parallel_method = "merge",
+    threads = threads
+  )
+  testthat::expect_gt(hamming, ksw2)
+  testthat::expect_equal(ksw2, implicit)
+})
+
 testthat::test_that("incremental batch planner matches unique(unlist) unions", {
   # Overlapping character IDs and explicit seq_index must agree, and batch
   # cuts must match a naive unique(unlist()) planner.

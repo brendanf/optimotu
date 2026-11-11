@@ -9,11 +9,11 @@
 \usage{
 parallel_config(method = c("merge", "concurrent", "hierarchical"), ...)
 
-parallel_merge(threads)
+parallel_merge(threads, subproblems = NULL)
 
-parallel_concurrent(threads)
+parallel_concurrent(threads, subproblems = NULL)
 
-parallel_hierarchical(threads, shards)
+parallel_hierarchical(threads, shards, subproblems = NULL)
 }
 \arguments{
 \item{method}{(\code{character} string) parallelization method.}
@@ -21,6 +21,14 @@ parallel_hierarchical(threads, shards)
 \item{...}{passed on to variants}
 
 \item{threads}{(positive \code{integer} scalar) total number of threads to use}
+
+\item{subproblems}{(\code{NULL} or positive \code{integer} scalar) minimum all-pairs
+tiles. \code{NULL} (the default) chooses a method-based square once
+\code{threads} is known: Hamming/USEARCH the square nearest \code{4 * threads};
+alignment methods (\code{wfa2}, \code{edlib}, \code{ksw2}, \code{hybrid}) the square in
+\verb{[threads, 4 * threads]} with the best equal-tile utilization (ties
+keep the smaller square). Values below \code{threads} are raised to
+\code{threads}. Ignored by \code{\link[=parallel_hierarchical]{parallel_hierarchical()}}.}
 
 \item{shards}{(positive \code{integer} scalar) number of independent working
 units for clustering. Must be less than or equal to \code{threads} (and in order

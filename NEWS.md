@@ -1,5 +1,11 @@
 # optimotu development version
 
+* `parallel_merge()`, `parallel_concurrent()`, and
+  `parallel_hierarchical()` accept `subproblems` (minimum all-pairs
+  tiles). The default, `default_subproblems()`, is a square nearest
+  `4 * threads` for Hamming/USEARCH and the best-filled square up to
+  `4 * threads` for alignment methods. Explicit values below `threads`
+  are raised to `threads`.
 * All-pairs tiles are ordered so taxonomically close (typically slower)
   blocks start first under TBB, reducing the chance that the slowest
   tile is left for a leftover wave.

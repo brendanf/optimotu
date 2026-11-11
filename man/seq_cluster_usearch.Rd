@@ -22,7 +22,7 @@ seq_cluster_usearch(
 }
 \arguments{
 \item{seq}{(\code{character} vector, filename,
-\link[Biostrings:XStringSet-class]{DNAStringSet}, or \code{data.frame} with columns
+\link[Biostrings:DNAStringSet]{DNAStringSet}, or \code{data.frame} with columns
 "seq_id" (\code{character}) and "seq" (\code{character})) sequences to cluster}
 
 \item{seq_id}{(\code{character} vector) names for the sequences.  If they are
@@ -72,7 +72,7 @@ specified in the "parallel_config" argument.}
 \item{...}{passed to methods (currently inactive)}
 }
 \value{
-An \code{\link[methods:StructureClasses]{integer matrix}} if
+An \code{\link[methods:structure-class]{integer matrix}} if
 \code{output_type=="matrix"}, an \code{\link[stats:hclust]{hclust}} object if
 \code{output_type=="hclust"}, or a list of one of these when \code{which} is a list.
 }

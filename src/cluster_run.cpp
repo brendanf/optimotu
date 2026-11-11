@@ -58,7 +58,8 @@ MultiClusterJob run_seq_cluster_multi(
     seqnames,
     which,
     verbose,
-    clustering_memory_budget_bytes
+    clustering_memory_budget_bytes,
+    element_as_string(dist_config, "method", "dist_config")
   );
   if (verbose) {
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;
@@ -123,7 +124,8 @@ MultiClusterJob run_seq_cluster_multi(
     static_cast<j_t>(seq.size()),
     which,
     verbose,
-    clustering_memory_budget_bytes
+    clustering_memory_budget_bytes,
+    element_as_string(dist_config, "method", "dist_config")
   );
   if (verbose) {
     OPTIMOTU_CERR << "done\ncreating ClusterWorker..." << std::flush;

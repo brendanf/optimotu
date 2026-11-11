@@ -18,6 +18,7 @@
 #include "Ksw2DistWorker.h"
 
 #include "AllPairGenerator.h"
+#include "subproblems.h"
 
 #include <algorithm>
 #include <cmath>
@@ -54,7 +55,8 @@ namespace
   // thread.
   std::size_t parent_n_tiles_from_parallel_method(
       const std::string &method,
-      int threads)
+      int threads,
+      int subproblems)
   {
     if (method == "concurrent" || (method == "merge" && threads <= 1))
     {
@@ -62,13 +64,56 @@ namespace
     }
     if (method == "merge")
     {
-      const double n_blocks = std::ceil(
-          std::sqrt(static_cast<double>(std::max(threads, 1))));
-      const std::size_t nb = static_cast<std::size_t>(n_blocks);
-      return nb * nb;
+      return static_cast<std::size_t>(
+          optimotu_square_subproblems(std::max(subproblems, threads)));
     }
     return static_cast<std::size_t>(std::max(threads, 1));
   }
+
+#ifdef OPTIMOTU_R
+  int requested_subproblems(Rcpp::List parallel_config)
+  {
+    if (!parallel_config.containsElementNamed("subproblems"))
+    {
+      return 0;
+    }
+    Rcpp::RObject item = parallel_config["subproblems"];
+    if (item.isNULL())
+    {
+      return 0;
+    }
+    if (!Rcpp::is<Rcpp::IntegerVector>(item))
+    {
+      OPTIMOTU_STOP(
+          "invalid `parallel_config`: member `subproblems` is not an integer");
+    }
+    auto subproblem_int = Rcpp::as<Rcpp::IntegerVector>(item);
+    if (subproblem_int.length() != 1 || subproblem_int[0] < 1)
+    {
+      OPTIMOTU_STOP(
+          "invalid `parallel_config`: `subproblems` must be a positive "
+          "integer scalar");
+    }
+    return subproblem_int[0];
+  }
+
+  int resolve_subproblems_from_config(
+      Rcpp::List parallel_config,
+      int threads,
+      const std::string &dist_method)
+  {
+    const int requested = requested_subproblems(parallel_config);
+    if (requested > 0)
+    {
+      return std::max(threads, requested);
+    }
+    if (dist_method.empty())
+    {
+      return optimotu_square_subproblems(threads);
+    }
+    return optimotu_default_subproblems(threads, dist_method);
+  }
+#endif
 
 } // namespace
 
@@ -135,7 +180,7 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
   const ClusterInstanceRole root_role =
       root_role_from_parallel_method(parallel_method, threads);
   const std::size_t parent_n_tiles =
-      parent_n_tiles_from_parallel_method(parallel_method, threads);
+      parent_n_tiles_from_parallel_method(parallel_method, threads, threads);
   if (verbose == 0)
   {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
@@ -179,7 +224,7 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
   const ClusterInstanceRole root_role =
       root_role_from_parallel_method(parallel_method, threads);
   const std::size_t parent_n_tiles =
-      parent_n_tiles_from_parallel_method(parallel_method, threads);
+      parent_n_tiles_from_parallel_method(parallel_method, threads, threads);
   if (verbose == 0)
   {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
@@ -526,7 +571,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     Rcpp::CharacterVector seqnames,
     Rcpp::ListOf<Rcpp::CharacterVector> subset_names,
     int verbose,
-    std::size_t clustering_memory_budget_bytes
+    std::size_t clustering_memory_budget_bytes,
+    const std::string &dist_method
 ) {
   reject_prim_multi(factory);
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
@@ -540,8 +586,11 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     : nullptr;
   const ClusterInstanceRole root_role =
       root_role_from_parallel_method(parallel_method, threads);
+  const int subproblems = resolve_subproblems_from_config(
+      parallel_config, threads, dist_method);
   const std::size_t parent_n_tiles =
-      parent_n_tiles_from_parallel_method(parallel_method, threads);
+      parent_n_tiles_from_parallel_method(
+          parallel_method, threads, subproblems);
   if (v == 0)
   {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
@@ -574,7 +623,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     j_t n_seq,
     Rcpp::ListOf<Rcpp::IntegerVector> subset_which,
     int verbose,
-    std::size_t clustering_memory_budget_bytes
+    std::size_t clustering_memory_budget_bytes,
+    const std::string &dist_method
 ) {
   reject_prim_multi(factory);
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
@@ -601,8 +651,11 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     : nullptr;
   const ClusterInstanceRole root_role =
       root_role_from_parallel_method(parallel_method, threads);
+  const int subproblems = resolve_subproblems_from_config(
+      parallel_config, threads, dist_method);
   const std::size_t parent_n_tiles =
-      parent_n_tiles_from_parallel_method(parallel_method, threads);
+      parent_n_tiles_from_parallel_method(
+          parallel_method, threads, subproblems);
   if (v == 0)
   {
     return std::make_unique<MultipleClusterAlgorithmImpl<0>>(
@@ -731,18 +784,8 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       par_method = "merge";
     }
   }
-  int subproblems = threads;
-  if (parallel_config.containsElementNamed("subproblems")) {
-    Rcpp::RObject item = parallel_config["subproblems"];
-    if (!Rcpp::is<Rcpp::IntegerVector>(item)) {
-      OPTIMOTU_STOP("invalid `parallel_config`: member `subproblems` is not an integer");
-    }
-    auto subproblem_int = Rcpp::as<Rcpp::IntegerVector>(item);
-    if (subproblem_int.length() != 1 || subproblem_int[0] < 1) {
-      OPTIMOTU_STOP("invalid `parallel_config`: `subproblems` must be a positive integer scalar");
-    }
-    subproblems = std::max(subproblems, subproblem_int[0]);
-  }
+  int subproblems = resolve_subproblems_from_config(
+      parallel_config, threads, dist_method);
   int worker_threads = threads;
   int v = (verbose > 4) ? 4 : verbose;
   AllPairGenerator::Builder pgb(seq.size(), subproblems);
@@ -1507,6 +1550,8 @@ std::unique_ptr<DistWorker> create_dist_worker(
   }
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
+  int subproblems = resolve_subproblems_from_config(
+      parallel_config, threads, dist_method);
   AlignmentSpan span_enum;
   switch (span) {
     case 0:
@@ -1518,7 +1563,7 @@ std::unique_ptr<DistWorker> create_dist_worker(
     default:
       OPTIMOTU_STOP("span must be 0 or 1");
   }
-  AllPairGenerator::Builder pgb(seq.size(), threads);
+  AllPairGenerator::Builder pgb(seq.size(), subproblems);
   if (dist_method == "wfa2") {
     int match = element_as_int(dist_config, "match", "dist_config");
     int mismatch = element_as_int(dist_config, "mismatch", "dist_config");

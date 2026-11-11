@@ -88,7 +88,12 @@ Native code:
     walks `[begin, end)`;
     `DistClusterWorker::run()` / `DistWorker::run()` launch
     `parallelFor(0, n_tiles, grain=1, n_threads)` so idle threads can
-    steal. DistWorker thread count is capped at
+    steal. `parallel_config$subproblems` is a first-class field
+    (`parallel_merge()` / `parallel_concurrent()`); `NULL` uses
+    `default_subproblems(threads, dist_method)`: Hamming/USEARCH the
+    square nearest `4 * threads`, alignment methods the best-filled
+    square up to `4 * threads`. Explicit values are `max(threads,
+    subproblems)` then squared. DistWorker thread count is capped at
     `min(requested, n_generators)` like DistClusterWorker. Split
     cluster workers use `max_relevant_local` / `apply_local` on mapped
     tile children; Hamming batches R interrupt checks.

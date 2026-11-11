@@ -6,6 +6,7 @@
 #include "BipartitePairGenerator.h"
 #include "MappedClusterAlgorithm.h"
 #include "tile_pairs.h"
+#include "subproblems.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -455,6 +456,22 @@ context("for_each_tile_pair") {
     expect_true(median > 0);
     expect_true(counts.back() <= median * 3);
     expect_true(counts.front() * 3 >= median);
+  }
+
+  test_that("default_subproblems follows fast vs slow square rules")
+  {
+    expect_true(optimotu_default_subproblems(1, "hamming") == 1);
+    expect_true(optimotu_default_subproblems(16, "hamming") == 64);
+    expect_true(optimotu_default_subproblems(15, "hamming") == 64);
+    expect_true(optimotu_default_subproblems(30, "hamming") == 121);
+    expect_true(optimotu_default_subproblems(12, "usearch") == 49);
+    expect_true(optimotu_default_subproblems(16, "ksw2") == 16);
+    expect_true(optimotu_default_subproblems(15, "ksw2") == 25);
+    expect_true(optimotu_default_subproblems(30, "wfa2") == 81);
+    expect_true(optimotu_default_subproblems(20, "edlib") == 36);
+    expect_true(optimotu_default_subproblems(12, "hybrid") == 36);
+    expect_true(optimotu_resolve_subproblems(16, "hamming", 36) == 36);
+    expect_true(optimotu_resolve_subproblems(16, "hamming", 4) == 16);
   }
 
   test_that("Builder places close tiles at TBB dyadic starts")

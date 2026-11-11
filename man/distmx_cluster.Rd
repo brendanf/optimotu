@@ -69,7 +69,7 @@ in the \code{names} argument. If \code{FALSE}, they are integer indices starting
 0 for the first sequence in \code{names}.}
 }
 \value{
-An \code{\link[methods:StructureClasses]{integer matrix}} if
+An \code{\link[methods:structure-class]{integer matrix}} if
 \code{output_type=="matrix"}, an \code{\link[stats:hclust]{hclust}} object if
 \code{output_type=="hclust"}, or a list of one of these when \code{which} is a list.
 }

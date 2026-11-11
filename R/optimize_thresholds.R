@@ -75,7 +75,9 @@ estimate_subset_memory_mb <- function(
   clust_method,
   parallel_method,
   threads,
-  include_result = FALSE
+  include_result = FALSE,
+  dist_method = NULL,
+  subproblems = NULL
 ) {
   # Match Cluster*Factory::estimate_bytes() (int = 4, uint64_t = 8).
   int_bytes <- 4
@@ -90,10 +92,17 @@ estimate_subset_memory_mb <- function(
   slink_leaf <- n_seq * u64_bytes * 4
   prim_leaf <- n_seq * 24
   # Parent peak: KruskalTournament (see kruskal_tournament_estimate_bytes).
+  resolved_sub <- if (!is.null(dist_method)) {
+    resolve_subproblems(threads, dist_method, subproblems)
+  } else if (!is.null(subproblems)) {
+    as.integer(max(threads, subproblems))
+  } else {
+    as.integer(threads)
+  }
+  n_tile_blocks <- ceiling(sqrt(max(resolved_sub, 1L)))
   merge_n_slots <- function(parallel_method, threads) {
     if (identical(parallel_method, "merge") && threads > 1) {
-      n_blocks <- ceiling(sqrt(threads))
-      return(as.integer(n_blocks * n_blocks))
+      return(as.integer(n_tile_blocks * n_tile_blocks))
     }
     if (identical(parallel_method, "hierarchical")) {
       return(as.integer(max(threads, 1L)))
@@ -121,8 +130,7 @@ estimate_subset_memory_mb <- function(
       if (threads <= 1) {
         1.1
       } else {
-        n_blocks <- ceiling(sqrt(threads))
-        1 + threads * (2 / n_blocks)
+        1 + threads * (2 / n_tile_blocks)
       }
     },
     concurrent = 1.1,
@@ -266,6 +274,7 @@ estimate_batch_memory_mb <- function(
   clust_method <- clust_config$method
   parallel_method <- parallel_config$method
   threads <- parallel_config$threads
+  subproblems <- parallel_config$subproblems
 
   per_subset <- vapply(
     subset_cluster_n(testset_select)[batch_idx],
@@ -275,7 +284,9 @@ estimate_batch_memory_mb <- function(
     clust_method = clust_method,
     parallel_method = parallel_method,
     threads = threads,
-    include_result = include_result
+    include_result = include_result,
+    dist_method = dist_method,
+    subproblems = subproblems
   )
   total <- sum(per_subset)
   n_union <- batch_n_union(testset_select, batch_idx)
@@ -364,7 +375,9 @@ make_initial_batches <- function(
       clust_method = clust_method,
       parallel_method = parallel_method,
       threads = threads,
-      include_result = FALSE
+      include_result = FALSE,
+      dist_method = dist_method,
+      subproblems = parallel_config$subproblems
     )
     # Probe union cost without mutating; commit only if we keep the subset.
     probe <- state

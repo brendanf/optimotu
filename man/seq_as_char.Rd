@@ -49,7 +49,7 @@ it overrides the indexed FASTA/FASTQ paths passed to \code{fastqindexr}.
 For index-backed inputs or \code{.fqi} files, \code{fastqindexr} (>= 0.1) is required.
 For plain FASTA files with \code{seq_idx} not \code{NULL}, random access uses
 \code{fastqindexr} when installed; otherwise the file is read with
-\code{\link[Biostrings:XStringSet-io]{Biostrings::readBStringSet()}} and subset in memory (avoid for very large
+\code{\link[Biostrings:readBStringSet]{Biostrings::readBStringSet()}} and subset in memory (avoid for very large
 inputs). Plain FASTQ subsetting without \code{fastqindexr} reads the entire file,
 then subsets (avoid for very large inputs).
 }

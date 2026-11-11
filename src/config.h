@@ -92,7 +92,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     Rcpp::CharacterVector seqnames,
     Rcpp::ListOf<Rcpp::CharacterVector> subset_names,
     int verbose = 0,
-    std::size_t clustering_memory_budget_bytes = 0
+    std::size_t clustering_memory_budget_bytes = 0,
+    const std::string &dist_method = ""
 );
 
 std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
@@ -101,7 +102,8 @@ std::unique_ptr<MultipleClusterAlgorithm> create_multiple_cluster_algorithm(
     j_t n_seq,
     Rcpp::ListOf<Rcpp::IntegerVector> subset_which,
     int verbose = 0,
-    std::size_t clustering_memory_budget_bytes = 0
+    std::size_t clustering_memory_budget_bytes = 0,
+    const std::string &dist_method = ""
 );
 
 template <typename distmx_t>

@@ -464,6 +464,13 @@ threshold_lookup <- function(
 #'
 #' @param method (`character` string) parallelization method.
 #' @param threads (positive `integer` scalar) total number of threads to use
+#' @param subproblems (`NULL` or positive `integer` scalar) minimum all-pairs
+#'   tiles. `NULL` (the default) chooses a method-based square once
+#'   `threads` is known: Hamming/USEARCH the square nearest `4 * threads`;
+#'   alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`) the square in
+#'   `[threads, 4 * threads]` with the best equal-tile utilization (ties
+#'   keep the smaller square). Values below `threads` are raised to
+#'   `threads`. Ignored by [parallel_hierarchical()].
 #' @param ... passed on to variants
 #'
 #' @return an object representing the thresholds
@@ -486,31 +493,35 @@ parallel_config <- function(
 
 #' @export
 #' @describeIn parallel_config helper function for method `"merge"`
-parallel_merge <- function(threads) {
-  checkmate::assert_integerish(threads, lower = 1L)
-  structure(
-    list(
-      method = "merge",
-      threads = as.integer(threads),
-      call = match.call()
-    ),
-    class = "optimotu_parallel_config"
+parallel_merge <- function(threads, subproblems = NULL) {
+  checkmate::assert_integerish(threads, lower = 1L, len = 1L)
+  out <- list(
+    method = "merge",
+    threads = as.integer(threads),
+    call = match.call()
   )
+  if (!is.null(subproblems)) {
+    checkmate::assert_integerish(subproblems, lower = 1L, len = 1L)
+    out$subproblems <- as.integer(subproblems)
+  }
+  structure(out, class = "optimotu_parallel_config")
 }
 
 
 #' @export
 #' @describeIn parallel_config helper function for method `"concurrent"`
-parallel_concurrent <- function(threads) {
-  checkmate::assert_integerish(threads, lower = 1L)
-  structure(
-    list(
-      method = "concurrent",
-      threads = as.integer(threads),
-      call = match.call()
-    ),
-    class = "optimotu_parallel_config"
+parallel_concurrent <- function(threads, subproblems = NULL) {
+  checkmate::assert_integerish(threads, lower = 1L, len = 1L)
+  out <- list(
+    method = "concurrent",
+    threads = as.integer(threads),
+    call = match.call()
   )
+  if (!is.null(subproblems)) {
+    checkmate::assert_integerish(subproblems, lower = 1L, len = 1L)
+    out$subproblems <- as.integer(subproblems)
+  }
+  structure(out, class = "optimotu_parallel_config")
 }
 
 #' @param shards (positive `integer` scalar) number of independent working
@@ -519,18 +530,83 @@ parallel_concurrent <- function(threads) {
 #' `threads`/2)
 #' @export
 #' @describeIn parallel_config helper function for method `"hierarchical"`
-parallel_hierarchical <- function(threads, shards) {
-  checkmate::assert_integerish(threads, lower = 1L)
+parallel_hierarchical <- function(threads, shards, subproblems = NULL) {
+  checkmate::assert_integerish(threads, lower = 1L, len = 1L)
   checkmate::assert_integerish(shards, lower = 1L, upper = threads)
-  structure(
-    list(
-      method = "hierarchical",
-      threads = as.integer(threads),
-      shards = as.integer(shards),
-      call = match.call()
-    ),
-    class = "optimotu_parallel_config"
+  out <- list(
+    method = "hierarchical",
+    threads = as.integer(threads),
+    shards = as.integer(shards),
+    call = match.call()
   )
+  if (!is.null(subproblems)) {
+    checkmate::assert_integerish(subproblems, lower = 1L, len = 1L)
+    out$subproblems <- as.integer(subproblems)
+  }
+  structure(out, class = "optimotu_parallel_config")
+}
+
+#' Default all-pairs subproblem count
+#'
+#' Hamming and USEARCH use the perfect square nearest `4 * threads`.
+#' Alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`) pick the square
+#' `S` with `threads <= S <= 4 * threads` that maximizes equal-tile
+#' utilization `S / (threads * ceil(S / threads))`; ties keep the
+#' smaller square.
+#'
+#' @param threads (positive `integer` scalar) worker thread count
+#' @param method (`character` scalar) distance method name
+#' @return integer subproblem request passed to the pair generator
+#' @export
+default_subproblems <- function(threads, method) {
+  checkmate::assert_integerish(threads, lower = 1L, len = 1L)
+  checkmate::assert_string(method)
+  threads <- as.integer(threads)
+  if (threads <= 1L) {
+    return(1L)
+  }
+  max_s <- 4L * threads
+  slow <- method %in% c("wfa2", "edlib", "ksw2", "hybrid")
+  if (!slow) {
+    n_blocks <- as.integer(round(sqrt(4 * threads)))
+    if (n_blocks < 1L) {
+      n_blocks <- 1L
+    }
+    s <- n_blocks * n_blocks
+    if (s < threads) {
+      n_blocks <- as.integer(ceiling(sqrt(threads)))
+      s <- n_blocks * n_blocks
+    }
+    return(s)
+  }
+  n_blocks <- as.integer(ceiling(sqrt(threads)))
+  best_s <- n_blocks * n_blocks
+  best_util <- -1
+  repeat {
+    s <- n_blocks * n_blocks
+    if (s > max_s) {
+      break
+    }
+    waves <- as.integer(ceiling(s / threads))
+    util <- s / (threads * waves)
+    if (
+      util > best_util + 1e-12 ||
+        (abs(util - best_util) <= 1e-12 && s < best_s)
+    ) {
+      best_util <- util
+      best_s <- s
+    }
+    n_blocks <- n_blocks + 1L
+  }
+  best_s
+}
+
+resolve_subproblems <- function(threads, method, requested = NULL) {
+  threads <- as.integer(threads)
+  if (!is.null(requested) && is.finite(requested) && requested >= 1) {
+    return(as.integer(max(threads, requested)))
+  }
+  default_subproblems(threads, method)
 }
 
 #' Configuration helper for pairwise distance methods
