@@ -9,7 +9,7 @@
 #include <cmath>
 #include <string>
 
-// Hamming / USEARCH: square nearest 4 * threads.
+// Hamming / USEARCH / aa: square nearest 4 * threads.
 // Alignment methods: square in [threads, 4 * threads] with the best
 // equal-tile utilization S / (threads * ceil(S / threads)); ties keep
 // the smaller square.

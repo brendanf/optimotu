@@ -37,6 +37,10 @@ class ClusterPrim : public SingleClusterAlgorithm {
   template <typename Dist>
   void grow_from_start(j_t n_vert, Dist dist, bool bipartite, j_t n_j);
 
+  template <typename Score>
+  void grow_from_start_batch(
+      j_t n_vert, Score score, bool bipartite, j_t n_j);
+
 public:
   ClusterPrim(const DistanceConverter &dconv, const j_t n);
   ClusterPrim(const DistanceConverter &dconv, init_matrix_t im);
@@ -73,6 +77,15 @@ public:
 
   template <typename Dist>
   void grow_bipartite(j_t n_j, j_t n_i, Dist dist);
+
+  // score(u, dist_by_local) writes distances from local vertex u to
+  // vertices still outside the tree (opposite part on a bipartite
+  // tile). Cutoffs are applied after those distances exist.
+  template <typename Score>
+  void grow_complete_batch(Score score);
+
+  template <typename Score>
+  void grow_bipartite_batch(j_t n_j, j_t n_i, Score score);
 };
 
 std::unique_ptr<SingleClusterAlgorithm> create_cluster_prim(
@@ -208,6 +221,118 @@ void ClusterPrim::grow_bipartite(j_t n_j, j_t n_i, Dist dist)
 {
   (void)n_i;
   grow_from_start(this->n, dist, true, n_j);
+}
+
+template <typename Score>
+void ClusterPrim::grow_from_start_batch(
+    j_t n_vert, Score score, bool bipartite, j_t n_j)
+{
+  grown_ = true;
+  mst_.clear();
+  if (n_vert < 2)
+  {
+    return;
+  }
+  const d_t inf = this->m;
+  std::vector<d_t> key(n_vert, inf);
+  std::vector<j_t> parent(n_vert, 0);
+  std::vector<char> in_tree(n_vert, 0);
+  std::vector<double> dist_by_local(n_vert, 1.0);
+  std::size_t dist_calls = 0;
+  auto maybe_interrupt = [&dist_calls]()
+  {
+#ifdef OPTIMOTU_R
+    if ((++dist_calls & 65535u) == 0u)
+    {
+      RcppThread::checkUserInterrupt();
+    }
+#else
+    (void)dist_calls;
+#endif
+  };
+
+  auto opposite = [&](j_t u, j_t v)
+  {
+    if (!bipartite)
+    {
+      return true;
+    }
+    const bool u_left = u < n_j;
+    const bool v_left = v < n_j;
+    return u_left != v_left;
+  };
+
+  auto apply_scores = [&](j_t u)
+  {
+    score(u, dist_by_local.data());
+    maybe_interrupt();
+    for (j_t v = 0; v < n_vert; ++v)
+    {
+      if (in_tree[v] || !opposite(u, v))
+      {
+        continue;
+      }
+      const d_t bin = this->dconv.convert(dist_by_local[v]);
+      if (bin < key[v])
+      {
+        key[v] = bin;
+        parent[v] = u;
+      }
+    }
+  };
+
+  in_tree[0] = 1;
+  key[0] = 0;
+  apply_scores(0);
+
+  for (j_t added = 1; added < n_vert; ++added)
+  {
+    j_t u = NO_CLUST;
+    d_t best = inf;
+    for (j_t v = 0; v < n_vert; ++v)
+    {
+      if (!in_tree[v] && key[v] < best)
+      {
+        best = key[v];
+        u = v;
+      }
+    }
+    if (u == NO_CLUST)
+    {
+      for (j_t v = 0; v < n_vert; ++v)
+      {
+        if (!in_tree[v])
+        {
+          u = v;
+          break;
+        }
+      }
+      if (u == NO_CLUST)
+      {
+        break;
+      }
+      in_tree[u] = 1;
+      key[u] = 0;
+      apply_scores(u);
+      continue;
+    }
+    in_tree[u] = 1;
+    add_mst_edge(parent[u], u, key[u]);
+    apply_scores(u);
+  }
+}
+
+template <typename Score>
+void ClusterPrim::grow_complete_batch(Score score)
+{
+  grow_from_start_batch(this->n, score, false, 0);
+}
+
+template <typename Score>
+void ClusterPrim::grow_bipartite_batch(j_t n_j, j_t n_i, Score score)
+{
+  (void)n_i;
+  grow_from_start_batch(this->n, score, true, n_j);
 }
 
 #endif

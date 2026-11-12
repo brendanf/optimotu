@@ -164,6 +164,7 @@ seq_cluster.character <- function(
   if (!missing(seq_id)) {
     names(seq) <- seq_id
   }
+  seq <- maybe_translate_aa_seq(seq, dist_config)
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
   checkmate::assert_class(clust_config, "optimotu_cluster_config")
   checkmate::assert_class(parallel_config, "optimotu_parallel_config")

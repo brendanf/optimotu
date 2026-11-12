@@ -596,6 +596,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// seq_distmx_pairs_internal
+Rcpp::DataFrame seq_distmx_pairs_internal(Rcpp::CharacterVector seq, Rcpp::List dist_config, Rcpp::IntegerMatrix pairs, Rcpp::List parallel_config, int verbose);
+RcppExport SEXP _optimotu_seq_distmx_pairs_internal(SEXP seqSEXP, SEXP dist_configSEXP, SEXP pairsSEXP, SEXP parallel_configSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type dist_config(dist_configSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerMatrix >::type pairs(pairsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type parallel_config(parallel_configSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(seq_distmx_pairs_internal(seq, dist_config, pairs, parallel_config, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 // seq_search_internal
 Rcpp::RObject seq_search_internal(Rcpp::CharacterVector query, Rcpp::CharacterVector ref, Rcpp::List dist_config, Rcpp::List parallel_config, double threshold, int verbose, bool return_cigar, int span);
 RcppExport SEXP _optimotu_seq_search_internal(SEXP querySEXP, SEXP refSEXP, SEXP dist_configSEXP, SEXP parallel_configSEXP, SEXP thresholdSEXP, SEXP verboseSEXP, SEXP return_cigarSEXP, SEXP spanSEXP) {
@@ -679,6 +694,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_seq_cluster_multi_best_threshold", (DL_FUNC) &_optimotu_seq_cluster_multi_best_threshold, 14},
     {"_optimotu_seq_cluster_profile_output", (DL_FUNC) &_optimotu_seq_cluster_profile_output, 7},
     {"_optimotu_seq_distmx_internal", (DL_FUNC) &_optimotu_seq_distmx_internal, 8},
+    {"_optimotu_seq_distmx_pairs_internal", (DL_FUNC) &_optimotu_seq_distmx_pairs_internal, 5},
     {"_optimotu_seq_search_internal", (DL_FUNC) &_optimotu_seq_search_internal, 8},
     {"_optimotu_summarize_by_rank", (DL_FUNC) &_optimotu_summarize_by_rank, 3},
     {"_optimotu_verify_which_impl", (DL_FUNC) &_optimotu_verify_which_impl, 2},

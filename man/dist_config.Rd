@@ -7,12 +7,13 @@
 \alias{dist_ksw2}
 \alias{dist_hybrid}
 \alias{dist_hamming}
+\alias{dist_aa}
 \alias{dist_usearch}
 \alias{dist_file}
 \title{Configuration helper for pairwise distance methods}
 \usage{
 dist_config(
-  method = c("wfa2", "edlib", "ksw2", "hybrid", "hamming", "file", "usearch"),
+  method = c("wfa2", "edlib", "ksw2", "hybrid", "hamming", "aa", "file", "usearch"),
   ...
 )
 
@@ -39,6 +40,14 @@ dist_ksw2(
 dist_hybrid(cutoff = 0.1)
 
 dist_hamming(min_overlap = 0L, ignore_gaps = TRUE)
+
+dist_aa(
+  weights = NULL,
+  min_overlap = 0L,
+  ignore_gaps = TRUE,
+  genetic_code = NULL,
+  codon_offset = 0L
+)
 
 dist_usearch(usearch = Sys.which("usearch"), usearch_ncpu = NULL)
 
@@ -79,6 +88,17 @@ counted towards the total aligned length. If \code{FALSE}, such columns are
 counted as mismatches.  End gaps in either sequence, and internal gaps shared
 by both sequences, are always ignored.}
 
+\item{weights}{(\code{NULL} or square \code{numeric} matrix) amino-acid
+dissimilarity. \code{NULL} is Hamming (0 on the diagonal, 1 off-diagonal).
+Matrices must have single-letter dimnames; unknown residue pairs
+default to 1. Distances are the mean per compared site.}
+
+\item{genetic_code}{(\code{NULL} or NCBI translation table number) if set,
+inputs are aligned nucleotides and are translated before scoring.}
+
+\item{codon_offset}{(\code{integer} in 0, 1, 2) first codon base in the
+aligned nucleotides when \code{genetic_code} is set.}
+
 \item{usearch}{(\code{character} path) path to the USEARCH executable}
 
 \item{usearch_ncpu}{(\code{integer} scalar or \code{NULL}) number of threads for
@@ -111,6 +131,8 @@ called as external programs.
 \item \code{dist_hybrid()}: helper function for method \code{"hybrid"}
 
 \item \code{dist_hamming()}: helper function for method \code{"hamming"}
+
+\item \code{dist_aa()}: helper function for method \code{"aa"}
 
 \item \code{dist_usearch()}: helper function for method \code{"usearch"}
 

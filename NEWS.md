@@ -1,5 +1,12 @@
 # optimotu development version
 
+* Add `dist_aa()` / `method = "aa"` for equal-length amino-acid (or
+  translated nucleotide) distances in `seq_distmx()`, `seq_search()`,
+  `seq_cluster()`, and `optimize_thresholds()`. Packed uint8 codes with
+  position-major tiles; `seq_distmx(pairs=)` scores requested pairs.
+  `aa` uses the fast Hamming/USEARCH `default_subproblems()` rule.
+  `translate_aligned()` strips A2M lowercase insertions and translates
+  with an NCBI genetic code.
 * `parallel_merge()`, `parallel_concurrent()`, and
   `parallel_hierarchical()` accept `subproblems` (minimum all-pairs
   tiles). The default, `default_subproblems()`, is a square nearest

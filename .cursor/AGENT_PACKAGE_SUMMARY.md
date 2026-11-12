@@ -34,10 +34,15 @@ Native code:
 - `src/`
   - performance-critical C/C++ implementations
   - distance workers, clustering algorithms, generators, and glue via Rcpp
-  - R package builds define `OPTIMOTU_R` (`src/Makevars`). All R / Rcpp / R
-    API use must be wrapped in `#ifdef OPTIMOTU_R`. Core algorithms keep a
-    pure C++ entry (standard types / `SequenceView`) so a standalone C++
-    library or non-R wrappers remain possible. Dual factories in
+  - R package builds define `OPTIMOTU_R` (`src/Makevars`). `Makevars` does
+    not set `-march`. Amino-acid identity uses SSE2 when `__SSE2__` is
+    defined (on for x86-64). Weighted `dist_aa()` uses AVX2 when `__AVX2__`
+    is defined, and otherwise the scalar loop. The v7 image appends
+    `-march=native -mtune=native` from `etc/Makevars.site` when its native
+    compiler block is active. All R / Rcpp / R API use must be wrapped in
+    `#ifdef OPTIMOTU_R`. Core algorithms keep a pure C++ entry (standard
+    types / `SequenceView`) so a standalone C++ library or non-R wrappers
+    remain possible. Dual factories in
     `src/config.h` (C++ types first, Rcpp config overloads under
     `OPTIMOTU_R`) are the pattern to copy.
   - `src/SequenceView.h` is an R-free non-owning view of sequence bytes;
@@ -90,8 +95,8 @@ Native code:
     `parallelFor(0, n_tiles, grain=1, n_threads)` so idle threads can
     steal. `parallel_config$subproblems` is a first-class field
     (`parallel_merge()` / `parallel_concurrent()`); `NULL` uses
-    `default_subproblems(threads, dist_method)`: Hamming/USEARCH the
-    square nearest `4 * threads`, alignment methods the best-filled
+    `default_subproblems(threads, dist_method)`: Hamming/USEARCH/`aa`
+    the square nearest `4 * threads`, alignment methods the best-filled
     square up to `4 * threads`. Explicit values are `max(threads,
     subproblems)` then squared. DistWorker thread count is capped at
     `min(requested, n_generators)` like DistClusterWorker. Split
@@ -99,12 +104,15 @@ Native code:
     tile children; Hamming batches R interrupt checks.
   - `clust_prim()` grows an MST with Prim on each all-pairs tile
     (complete or bipartite) and Kruskal-unions those trees in a
-    binary tournament (last arriving thread merges). Multi-subset
-    `optimize_thresholds()` / `seq_cluster(..., which = ...)` errors
-    (Prim grow order cannot share a streamed pair). Use for
-    single-subset `seq_cluster()`. Concurrent Prim with `threads > 1`
-    errors; `parallel_concurrent(1)` is remapped to the merge/split
-    worker so Prim can grow.
+    binary tournament (last arriving thread merges). Amino-acid Prim
+    scores the live outside set with the position-major kernels
+    (SSE2 identity / AVX2 weighted); Hamming and alignment methods
+    stay pairwise. Multi-subset `optimize_thresholds()` /
+    `seq_cluster(..., which = ...)` errors (Prim grow order cannot
+    share a streamed pair). Use for single-subset `seq_cluster()`.
+    Concurrent Prim with `threads > 1` errors;
+    `parallel_concurrent(1)` is remapped to the merge/split worker so
+    Prim can grow.
   - `clust_slink()` still runs sequential SLINK on each tile (and on
     the single-thread root). With `parallel_merge` / distmx shards,
     each tile submits its pointer-representation MST into a
@@ -148,7 +156,8 @@ Core exported API families include:
 
 - config helpers:
   - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_ksw2()`, `dist_hamming()`,
-    `dist_usearch()`, `dist_file()`, `dist_hybrid()`
+    `dist_aa()`, `dist_usearch()`, `dist_file()`, `dist_hybrid()`
+  - `translate_aligned()` for HMM A2M nucleotides before `dist_aa()`
   - `clust_config()` + `clust_tree()`, `clust_matrix()`, `clust_index()`,
     `clust_slink()`, `clust_prim()`
   - `threshold_config()` + `threshold_uniform()`, `threshold_set()`,
@@ -229,8 +238,9 @@ explicitly requests API changes.
   via `write_threshold_row()` instead of materializing the result matrix.
   Batch planning keeps a running integer sequence union (`seq_index` from
   `summarize_by_rank()`) and adds Hamming packed-sequence bytes for that
-  union (not the sum of subset sizes) when `dist_hamming()` is used; it does
-  not call `unique(unlist(seq_id))` per candidate step.
+  union (not the sum of subset sizes) when `dist_hamming()` is used, or
+  packed amino-acid bytes via `estimate_aa_packed_mb()` for `dist_aa()`;
+  it does not call `unique(unlist(seq_id))` per candidate step.
 - `summarize_by_rank()` reuses interned CHARSXPs (no `std::string` ID copies)
   and returns `seq_index` (1-based row indices in the taxonomy) alongside
   `seq_id`. `optimize_thresholds()` passes those indices into clustering

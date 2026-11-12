@@ -150,3 +150,92 @@ testthat::test_that("clust_prim() partitions match clust_slink() and hclust expo
     testthat::expect_equal(fa, fb, info = rownames(slink_cut)[r])
   }
 })
+
+testthat::test_that("clust_prim() partitions match clust_slink() for dist_aa", {
+  set.seed(3)
+  aa <- c(
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "K",
+    "L",
+    "M",
+    "N",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "V",
+    "W",
+    "Y"
+  )
+  L <- 40L
+  make_clade <- function(base, n) {
+    vapply(
+      seq_len(n),
+      function(i) {
+        s <- strsplit(base, "", TRUE)[[1L]]
+        pos <- sample.int(length(s), 4L)
+        s[pos] <- sample(aa, 4L, replace = TRUE)
+        paste(s, collapse = "")
+      },
+      character(1L)
+    )
+  }
+  bases <- replicate(
+    4L,
+    paste(sample(aa, L, replace = TRUE), collapse = ""),
+    simplify = TRUE
+  )
+  seq <- unlist(lapply(bases, make_clade, n = 16L), use.names = FALSE)
+  names(seq) <- sprintf("s%02d", seq_along(seq))
+  seq[[1L]] <- paste0("---", substring(seq[[1L]], 4L))
+  seq[[2L]] <- paste0(substring(seq[[2L]], 1L, L - 3L), "---")
+  w <- matrix(0.5, length(aa), length(aa), dimnames = list(aa, aa))
+  diag(w) <- 0
+  dist_cfgs <- list(
+    aa_identity = dist_aa(ignore_gaps = TRUE),
+    aa_weights = dist_aa(weights = w, ignore_gaps = TRUE),
+    aa_identity_endgap = dist_aa(ignore_gaps = FALSE)
+  )
+  thresholds <- c(0.05, 0.1, 0.2)
+  for (dist_name in names(dist_cfgs)) {
+    slink_mat <- seq_cluster(
+      seq = seq,
+      dist_config = dist_cfgs[[dist_name]],
+      threshold_config = threshold_set(thresholds),
+      clust_config = clust_slink(),
+      parallel_config = parallel_merge(1L),
+      output_type = "matrix",
+      verbose = FALSE
+    )
+    for (threads in c(1L, 4L)) {
+      prim_mat <- seq_cluster(
+        seq = seq,
+        dist_config = dist_cfgs[[dist_name]],
+        threshold_config = threshold_set(thresholds),
+        clust_config = clust_prim(),
+        parallel_config = parallel_merge(threads),
+        output_type = "matrix",
+        verbose = FALSE
+      )
+      conf <- confusion_matrix2(prim_mat, slink_mat)
+      testthat::expect_equal(
+        conf$FP,
+        rep(0L, nrow(conf)),
+        info = paste(dist_name, threads)
+      )
+      testthat::expect_equal(
+        conf$FN,
+        rep(0L, nrow(conf)),
+        info = paste(dist_name, threads)
+      )
+    }
+  }
+})

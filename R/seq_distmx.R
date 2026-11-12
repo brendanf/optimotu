@@ -36,6 +36,10 @@
 #' [seq_as_char()].
 #' @param seq_file optional path override for `fastqindexr_index` or `.fqi`
 #' inputs only; see [seq_as_char()].
+#' @param pairs optional two-column integer matrix of 1-based sequence
+#' indices. When set, only those pairs are scored and all of them are
+#' returned (`threshold` is not an inclusion gate). Currently implemented
+#' for [dist_aa()].
 #' @param ... passed to methods
 #' @return (`data.frame`) with columns "seq_id1" and "seq_id2" (`character`),
 #' or "seq_idx1" and "seq_idx2" (`integer`) if `id_is_integer` is `TRUE`,
@@ -60,6 +64,7 @@ seq_distmx <- function(
   id_is_int = is.data.frame(seq) && "seq_idx" %in% names(seq),
   seq_idx = NULL,
   seq_file = NULL,
+  pairs = NULL,
   ...
 ) {
   n_seq <- seq_input_n_records(seq, seq_file)
@@ -100,6 +105,31 @@ seq_distmx <- function(
     )
     if (!is.null(seq_id)) {
       names(seq) <- seq_id
+    }
+    seq <- maybe_translate_aa_seq(seq, dist_config)
+
+    if (!is.null(pairs)) {
+      if (!is.null(dim(pairs)) && ncol(pairs) == 2L) {
+        pairs <- as.matrix(pairs)
+      } else {
+        stop("`pairs` must be an integer matrix with two columns")
+      }
+      storage.mode(pairs) <- "integer"
+      out <- seq_distmx_pairs_internal(
+        seq = seq,
+        dist_config = dist_config,
+        pairs = pairs,
+        parallel_config = parallel_config,
+        verbose = as.integer(verbose)
+      )
+      if (isFALSE(id_is_int)) {
+        out$seq_idx1 <- names(seq)[out$seq_idx1]
+        out$seq_idx2 <- names(seq)[out$seq_idx2]
+        names(out)[1:2] <- c("seq_id1", "seq_id2")
+      }
+      class(out) <- "data.frame"
+      attr(out, "row.names") <- seq_len(nrow(out))
+      return(out)
     }
 
     if (identical(dist_config$method, "file")) {

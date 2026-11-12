@@ -96,6 +96,8 @@ seq_search <- function(
     if (!is.null(ref_id)) {
       names(ref) <- ref_id
     }
+    query <- maybe_translate_aa_seq(query, dist_config)
+    ref <- maybe_translate_aa_seq(ref, dist_config)
 
     if (identical(dist_config$method, "file")) {
       checkmate::assert_file(dist_config$filename)

@@ -50,6 +50,7 @@ seq_distmx(
   id_is_int = is.data.frame(seq) && "seq_idx" \%in\% names(seq),
   seq_idx = NULL,
   seq_file = NULL,
+  pairs = NULL,
   ...
 )
 
@@ -179,6 +180,11 @@ inputs) or rows / elements for tabular and in-memory inputs; see
 
 \item{seq_file}{optional path override for \code{fastqindexr_index} or \code{.fqi}
 inputs only; see \code{\link[=seq_as_char]{seq_as_char()}}.}
+
+\item{pairs}{optional two-column integer matrix of 1-based sequence
+indices. When set, only those pairs are scored and all of them are
+returned (\code{threshold} is not an inclusion gate). Currently implemented
+for \code{\link[=dist_aa]{dist_aa()}}.}
 
 \item{...}{passed to methods}
 

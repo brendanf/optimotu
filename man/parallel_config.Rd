@@ -24,8 +24,9 @@ parallel_hierarchical(threads, shards, subproblems = NULL)
 
 \item{subproblems}{(\code{NULL} or positive \code{integer} scalar) minimum all-pairs
 tiles. \code{NULL} (the default) chooses a method-based square once
-\code{threads} is known: Hamming/USEARCH the square nearest \code{4 * threads};
-alignment methods (\code{wfa2}, \code{edlib}, \code{ksw2}, \code{hybrid}) the square in
+\code{threads} is known: Hamming/USEARCH/\code{aa} the square nearest
+\code{4 * threads}; alignment methods (\code{wfa2}, \code{edlib}, \code{ksw2}, \code{hybrid})
+the square in
 \verb{[threads, 4 * threads]} with the best equal-tile utilization (ties
 keep the smaller square). Values below \code{threads} are raised to
 \code{threads}. Ignored by \code{\link[=parallel_hierarchical]{parallel_hierarchical()}}.}

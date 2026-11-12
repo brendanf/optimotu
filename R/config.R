@@ -466,8 +466,9 @@ threshold_lookup <- function(
 #' @param threads (positive `integer` scalar) total number of threads to use
 #' @param subproblems (`NULL` or positive `integer` scalar) minimum all-pairs
 #'   tiles. `NULL` (the default) chooses a method-based square once
-#'   `threads` is known: Hamming/USEARCH the square nearest `4 * threads`;
-#'   alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`) the square in
+#'   `threads` is known: Hamming/USEARCH/`aa` the square nearest
+#'   `4 * threads`; alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`)
+#'   the square in
 #'   `[threads, 4 * threads]` with the best equal-tile utilization (ties
 #'   keep the smaller square). Values below `threads` are raised to
 #'   `threads`. Ignored by [parallel_hierarchical()].
@@ -548,7 +549,7 @@ parallel_hierarchical <- function(threads, shards, subproblems = NULL) {
 
 #' Default all-pairs subproblem count
 #'
-#' Hamming and USEARCH use the perfect square nearest `4 * threads`.
+#' Hamming, USEARCH, and `aa` use the perfect square nearest `4 * threads`.
 #' Alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`) pick the square
 #' `S` with `threads <= S <= 4 * threads` that maximizes equal-tile
 #' utilization `S / (threads * ceil(S / threads))`; ties keep the
@@ -701,7 +702,16 @@ resolve_subproblems <- function(threads, method, requested = NULL) {
 #'  https://doi.org/10.1098/rstb.2023.0124
 
 dist_config <- function(
-  method = c("wfa2", "edlib", "ksw2", "hybrid", "hamming", "file", "usearch"),
+  method = c(
+    "wfa2",
+    "edlib",
+    "ksw2",
+    "hybrid",
+    "hamming",
+    "aa",
+    "file",
+    "usearch"
+  ),
   ...
 ) {
   method <- match.arg(method)
@@ -713,6 +723,7 @@ dist_config <- function(
     file = dist_file(...),
     hybrid = dist_hybrid(...),
     hamming = dist_hamming(...),
+    aa = dist_aa(...),
     usearch = dist_usearch(...)
   )
   dc$call <- match.call()
@@ -843,6 +854,98 @@ dist_hamming <- function(min_overlap = 0L, ignore_gaps = TRUE) {
     ),
     class = "optimotu_dist_config"
   )
+}
+
+aa_code_from_char <- function(x) {
+  x <- toupper(as.character(x))
+  vapply(
+    x,
+    function(ch) {
+      if (!nzchar(ch)) {
+        stop("Amino-acid weight dimnames must be single characters")
+      }
+      if (ch %in% c("-", ".", " ")) {
+        return(0L)
+      }
+      if (identical(ch, "*")) {
+        return(27L)
+      }
+      o <- utf8ToInt(substr(ch, 1L, 1L))
+      if (o >= utf8ToInt("A") && o <= utf8ToInt("Z")) {
+        return(o - utf8ToInt("A") + 1L)
+      }
+      28L
+    },
+    integer(1)
+  )
+}
+
+make_aa_weight_lut <- function(weights) {
+  if (is.null(weights)) {
+    return(NULL)
+  }
+  checkmate::assert_matrix(
+    weights,
+    mode = "numeric",
+    min.rows = 1L,
+    min.cols = 1L
+  )
+  if (nrow(weights) != ncol(weights)) {
+    stop("`weights` must be a square matrix")
+  }
+  dn <- dimnames(weights)
+  if (is.null(dn) || is.null(dn[[1]]) || is.null(dn[[2]])) {
+    stop("`weights` must have single-letter dimnames")
+  }
+  lut <- matrix(1, 32L, 32L)
+  diag(lut) <- 0
+  ri <- aa_code_from_char(dn[[1]])
+  ci <- aa_code_from_char(dn[[2]])
+  for (i in seq_along(ri)) {
+    for (j in seq_along(ci)) {
+      lut[ri[[i]] + 1L, ci[[j]] + 1L] <- as.numeric(weights[i, j])
+    }
+  }
+  lut
+}
+
+#' @param weights (`NULL` or square `numeric` matrix) amino-acid
+#' dissimilarity. `NULL` is Hamming (0 on the diagonal, 1 off-diagonal).
+#' Matrices must have single-letter dimnames; unknown residue pairs
+#' default to 1. Distances are the mean per compared site.
+#' @param genetic_code (`NULL` or NCBI translation table number) if set,
+#' inputs are aligned nucleotides and are translated before scoring.
+#' @param codon_offset (`integer` in 0, 1, 2) first codon base in the
+#' aligned nucleotides when `genetic_code` is set.
+#' @export
+#' @describeIn dist_config helper function for method `"aa"`
+dist_aa <- function(
+  weights = NULL,
+  min_overlap = 0L,
+  ignore_gaps = TRUE,
+  genetic_code = NULL,
+  codon_offset = 0L
+) {
+  checkmate::assert_count(min_overlap)
+  checkmate::assert_flag(ignore_gaps)
+  checkmate::assert_integerish(codon_offset, len = 1L, lower = 0, upper = 2)
+  if (!is.null(genetic_code)) {
+    checkmate::assert_integerish(genetic_code, len = 1L, lower = 1)
+    genetic_code <- as.integer(genetic_code)
+  }
+  out <- list(
+    method = "aa",
+    min_overlap = as.integer(min_overlap),
+    ignore_gaps = ignore_gaps,
+    genetic_code = genetic_code,
+    codon_offset = as.integer(codon_offset),
+    call = match.call()
+  )
+  lut <- make_aa_weight_lut(weights)
+  if (!is.null(lut)) {
+    out$weight_lut <- lut
+  }
+  structure(out, class = "optimotu_dist_config")
 }
 
 

@@ -59,4 +59,42 @@ bool try_grow_prim(
   return true;
 }
 
+// Like try_grow_prim, but score(local_u, dist_by_local) fills distances
+// from local vertex u. Local indices stay inside Prim; the scorer maps
+// to packed rows when the tile is a MappedClusterAlgorithm.
+template <typename Score>
+bool try_grow_prim_batch(
+    ClusterAlgorithm *algo,
+    PairGenerator &pg,
+    Score score)
+{
+  if (!algo)
+  {
+    return false;
+  }
+  ClusterPrim *prim = dynamic_cast<ClusterPrim *>(algo);
+  if (!prim)
+  {
+    if (auto *mapped = dynamic_cast<MappedClusterAlgorithm *>(algo))
+    {
+      prim = dynamic_cast<ClusterPrim *>(&mapped->inner_algorithm());
+    }
+  }
+  if (!prim)
+  {
+    return false;
+  }
+  if (auto *bp = dynamic_cast<BipartitePairGenerator *>(&pg))
+  {
+    const j_t n_j = static_cast<j_t>(bp->seq_end_j() - bp->seq_begin_j());
+    const j_t n_i = static_cast<j_t>(bp->seq_end_i() - bp->seq_begin_i());
+    prim->grow_bipartite_batch(n_j, n_i, score);
+  }
+  else
+  {
+    prim->grow_complete_batch(score);
+  }
+  return true;
+}
+
 #endif

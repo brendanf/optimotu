@@ -315,6 +315,10 @@ seq_distmx_internal <- function(seq, dist_config, parallel_config, threshold, ve
     .Call(`_optimotu_seq_distmx_internal`, seq, dist_config, parallel_config, threshold, verbose, details, span, constrain)
 }
 
+seq_distmx_pairs_internal <- function(seq, dist_config, pairs, parallel_config, verbose = 0L) {
+    .Call(`_optimotu_seq_distmx_pairs_internal`, seq, dist_config, pairs, parallel_config, verbose)
+}
+
 #' Search for best match(es) of query sequences in reference sequences
 #' @param query (named `character`) query sequences
 #' @param ref (named `character`) reference sequences

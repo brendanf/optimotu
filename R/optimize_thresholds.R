@@ -159,6 +159,16 @@ estimate_subset_memory_mb <- function(
   max(1, total_bytes / (1024 * 1024))
 }
 
+estimate_aa_packed_mb <- function(n_union, seq_len) {
+  if (
+    n_union <= 0L || is.null(seq_len) || !is.finite(seq_len) || seq_len <= 0
+  ) {
+    return(0)
+  }
+  bytes <- n_union * (seq_len + 8)
+  bytes / (1024 * 1024)
+}
+
 estimate_hamming_packed_mb <- function(n_union, seq_len) {
   if (
     n_union <= 0L || is.null(seq_len) || !is.finite(seq_len) || seq_len <= 0
@@ -293,6 +303,9 @@ estimate_batch_memory_mb <- function(
   if (identical(dist_method, "hamming") && n_union > 0L) {
     total <- total + estimate_hamming_packed_mb(n_union, mean_seq_len)
   }
+  if (identical(dist_method, "aa") && n_union > 0L) {
+    total <- total + estimate_aa_packed_mb(n_union, mean_seq_len)
+  }
   # Light allowance for SequenceView vector (~16B/view).
   if (n_union > 0L) {
     total <- total + max(0, n_union * 16 / (1024 * 1024))
@@ -327,6 +340,7 @@ make_initial_batches <- function(
   parallel_method <- parallel_config$method
   threads <- parallel_config$threads
   do_hamming <- identical(dist_method, "hamming")
+  do_aa <- identical(dist_method, "aa")
 
   seq_indices <- testset_seq_indices(testset_select)
   n_seq_total <- 0L
@@ -358,6 +372,10 @@ make_initial_batches <- function(
     if (do_hamming && state$n_union > 0L) {
       total <- total +
         estimate_hamming_packed_mb(state$n_union, mean_seq_len)
+    }
+    if (do_aa && state$n_union > 0L) {
+      total <- total +
+        estimate_aa_packed_mb(state$n_union, mean_seq_len)
     }
     if (state$n_union > 0L) {
       total <- total + max(0, state$n_union * 16 / (1024 * 1024))
@@ -645,6 +663,7 @@ cluster_find_best_thresholds <- function(
     seq_file = seq_file,
     as = "character"
   )
+  seq_char <- maybe_translate_aa_seq(seq_char, dist_config)
   # Integer which: 1-based indices into seq_char (aligned with taxonomy).
   # Character which: legacy name lookup (verify + match).
   if (which_is_index) {
@@ -1114,6 +1133,7 @@ optimize_thresholds <- function(
       seq_file = seq_file,
       as = "character"
     )
+    refseq <- maybe_translate_aa_seq(refseq, dist_config)
     if (!is.null(seq_names)) {
       names(refseq) <- seq_names
     }
