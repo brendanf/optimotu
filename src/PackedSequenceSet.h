@@ -11,7 +11,7 @@
 
 // Analogous to SequenceSetB in C code
 struct PackedSequenceSet {
-  int num_seqs, alen, ulen, mulen;
+  int num_seqs = 0, alen = 0, ulen = 0, mulen = 0;
   std::vector<std::vector<uint64_t>> packed_seq;
   std::vector<std::vector<uint64_t>> mask;
   std::vector<int> start;
@@ -56,6 +56,32 @@ struct PackedSequenceSet {
     const bool ignore_gap
   ) const;
   bool verify(const SequenceSet & seq) const;
+
+  void fill_word_major(
+    int begin,
+    int end,
+    std::vector<uint64_t> &seq_out,
+    std::vector<uint64_t> &mask_out
+  ) const;
+  void fill_word_major_idx(
+    const int *idx,
+    int n_idx,
+    std::vector<uint64_t> &seq_out,
+    std::vector<uint64_t> &mask_out
+  ) const;
+
+  // ignore_gaps / pdistB only. seq_major and mask_major from fill_word_major*.
+  void score_query_vs_word_major(
+    int query_i,
+    const uint64_t *seq_major,
+    const uint64_t *mask_major,
+    int n_target,
+    int n_cols,
+    int min_overlap,
+    double *dist_out,
+    int *n_ok_out,
+    int *n_match_out = nullptr
+  ) const;
 };
 
 #endif

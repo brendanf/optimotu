@@ -1,4 +1,6 @@
 #include "HammingDistWorker.h"
+#include "AllPairGenerator.h"
+#include "BipartitePairGenerator.h"
 #include "tile_pairs.h"
 #include <algorithm>
 
@@ -80,9 +82,98 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(
     my_max_delete.reserve(1000);
   }
 
+  auto consider_plain = [&](
+    std::size_t i,
+    std::size_t j,
+    int num_matches,
+    int n_ok,
+    double d
+  ) {
+    my_considered++;
+    if (n_ok > 0 && n_ok >= min_overlap) {
+      my_aligned++;
+      if (d <= dist_threshold) {
+        my_seq1.push_back(j);
+        my_seq2.push_back(i);
+        my_score1.push_back(0);
+        my_score2.push_back(num_matches);
+        my_dist1.push_back(0);
+        my_dist2.push_back(d);
+        if (my_seq1.size() == 1000) {
+          sdm.append(
+            my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2
+          );
+        }
+      }
+    }
+    hamming_maybe_interrupt(pairs_since_check);
+  };
+
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t /*pg_index*/, PairGenerator &pg) {
+      if constexpr (!std::is_same_v<
+        SparseDistanceMatrixType, SparseDistanceMatrixGapstats
+      >) {
+        if (ignore_gap) {
+          if (auto *diag = dynamic_cast<AllPairGenerator *>(&pg)) {
+            const int offset = static_cast<int>(diag->seq_offset());
+            const int n_tile = static_cast<int>(diag->seq_count());
+            std::vector<uint64_t> seq_major;
+            std::vector<uint64_t> mask_major;
+            pss.fill_word_major(offset, offset + n_tile, seq_major, mask_major);
+            std::vector<double> dists(static_cast<std::size_t>(n_tile));
+            std::vector<int> n_ok(static_cast<std::size_t>(n_tile));
+            std::vector<int> n_match(static_cast<std::size_t>(n_tile));
+            for (int i = offset + 1; i < offset + n_tile; ++i) {
+              const int n_j = i - offset;
+              pss.score_query_vs_word_major(
+                i, seq_major.data(), mask_major.data(), n_j, n_tile,
+                min_overlap, dists.data(), n_ok.data(), n_match.data()
+              );
+              for (int t = 0; t < n_j; ++t) {
+                consider_plain(
+                  static_cast<std::size_t>(i),
+                  static_cast<std::size_t>(offset + t),
+                  n_match[static_cast<std::size_t>(t)],
+                  n_ok[static_cast<std::size_t>(t)],
+                  dists[static_cast<std::size_t>(t)]
+                );
+              }
+            }
+            return;
+          }
+          if (auto *bip = dynamic_cast<BipartitePairGenerator *>(&pg)) {
+            const int begin_i = static_cast<int>(bip->seq_begin_i());
+            const int end_i = static_cast<int>(bip->seq_end_i());
+            const int begin_j = static_cast<int>(bip->seq_begin_j());
+            const int end_j = static_cast<int>(bip->seq_end_j());
+            const int n_j = end_j - begin_j;
+            std::vector<uint64_t> seq_major;
+            std::vector<uint64_t> mask_major;
+            pss.fill_word_major(begin_j, end_j, seq_major, mask_major);
+            std::vector<double> dists(static_cast<std::size_t>(n_j));
+            std::vector<int> n_ok(static_cast<std::size_t>(n_j));
+            std::vector<int> n_match(static_cast<std::size_t>(n_j));
+            for (int i = begin_i; i < end_i; ++i) {
+              pss.score_query_vs_word_major(
+                i, seq_major.data(), mask_major.data(), n_j, n_j,
+                min_overlap, dists.data(), n_ok.data(), n_match.data()
+              );
+              for (int t = 0; t < n_j; ++t) {
+                consider_plain(
+                  static_cast<std::size_t>(i),
+                  static_cast<std::size_t>(begin_j + t),
+                  n_match[static_cast<std::size_t>(t)],
+                  n_ok[static_cast<std::size_t>(t)],
+                  dists[static_cast<std::size_t>(t)]
+                );
+              }
+            }
+            return;
+          }
+        }
+      }
       for_each_tile_pair(pg, [&](
         std::size_t i0, std::size_t j0, std::size_t, std::size_t
       ) {

@@ -9,6 +9,9 @@ protected:
   const PackedSequenceSet pss;
   const int min_overlap;
   const bool ignore_gaps;
+  std::vector<uint64_t> ref_seq_major;
+  std::vector<uint64_t> ref_mask_major;
+  std::vector<int> ref_idx;
 public :
   HammingSearchWorker(
     const std::vector<std::string> &query,
@@ -17,9 +20,7 @@ public :
     const std::uint8_t threads,
     const int min_overlap = 0,
     const bool ignore_gaps = TRUE
-  ) : SearchWorker(query, ref, threshold, threads),
-  pss(query, ref), min_overlap(min_overlap),
-  ignore_gaps(ignore_gaps) {};
+  );
 };
 
 template<int verbose>

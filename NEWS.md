@@ -1,5 +1,17 @@
 # optimotu development version
 
+* Speed up Hamming (`ignore_gaps = TRUE`) and amino-acid identity with
+  compile-time one-versus-many kernels (`OPTIMOTU_HAMMING_KERNEL` /
+  `OPTIMOTU_AA_KERNEL`; `Makevars` does not pass `-mavx512*`). On an
+  AVX-512 HPC node, Hamming stripe vs `pdistB` at 128 / 512 targets was
+  1.00x / 1.02x (scalar), 5.91x / 3.89x (AVX2), and 18.96x / 11.83x
+  (AVX-512 `VPOPCNTDQ`); the AVX2/AVX-512 pair loop was 5.2–6.3x.
+  Amino-acid identity vs the scalar column at those sizes was 11.7x /
+  15.8x (AVX2-32) and 13.0x / 23.3x (AVX-512BW-64). On Grace NEON,
+  Hamming vs `pdistB` was 1.47x / 1.38x and amino-acid identity vs
+  scalar was 17.8x / 19.3x. Hamming Prim uses the word-major kernel
+  when `ignore_gaps` is true. Scripts:
+  `tools/bench_hamming_kernels.sh`, `tools/bench_neon_kernels.sh`.
 * Add `dist_aa()` / `method = "aa"` for equal-length amino-acid (or
   translated nucleotide) distances in `seq_distmx()`, `seq_search()`,
   `seq_cluster()`, and `optimize_thresholds()`. Packed uint8 codes with

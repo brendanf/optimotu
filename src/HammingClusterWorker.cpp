@@ -3,30 +3,107 @@
 #include "MultipleClusterAlgorithm.h"
 #include "prim_tile.h"
 #include "tile_pairs.h"
+#include "AllPairGenerator.h"
+#include "BipartitePairGenerator.h"
+
+#include <algorithm>
+#include <utility>
+
 extern "C" {
 #include "defs.h"
 }
 
 typedef RcppParallel::RMatrix<int> matrix_t;
 
-namespace
-{
+namespace {
 
-  // Hamming visits ~1e9 pairs; checking R interrupt every pair dominates.
-  constexpr std::size_t kHammingInterruptBatch = 65536;
+constexpr std::size_t kHammingInterruptBatch = 65536;
 
-  inline void hamming_maybe_interrupt(std::size_t &pairs_since_check)
-  {
-    if (++pairs_since_check >= kHammingInterruptBatch)
-    {
-      pairs_since_check = 0;
+inline void hamming_maybe_interrupt(std::size_t &pairs_since_check) {
+  if (++pairs_since_check >= kHammingInterruptBatch) {
+    pairs_since_check = 0;
 #ifdef OPTIMOTU_R
-      RcppThread::checkUserInterrupt();
+    RcppThread::checkUserInterrupt();
 #endif
+  }
+}
+
+struct LiveHammingBlock {
+  int n_cols = 0;
+  int live = 0;
+  int ulen = 0;
+  int mulen = 0;
+  std::vector<uint64_t> seq_major;
+  std::vector<uint64_t> mask_major;
+  std::vector<int> local_idx;
+  std::vector<int> packed_idx;
+  std::vector<int> lane_of;
+
+  void init(
+    const PackedSequenceSet &pss,
+    const std::vector<int> &locals,
+    const std::vector<int> &packed,
+    int n_vert
+  ) {
+    const int n = static_cast<int>(locals.size());
+    n_cols = n;
+    live = n;
+    ulen = pss.ulen;
+    mulen = pss.mulen;
+    pss.fill_word_major_idx(packed.data(), n, seq_major, mask_major);
+    local_idx = locals;
+    packed_idx = packed;
+    lane_of.assign(static_cast<std::size_t>(n_vert), -1);
+    for (int t = 0; t < n; ++t) {
+      lane_of[static_cast<std::size_t>(locals[static_cast<std::size_t>(t)])] =
+        t;
     }
   }
 
-} // namespace
+  void remove(int u) {
+    if (u < 0 || static_cast<std::size_t>(u) >= lane_of.size()) {
+      return;
+    }
+    const int lane = lane_of[static_cast<std::size_t>(u)];
+    if (lane < 0 || live <= 0) {
+      return;
+    }
+    const int last = live - 1;
+    if (lane != last) {
+      for (int w = 0; w < ulen; ++w) {
+        const std::size_t base =
+          static_cast<std::size_t>(w) * static_cast<std::size_t>(n_cols);
+        std::swap(
+          seq_major[base + static_cast<std::size_t>(lane)],
+          seq_major[base + static_cast<std::size_t>(last)]
+        );
+      }
+      for (int w = 0; w < mulen; ++w) {
+        const std::size_t base =
+          static_cast<std::size_t>(w) * static_cast<std::size_t>(n_cols);
+        std::swap(
+          mask_major[base + static_cast<std::size_t>(lane)],
+          mask_major[base + static_cast<std::size_t>(last)]
+        );
+      }
+      std::swap(
+        local_idx[static_cast<std::size_t>(lane)],
+        local_idx[static_cast<std::size_t>(last)]
+      );
+      std::swap(
+        packed_idx[static_cast<std::size_t>(lane)],
+        packed_idx[static_cast<std::size_t>(last)]
+      );
+      lane_of[static_cast<std::size_t>(
+        local_idx[static_cast<std::size_t>(lane)]
+      )] = lane;
+    }
+    lane_of[static_cast<std::size_t>(u)] = -1;
+    --live;
+  }
+};
+
+}  // namespace
 
 HammingClusterWorker::HammingClusterWorker(
   const SequenceSet &seq,
@@ -85,6 +162,128 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
           return;
         }
         my_algo->set_merge_slot(pg_index);
+        if (ignore_gaps && my_algo->uses_prim()) {
+          const std::vector<std::size_t> *fwd = nullptr;
+          if (auto *mapped = dynamic_cast<MappedClusterAlgorithm *>(my_algo)) {
+            fwd = mapped->fwd_map_ptr();
+          }
+          auto packed_of = [&](j_t local) -> int {
+            if (fwd) {
+              return static_cast<int>((*fwd)[static_cast<std::size_t>(local)]);
+            }
+            return static_cast<int>(local);
+          };
+          auto *bp = dynamic_cast<BipartitePairGenerator *>(&pg);
+          const j_t n_j = bp
+            ? static_cast<j_t>(bp->seq_end_j() - bp->seq_begin_j())
+            : 0;
+          const j_t n_i = bp
+            ? static_cast<j_t>(bp->seq_end_i() - bp->seq_begin_i())
+            : 0;
+          const j_t n_vert = bp ? (n_j + n_i) : (
+            fwd
+              ? static_cast<j_t>(fwd->size())
+              : static_cast<j_t>(pss.num_seqs)
+          );
+          LiveHammingBlock left;
+          LiveHammingBlock right;
+          LiveHammingBlock all;
+          if (bp) {
+            std::vector<int> locals_j(static_cast<std::size_t>(n_j));
+            std::vector<int> packed_j(static_cast<std::size_t>(n_j));
+            for (j_t t = 0; t < n_j; ++t) {
+              locals_j[static_cast<std::size_t>(t)] = static_cast<int>(t);
+              packed_j[static_cast<std::size_t>(t)] = packed_of(t);
+            }
+            std::vector<int> locals_i(static_cast<std::size_t>(n_i));
+            std::vector<int> packed_i(static_cast<std::size_t>(n_i));
+            for (j_t t = 0; t < n_i; ++t) {
+              const j_t local = n_j + t;
+              locals_i[static_cast<std::size_t>(t)] = static_cast<int>(local);
+              packed_i[static_cast<std::size_t>(t)] = packed_of(local);
+            }
+            left.init(pss, locals_j, packed_j, static_cast<int>(n_vert));
+            right.init(pss, locals_i, packed_i, static_cast<int>(n_vert));
+          } else {
+            std::vector<int> locals(static_cast<std::size_t>(n_vert));
+            std::vector<int> packed(static_cast<std::size_t>(n_vert));
+            for (j_t t = 0; t < n_vert; ++t) {
+              locals[static_cast<std::size_t>(t)] = static_cast<int>(t);
+              packed[static_cast<std::size_t>(t)] = packed_of(t);
+            }
+            all.init(pss, locals, packed, static_cast<int>(n_vert));
+          }
+          std::vector<double> lane_dist;
+          std::vector<int> lane_ok;
+          auto score_block = [&](LiveHammingBlock &block, int packed_u) {
+            if (block.live <= 0) {
+              return;
+            }
+            lane_dist.assign(static_cast<std::size_t>(block.live), 1.0);
+            lane_ok.assign(static_cast<std::size_t>(block.live), 0);
+            pss.score_query_vs_word_major(
+              packed_u,
+              block.seq_major.data(),
+              block.mask_major.data(),
+              block.live,
+              block.n_cols,
+              min_overlap,
+              lane_dist.data(),
+              lane_ok.data(),
+              nullptr
+            );
+            for (int t = 0; t < block.live; ++t) {
+              ++my_prealigned;
+              if (lane_dist[static_cast<std::size_t>(t)] < 1.0) {
+                ++my_aligned;
+              }
+              hamming_maybe_interrupt(pairs_since_check);
+            }
+          };
+          const bool grew = try_grow_prim_batch(
+            my_algo, pg,
+            [&](j_t u, double *dist_by_local) {
+              const int packed_u = packed_of(u);
+              if (bp) {
+                if (u < n_j) {
+                  left.remove(static_cast<int>(u));
+                  score_block(right, packed_u);
+                  for (int t = 0; t < right.live; ++t) {
+                    dist_by_local[right.local_idx[static_cast<std::size_t>(t)]] =
+                      lane_dist[static_cast<std::size_t>(t)];
+                  }
+                } else {
+                  right.remove(static_cast<int>(u));
+                  score_block(left, packed_u);
+                  for (int t = 0; t < left.live; ++t) {
+                    dist_by_local[left.local_idx[static_cast<std::size_t>(t)]] =
+                      lane_dist[static_cast<std::size_t>(t)];
+                  }
+                }
+              } else {
+                all.remove(static_cast<int>(u));
+                score_block(all, packed_u);
+                for (int t = 0; t < all.live; ++t) {
+                  dist_by_local[all.local_idx[static_cast<std::size_t>(t)]] =
+                    lane_dist[static_cast<std::size_t>(t)];
+                }
+              }
+            }
+          );
+          if (!grew) {
+            OPTIMOTU_STOP(
+              "clust_prim() Hamming batch grow requires ClusterPrim"
+            );
+          }
+          mutex.lock();
+          _aligned += my_aligned;
+          _prealigned += my_prealigned;
+          mutex.unlock();
+          my_aligned = 0;
+          my_prealigned = 0;
+          finish_tile(my_algo, pg_index);
+          return;
+        }
         if (try_grow_prim(
                 my_algo, pg,
                 [&](j_t gi, j_t gj, double cutoff)
@@ -118,60 +317,111 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
             << "HammingSplitClusterWorker thread " << pg_index
             << " entered" << std::endl);
 
-        // Mapped tile children want tile-local indices; MCA / root want global.
         const bool use_local =
             dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
 
-        for_each_tile_pair(pg, [&](
-                                   std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj)
-                           {
-        ++my_prealigned;
-        double d = pss.dist(
-            static_cast<int>(i0),
-            static_cast<int>(j0),
-            min_overlap,
-            ignore_gaps);
-        if (d < 1.0)
-          ++my_aligned;
-        if (use_local)
-        {
-          double threshold = my_algo->max_relevant_local(
-              static_cast<j_t>(li), static_cast<j_t>(lj));
-          OPTIMOTU_DEBUG(
-              4,
-              << "thread" << pg_index
-              << ": seqs " << lj << " (j0=" << j0 << ")"
-              << " and " << li << " (i0=" << i0 << ")"
-              << " max relevant=" << threshold
-              << std::endl);
-          OPTIMOTU_DEBUG(
-              4,
-              << (d <= threshold ? "*" : " ")
-              << " distance=" << d
-              << std::endl;);
-          if (d <= threshold)
-            my_algo->apply_local(
-                static_cast<j_t>(li), static_cast<j_t>(lj), d);
+        auto apply_pair = [&](std::size_t i0, std::size_t j0, std::size_t li,
+                              std::size_t lj, double d) {
+          ++my_prealigned;
+          if (d < 1.0) {
+            ++my_aligned;
+          }
+          if (use_local) {
+            double threshold = my_algo->max_relevant_local(
+              static_cast<j_t>(li), static_cast<j_t>(lj)
+            );
+            if (d <= threshold) {
+              my_algo->apply_local(
+                static_cast<j_t>(li), static_cast<j_t>(lj), d
+              );
+            }
+          } else {
+            double threshold = my_algo->max_relevant(
+              static_cast<j_t>(i0), static_cast<j_t>(j0)
+            );
+            if (d <= threshold) {
+              (*my_algo)(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
+            }
+          }
+          hamming_maybe_interrupt(pairs_since_check);
+        };
+
+        if (ignore_gaps) {
+          if (auto *diag = dynamic_cast<AllPairGenerator *>(&pg)) {
+            const int offset = static_cast<int>(diag->seq_offset());
+            const int n_tile = static_cast<int>(diag->seq_count());
+            std::vector<uint64_t> seq_major;
+            std::vector<uint64_t> mask_major;
+            pss.fill_word_major(offset, offset + n_tile, seq_major, mask_major);
+            std::vector<double> dists(static_cast<std::size_t>(n_tile));
+            std::vector<int> n_ok(static_cast<std::size_t>(n_tile));
+            for (int i = offset + 1; i < offset + n_tile; ++i) {
+              const int n_j = i - offset;
+              pss.score_query_vs_word_major(
+                i, seq_major.data(), mask_major.data(), n_j, n_tile,
+                min_overlap, dists.data(), n_ok.data(), nullptr
+              );
+              const std::size_t li = static_cast<std::size_t>(i - offset);
+              for (int t = 0; t < n_j; ++t) {
+                apply_pair(
+                  static_cast<std::size_t>(i),
+                  static_cast<std::size_t>(offset + t),
+                  li,
+                  static_cast<std::size_t>(t),
+                  dists[static_cast<std::size_t>(t)]
+                );
+              }
+            }
+          } else if (auto *bip = dynamic_cast<BipartitePairGenerator *>(&pg)) {
+            const int begin_i = static_cast<int>(bip->seq_begin_i());
+            const int end_i = static_cast<int>(bip->seq_end_i());
+            const int begin_j = static_cast<int>(bip->seq_begin_j());
+            const int end_j = static_cast<int>(bip->seq_end_j());
+            const int n_j = end_j - begin_j;
+            std::vector<uint64_t> seq_major;
+            std::vector<uint64_t> mask_major;
+            pss.fill_word_major(begin_j, end_j, seq_major, mask_major);
+            std::vector<double> dists(static_cast<std::size_t>(n_j));
+            std::vector<int> n_ok(static_cast<std::size_t>(n_j));
+            for (int i = begin_i; i < end_i; ++i) {
+              pss.score_query_vs_word_major(
+                i, seq_major.data(), mask_major.data(), n_j, n_j,
+                min_overlap, dists.data(), n_ok.data(), nullptr
+              );
+              const std::size_t li =
+                static_cast<std::size_t>(i - begin_i + n_j);
+              for (int t = 0; t < n_j; ++t) {
+                apply_pair(
+                  static_cast<std::size_t>(i),
+                  static_cast<std::size_t>(begin_j + t),
+                  li,
+                  static_cast<std::size_t>(t),
+                  dists[static_cast<std::size_t>(t)]
+                );
+              }
+            }
+          } else {
+            for_each_tile_pair(pg, [&](
+              std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
+            ) {
+              double d = pss.dist(
+                static_cast<int>(i0), static_cast<int>(j0), min_overlap,
+                ignore_gaps
+              );
+              apply_pair(i0, j0, li, lj, d);
+            });
+          }
+        } else {
+          for_each_tile_pair(pg, [&](
+            std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
+          ) {
+            double d = pss.dist(
+              static_cast<int>(i0), static_cast<int>(j0), min_overlap,
+              ignore_gaps
+            );
+            apply_pair(i0, j0, li, lj, d);
+          });
         }
-        else
-        {
-          double threshold = my_algo->max_relevant(
-              static_cast<j_t>(i0), static_cast<j_t>(j0));
-          OPTIMOTU_DEBUG(
-              4,
-              << "thread" << pg_index
-              << ": seqs " << j0 << " and " << i0
-              << " max relevant=" << threshold
-              << std::endl);
-          OPTIMOTU_DEBUG(
-              4,
-              << (d <= threshold ? "*" : " ")
-              << " distance=" << d
-              << std::endl;);
-          if (d <= threshold)
-            (*my_algo)(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
-        }
-        hamming_maybe_interrupt(pairs_since_check); });
 
 #ifdef OPTIMOTU_R
         RcppThread::checkUserInterrupt();
@@ -217,28 +467,93 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
         << " entered" << std::endl
       );
 
-      for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t, std::size_t
-      ) {
-        OPTIMOTU_DEBUG(
-            4,
-            << "thread" << pg_index
-            << ": seqs " << j0 << " and " << i0
-            << std::endl);
+      auto apply_one = [&](std::size_t i0, std::size_t j0, double d) {
         double threshold = clust_algo.max_relevant(
-            static_cast<j_t>(i0), static_cast<j_t>(j0));
+          static_cast<j_t>(i0), static_cast<j_t>(j0)
+        );
         ++my_prealigned;
-        double d = pss.dist(
-            static_cast<int>(i0),
-            static_cast<int>(j0),
-            min_overlap,
-            ignore_gaps);
-        if (d < 1.0)
+        if (d < 1.0) {
           ++my_aligned;
-        if (d < threshold)
+        }
+        if (d < threshold) {
           clust_algo(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
+        }
         hamming_maybe_interrupt(pairs_since_check);
-      });
+      };
+
+      if (ignore_gaps) {
+        if (auto *diag = dynamic_cast<AllPairGenerator *>(&pg)) {
+          const int offset = static_cast<int>(diag->seq_offset());
+          const int n_tile = static_cast<int>(diag->seq_count());
+          std::vector<uint64_t> seq_major;
+          std::vector<uint64_t> mask_major;
+          pss.fill_word_major(offset, offset + n_tile, seq_major, mask_major);
+          std::vector<double> dists(static_cast<std::size_t>(n_tile));
+          std::vector<int> n_ok(static_cast<std::size_t>(n_tile));
+          for (int i = offset + 1; i < offset + n_tile; ++i) {
+            const int n_j = i - offset;
+            pss.score_query_vs_word_major(
+              i, seq_major.data(), mask_major.data(), n_j, n_tile,
+              min_overlap, dists.data(), n_ok.data(), nullptr
+            );
+            for (int t = 0; t < n_j; ++t) {
+              apply_one(
+                static_cast<std::size_t>(i),
+                static_cast<std::size_t>(offset + t),
+                dists[static_cast<std::size_t>(t)]
+              );
+            }
+          }
+        } else if (auto *bip = dynamic_cast<BipartitePairGenerator *>(&pg)) {
+          const int begin_i = static_cast<int>(bip->seq_begin_i());
+          const int end_i = static_cast<int>(bip->seq_end_i());
+          const int begin_j = static_cast<int>(bip->seq_begin_j());
+          const int end_j = static_cast<int>(bip->seq_end_j());
+          const int n_j = end_j - begin_j;
+          std::vector<uint64_t> seq_major;
+          std::vector<uint64_t> mask_major;
+          pss.fill_word_major(begin_j, end_j, seq_major, mask_major);
+          std::vector<double> dists(static_cast<std::size_t>(n_j));
+          std::vector<int> n_ok(static_cast<std::size_t>(n_j));
+          for (int i = begin_i; i < end_i; ++i) {
+            pss.score_query_vs_word_major(
+              i, seq_major.data(), mask_major.data(), n_j, n_j,
+              min_overlap, dists.data(), n_ok.data(), nullptr
+            );
+            for (int t = 0; t < n_j; ++t) {
+              apply_one(
+                static_cast<std::size_t>(i),
+                static_cast<std::size_t>(begin_j + t),
+                dists[static_cast<std::size_t>(t)]
+              );
+            }
+          }
+        } else {
+          for_each_tile_pair(pg, [&](
+            std::size_t i0, std::size_t j0, std::size_t, std::size_t
+          ) {
+            apply_one(
+              i0, j0,
+              pss.dist(
+                static_cast<int>(i0), static_cast<int>(j0), min_overlap,
+                ignore_gaps
+              )
+            );
+          });
+        }
+      } else {
+        for_each_tile_pair(pg, [&](
+          std::size_t i0, std::size_t j0, std::size_t, std::size_t
+        ) {
+          apply_one(
+            i0, j0,
+            pss.dist(
+              static_cast<int>(i0), static_cast<int>(j0), min_overlap,
+              ignore_gaps
+            )
+          );
+        });
+      }
 
 #ifdef OPTIMOTU_R
       RcppThread::checkUserInterrupt();

@@ -3,15 +3,20 @@
 // SPDX-License-Identifier: MIT
 
 #include "PackedAaSequenceSet.h"
+#include "aa_kernel.h"
 #include "optimotu.h"
 #include <algorithm>
 #include <cstring>
 #include <vector>
 
-#if defined(__AVX2__)
+#if OPTIMOTU_AA_KERNEL == 4
+#include <immintrin.h>
+#elif OPTIMOTU_AA_KERNEL == 3
 #include <immintrin.h>
 #elif defined(__SSE2__)
 #include <emmintrin.h>
+#elif defined(__ARM_NEON)
+#include <arm_neon.h>
 #endif
 
 uint8_t pack_aa_char(char c) {
@@ -142,7 +147,7 @@ inline void identity_site_u16(
   *n_match = static_cast<uint16_t>(*n_match + match);
 }
 
-#if defined(__SSE2__)
+#if OPTIMOTU_AA_KERNEL == 2 && defined(__SSE2__)
 inline __m128i loadu_si128(const uint8_t *p) {
   return _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
 }
@@ -221,7 +226,229 @@ inline void identity_pair_16(
 }
 #endif
 
-#if defined(__AVX2__)
+#if OPTIMOTU_AA_KERNEL == 2 && defined(__ARM_NEON)
+inline uint8x16_t skip_mask_16_neon(uint8_t a, uint8x16_t vb, bool ignore_gaps) {
+  const uint8x16_t b_gap = vceqq_u8(vb, vdupq_n_u8(0));
+  if (ignore_gaps) {
+    if (a == 0) {
+      return vdupq_n_u8(0xFF);
+    }
+    return b_gap;
+  }
+  if (a == 0) {
+    return b_gap;
+  }
+  return vdupq_n_u8(0);
+}
+
+inline void add_u16x16_neon(uint16_t *dst, uint8x16_t bytes_0_or_1) {
+  const uint16x8_t lo = vmovl_u8(vget_low_u8(bytes_0_or_1));
+  const uint16x8_t hi = vmovl_u8(vget_high_u8(bytes_0_or_1));
+  vst1q_u16(dst, vaddq_u16(vld1q_u16(dst), lo));
+  vst1q_u16(dst + 8, vaddq_u16(vld1q_u16(dst + 8), hi));
+}
+
+inline void identity_column_16(
+  uint8_t a,
+  const uint8_t *col,
+  bool ignore_gaps,
+  uint16_t *n_ok,
+  uint16_t *n_match
+) {
+  const uint8x16_t va = vdupq_n_u8(a);
+  const uint8x16_t vb = vld1q_u8(col);
+  const uint8x16_t skip = skip_mask_16_neon(a, vb, ignore_gaps);
+  const uint8x16_t valid = vbicq_u8(vdupq_n_u8(1), skip);
+  const uint8x16_t eq = vandq_u8(vceqq_u8(va, vb), valid);
+  add_u16x16_neon(n_ok, valid);
+  add_u16x16_neon(n_match, vandq_u8(eq, vdupq_n_u8(1)));
+}
+
+inline void identity_pair_16(
+  const uint8_t *a,
+  const uint8_t *b,
+  bool ignore_gaps,
+  int *n_ok,
+  int *n_match
+) {
+  const uint8x16_t va = vld1q_u8(a);
+  const uint8x16_t vb = vld1q_u8(b);
+  const uint8x16_t a_gap = vceqq_u8(va, vdupq_n_u8(0));
+  const uint8x16_t b_gap = vceqq_u8(vb, vdupq_n_u8(0));
+  const uint8x16_t skip = ignore_gaps
+    ? vorrq_u8(a_gap, b_gap)
+    : vandq_u8(a_gap, b_gap);
+  const uint8x16_t valid = vmvnq_u8(skip);
+  const uint8x16_t eq = vandq_u8(vceqq_u8(va, vb), valid);
+  const uint8x16_t vcnt = vcntq_u8(vandq_u8(valid, vdupq_n_u8(1)));
+  const uint8x16_t mcnt = vcntq_u8(vandq_u8(eq, vdupq_n_u8(1)));
+  *n_ok += static_cast<int>(vaddvq_u8(vcnt));
+  *n_match += static_cast<int>(vaddvq_u8(mcnt));
+}
+#endif
+
+#if OPTIMOTU_AA_KERNEL == 3
+inline __m256i skip_mask_32(uint8_t a, __m256i vb, bool ignore_gaps) {
+  const __m256i zero = _mm256_setzero_si256();
+  const __m256i b_gap = _mm256_cmpeq_epi8(vb, zero);
+  if (ignore_gaps) {
+    if (a == 0) {
+      return _mm256_set1_epi8(static_cast<char>(0xFF));
+    }
+    return b_gap;
+  }
+  if (a == 0) {
+    return b_gap;
+  }
+  return zero;
+}
+
+inline void add_u16x16_avx(uint16_t *dst, __m128i bytes_0_or_1) {
+  const __m128i zero = _mm_setzero_si128();
+  const __m128i lo = _mm_unpacklo_epi8(bytes_0_or_1, zero);
+  const __m128i hi = _mm_unpackhi_epi8(bytes_0_or_1, zero);
+  _mm_storeu_si128(
+    reinterpret_cast<__m128i *>(dst),
+    _mm_add_epi16(_mm_loadu_si128(reinterpret_cast<const __m128i *>(dst)), lo)
+  );
+  _mm_storeu_si128(
+    reinterpret_cast<__m128i *>(dst + 8),
+    _mm_add_epi16(
+      _mm_loadu_si128(reinterpret_cast<const __m128i *>(dst + 8)), hi
+    )
+  );
+}
+
+inline void identity_column_32(
+  uint8_t a,
+  const uint8_t *col,
+  bool ignore_gaps,
+  uint16_t *n_ok,
+  uint16_t *n_match
+) {
+  const __m256i va = _mm256_set1_epi8(static_cast<char>(a));
+  const __m256i vb = _mm256_loadu_si256(
+    reinterpret_cast<const __m256i *>(col)
+  );
+  const __m256i skip = skip_mask_32(a, vb, ignore_gaps);
+  const __m256i ones = _mm256_set1_epi8(static_cast<char>(0xFF));
+  const __m256i one = _mm256_set1_epi8(1);
+  const __m256i valid = _mm256_andnot_si256(skip, ones);
+  const __m256i eq = _mm256_and_si256(_mm256_cmpeq_epi8(va, vb), valid);
+  add_u16x16_avx(n_ok, _mm256_castsi256_si128(_mm256_and_si256(valid, one)));
+  add_u16x16_avx(
+    n_ok + 16,
+    _mm256_extracti128_si256(_mm256_and_si256(valid, one), 1)
+  );
+  add_u16x16_avx(n_match, _mm256_castsi256_si128(_mm256_and_si256(eq, one)));
+  add_u16x16_avx(
+    n_match + 16,
+    _mm256_extracti128_si256(_mm256_and_si256(eq, one), 1)
+  );
+}
+
+inline void identity_pair_32(
+  const uint8_t *a,
+  const uint8_t *b,
+  bool ignore_gaps,
+  int *n_ok,
+  int *n_match
+) {
+  const __m256i va = _mm256_loadu_si256(
+    reinterpret_cast<const __m256i *>(a)
+  );
+  const __m256i vb = _mm256_loadu_si256(
+    reinterpret_cast<const __m256i *>(b)
+  );
+  const __m256i zero = _mm256_setzero_si256();
+  const __m256i a_gap = _mm256_cmpeq_epi8(va, zero);
+  const __m256i b_gap = _mm256_cmpeq_epi8(vb, zero);
+  const __m256i skip = ignore_gaps
+    ? _mm256_or_si256(a_gap, b_gap)
+    : _mm256_and_si256(a_gap, b_gap);
+  const __m256i ones = _mm256_set1_epi8(static_cast<char>(0xFF));
+  const __m256i valid = _mm256_andnot_si256(skip, ones);
+  const __m256i eq = _mm256_and_si256(_mm256_cmpeq_epi8(va, vb), valid);
+  *n_ok += __builtin_popcount(_mm256_movemask_epi8(valid));
+  *n_match += __builtin_popcount(_mm256_movemask_epi8(eq));
+}
+#endif
+
+#if OPTIMOTU_AA_KERNEL == 4
+inline void identity_column_64(
+  uint8_t a,
+  const uint8_t *col,
+  bool ignore_gaps,
+  uint16_t *n_ok,
+  uint16_t *n_match
+) {
+  const __m512i va = _mm512_set1_epi8(static_cast<char>(a));
+  const __m512i vb = _mm512_loadu_si512(col);
+  const __m512i zero = _mm512_setzero_si512();
+  const __mmask64 b_gap = _mm512_cmpeq_epi8_mask(vb, zero);
+  __mmask64 skip;
+  if (ignore_gaps) {
+    skip = a == 0 ? ~__mmask64{0} : b_gap;
+  } else if (a == 0) {
+    skip = b_gap;
+  } else {
+    skip = 0;
+  }
+  const __mmask64 valid = ~skip;
+  const __mmask64 eq = _mm512_mask_cmpeq_epi8_mask(valid, va, vb);
+  const __m512i one = _mm512_set1_epi16(1);
+  const __mmask32 vlo = static_cast<__mmask32>(valid);
+  const __mmask32 vhi = static_cast<__mmask32>(valid >> 32);
+  const __mmask32 elo = static_cast<__mmask32>(eq);
+  const __mmask32 ehi = static_cast<__mmask32>(eq >> 32);
+  _mm512_storeu_si512(
+    n_ok,
+    _mm512_mask_add_epi16(
+      _mm512_loadu_si512(n_ok), vlo, _mm512_loadu_si512(n_ok), one
+    )
+  );
+  _mm512_storeu_si512(
+    n_ok + 32,
+    _mm512_mask_add_epi16(
+      _mm512_loadu_si512(n_ok + 32), vhi, _mm512_loadu_si512(n_ok + 32), one
+    )
+  );
+  _mm512_storeu_si512(
+    n_match,
+    _mm512_mask_add_epi16(
+      _mm512_loadu_si512(n_match), elo, _mm512_loadu_si512(n_match), one
+    )
+  );
+  _mm512_storeu_si512(
+    n_match + 32,
+    _mm512_mask_add_epi16(
+      _mm512_loadu_si512(n_match + 32), ehi,
+      _mm512_loadu_si512(n_match + 32), one
+    )
+  );
+}
+
+inline void identity_pair_64(
+  const uint8_t *a,
+  const uint8_t *b,
+  bool ignore_gaps,
+  int *n_ok,
+  int *n_match
+) {
+  const __m512i va = _mm512_loadu_si512(a);
+  const __m512i vb = _mm512_loadu_si512(b);
+  const __m512i zero = _mm512_setzero_si512();
+  const __mmask64 a_gap = _mm512_cmpeq_epi8_mask(va, zero);
+  const __mmask64 b_gap = _mm512_cmpeq_epi8_mask(vb, zero);
+  const __mmask64 skip = ignore_gaps ? (a_gap | b_gap) : (a_gap & b_gap);
+  const __mmask64 valid = ~skip;
+  const __mmask64 eq = _mm512_mask_cmpeq_epi8_mask(valid, va, vb);
+  *n_ok += static_cast<int>(_mm_popcnt_u64(valid));
+  *n_match += static_cast<int>(_mm_popcnt_u64(eq));
+}
+#endif
+
+#if (OPTIMOTU_AA_KERNEL == 3 || OPTIMOTU_AA_KERNEL == 4) && defined(__AVX2__)
 inline __m128i loadu_si64(const uint8_t *p) {
   long long tmp;
   std::memcpy(&tmp, p, sizeof(tmp));
@@ -280,6 +507,63 @@ inline void weighted_column_8(
     _mm256_add_pd(_mm256_loadu_pd(acc + 4), _mm256_cvtps_pd(whi))
   );
 }
+
+#if OPTIMOTU_AA_KERNEL == 4
+inline void weighted_column_16(
+  const float *prof_row,
+  uint8_t a,
+  const uint8_t *col,
+  bool ignore_gaps,
+  int *n_ok,
+  double *acc
+) {
+  const __m128i codes = _mm_loadu_si128(
+    reinterpret_cast<const __m128i *>(col)
+  );
+  const __m128i zero8 = _mm_setzero_si128();
+  const __m128i b_gap = _mm_cmpeq_epi8(codes, zero8);
+  __m128i skip;
+  if (ignore_gaps) {
+    skip = a == 0 ? _mm_set1_epi8(static_cast<char>(0xFF)) : b_gap;
+  } else if (a == 0) {
+    skip = b_gap;
+  } else {
+    skip = zero8;
+  }
+  const __m128i ones = _mm_set1_epi8(static_cast<char>(0xFF));
+  const __m128i valid8 = _mm_andnot_si128(skip, ones);
+  const __m512i valid32 = _mm512_cvtepu8_epi32(valid8);
+  const __mmask16 is_valid = _mm512_cmpneq_epi32_mask(
+    valid32,
+    _mm512_setzero_si512()
+  );
+  const __m512i one = _mm512_maskz_set1_epi32(is_valid, 1);
+  _mm512_storeu_si512(
+    n_ok,
+    _mm512_add_epi32(_mm512_loadu_si512(n_ok), one)
+  );
+  const __m512i idx = _mm512_cvtepu8_epi32(codes);
+  const __m512 gathered = _mm512_mask_i32gather_ps(
+    _mm512_setzero_ps(),
+    is_valid,
+    idx,
+    prof_row,
+    4
+  );
+  const __m256 glo = _mm512_castps512_ps256(gathered);
+  const __m256 ghi = _mm256_castsi256_ps(
+    _mm512_extracti64x4_epi64(_mm512_castps_si512(gathered), 1)
+  );
+  _mm512_storeu_pd(
+    acc,
+    _mm512_add_pd(_mm512_loadu_pd(acc), _mm512_cvtps_pd(glo))
+  );
+  _mm512_storeu_pd(
+    acc + 8,
+    _mm512_add_pd(_mm512_loadu_pd(acc + 8), _mm512_cvtps_pd(ghi))
+  );
+}
+#endif
 #endif
 
 inline void weighted_site(
@@ -391,13 +675,21 @@ std::tuple<bool, int, double> PackedAaSequenceSet::success_score_and_dist(
   int n_match = 0;
   double acc = 0.0;
   int k = lo;
-#if defined(__SSE2__)
   if (weight_lut == nullptr) {
+#if OPTIMOTU_AA_KERNEL == 4
+    for (; k + 64 <= hi; k += 64) {
+      identity_pair_64(a + k, b + k, ignore_gaps, &n_ok, &n_match);
+    }
+#elif OPTIMOTU_AA_KERNEL == 3
+    for (; k + 32 <= hi; k += 32) {
+      identity_pair_32(a + k, b + k, ignore_gaps, &n_ok, &n_match);
+    }
+#elif OPTIMOTU_AA_KERNEL == 2
     for (; k + 16 <= hi; k += 16) {
       identity_pair_16(a + k, b + k, ignore_gaps, &n_ok, &n_match);
     }
-  }
 #endif
+  }
   for (; k < hi; ++k) {
     if (weight_lut == nullptr) {
       identity_site(a[k], b[k], ignore_gaps, &n_ok, &n_match);
@@ -460,12 +752,21 @@ void PackedAaSequenceSet::score_query_vs_pos_major(
   }
   const bool use_vector = covered && alen <= 65535;
 
-#if defined(__SSE2__)
+#if OPTIMOTU_AA_KERNEL >= 2
   if (use_vector && weight_lut == nullptr) {
     thread_local std::vector<uint16_t> n_ok16;
     thread_local std::vector<uint16_t> n_match16;
     n_ok16.assign(static_cast<std::size_t>(n_target), 0);
     n_match16.assign(static_cast<std::size_t>(n_target), 0);
+    constexpr int kVec =
+#if OPTIMOTU_AA_KERNEL == 4
+      64
+#elif OPTIMOTU_AA_KERNEL == 3
+      32
+#else
+      16
+#endif
+      ;
     for (int k = q_start; k < q_end; ++k) {
       const uint8_t a = q[k];
       if (ignore_gaps && a == 0) {
@@ -474,8 +775,14 @@ void PackedAaSequenceSet::score_query_vs_pos_major(
       const uint8_t *col = pos_major +
         static_cast<std::size_t>(k) * static_cast<std::size_t>(n_cols);
       int j = 0;
-      for (; j + 16 <= n_target; j += 16) {
+      for (; j + kVec <= n_target; j += kVec) {
+#if OPTIMOTU_AA_KERNEL == 4
+        identity_column_64(
+#elif OPTIMOTU_AA_KERNEL == 3
+        identity_column_32(
+#else
         identity_column_16(
+#endif
           a,
           col + j,
           ignore_gaps,
@@ -508,12 +815,17 @@ void PackedAaSequenceSet::score_query_vs_pos_major(
   }
 #endif
 
-#if defined(__AVX2__)
+#if OPTIMOTU_AA_KERNEL == 3 || OPTIMOTU_AA_KERNEL == 4
   if (use_vector && weight_lut != nullptr) {
     thread_local std::vector<int> n_ok;
     thread_local std::vector<double> acc;
     n_ok.assign(static_cast<std::size_t>(n_target), 0);
     acc.assign(static_cast<std::size_t>(n_target), 0.0);
+#if OPTIMOTU_AA_KERNEL == 4
+    constexpr int kW = 16;
+#else
+    constexpr int kW = 8;
+#endif
     for (int k = q_start; k < q_end; ++k) {
       const uint8_t a = q[k];
       if (ignore_gaps && a == 0) {
@@ -523,8 +835,12 @@ void PackedAaSequenceSet::score_query_vs_pos_major(
         static_cast<std::size_t>(k) * static_cast<std::size_t>(n_cols);
       const float *prof_row = weight_lut + static_cast<std::size_t>(a) * kLut;
       int j = 0;
-      for (; j + 8 <= n_target; j += 8) {
+      for (; j + kW <= n_target; j += kW) {
+#if OPTIMOTU_AA_KERNEL == 4
+        weighted_column_16(
+#else
         weighted_column_8(
+#endif
           prof_row,
           a,
           col + j,

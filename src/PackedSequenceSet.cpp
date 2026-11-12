@@ -1,4 +1,5 @@
 #include "PackedSequenceSet.h"
+#include "hamming_stripe.h"
 #include <sstream>
 
 extern "C" {
@@ -274,6 +275,97 @@ PackedSequenceSet::PackedSequenceSet(
       sequence_views_from_strings(seq2)
     ) {}
 
+void PackedSequenceSet::fill_word_major(
+  int begin,
+  int end,
+  std::vector<uint64_t> &seq_out,
+  std::vector<uint64_t> &mask_out
+) const {
+  const int n_j = end - begin;
+  if (n_j <= 0 || ulen <= 0) {
+    seq_out.clear();
+    mask_out.clear();
+    return;
+  }
+  seq_out.assign(
+    static_cast<std::size_t>(ulen) * static_cast<std::size_t>(n_j), 0ULL
+  );
+  mask_out.assign(
+    static_cast<std::size_t>(mulen) * static_cast<std::size_t>(n_j), 0ULL
+  );
+  for (int j = 0; j < n_j; ++j) {
+    const auto &srow = packed_seq[static_cast<std::size_t>(begin + j)];
+    const auto &mrow = mask[static_cast<std::size_t>(begin + j)];
+    for (int w = 0; w < ulen; ++w) {
+      seq_out[static_cast<std::size_t>(w) * static_cast<std::size_t>(n_j) +
+              static_cast<std::size_t>(j)] = srow[static_cast<std::size_t>(w)];
+    }
+    for (int w = 0; w < mulen; ++w) {
+      mask_out[static_cast<std::size_t>(w) * static_cast<std::size_t>(n_j) +
+               static_cast<std::size_t>(j)] = mrow[static_cast<std::size_t>(w)];
+    }
+  }
+}
+
+void PackedSequenceSet::fill_word_major_idx(
+  const int *idx,
+  int n_idx,
+  std::vector<uint64_t> &seq_out,
+  std::vector<uint64_t> &mask_out
+) const {
+  if (n_idx <= 0 || ulen <= 0) {
+    seq_out.clear();
+    mask_out.clear();
+    return;
+  }
+  seq_out.assign(
+    static_cast<std::size_t>(ulen) * static_cast<std::size_t>(n_idx), 0ULL
+  );
+  mask_out.assign(
+    static_cast<std::size_t>(mulen) * static_cast<std::size_t>(n_idx), 0ULL
+  );
+  for (int j = 0; j < n_idx; ++j) {
+    const int i = idx[j];
+    const auto &srow = packed_seq[static_cast<std::size_t>(i)];
+    const auto &mrow = mask[static_cast<std::size_t>(i)];
+    for (int w = 0; w < ulen; ++w) {
+      seq_out[static_cast<std::size_t>(w) * static_cast<std::size_t>(n_idx) +
+              static_cast<std::size_t>(j)] = srow[static_cast<std::size_t>(w)];
+    }
+    for (int w = 0; w < mulen; ++w) {
+      mask_out[static_cast<std::size_t>(w) * static_cast<std::size_t>(n_idx) +
+               static_cast<std::size_t>(j)] = mrow[static_cast<std::size_t>(w)];
+    }
+  }
+}
+
+void PackedSequenceSet::score_query_vs_word_major(
+  int query_i,
+  const uint64_t *seq_major,
+  const uint64_t *mask_major,
+  int n_target,
+  int n_cols,
+  int min_overlap,
+  double *dist_out,
+  int *n_ok_out,
+  int *n_match_out
+) const {
+  hamming_score_stripe(
+    packed_seq[static_cast<std::size_t>(query_i)].data(),
+    mask[static_cast<std::size_t>(query_i)].data(),
+    seq_major,
+    mask_major,
+    ulen,
+    mulen,
+    n_target,
+    n_cols,
+    min_overlap,
+    dist_out,
+    n_ok_out,
+    n_match_out
+  );
+}
+
 double PackedSequenceSet::dist(const int i, const int j, const int min_overlap,
                                const bool ignore_gap) const {
   int s, e;
@@ -283,9 +375,11 @@ double PackedSequenceSet::dist(const int i, const int j, const int min_overlap,
   int num_ok, num_matches;
   double dist;
   if (ignore_gap) {
-    pdistB(packed_seq[i].data(), mask[i].data(),
-           packed_seq[j].data(), mask[j].data(),
-           s, e, min_overlap, &num_ok, &num_matches, &dist);
+    hamming_pdist_pair(
+      packed_seq[i].data(), mask[i].data(),
+      packed_seq[j].data(), mask[j].data(),
+      ulen, mulen, min_overlap, &num_ok, &num_matches, &dist
+    );
   } else {
     pdistB2(packed_seq[i].data(), mask[i].data(),
             packed_seq[j].data(), mask[j].data(),
@@ -303,9 +397,11 @@ std::pair<int, double> PackedSequenceSet::score_and_dist(
   int num_ok, num_matches;
   double dist;
   if (ignore_gap) {
-    pdistB(packed_seq[i].data(), mask[i].data(),
-           packed_seq[j].data(), mask[j].data(),
-           s, e, min_overlap, &num_ok, &num_matches, &dist);
+    hamming_pdist_pair(
+      packed_seq[i].data(), mask[i].data(),
+      packed_seq[j].data(), mask[j].data(),
+      ulen, mulen, min_overlap, &num_ok, &num_matches, &dist
+    );
   } else {
     pdistB2(packed_seq[i].data(), mask[i].data(),
             packed_seq[j].data(), mask[j].data(),
@@ -323,9 +419,11 @@ std::tuple<bool, int, double> PackedSequenceSet::success_score_and_dist(
   int result, num_ok, num_matches;
   double dist;
   if (ignore_gap) {
-    result = pdistB(packed_seq[i].data(), mask[i].data(),
-                    packed_seq[j].data(), mask[j].data(),
-                    s, e, min_overlap, &num_ok, &num_matches, &dist);
+    result = hamming_pdist_pair(
+      packed_seq[i].data(), mask[i].data(),
+      packed_seq[j].data(), mask[j].data(),
+      ulen, mulen, min_overlap, &num_ok, &num_matches, &dist
+    );
   } else {
     result = pdistB2(packed_seq[i].data(), mask[i].data(),
                      packed_seq[j].data(), mask[j].data(),

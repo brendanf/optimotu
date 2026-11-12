@@ -35,9 +35,15 @@ Native code:
   - performance-critical C/C++ implementations
   - distance workers, clustering algorithms, generators, and glue via Rcpp
   - R package builds define `OPTIMOTU_R` (`src/Makevars`). `Makevars` does
-    not set `-march`. Amino-acid identity uses SSE2 when `__SSE2__` is
-    defined (on for x86-64). Weighted `dist_aa()` uses AVX2 when `__AVX2__`
-    is defined, and otherwise the scalar loop. The v7 image appends
+    not set `-march` and does not pass `-mavx512*` or ARM flags. Hamming
+    `ignore_gaps` uses a word-major one-versus-many stripe
+    (`src/hamming_stripe.cpp`): `OPTIMOTU_HAMMING_KERNEL` 3 AVX-512
+    `VPOPCNTDQ`, else 2 AVX2, else 4 NEON, else 1 scalar. Pair leftovers
+    use the same ISA. Amino-acid identity width is
+    `OPTIMOTU_AA_KERNEL` 4 AVX-512BW-64, else 3 AVX2-32, else 2
+    SSE2/NEON-16, else 1 scalar. Weighted `dist_aa()` gathers 16 floats
+    on AVX-512, 8 on AVX2, else scalar. `OPTIMOTU_AA_SCALAR_ONLY` forces
+    the scalar AA loops. The v7 image appends
     `-march=native -mtune=native` from `etc/Makevars.site` when its native
     compiler block is active. All R / Rcpp / R API use must be wrapped in
     `#ifdef OPTIMOTU_R`. Core algorithms keep a pure C++ entry (standard
@@ -106,7 +112,8 @@ Native code:
     (complete or bipartite) and Kruskal-unions those trees in a
     binary tournament (last arriving thread merges). Amino-acid Prim
     scores the live outside set with the position-major kernels
-    (SSE2 identity / AVX2 weighted); Hamming and alignment methods
+    (identity / weighted SIMD above). Hamming Prim uses the word-major
+    stripe when `ignore_gaps` is true; `pdistB2` and alignment methods
     stay pairwise. Multi-subset `optimize_thresholds()` /
     `seq_cluster(..., which = ...)` errors (Prim grow order cannot
     share a streamed pair). Use for single-subset `seq_cluster()`.
