@@ -41,8 +41,9 @@ Native code:
     `VPOPCNTDQ`, else 2 AVX2, else 4 NEON, else 1 scalar. Pair leftovers
     use the same ISA. Amino-acid identity width is
     `OPTIMOTU_AA_KERNEL` 4 AVX-512BW-64, else 3 AVX2-32, else 2
-    SSE2/NEON-16, else 1 scalar. Weighted `dist_aa()` gathers 16 floats
-    on AVX-512, 8 on AVX2, else scalar. `OPTIMOTU_AA_SCALAR_ONLY` forces
+    SSE2/NEON-16, else 1 scalar. Weighted `dist_aa()` uses AVX-512
+    `VPERMI2PS` over the 32-float profile row, AVX2 gather of 8, else
+    scalar. `OPTIMOTU_AA_SCALAR_ONLY` forces
     the scalar AA loops. The v7 image appends
     `-march=native -mtune=native` from `etc/Makevars.site` when its native
     compiler block is active. All R / Rcpp / R API use must be wrapped in

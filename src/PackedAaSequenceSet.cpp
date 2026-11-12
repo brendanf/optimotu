@@ -543,13 +543,13 @@ inline void weighted_column_16(
     _mm512_add_epi32(_mm512_loadu_si512(n_ok), one)
   );
   const __m512i idx = _mm512_cvtepu8_epi32(codes);
-  const __m512 gathered = _mm512_mask_i32gather_ps(
-    _mm512_setzero_ps(),
-    is_valid,
-    idx,
-    prof_row,
-    4
-  );
+  const __m512 lut_lo = _mm512_loadu_ps(prof_row);
+  const __m512 lut_hi = _mm512_loadu_ps(prof_row + 16);
+  const __m512 gathered = _mm512_maskz_permutex2var_ps(
+      is_valid,
+      lut_lo,
+      idx,
+      lut_hi);
   const __m256 glo = _mm512_castps512_ps256(gathered);
   const __m256 ghi = _mm256_castsi256_ps(
     _mm512_extracti64x4_epi64(_mm512_castps_si512(gathered), 1)
