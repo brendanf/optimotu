@@ -64,6 +64,46 @@ test_that("Hamming distance works for long sequences", {
   expect_equal(d$dist, 2 / 139)
 })
 
+test_that("ignore_gaps FALSE keeps a full word at 64-base ends", {
+  for (n in c(64L, 128L, 192L)) {
+    same <- strrep("A", n)
+    hit <- seq_search(
+      query = c(q = same),
+      ref = c(r = same),
+      threshold = 0.5,
+      dist_config = dist_hamming(ignore_gaps = FALSE)
+    )
+    expect_equal(hit$dist, 0, info = n)
+
+    mismatch <- paste0(strrep("A", n - 1L), "C")
+    missed <- seq_search(
+      query = c(q = same),
+      ref = c(r = mismatch),
+      threshold = 0.5,
+      dist_config = dist_hamming(ignore_gaps = FALSE)
+    )
+    expect_equal(missed$dist, 1 / n, info = n)
+  }
+
+  # Partial end mask, and ignore_gaps TRUE at a 64-base end.
+  partial <- strrep("A", 65L)
+  partial_hit <- seq_search(
+    query = c(q = partial),
+    ref = c(r = partial),
+    threshold = 0.5,
+    dist_config = dist_hamming(ignore_gaps = FALSE)
+  )
+  expect_equal(partial_hit$dist, 0)
+  full_word <- strrep("A", 64L)
+  gaps_ignored <- seq_search(
+    query = c(q = full_word),
+    ref = c(r = full_word),
+    threshold = 0.5,
+    dist_config = dist_hamming(ignore_gaps = TRUE)
+  )
+  expect_equal(gaps_ignored$dist, 0)
+})
+
 test_that("Hamming search packing skips lowercase without overflowing", {
   # Packed width is non-lowercase columns. Lowercase is skipped as an
   # insertion, matching clustering. Equal packed width must not over-read.

@@ -36,4 +36,12 @@
 #error "OPTIMOTU_HAMMING_KERNEL must be 1, 2, 3, or 4"
 #endif
 
+// pdistB2 one-versus-many stripe: AVX2 / AVX-512 only. Scalar and NEON
+// lose to pairwise pdistB2 on the CPUs we have timed.
+#if OPTIMOTU_HAMMING_KERNEL == 2 || OPTIMOTU_HAMMING_KERNEL == 3
+#define OPTIMOTU_HAMMING_PDISTB2_STRIPE 1
+#else
+#define OPTIMOTU_HAMMING_PDISTB2_STRIPE 0
+#endif
+
 #endif

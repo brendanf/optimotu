@@ -35,13 +35,19 @@ Native code:
   - performance-critical C/C++ implementations
   - distance workers, clustering algorithms, generators, and glue via Rcpp
   - R package builds define `OPTIMOTU_R` (`src/Makevars`). `Makevars` does
-    not set `-march` and does not pass `-mavx512*` or ARM flags. Hamming
-    `ignore_gaps` uses a word-major one-versus-many stripe
+    not set `-march` and does not pass `-mavx512*` or ARM flags.     Hamming
+    uses a word-major one-versus-many stripe
     (`src/hamming_stripe.cpp`): `OPTIMOTU_HAMMING_KERNEL` 3 AVX-512
-    `VPOPCNTDQ`, else 2 AVX2, else 4 NEON, else 1 scalar. Pair leftovers
-    use the same ISA. Amino-acid identity width is
+    `VPOPCNTDQ`, else 2 AVX2, else 4 NEON, else 1 scalar. `ignore_gaps`
+    is `pdistB` (AND+popcount over all packed words). Internal gaps
+    (`ignore_gaps = FALSE`) uses that `pdistB2` stripe only on AVX2 /
+    AVX-512; scalar and NEON keep pairwise `pdistB2`. Pair leftovers
+    and `pdistB2_gap` stay on the pair path.
+    Amino-acid identity width is
     `OPTIMOTU_AA_KERNEL` 4 AVX-512BW-64, else 3 AVX2-32, else 2
-    SSE2/NEON-16, else 1 scalar. Weighted `dist_aa()` uses AVX-512
+    SSE2/NEON-16, else 1 scalar.     Unequal ranges with
+    `ignore_gaps = FALSE` use windowed columns on AVX2 / AVX-512;
+    SSE2/NEON fall back to the scalar loop. Weighted `dist_aa()` uses AVX-512
     `VPERMI2PS` over the 32-float profile row, AVX2 gather of 8, else
     scalar. `OPTIMOTU_AA_SCALAR_ONLY` forces
     the scalar AA loops. The v7 image appends
@@ -113,9 +119,9 @@ Native code:
     (complete or bipartite) and Kruskal-unions those trees in a
     binary tournament (last arriving thread merges). Amino-acid Prim
     scores the live outside set with the position-major kernels
-    (identity / weighted SIMD above). Hamming Prim uses the word-major
-    stripe when `ignore_gaps` is true; `pdistB2` and alignment methods
-    stay pairwise. Multi-subset `optimize_thresholds()` /
+    (identity / weighted SIMD above).     Hamming Prim uses the word-major
+    stripe for `ignore_gaps` and for `pdistB2` on AVX2 / AVX-512;
+    `pdistB2_gap` and alignment methods stay pairwise. Multi-subset `optimize_thresholds()` /
     `seq_cluster(..., which = ...)` errors (Prim grow order cannot
     share a streamed pair). Use for single-subset `seq_cluster()`.
     Concurrent Prim with `threads > 1` errors;

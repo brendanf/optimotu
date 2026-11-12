@@ -70,7 +70,8 @@ struct PackedSequenceSet {
     std::vector<uint64_t> &mask_out
   ) const;
 
-  // ignore_gaps / pdistB only. seq_major and mask_major from fill_word_major*.
+  // seq_major and mask_major from fill_word_major*. target_start ==
+  // nullptr is pdistB; otherwise pdistB2 with lane-order ranges.
   void score_query_vs_word_major(
     int query_i,
     const uint64_t *seq_major,
@@ -80,7 +81,9 @@ struct PackedSequenceSet {
     int min_overlap,
     double *dist_out,
     int *n_ok_out,
-    int *n_match_out = nullptr
+    int *n_match_out = nullptr,
+    const int *target_start = nullptr,
+    const int *target_end = nullptr
   ) const;
 };
 

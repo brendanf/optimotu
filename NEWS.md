@@ -1,5 +1,9 @@
 # optimotu development version
 
+* Fix `dist_hamming(ignore_gaps = FALSE)`, which could give a wrong
+  distance when an overlap ended on a multiple of 64 bases. The last
+  64-base mask word was dropped, so those comparisons could come back
+  as distance 1 or as a negative distance.
 * Speed up Hamming (`ignore_gaps = TRUE`) and amino-acid identity with
   compile-time one-versus-many kernels (`OPTIMOTU_HAMMING_KERNEL` /
   `OPTIMOTU_AA_KERNEL`). On an

@@ -348,7 +348,9 @@ void PackedSequenceSet::score_query_vs_word_major(
   int min_overlap,
   double *dist_out,
   int *n_ok_out,
-  int *n_match_out
+  int *n_match_out,
+  const int *target_start,
+  const int *target_end
 ) const {
   hamming_score_stripe(
     packed_seq[static_cast<std::size_t>(query_i)].data(),
@@ -362,7 +364,11 @@ void PackedSequenceSet::score_query_vs_word_major(
     min_overlap,
     dist_out,
     n_ok_out,
-    n_match_out
+    n_match_out,
+    start[static_cast<std::size_t>(query_i)],
+    end[static_cast<std::size_t>(query_i)],
+    target_start,
+    target_end
   );
 }
 

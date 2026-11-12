@@ -1,5 +1,6 @@
 #include "optimotu.h"
 #include "HammingSearchWorker.h"
+#include "hamming_kernel.h"
 extern "C" {
 #include "defs.h"
 }
@@ -15,9 +16,9 @@ HammingSearchWorker::HammingSearchWorker(
     pss(query, ref),
     min_overlap(min_overlap),
     ignore_gaps(ignore_gaps) {
-  if (ignore_gaps) {
-    const int nq = static_cast<int>(query.size());
-    const int nr = static_cast<int>(ref.size());
+  const int nq = static_cast<int>(query.size());
+  const int nr = static_cast<int>(ref.size());
+  if (ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE) {
     ref_idx.resize(static_cast<std::size_t>(nr));
     for (int j = 0; j < nr; ++j) {
       ref_idx[static_cast<std::size_t>(j)] = nq + j;
@@ -39,18 +40,26 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   const int nr = static_cast<int>(ref.size());
+  const bool use_stripe = ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE;
   std::vector<double> dists;
   std::vector<int> n_ok;
-  if (ignore_gaps) {
+  const int nq = static_cast<int>(query.size());
+  const int *tstart = nullptr;
+  const int *tend = nullptr;
+  if (use_stripe) {
     dists.resize(static_cast<std::size_t>(nr));
     n_ok.resize(static_cast<std::size_t>(nr));
+    if (!ignore_gaps) {
+      tstart = pss.start.data() + nq;
+      tend = pss.end.data() + nq;
+    }
   }
   for (std::size_t i = begin_i; i < end_i; i++) {
     if (!hits[i]) {
       hits[i] = std::make_unique<SearchHit>();
     }
     SearchHit & hit = *hits[i];
-    if (ignore_gaps && nr > 0) {
+    if (use_stripe && nr > 0) {
       pss.score_query_vs_word_major(
         static_cast<int>(i),
         ref_seq_major.data(),
@@ -60,7 +69,9 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
         min_overlap,
         dists.data(),
         n_ok.data(),
-        nullptr
+        nullptr,
+        tstart,
+        tend
       );
     }
     for (std::size_t j = 0; j < ref.size(); j++) {
@@ -74,9 +85,14 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
         << std::endl
       );
       ++my_prealigned;
-      double d = ignore_gaps
+      double d = use_stripe
         ? dists[j]
-        : pss.dist(i, j + query.size(), min_overlap, ignore_gaps);
+        : pss.dist(
+            static_cast<int>(i),
+            static_cast<int>(j) + static_cast<int>(query.size()),
+            min_overlap,
+            ignore_gaps
+          );
 
       OPTIMOTU_DEBUG(
         4,

@@ -15,6 +15,18 @@
 #define debugprintf(...)
 #endif
 
+/* Bits of a mask word covered by an exclusive end. A multiple of 64
+   covers the whole word; `~(~0 >> 0)` would be zero and drop it. */
+static uint64_t mask_end_bits(int end)
+{
+  const int rem = end % (NUCLEOTIDES_IN_WORD * 4);
+  if (rem == 0)
+  {
+    return ~(uint64_t)0;
+  }
+  return ~((uint64_t)(-1) >> rem);
+}
+
 // Advance i past lowercase insertions. Returns the new index.
 static int skip_inserts(const char *s, const int slen, int i) {
   while (i < slen && s[i] >= 'a' && s[i] <= 'z') {
@@ -242,7 +254,7 @@ int pdistB_gap(const uint64_t *a, const uint64_t *ma,
       end_mask >>= (start % (NUCLEOTIDES_IN_WORD*4));
     }
     if (i == nend - 1) {
-      end_mask &= ~((uint64_t)(-1) >> (end % (NUCLEOTIDES_IN_WORD*4)));
+      end_mask &= mask_end_bits(end);
     }
     *num_ok += __builtin_popcountll((ma[i] & mb[i]) & end_mask);
     unsigned long long ins = mb[i] & ~ma[i] & end_mask;
@@ -332,7 +344,7 @@ int pdistB2(const uint64_t *a, const uint64_t *ma,
     debugprintf("single mask\n");
     mask = (uint64_t)(-1) >> (start % (NUCLEOTIDES_IN_WORD*4));
     debugprintf("mask=%016" PRIx64 "\n", mask);
-    mask &= ~((uint64_t)(-1) >> (end % (NUCLEOTIDES_IN_WORD*4)));
+    mask &= mask_end_bits(end);
     debugprintf("mask=%016" PRIx64 "\n", mask);
     debugprintf("ma | mb=%016" PRIx64 "\n", ma[nstart] | mb[nstart]);
     *num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
@@ -351,7 +363,7 @@ int pdistB2(const uint64_t *a, const uint64_t *ma,
       debugprintf("num_ok=%d\n", *num_ok);
     }
 
-    mask = ~((uint64_t)(-1) >> (end % (NUCLEOTIDES_IN_WORD*4)));
+    mask = mask_end_bits(end);
     debugprintf("mask=%016" PRIx64 "\n", mask);
     *num_ok += __builtin_popcountll((ma[nend-1] | mb[nend-1]) & mask);
     debugprintf("num_ok=%d\n", *num_ok);
@@ -414,7 +426,7 @@ if (nstart + 1 == nend) {
 debugprintf("single mask\n");
 mask = (uint64_t)(-1) >> (start % (NUCLEOTIDES_IN_WORD*4));
 debugprintf("mask=%016" PRIx64 "\n", mask);
-mask &= ~((uint64_t)(-1) >> (end % (NUCLEOTIDES_IN_WORD*4)));
+mask &= mask_end_bits(end);
 debugprintf("mask=%016" PRIx64 "\n", mask);
 debugprintf("ma | mb=%016" PRIx64 "\n", ma[nstart] | mb[nstart]);
 *num_ok = __builtin_popcountll((ma[nstart] | mb[nstart]) & mask);
@@ -507,7 +519,7 @@ if (del) {
 }
 
 // Last mask
-mask = ~((uint64_t)(-1) >> (end % (NUCLEOTIDES_IN_WORD*4)));
+mask = mask_end_bits(end);
 debugprintf("mask=%016" PRIx64 "\n", mask);
 *num_ok += __builtin_popcountll((ma[nend-1] | mb[nend-1]) & mask);
 debugprintf("num_ok=%d\n", *num_ok);

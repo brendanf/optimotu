@@ -2,6 +2,7 @@
 #include "AllPairGenerator.h"
 #include "BipartitePairGenerator.h"
 #include "tile_pairs.h"
+#include "hamming_kernel.h"
 #include <algorithm>
 
 #ifdef OPTIMOTU_R
@@ -115,63 +116,73 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(
       if constexpr (!std::is_same_v<
         SparseDistanceMatrixType, SparseDistanceMatrixGapstats
       >) {
-        if (ignore_gap) {
-          if (auto *diag = dynamic_cast<AllPairGenerator *>(&pg)) {
-            const int offset = static_cast<int>(diag->seq_offset());
-            const int n_tile = static_cast<int>(diag->seq_count());
-            std::vector<uint64_t> seq_major;
-            std::vector<uint64_t> mask_major;
-            pss.fill_word_major(offset, offset + n_tile, seq_major, mask_major);
-            std::vector<double> dists(static_cast<std::size_t>(n_tile));
-            std::vector<int> n_ok(static_cast<std::size_t>(n_tile));
-            std::vector<int> n_match(static_cast<std::size_t>(n_tile));
-            for (int i = offset + 1; i < offset + n_tile; ++i) {
-              const int n_j = i - offset;
-              pss.score_query_vs_word_major(
-                i, seq_major.data(), mask_major.data(), n_j, n_tile,
-                min_overlap, dists.data(), n_ok.data(), n_match.data()
+        if ((ignore_gap || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+            dynamic_cast<AllPairGenerator *>(&pg) != nullptr) {
+          auto *diag = static_cast<AllPairGenerator *>(&pg);
+          const int offset = static_cast<int>(diag->seq_offset());
+          const int n_tile = static_cast<int>(diag->seq_count());
+          std::vector<uint64_t> seq_major;
+          std::vector<uint64_t> mask_major;
+          pss.fill_word_major(offset, offset + n_tile, seq_major, mask_major);
+          std::vector<double> dists(static_cast<std::size_t>(n_tile));
+          std::vector<int> n_ok(static_cast<std::size_t>(n_tile));
+          std::vector<int> n_match(static_cast<std::size_t>(n_tile));
+          const int *tstart =
+            ignore_gap ? nullptr : pss.start.data() + offset;
+          const int *tend = ignore_gap ? nullptr : pss.end.data() + offset;
+          for (int i = offset + 1; i < offset + n_tile; ++i) {
+            const int n_j = i - offset;
+            pss.score_query_vs_word_major(
+              i, seq_major.data(), mask_major.data(), n_j, n_tile,
+              min_overlap, dists.data(), n_ok.data(), n_match.data(),
+              tstart, tend
+            );
+            for (int t = 0; t < n_j; ++t) {
+              consider_plain(
+                static_cast<std::size_t>(i),
+                static_cast<std::size_t>(offset + t),
+                n_match[static_cast<std::size_t>(t)],
+                n_ok[static_cast<std::size_t>(t)],
+                dists[static_cast<std::size_t>(t)]
               );
-              for (int t = 0; t < n_j; ++t) {
-                consider_plain(
-                  static_cast<std::size_t>(i),
-                  static_cast<std::size_t>(offset + t),
-                  n_match[static_cast<std::size_t>(t)],
-                  n_ok[static_cast<std::size_t>(t)],
-                  dists[static_cast<std::size_t>(t)]
-                );
-              }
             }
-            return;
           }
-          if (auto *bip = dynamic_cast<BipartitePairGenerator *>(&pg)) {
-            const int begin_i = static_cast<int>(bip->seq_begin_i());
-            const int end_i = static_cast<int>(bip->seq_end_i());
-            const int begin_j = static_cast<int>(bip->seq_begin_j());
-            const int end_j = static_cast<int>(bip->seq_end_j());
-            const int n_j = end_j - begin_j;
-            std::vector<uint64_t> seq_major;
-            std::vector<uint64_t> mask_major;
-            pss.fill_word_major(begin_j, end_j, seq_major, mask_major);
-            std::vector<double> dists(static_cast<std::size_t>(n_j));
-            std::vector<int> n_ok(static_cast<std::size_t>(n_j));
-            std::vector<int> n_match(static_cast<std::size_t>(n_j));
-            for (int i = begin_i; i < end_i; ++i) {
-              pss.score_query_vs_word_major(
-                i, seq_major.data(), mask_major.data(), n_j, n_j,
-                min_overlap, dists.data(), n_ok.data(), n_match.data()
+          return;
+        }
+        if ((ignore_gap || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+            dynamic_cast<BipartitePairGenerator *>(&pg) != nullptr) {
+          auto *bip = static_cast<BipartitePairGenerator *>(&pg);
+          const int begin_i = static_cast<int>(bip->seq_begin_i());
+          const int end_i = static_cast<int>(bip->seq_end_i());
+          const int begin_j = static_cast<int>(bip->seq_begin_j());
+          const int end_j = static_cast<int>(bip->seq_end_j());
+          const int n_j = end_j - begin_j;
+          std::vector<uint64_t> seq_major;
+          std::vector<uint64_t> mask_major;
+          pss.fill_word_major(begin_j, end_j, seq_major, mask_major);
+          std::vector<double> dists(static_cast<std::size_t>(n_j));
+          std::vector<int> n_ok(static_cast<std::size_t>(n_j));
+          std::vector<int> n_match(static_cast<std::size_t>(n_j));
+          const int *tstart =
+            ignore_gap ? nullptr : pss.start.data() + begin_j;
+          const int *tend = ignore_gap ? nullptr : pss.end.data() + begin_j;
+          for (int i = begin_i; i < end_i; ++i) {
+            pss.score_query_vs_word_major(
+              i, seq_major.data(), mask_major.data(), n_j, n_j,
+              min_overlap, dists.data(), n_ok.data(), n_match.data(),
+              tstart, tend
+            );
+            for (int t = 0; t < n_j; ++t) {
+              consider_plain(
+                static_cast<std::size_t>(i),
+                static_cast<std::size_t>(begin_j + t),
+                n_match[static_cast<std::size_t>(t)],
+                n_ok[static_cast<std::size_t>(t)],
+                dists[static_cast<std::size_t>(t)]
               );
-              for (int t = 0; t < n_j; ++t) {
-                consider_plain(
-                  static_cast<std::size_t>(i),
-                  static_cast<std::size_t>(begin_j + t),
-                  n_match[static_cast<std::size_t>(t)],
-                  n_ok[static_cast<std::size_t>(t)],
-                  dists[static_cast<std::size_t>(t)]
-                );
-              }
             }
-            return;
           }
+          return;
         }
       }
       for_each_tile_pair(pg, [&](

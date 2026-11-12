@@ -8,8 +8,10 @@
 #include "hamming_kernel.h"
 #include <cstdint>
 
-// Score one packed query against a word-major stripe of targets
-// (ignore_gaps / pdistB semantics: invalid bases are already zero).
+// Score one packed query against a word-major stripe of targets.
+// target_start == nullptr uses ignore_gaps / pdistB (invalid bits are 0).
+// Otherwise uses pdistB2 inside the intersection of query and target
+// ranges (lane-order start/end, end exclusive).
 void hamming_score_stripe(
   const uint64_t *query_seq,
   const uint64_t *query_mask,
@@ -22,7 +24,11 @@ void hamming_score_stripe(
   int min_overlap,
   double *dist_out,
   int *n_ok_out,
-  int *n_match_out
+  int *n_match_out,
+  int query_start = 0,
+  int query_end = 0,
+  const int *target_start = nullptr,
+  const int *target_end = nullptr
 );
 
 // Pairwise pdistB over all packed words (terminal-gap zeros are free).
