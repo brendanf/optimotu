@@ -78,7 +78,7 @@ translate_aligned <- function(seq, genetic_code, codon_offset = 0L) {
 }
 
 maybe_translate_aa_seq <- function(seq, dist_config) {
-  if (!identical(dist_config$method, "aa")) {
+  if (!dist_config$method %in% c("aa", "evo")) {
     return(seq)
   }
   code <- dist_config$genetic_code

@@ -39,7 +39,7 @@
 #' @param pairs optional two-column integer matrix of 1-based sequence
 #' indices. When set, only those pairs are scored and all of them are
 #' returned (`threshold` is not an inclusion gate). Currently implemented
-#' for [dist_aa()].
+#' for [dist_aa()] and [dist_evo()].
 #' @param ... passed to methods
 #' @return (`data.frame`) with columns "seq_id1" and "seq_id2" (`character`),
 #' or "seq_idx1" and "seq_idx2" (`integer`) if `id_is_integer` is `TRUE`,

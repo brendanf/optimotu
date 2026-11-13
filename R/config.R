@@ -549,7 +549,8 @@ parallel_hierarchical <- function(threads, shards, subproblems = NULL) {
 
 #' Default all-pairs subproblem count
 #'
-#' Hamming, USEARCH, and `aa` use the perfect square nearest `4 * threads`.
+#' Hamming, USEARCH, `aa`, and `evo` use the perfect square nearest
+#' `4 * threads`.
 #' Alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`) pick the square
 #' `S` with `threads <= S <= 4 * threads` that maximizes equal-tile
 #' utilization `S / (threads * ceil(S / threads))`; ties keep the
@@ -709,6 +710,7 @@ dist_config <- function(
     "hybrid",
     "hamming",
     "aa",
+    "evo",
     "file",
     "usearch"
   ),
@@ -724,6 +726,7 @@ dist_config <- function(
     hybrid = dist_hybrid(...),
     hamming = dist_hamming(...),
     aa = dist_aa(...),
+    evo = dist_evo(...),
     usearch = dist_usearch(...)
   )
   dc$call <- match.call()

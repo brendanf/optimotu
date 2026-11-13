@@ -5,6 +5,7 @@ testthat::test_that("default_subproblems fast methods use square nearest 4x", {
   testthat::expect_equal(default_subproblems(30L, "hamming"), 121L)
   testthat::expect_equal(default_subproblems(12L, "usearch"), 49L)
   testthat::expect_equal(default_subproblems(16L, "aa"), 64L)
+  testthat::expect_equal(default_subproblems(16L, "evo"), 64L)
 })
 
 testthat::test_that("default_subproblems slow methods maximize last-wave fill", {

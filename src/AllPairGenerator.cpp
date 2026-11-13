@@ -466,6 +466,7 @@ context("for_each_tile_pair") {
     expect_true(optimotu_default_subproblems(30, "hamming") == 121);
     expect_true(optimotu_default_subproblems(12, "usearch") == 49);
     expect_true(optimotu_default_subproblems(16, "aa") == 64);
+    expect_true(optimotu_default_subproblems(16, "evo") == 64);
     expect_true(optimotu_default_subproblems(16, "ksw2") == 16);
     expect_true(optimotu_default_subproblems(15, "ksw2") == 25);
     expect_true(optimotu_default_subproblems(30, "wfa2") == 81);

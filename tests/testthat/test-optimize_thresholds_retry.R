@@ -172,19 +172,41 @@ testthat::test_that("memory-budget helpers plan, split, and detect errors", {
   )
   testthat::expect_equal(unbudgeted, list(idx))
 
+  # Largest subset fits; the whole set does not. A fixed 2 MB budget
+  # only forced a split while each subset was floored to 1 MB.
+  subset_mb <- vapply(
+    testset_select$n_seq,
+    optimotu:::estimate_subset_memory_mb,
+    numeric(1),
+    n_thresholds = length(tc$thresholds),
+    clust_method = cc$method,
+    parallel_method = pc$method,
+    threads = pc$threads,
+    subproblems = pc$subproblems
+  )
+  budget_mb <- max(subset_mb)
+  testthat::expect_lt(budget_mb, sum(subset_mb))
+
   tight <- optimotu:::make_initial_batches(
     idx,
     testset_select,
     tc,
     cc,
     pc,
-    2
+    budget_mb
   )
   testthat::expect_gt(length(tight), 1L)
   testthat::expect_equal(sort(unlist(tight)), idx)
   testthat::expect_equal(
     tight,
-    optimotu:::make_initial_batches(idx, testset_select, tc, cc, pc, 2)
+    optimotu:::make_initial_batches(
+      idx,
+      testset_select,
+      tc,
+      cc,
+      pc,
+      budget_mb
+    )
   )
 
   overlap <- optimotu:::split_batch_indices(idx, testset_select, "overlap")

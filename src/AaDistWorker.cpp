@@ -77,12 +77,15 @@ AaDistWorker::AaDistWorker(
   const float *weight_lut_in,
   bool return_all,
   int verbose,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  const EvoModel *evo_model
 ) : DistWorker(seq, dist_threshold, pgb, sdm, verbose, worker_threads),
     pss(seq),
     min_overlap(min_overlap),
     ignore_gaps(ignore_gaps),
-    return_all(return_all) {
+    return_all(return_all),
+    has_evo(evo_model != nullptr),
+    evo(evo_model != nullptr ? *evo_model : EvoModel()) {
   if (weight_lut_in == nullptr) {
     weight_lut = nullptr;
   } else {
@@ -92,6 +95,40 @@ AaDistWorker::AaDistWorker(
     );
     weight_lut = lut_storage.data();
   }
+}
+
+void AaDistWorker::score_targets(
+  int query,
+  const uint8_t *pos_major,
+  const int *target_idx,
+  int n_target,
+  int n_cols,
+  double dist_threshold_in,
+  bool early_exit,
+  double *dist_out,
+  int *n_ok_out
+) const {
+  if (has_evo) {
+    pss.score_query_evo(
+      query, pos_major, target_idx, n_target, n_cols,
+      min_overlap, ignore_gaps, evo, dist_out, n_ok_out
+    );
+    return;
+  }
+  pss.score_query_vs_pos_major(
+    query, pos_major, target_idx, n_target, n_cols,
+    min_overlap, ignore_gaps, weight_lut, dist_threshold_in, early_exit,
+    dist_out, n_ok_out
+  );
+}
+
+std::tuple<bool, int, double> AaDistWorker::score_pair(int i, int j) const {
+  if (has_evo) {
+    return pss.score_evo_pair(i, j, min_overlap, ignore_gaps, evo);
+  }
+  return pss.success_score_and_dist(
+    i, j, min_overlap, ignore_gaps, weight_lut
+  );
 }
 
 template<int verbose>
@@ -129,15 +166,12 @@ void AaDistWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end) {
         std::vector<int> n_ok(static_cast<std::size_t>(n_tile));
         for (int i = offset + 1; i < end_i; ++i) {
           const int n_j = i - offset;
-          pss.score_query_vs_pos_major(
+          score_targets(
             i,
             pos_major.data(),
             target_idx.data(),
             n_j,
             n_tile,
-            min_overlap,
-            ignore_gaps,
-            weight_lut,
             dist_threshold,
             !return_all,
             dists.data(),
@@ -178,15 +212,12 @@ void AaDistWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end) {
         std::vector<double> dists(static_cast<std::size_t>(n_j));
         std::vector<int> n_ok(static_cast<std::size_t>(n_j));
         for (int i = begin_i; i < end_i; ++i) {
-          pss.score_query_vs_pos_major(
+          score_targets(
             i,
             pos_major.data(),
             target_idx.data(),
             n_j,
             n_j,
-            min_overlap,
-            ignore_gaps,
-            weight_lut,
             dist_threshold,
             !return_all,
             dists.data(),
@@ -215,12 +246,9 @@ void AaDistWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end) {
       for_each_tile_pair(pg, [&](
         std::size_t i0, std::size_t j0, std::size_t, std::size_t
       ) {
-        auto [success, n_ok, d] = pss.success_score_and_dist(
+        auto [success, n_ok, d] = score_pair(
           static_cast<int>(i0),
-          static_cast<int>(j0),
-          min_overlap,
-          ignore_gaps,
-          weight_lut
+          static_cast<int>(j0)
         );
         ++my_considered;
         if (success) {
@@ -257,7 +285,8 @@ std::unique_ptr<AaDistWorker> create_aa_dist_worker(
   const float *weight_lut,
   bool return_all,
   int verbose,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  const EvoModel *evo_model
 ) {
   if (dynamic_cast<SparseDistanceMatrixCigar *>(&sdm)) {
     OPTIMOTU_STOP("Cigar is not implemented for amino-acid distance");
@@ -269,30 +298,30 @@ std::unique_ptr<AaDistWorker> create_aa_dist_worker(
   if (v == 0) {
     return std::make_unique<AaDistWorkerImpl<0>>(
       seq, dist_threshold, pgb, sdm, min_overlap, ignore_gaps, weight_lut,
-      return_all, 0, worker_threads
+      return_all, 0, worker_threads, evo_model
     );
   }
   if (v == 1) {
     return std::make_unique<AaDistWorkerImpl<1>>(
       seq, dist_threshold, pgb, sdm, min_overlap, ignore_gaps, weight_lut,
-      return_all, 1, worker_threads
+      return_all, 1, worker_threads, evo_model
     );
   }
   if (v == 2) {
     return std::make_unique<AaDistWorkerImpl<2>>(
       seq, dist_threshold, pgb, sdm, min_overlap, ignore_gaps, weight_lut,
-      return_all, 2, worker_threads
+      return_all, 2, worker_threads, evo_model
     );
   }
   if (v == 3) {
     return std::make_unique<AaDistWorkerImpl<3>>(
       seq, dist_threshold, pgb, sdm, min_overlap, ignore_gaps, weight_lut,
-      return_all, 3, worker_threads
+      return_all, 3, worker_threads, evo_model
     );
   }
   return std::make_unique<AaDistWorkerImpl<4>>(
     seq, dist_threshold, pgb, sdm, min_overlap, ignore_gaps, weight_lut,
-    return_all, 4, worker_threads
+      return_all, 4, worker_threads, evo_model
   );
 }
 

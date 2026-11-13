@@ -49,7 +49,13 @@ Native code:
     `ignore_gaps = FALSE` use windowed columns on AVX2 / AVX-512;
     SSE2/NEON fall back to the scalar loop. Weighted `dist_aa()` uses AVX-512
     `VPERMI2PS` over the 32-float profile row, AVX2 gather of 8, else
-    scalar. `OPTIMOTU_AA_SCALAR_ONLY` forces
+    scalar.     `dist_evo()` stores the likelihood grid for one residue pair
+    contiguously and adds that row with SIMD (8 doubles on AVX-512, 8
+    floats converted on AVX2, 2 doubles on SSE2/NEON). Newton refinement
+    hoists `exp(λ t)` once per iteration, in SIMD across a batch of
+    targets. One pass over the 20 eigenvalues produces the value and
+    both derivatives, and four residue pairs are dotted before their
+    score divisions. `OPTIMOTU_AA_SCALAR_ONLY` forces
     the scalar AA loops. The v7 image appends
     `-march=native -mtune=native` from `etc/Makevars.site` when its native
     compiler block is active. All R / Rcpp / R API use must be wrapped in
@@ -170,8 +176,9 @@ Core exported API families include:
 
 - config helpers:
   - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_ksw2()`, `dist_hamming()`,
-    `dist_aa()`, `dist_usearch()`, `dist_file()`, `dist_hybrid()`
-  - `translate_aligned()` for HMM A2M nucleotides before `dist_aa()`
+    `dist_aa()`, `dist_evo()`, `dist_usearch()`, `dist_file()`, `dist_hybrid()`
+  - `translate_aligned()` for HMM A2M nucleotides before `dist_aa()` and
+    `dist_evo()`
   - `clust_config()` + `clust_tree()`, `clust_matrix()`, `clust_index()`,
     `clust_slink()`, `clust_prim()`
   - `threshold_config()` + `threshold_uniform()`, `threshold_set()`,
@@ -253,7 +260,8 @@ explicitly requests API changes.
   Batch planning keeps a running integer sequence union (`seq_index` from
   `summarize_by_rank()`) and adds Hamming packed-sequence bytes for that
   union (not the sum of subset sizes) when `dist_hamming()` is used, or
-  packed amino-acid bytes via `estimate_aa_packed_mb()` for `dist_aa()`;
+  packed amino-acid bytes via `estimate_aa_packed_mb()` for `dist_aa()` and
+  `dist_evo()`;
   it does not call `unique(unlist(seq_id))` per candidate step.
 - `summarize_by_rank()` reuses interned CHARSXPs (no `std::string` ID copies)
   and returns `seq_index` (1-based row indices in the taxonomy) alongside

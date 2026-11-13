@@ -103,11 +103,14 @@ AaClusterWorker::AaClusterWorker(
   const bool ignore_gaps,
   const float *weight_lut_in,
   int verbose,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  const EvoModel *evo_model
 ) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads),
     pss(seq),
     min_overlap(min_overlap),
-    ignore_gaps(ignore_gaps) {
+    ignore_gaps(ignore_gaps),
+    has_evo(evo_model != nullptr),
+    evo(evo_model != nullptr ? *evo_model : EvoModel()) {
   if (weight_lut_in == nullptr) {
     weight_lut = nullptr;
   } else {
@@ -127,6 +130,43 @@ AaClusterWorker::AaClusterWorker(
   }
 }
 
+void AaClusterWorker::score_targets(
+  int query,
+  const uint8_t *pos_major,
+  const int *target_idx,
+  int n_target,
+  int n_cols,
+  double *dist_out,
+  int *n_ok_out
+) const {
+  if (has_evo) {
+    pss.score_query_evo(
+      query, pos_major, target_idx, n_target, n_cols,
+      min_overlap, ignore_gaps, evo, dist_out, n_ok_out
+    );
+    return;
+  }
+  pss.score_query_vs_pos_major(
+    query, pos_major, target_idx, n_target, n_cols,
+    min_overlap, ignore_gaps, weight_lut, 1.0, false,
+    dist_out, n_ok_out
+  );
+}
+
+double AaClusterWorker::pair_distance(int i, int j) const {
+  if (has_evo) {
+    return pss.dist_evo(i, j, min_overlap, ignore_gaps, evo);
+  }
+  return pss.dist(i, j, min_overlap, ignore_gaps, weight_lut);
+}
+
+bool AaClusterWorker::below_unit(double d) const {
+  if (has_evo) {
+    return d < evo.t_max;
+  }
+  return d < 1.0;
+}
+
 AaClusterWorker::~AaClusterWorker() {
   if (tracked_pss_bytes > 0) {
     if (auto *mca = dynamic_cast<MultipleClusterAlgorithm *>(&clust_algo)) {
@@ -143,10 +183,11 @@ AaSplitClusterWorker<verbose>::AaSplitClusterWorker(
   const int min_overlap,
   const bool ignore_gaps,
   const float *weight_lut,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  const EvoModel *evo_model
 ) : AaClusterWorker(
       seq, clust_algo, pgb, min_overlap, ignore_gaps, weight_lut, verbose,
-      worker_threads
+      worker_threads, evo_model
     ) {}
 
 template<int verbose>
@@ -224,23 +265,18 @@ void AaSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t en
           }
           lane_dist.assign(static_cast<std::size_t>(block.live), 1.0);
           lane_ok.assign(static_cast<std::size_t>(block.live), 0);
-          pss.score_query_vs_pos_major(
+          score_targets(
             packed_u,
             block.pos_major.data(),
             block.packed_idx.data(),
             block.live,
             block.n_cols,
-            min_overlap,
-            ignore_gaps,
-            weight_lut,
-            1.0,
-            false,
             lane_dist.data(),
             lane_ok.data()
           );
           for (int t = 0; t < block.live; ++t) {
             ++my_prealigned;
-            if (lane_dist[static_cast<std::size_t>(t)] < 1.0) {
+            if (below_unit(lane_dist[static_cast<std::size_t>(t)])) {
               ++my_aligned;
             }
             aa_maybe_interrupt(pairs_since_check);
@@ -296,7 +332,7 @@ void AaSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t en
       auto apply_pair = [&](std::size_t i0, std::size_t j0, std::size_t li,
                             std::size_t lj, double d) {
         ++my_prealigned;
-        if (d < 1.0) {
+        if (below_unit(d)) {
           ++my_aligned;
         }
         if (use_local) {
@@ -332,9 +368,9 @@ void AaSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t en
         std::vector<int> n_ok(static_cast<std::size_t>(n_tile));
         for (int i = offset + 1; i < offset + n_tile; ++i) {
           const int n_j = i - offset;
-          pss.score_query_vs_pos_major(
-            i, pos_major.data(), target_idx.data(),             n_j, n_tile, min_overlap,
-            ignore_gaps, weight_lut, 1.0, false, dists.data(), n_ok.data()
+          score_targets(
+            i, pos_major.data(), target_idx.data(), n_j, n_tile,
+            dists.data(), n_ok.data()
           );
           const std::size_t li = static_cast<std::size_t>(i - offset);
           for (int t = 0; t < n_j; ++t) {
@@ -362,9 +398,9 @@ void AaSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t en
         std::vector<double> dists(static_cast<std::size_t>(n_j));
         std::vector<int> n_ok(static_cast<std::size_t>(n_j));
         for (int i = begin_i; i < end_i; ++i) {
-          pss.score_query_vs_pos_major(
-            i, pos_major.data(), target_idx.data(),             n_j, n_j, min_overlap,
-            ignore_gaps, weight_lut, 1.0, false, dists.data(), n_ok.data()
+          score_targets(
+            i, pos_major.data(), target_idx.data(), n_j, n_j,
+            dists.data(), n_ok.data()
           );
           const std::size_t li =
             static_cast<std::size_t>(i - begin_i + n_j);
@@ -382,10 +418,7 @@ void AaSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t en
         for_each_tile_pair(pg, [&](
           std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
         ) {
-          double d = pss.dist(
-            static_cast<int>(i0), static_cast<int>(j0), min_overlap,
-            ignore_gaps, weight_lut
-          );
+          double d = pair_distance(static_cast<int>(i0), static_cast<int>(j0));
           apply_pair(i0, j0, li, lj, d);
         });
       }
@@ -412,10 +445,11 @@ AaConcurrentClusterWorker<verbose>::AaConcurrentClusterWorker(
   const int min_overlap,
   const bool ignore_gaps,
   const float *weight_lut,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  const EvoModel *evo_model
 ) : AaClusterWorker(
       seq, clust_algo, pgb, min_overlap, ignore_gaps, weight_lut, verbose,
-      worker_threads
+      worker_threads, evo_model
     ) {}
 
 template<int verbose>
@@ -438,14 +472,8 @@ void AaConcurrentClusterWorker<verbose>::operator()(
           static_cast<j_t>(i0), static_cast<j_t>(j0)
         );
         ++my_prealigned;
-        double d = pss.dist(
-          static_cast<int>(i0),
-          static_cast<int>(j0),
-          min_overlap,
-          ignore_gaps,
-          weight_lut
-        );
-        if (d < 1.0) {
+        double d = pair_distance(static_cast<int>(i0), static_cast<int>(j0));
+        if (below_unit(d)) {
           ++my_aligned;
         }
         if (d < threshold) {

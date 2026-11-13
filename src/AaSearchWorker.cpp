@@ -13,11 +13,14 @@ AaSearchWorker::AaSearchWorker(
   const std::uint8_t threads,
   const int min_overlap,
   const bool ignore_gaps,
-  const float *weight_lut_in
+  const float *weight_lut_in,
+  const EvoModel *evo_model
 ) : SearchWorker(query, ref, threshold, threads),
     pss(query, ref),
     min_overlap(min_overlap),
-    ignore_gaps(ignore_gaps) {
+    ignore_gaps(ignore_gaps),
+    has_evo(evo_model != nullptr),
+    evo(evo_model != nullptr ? *evo_model : EvoModel()) {
   if (weight_lut_in == nullptr) {
     weight_lut = nullptr;
   } else {
@@ -36,6 +39,43 @@ AaSearchWorker::AaSearchWorker(
   pss.fill_pos_major(nq, nq + nr, ref_pos_major);
 }
 
+void AaSearchWorker::score_refs(
+  int query_i,
+  double *dist_out,
+  int *n_ok_out
+) const {
+  const int nr = static_cast<int>(ref_idx.size());
+  if (has_evo) {
+    pss.score_query_evo(
+      query_i,
+      ref_pos_major.data(),
+      ref_idx.data(),
+      nr,
+      nr,
+      min_overlap,
+      ignore_gaps,
+      evo,
+      dist_out,
+      n_ok_out
+    );
+    return;
+  }
+  pss.score_query_vs_pos_major(
+    query_i,
+    ref_pos_major.data(),
+    ref_idx.data(),
+    nr,
+    nr,
+    min_overlap,
+    ignore_gaps,
+    weight_lut,
+    threshold,
+    true,
+    dist_out,
+    n_ok_out
+  );
+}
+
 template<int verbose>
 void AaSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end) {
   const std::size_t begin_i = (begin * query.size()) / threads;
@@ -51,24 +91,15 @@ void AaSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end)
       hits[i] = std::make_unique<SearchHit>();
     }
     SearchHit &hit = *hits[i];
-    pss.score_query_vs_pos_major(
-      static_cast<int>(i),
-      ref_pos_major.data(),
-      ref_idx.data(),
-      nr,
-      nr,
-      min_overlap,
-      ignore_gaps,
-      weight_lut,
-      threshold,
-      true,
-      dists.data(),
-      n_ok.data()
-    );
+    score_refs(static_cast<int>(i), dists.data(), n_ok.data());
     for (int j = 0; j < nr; ++j) {
       ++my_prealigned;
       const double d = dists[static_cast<std::size_t>(j)];
-      if (d == 1.0) {
+      if (has_evo) {
+        if (!(d < evo.t_max)) {
+          continue;
+        }
+      } else if (d == 1.0) {
         continue;
       }
       ++my_aligned;

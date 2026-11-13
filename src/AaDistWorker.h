@@ -8,6 +8,8 @@
 #ifdef OPTIMOTU_R
 
 #include "DistWorker.h"
+#include <tuple>
+#include "EvoModel.h"
 #include "PackedAaSequenceSet.h"
 #include <memory>
 #include <vector>
@@ -20,6 +22,21 @@ protected:
   std::vector<float> lut_storage;
   const float *weight_lut;
   const bool return_all;
+  bool has_evo = false;
+  EvoModel evo;
+
+  void score_targets(
+    int query,
+    const uint8_t *pos_major,
+    const int *target_idx,
+    int n_target,
+    int n_cols,
+    double dist_threshold,
+    bool early_exit,
+    double *dist_out,
+    int *n_ok_out
+  ) const;
+  std::tuple<bool, int, double> score_pair(int i, int j) const;
 
 public:
   AaDistWorker(
@@ -32,7 +49,8 @@ public:
     const float *weight_lut,
     bool return_all,
     int verbose = 0,
-    std::size_t worker_threads = 0
+    std::size_t worker_threads = 0,
+    const EvoModel *evo_model = nullptr
   );
 };
 
@@ -46,6 +64,8 @@ class AaDistWorkerImpl : public AaDistWorker {
   using AaDistWorker::ignore_gaps;
   using AaDistWorker::weight_lut;
   using AaDistWorker::return_all;
+  using AaDistWorker::score_targets;
+  using AaDistWorker::score_pair;
 
 public:
   using AaDistWorker::AaDistWorker;
@@ -62,7 +82,8 @@ std::unique_ptr<AaDistWorker> create_aa_dist_worker(
   const float *weight_lut,
   bool return_all,
   int verbose = 0,
-  std::size_t worker_threads = 0
+  std::size_t worker_threads = 0,
+  const EvoModel *evo_model = nullptr
 );
 
 #endif

@@ -6,6 +6,7 @@
 
 #include "PackedAaSequenceSet.h"
 #include "AaConfig.h"
+#include "EvoConfig.h"
 #include "config.h"
 #include <Rcpp.h>
 #include <RcppParallel.h>
@@ -32,6 +33,7 @@ struct AaStarWorker : public RcppParallel::Worker {
   int min_overlap;
   bool ignore_gaps;
   const float *weight_lut;
+  const EvoModel *evo;
   std::unordered_map<uint64_t, double> *dists;
   std::unordered_map<uint64_t, int> *n_ok;
   std::mutex mutex;
@@ -43,6 +45,7 @@ struct AaStarWorker : public RcppParallel::Worker {
     int min_overlap,
     bool ignore_gaps,
     const float *weight_lut,
+    const EvoModel *evo,
     std::unordered_map<uint64_t, double> *dists,
     std::unordered_map<uint64_t, int> *n_ok
   ) : pss(pss),
@@ -51,6 +54,7 @@ struct AaStarWorker : public RcppParallel::Worker {
       min_overlap(min_overlap),
       ignore_gaps(ignore_gaps),
       weight_lut(weight_lut),
+      evo(evo),
       dists(dists),
       n_ok(n_ok) {}
 
@@ -65,20 +69,35 @@ struct AaStarWorker : public RcppParallel::Worker {
       pss.fill_pos_major_idx(part.data(), n_j, pos_major);
       std::vector<double> d(static_cast<std::size_t>(n_j));
       std::vector<int> n_ok(static_cast<std::size_t>(n_j));
-      pss.score_query_vs_pos_major(
-        qi,
-        pos_major.data(),
-        part.data(),
-        n_j,
-        n_j,
-        min_overlap,
-        ignore_gaps,
-        weight_lut,
-        1.0,
-        false,
-        d.data(),
-        n_ok.data()
-      );
+      if (evo != nullptr) {
+        pss.score_query_evo(
+          qi,
+          pos_major.data(),
+          part.data(),
+          n_j,
+          n_j,
+          min_overlap,
+          ignore_gaps,
+          *evo,
+          d.data(),
+          n_ok.data()
+        );
+      } else {
+        pss.score_query_vs_pos_major(
+          qi,
+          pos_major.data(),
+          part.data(),
+          n_j,
+          n_j,
+          min_overlap,
+          ignore_gaps,
+          weight_lut,
+          1.0,
+          false,
+          d.data(),
+          n_ok.data()
+        );
+      }
       for (int t = 0; t < n_j; ++t) {
         const uint64_t key = undirected_key(qi, part[static_cast<std::size_t>(t)]);
         local[key] = d[static_cast<std::size_t>(t)];
@@ -114,8 +133,10 @@ Rcpp::DataFrame seq_distmx_pairs_internal(
   }
   const std::string method =
     element_as_string(dist_config, "method", "dist_config");
-  if (method != "aa") {
-    OPTIMOTU_STOP("seq_distmx pairs= is currently implemented for dist_aa()");
+  if (method != "aa" && method != "evo") {
+    OPTIMOTU_STOP(
+      "seq_distmx pairs= is implemented for dist_aa() and dist_evo()"
+    );
   }
   if (pairs.ncol() != 2) {
     OPTIMOTU_STOP("`pairs` must have two columns");
@@ -125,7 +146,15 @@ Rcpp::DataFrame seq_distmx_pairs_internal(
   const int n_pair = pairs.nrow();
   PackedAaSequenceSet pss(seq_str);
   std::vector<float> lut_storage;
-  const float *weight_lut = aa_weight_lut_from_config(dist_config, lut_storage);
+  EvoModel evo_store;
+  const EvoModel *evo = nullptr;
+  const float *weight_lut = nullptr;
+  if (method == "evo") {
+    evo_store = evo_model_from_config(dist_config);
+    evo = &evo_store;
+  } else {
+    weight_lut = aa_weight_lut_from_config(dist_config, lut_storage);
+  }
   const int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
   const bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
   int threads = 1;
@@ -198,8 +227,8 @@ Rcpp::DataFrame seq_distmx_pairs_internal(
 
   if (!queries.empty()) {
     AaStarWorker worker(
-      pss, queries, partners, min_overlap, ignore_gaps, weight_lut, &dist_map,
-      &n_ok_map
+      pss, queries, partners, min_overlap, ignore_gaps, weight_lut, evo,
+      &dist_map, &n_ok_map
     );
     const int n_threads = std::min(threads, static_cast<int>(queries.size()));
     if (n_threads <= 1) {
@@ -212,9 +241,9 @@ Rcpp::DataFrame seq_distmx_pairs_internal(
   for (std::size_t k = 0; k < leftover_i.size(); ++k) {
     const int i = leftover_i[k];
     const int j = leftover_j[k];
-    const auto scored = pss.success_score_and_dist(
-      i, j, min_overlap, ignore_gaps, weight_lut
-    );
+    const auto scored = evo == nullptr
+      ? pss.success_score_and_dist(i, j, min_overlap, ignore_gaps, weight_lut)
+      : pss.score_evo_pair(i, j, min_overlap, ignore_gaps, *evo);
     const uint64_t key = undirected_key(i, j);
     dist_map[key] = std::get<2>(scored);
     n_ok_map[key] = std::get<1>(scored);

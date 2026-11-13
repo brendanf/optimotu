@@ -19,3 +19,4 @@
 ^tests/clado.rds$
 ^\.cursor$
 ^docs$
+^tools/mtart_sim\.bin$

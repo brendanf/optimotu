@@ -19,6 +19,7 @@
 #include "HammingDistWorker.h"
 #include "AaDistWorker.h"
 #include "AaConfig.h"
+#include "EvoConfig.h"
 #include "Ksw2DistWorker.h"
 
 #include "AllPairGenerator.h"
@@ -1132,65 +1133,72 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       OPTIMOTU_STOP("unknown parallelization method");
     }
   }
-  else if (dist_method == "aa")
+  else if (dist_method == "aa" || dist_method == "evo")
   {
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
     std::vector<float> lut_storage;
-    const float *weight_lut =
-      aa_weight_lut_from_config(dist_config, lut_storage);
+    EvoModel evo_store;
+    const EvoModel *evo_ptr = nullptr;
+    const float *weight_lut = nullptr;
+    if (dist_method == "evo") {
+      evo_store = evo_model_from_config(dist_config);
+      evo_ptr = &evo_store;
+    } else {
+      weight_lut = aa_weight_lut_from_config(dist_config, lut_storage);
+    }
     if (par_method == "merge") {
       if (v == 0) {
         return std::make_unique<AaSplitClusterWorker<0>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else if (v == 1) {
         return std::make_unique<AaSplitClusterWorker<1>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else if (v == 2) {
         return std::make_unique<AaSplitClusterWorker<2>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else if (v == 3) {
         return std::make_unique<AaSplitClusterWorker<3>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else {
         return std::make_unique<AaSplitClusterWorker<4>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
         return std::make_unique<AaConcurrentClusterWorker<0>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else if (v == 1) {
         return std::make_unique<AaConcurrentClusterWorker<1>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else if (v == 2) {
         return std::make_unique<AaConcurrentClusterWorker<2>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else if (v == 3) {
         return std::make_unique<AaConcurrentClusterWorker<3>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       } else {
         return std::make_unique<AaConcurrentClusterWorker<4>>(
           seq, cluster, pgb, min_overlap, ignore_gaps, weight_lut,
-          worker_threads
+          worker_threads, evo_ptr
         );
       }
     } else {
@@ -1590,7 +1598,7 @@ std::unique_ptr<SearchWorker> create_search_worker(
                                                           ignore_gaps);
     }
   }
-  else if (dist_method == "aa")
+  else if (dist_method == "aa" || dist_method == "evo")
   {
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
@@ -1601,29 +1609,41 @@ std::unique_ptr<SearchWorker> create_search_worker(
       OPTIMOTU_STOP("cigar is not implemented for amino-acid distance");
     }
     std::vector<float> lut_storage;
-    const float *weight_lut =
-      aa_weight_lut_from_config(dist_config, lut_storage);
+    EvoModel evo_store;
+    const EvoModel *evo_ptr = nullptr;
+    const float *weight_lut = nullptr;
+    if (dist_method == "evo") {
+      evo_store = evo_model_from_config(dist_config);
+      evo_ptr = &evo_store;
+    } else {
+      weight_lut = aa_weight_lut_from_config(dist_config, lut_storage);
+    }
     switch (v) {
     case 0:
       return std::make_unique<AaSearchWorkerImpl<0>>(
-        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut
+        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut,
+        evo_ptr
       );
     case 1:
       return std::make_unique<AaSearchWorkerImpl<1>>(
-        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut
+        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut,
+        evo_ptr
       );
     case 2:
       return std::make_unique<AaSearchWorkerImpl<2>>(
-        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut
+        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut,
+        evo_ptr
       );
     case 3:
       return std::make_unique<AaSearchWorkerImpl<3>>(
-        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut
+        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut,
+        evo_ptr
       );
     case 4:
     default:
       return std::make_unique<AaSearchWorkerImpl<4>>(
-        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut
+        query, ref, threshold, threads, min_overlap, ignore_gaps, weight_lut,
+        evo_ptr
       );
     }
   }
@@ -1718,7 +1738,7 @@ std::unique_ptr<DistWorker> create_dist_worker(
       static_cast<std::size_t>(threads)
     );
   }
-  else if (dist_method == "aa")
+  else if (dist_method == "aa" || dist_method == "evo")
   {
     if (span != 0) {
       OPTIMOTU_STOP("span is not implemented for amino-acid distance");
@@ -1731,11 +1751,18 @@ std::unique_ptr<DistWorker> create_dist_worker(
     int min_overlap = element_as_int(dist_config, "min_overlap", "dist_config");
     bool ignore_gaps = element_as_bool(dist_config, "ignore_gaps", "dist_config");
     std::vector<float> lut_storage;
-    const float *weight_lut =
-      aa_weight_lut_from_config(dist_config, lut_storage);
+    EvoModel evo_store;
+    const EvoModel *evo_ptr = nullptr;
+    const float *weight_lut = nullptr;
+    if (dist_method == "evo") {
+      evo_store = evo_model_from_config(dist_config);
+      evo_ptr = &evo_store;
+    } else {
+      weight_lut = aa_weight_lut_from_config(dist_config, lut_storage);
+    }
     return create_aa_dist_worker(
       seq, threshold, pgb, sdm, min_overlap, ignore_gaps, weight_lut,
-      false, verbose, static_cast<std::size_t>(threads)
+      false, verbose, static_cast<std::size_t>(threads), evo_ptr
     );
   }
   else

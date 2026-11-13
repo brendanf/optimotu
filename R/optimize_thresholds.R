@@ -156,7 +156,10 @@ estimate_subset_memory_mb <- function(
   if (isTRUE(include_result) && clust_method %in% c("tree", "slink", "prim")) {
     total_bytes <- total_bytes + n_seq * n_thresholds * int_bytes
   }
-  max(1, total_bytes / (1024 * 1024))
+  # add some per-subset overhead
+  total_bytes <- total_bytes + 4096
+  #return in MB
+  total_bytes / (1024 * 1024)
 }
 
 estimate_aa_packed_mb <- function(n_union, seq_len) {
@@ -303,7 +306,8 @@ estimate_batch_memory_mb <- function(
   if (identical(dist_method, "hamming") && n_union > 0L) {
     total <- total + estimate_hamming_packed_mb(n_union, mean_seq_len)
   }
-  if (identical(dist_method, "aa") && n_union > 0L) {
+  # isTRUE: NULL %in% c("aa", "evo") is logical(0), which if() rejects.
+  if (isTRUE(dist_method %in% c("aa", "evo")) && n_union > 0L) {
     total <- total + estimate_aa_packed_mb(n_union, mean_seq_len)
   }
   # Light allowance for SequenceView vector (~16B/view).
@@ -340,7 +344,8 @@ make_initial_batches <- function(
   parallel_method <- parallel_config$method
   threads <- parallel_config$threads
   do_hamming <- identical(dist_method, "hamming")
-  do_aa <- identical(dist_method, "aa")
+  # isTRUE: NULL %in% c("aa", "evo") is logical(0), which if() rejects.
+  do_aa <- isTRUE(dist_method %in% c("aa", "evo"))
 
   seq_indices <- testset_seq_indices(testset_select)
   n_seq_total <- 0L

@@ -5,6 +5,7 @@
 #ifndef OPTIMOTU_PACKEDAASEQUENCESET_H
 #define OPTIMOTU_PACKEDAASEQUENCESET_H
 
+#include "EvoModel.h"
 #include "SequenceView.h"
 #include <cstddef>
 #include <cstdint>
@@ -72,6 +73,37 @@ struct PackedAaSequenceSet {
     const float *weight_lut,
     double dist_threshold,
     bool early_exit,
+    double *dist_out,
+    int *n_ok_out
+  ) const;
+
+  // ML divergence under model. Overlap failure and a likelihood that is
+  // still rising at the last grid point both return model.t_max.
+  std::tuple<bool, int, double> score_evo_pair(
+    int i,
+    int j,
+    int min_overlap,
+    bool ignore_gaps,
+    const EvoModel &model
+  ) const;
+
+  double dist_evo(
+    int i,
+    int j,
+    int min_overlap,
+    bool ignore_gaps,
+    const EvoModel &model
+  ) const;
+
+  void score_query_evo(
+    int query_i,
+    const uint8_t *pos_major,
+    const int *target_idx,
+    int n_target,
+    int n_cols,
+    int min_overlap,
+    bool ignore_gaps,
+    const EvoModel &model,
     double *dist_out,
     int *n_ok_out
   ) const;

@@ -49,6 +49,13 @@ kruskal_parent_bytes <- function(
     n_seq * 16
 }
 
+# Per-subset pad added at the end of estimate_subset_memory_mb().
+subset_overhead_bytes <- 4096
+
+bytes_to_mb <- function(bytes) {
+  bytes / (1024 * 1024)
+}
+
 estimate_subset_bytes <- function(
   n_seq,
   n_thresholds,
@@ -74,7 +81,7 @@ estimate_subset_bytes <- function(
       hierarchical = max(1, threads / 2),
       1
     )
-    return(root + (scale - 1) * child)
+    return(root + (scale - 1) * child + subset_overhead_bytes)
   }
   scale <- switch(
     parallel_method,
@@ -83,7 +90,7 @@ estimate_subset_bytes <- function(
     hierarchical = max(1, threads / 2),
     1
   )
-  algo_bytes(n_seq, n_thresholds, clust_method) * scale
+  algo_bytes(n_seq, n_thresholds, clust_method) * scale + subset_overhead_bytes
 }
 
 merge_scale <- function(threads) {
@@ -102,17 +109,13 @@ testthat::test_that("estimate_subset_memory_mb matches estimate_bytes logic", {
       parallel_method = "concurrent",
       threads = 1L
     )
-    expected <- max(
-      1,
-      estimate_subset_bytes(
-        n_seq,
-        n_thresholds,
-        method,
-        "concurrent",
-        1L
-      ) /
-        (1024 * 1024)
-    )
+    expected <- bytes_to_mb(estimate_subset_bytes(
+      n_seq,
+      n_thresholds,
+      method,
+      "concurrent",
+      1L
+    ))
     testthat::expect_equal(got, expected, info = method)
   }
 })
@@ -236,13 +239,9 @@ testthat::test_that("include_result adds 4nm only for tree and slink", {
       1L,
       include_result = TRUE
     )
-    expected <- max(1, (base_bytes + result_bytes) / (1024 * 1024))
+    expected <- bytes_to_mb(base_bytes + result_bytes)
     testthat::expect_equal(with_result, expected, info = method)
-    testthat::expect_equal(
-      without,
-      max(1, base_bytes / (1024 * 1024)),
-      info = method
-    )
+    testthat::expect_equal(without, bytes_to_mb(base_bytes), info = method)
   }
   for (method in c("matrix", "index")) {
     without <- optimotu:::estimate_subset_memory_mb(
@@ -269,11 +268,10 @@ testthat::test_that("estimate_subset_memory_mb scales merge by tile shards", {
   n_seq <- 10000L
   n_thresholds <- 40L
   threads <- 2L
-  expected <- max(
-    1,
+  expected <- bytes_to_mb(
     algo_bytes(n_seq, n_thresholds, "tree") *
-      merge_scale(threads) /
-      (1024 * 1024)
+      merge_scale(threads) +
+      subset_overhead_bytes
   )
   got <- optimotu:::estimate_subset_memory_mb(
     n_seq = n_seq,
@@ -289,17 +287,13 @@ testthat::test_that("merge slink uses parent root and leaf tile shards", {
   n_seq <- 10000L
   n_thresholds <- 40L
   threads <- 2L
-  expected <- max(
-    1,
-    estimate_subset_bytes(
-      n_seq,
-      n_thresholds,
-      "slink",
-      "merge",
-      threads
-    ) /
-      (1024 * 1024)
-  )
+  expected <- bytes_to_mb(estimate_subset_bytes(
+    n_seq,
+    n_thresholds,
+    "slink",
+    "merge",
+    threads
+  ))
   got <- optimotu:::estimate_subset_memory_mb(
     n_seq = n_seq,
     n_thresholds = n_thresholds,
@@ -381,11 +375,10 @@ testthat::test_that("estimate_subset_memory_mb merge scale grows with threads", 
     4L
   )
   testthat::expect_gt(four, two)
-  expected_four <- max(
-    1,
+  expected_four <- bytes_to_mb(
     algo_bytes(n_seq, n_thresholds, "tree") *
-      merge_scale(4L) /
-      (1024 * 1024)
+      merge_scale(4L) +
+      subset_overhead_bytes
   )
   testthat::expect_equal(four, expected_four)
 })
@@ -542,7 +535,31 @@ testthat::test_that("estimate_batch_memory_mb adds Hamming packed union bytes", 
   )
   n_union <- length(unique(unlist(testset$seq_id[1:2], use.names = FALSE)))
   packed <- optimotu:::estimate_hamming_packed_mb(n_union, 400)
+  aa_packed <- optimotu:::estimate_aa_packed_mb(n_union, 400)
   # Non-Hamming path already includes SequenceView allowance.
   testthat::expect_equal(with_ham, without + packed)
   testthat::expect_gt(with_ham, without)
+  for (method in c("aa", "evo")) {
+    got <- optimotu:::estimate_batch_memory_mb(
+      batch_idx = 1:2,
+      testset_select = testset,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
+      dist_method = method,
+      mean_seq_len = 400
+    )
+    testthat::expect_equal(got, without + aa_packed, info = method)
+  }
+  # NULL dist_method is the default and must stay a scalar logical.
+  batches <- optimotu:::make_initial_batches(
+    seq_len(nrow(testset)),
+    testset,
+    threshold_config,
+    clust_config,
+    parallel_config,
+    budget_mb = 1e6,
+    dist_method = NULL
+  )
+  testthat::expect_equal(batches, list(seq_len(nrow(testset))))
 })

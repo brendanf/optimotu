@@ -1,5 +1,15 @@
 # optimotu development version
 
+* Add `dist_evo()` / `method = "evo"` for maximum-likelihood amino-acid
+  divergence under an exchangeability model (`mtart`, `mtrev`, `mtmam`,
+  `jtt`, `wag`, `lg`, a PAML file, or a literal matrix plus `pi`).
+  The likelihood grid for one residue pair is contiguous, and each scan
+  adds it with SIMD. Unsaturated pairs are refined with Newton steps.
+  Each step evaluates the 20 spectral exponentials once, in SIMD across
+  a batch of targets. The three eigenvalue dots for a residue pair share
+  one pass, and four pairs are dotted before their score divisions. The method is available from
+  `seq_distmx()`, `seq_search()`, `seq_cluster()`, and
+  `optimize_thresholds()`, with the same fast subproblem rule as Hamming.
 * Fix `dist_hamming(ignore_gaps = FALSE)`, which could give a wrong
   distance when an overlap ended on a multiple of 64 bases. The last
   64-base mask word was dropped, so those comparisons could come back

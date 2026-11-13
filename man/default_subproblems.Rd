@@ -15,7 +15,8 @@ default_subproblems(threads, method)
 integer subproblem request passed to the pair generator
 }
 \description{
-Hamming, USEARCH, and \code{aa} use the perfect square nearest \code{4 * threads}.
+Hamming, USEARCH, \code{aa}, and \code{evo} use the perfect square nearest
+\code{4 * threads}.
 Alignment methods (\code{wfa2}, \code{edlib}, \code{ksw2}, \code{hybrid}) pick the square
 \code{S} with \verb{threads <= S <= 4 * threads} that maximizes equal-tile
 utilization \code{S / (threads * ceil(S / threads))}; ties keep the
