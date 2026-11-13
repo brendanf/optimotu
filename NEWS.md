@@ -1,5 +1,12 @@
 # optimotu development version
 
+* Add `dissimilarity = "score"` to `dist_wfa2()`, `dist_edlib()`,
+  `dist_ksw2()`, `dist_hybrid()`, and `align()`. The default remains
+  CIGAR identity `(L - M) / L`. Score mode converts the aligner's
+  optimal score to substitution units of the same penalties and
+  skips traceback unless a CIGAR or gap summary is requested.
+  Constrained score banding uses a substitution-budget bound, not
+  the identity band (`docs/wfa-identity-score-bound.md`).
 * Add `dist_evo()` / `method = "evo"` for maximum-likelihood amino-acid
   divergence under an exchangeability model (`mtart`, `mtrev`, `mtmam`,
   `jtt`, `wag`, `lg`, a PAML file, or a literal matrix plus `pi`).

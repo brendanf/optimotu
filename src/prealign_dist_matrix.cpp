@@ -1,3 +1,4 @@
+#include "optimotu.h"
 #include <Rcpp.h>
 #include <RcppParallel.h>
 #include <RcppThread.h>
@@ -6,6 +7,7 @@
 #include "SparseDistanceMatrix.h"
 #include "ClusterIndexedMatrix.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 #include <cstdint>
 
 struct PrealignAlignWorker : public RcppParallel::Worker {
@@ -13,6 +15,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold, sim_threshold, sim_threshold_plus_1;
   const bool do_prealign, is_constrained;
+  const Dissimilarity dissimilarity;
   const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &prealigned, &aligned;
@@ -28,6 +31,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
     const double dist_threshold,
     const bool do_prealign,
     const bool constrain,
+    Dissimilarity dissimilarity,
     const std::uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &prealigned,
@@ -37,6 +41,7 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
   dist_threshold(dist_threshold), sim_threshold(1.0 - dist_threshold),
   sim_threshold_plus_1(1.0 + sim_threshold), do_prealign(do_prealign),
   is_constrained(constrain),
+  dissimilarity(dissimilarity),
   threads(threads),
   sdm(sdm), prealigned(prealigned), aligned(aligned) {};
 
@@ -61,8 +66,12 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
 
     wfa::WFAlignerEdit prealigner{wfa::WFAligner::Score};
 
-    wfa::WFAlignerChoose aligner{match, mismatch, gap, extend, gap2, extend2,
-                                 wfa::WFAligner::Alignment};
+    wfa::WFAlignerChoose aligner{
+      match, mismatch, gap, extend, gap2, extend2,
+      dissimilarity == Dissimilarity::SCORE
+        ? wfa::WFAligner::Score
+        : wfa::WFAligner::Alignment
+    };
     if (begin == 0) {
       begin_i = 1;
     } else {
@@ -82,15 +91,20 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
         // Rcpp::Rcout << "#### seq " << i << " (l1=" << l1 << ") and "
         //             << j << " (l2=" << l2 <<")####" << std::endl;
 
-        if (l1/l2 < sim_threshold) continue;
+        if (!pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, dist_threshold,
+              match, mismatch, gap, extend, gap2, extend2
+            )) {
+          continue;
+        }
         double maxd1 = wfa_identity_max_edits(l1, l2, dist_threshold);
-        WfaIdentityBound bound = wfa_identity_bound(
-            l1, l2, dist_threshold, match, mismatch, gap, extend, gap2,
-            extend2
+        WfaIdentityBound bound = choose_alignment_bound(
+            dissimilarity, l1, l2, dist_threshold, match, mismatch, gap,
+            extend, gap2, extend2
         );
 
         std::pair<int, double> d1 = {0, 0};
-        if (do_prealign) {
+        if (do_prealign && dissimilarity == Dissimilarity::IDENTITY) {
           prealigner.setMaxAlignmentSteps((int)maxd1 + 1);
           prealigner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
           auto status = prealigner.alignEnd2End(seq[s1], seq[s2]);
@@ -104,8 +118,9 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
           aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
           aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
         }
-        // std::cout << "Aligning..." << std::endl;
-        auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);
+        auto d2 = score_and_distance_wfa2(
+            seq[s1], seq[s2], aligner, dissimilarity, match, mismatch
+        );
         // std::cout << "Alignment successful." << std::endl;
 
         my_aligned++;
@@ -163,7 +178,8 @@ Rcpp::DataFrame seq_distmx_prealign(
     int gap_open2 = 0, int gap_extend2 = 0,
     bool prealign = true,
     bool constrain = true,
-    std::uint8_t threads = 1) {
+    std::uint8_t threads = 1,
+    std::string dissimilarity = "identity") {
   size_t prealigned = 0, aligned = 0;
 
   std::vector<size_t> seq1, seq2;
@@ -171,10 +187,16 @@ Rcpp::DataFrame seq_distmx_prealign(
   std::vector<double> dist1, dist2;
 
   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
+  Dissimilarity mode = (dissimilarity == "score")
+      ? Dissimilarity::SCORE
+      : Dissimilarity::IDENTITY;
+  if (dissimilarity != "score" && dissimilarity != "identity") {
+    OPTIMOTU_STOP("dissimilarity must be \"identity\" or \"score\"");
+  }
   PrealignAlignWorker worker(seq,
                              match, mismatch, gap_open, gap_extend, gap_open2,
                              gap_extend2,
-                             dist_threshold, prealign, constrain, threads,
+                             dist_threshold, prealign, constrain, mode, threads,
                              sdm, prealigned, aligned);
   if (threads > 1) {
     RcppParallel::parallelFor(0, threads, worker, 1, threads);

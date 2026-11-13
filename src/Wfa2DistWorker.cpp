@@ -6,6 +6,7 @@
 #include "pairwise_alignment.h"
 #include "optimotu.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 
 Wfa2DistWorker::Wfa2DistWorker(
   const std::vector<std::string> &seq,
@@ -16,8 +17,9 @@ Wfa2DistWorker::Wfa2DistWorker(
   int gap_open, int gap_extend,
   int gap_open2, int gap_extend2,
   int verbose,
-  std::size_t worker_threads
-) : DistWorker(seq, dist_threshold, pgb, sdm, verbose, worker_threads),
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
+) : DistWorker(seq, dist_threshold, pgb, sdm, verbose, worker_threads, dissimilarity),
 match(match), mismatch(mismatch),
 gap_open(gap_open), gap_extend(gap_extend),
 gap_open2(gap_open2), gap_extend2(gap_extend2) {}
@@ -58,9 +60,14 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
     my_max_delete.reserve(1000);
   }
 
-  wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
-                                   gap_open2, gap_extend2,
-                                   wfa::WFAligner::Alignment};
+  constexpr bool need_path =
+    !std::is_same_v<SparseDistanceMatrixType, SparseDistanceMatrix>;
+  const bool score_only =
+    dissimilarity == Dissimilarity::SCORE && !need_path;
+  wfa::WFAlignerChoose wfa_aligner{
+    match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2,
+    score_only ? wfa::WFAligner::Score : wfa::WFAligner::Alignment
+  };
 
   OPTIMOTU_DEBUG(
     2,
@@ -108,13 +115,16 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
         size_t s2 = is_seqj_longer ? j : i;
         double l1 = seq[s1].size(), l2 = seq[s2].size();
 
-        if constexpr (span == AlignmentSpan::GLOBAL) {
-          if (l1/l2 < sim_threshold) return;
+        if (!pair_length_ok(
+              dissimilarity, span, l1, l2, dist_threshold,
+              match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2
+            )) {
+          return;
         }
         ++my_prealigned;
         if constexpr (is_constrained) {
-          WfaIdentityBound bound = wfa_identity_bound(
-              l1, l2, dist_threshold, match, mismatch,
+          WfaIdentityBound bound = choose_alignment_bound(
+              dissimilarity, l1, l2, dist_threshold, match, mismatch,
               gap_open, gap_extend, gap_open2, gap_extend2,
               span == AlignmentSpan::EXTEND
           );
@@ -122,12 +132,20 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
           wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
         }
 
-        std::string cigar = cigar_wfa2<span>(seq[s1], seq[s2], wfa_aligner);
-        if (cigar == "") return;
-        ++my_aligned;
-        int score = wfa_aligner.getAlignmentScore();
-        double d = distance_from_cigar(cigar);
+        double d;
+        std::string cigar;
+        if (need_path) {
+          std::tie(d, cigar) = distance_and_cigar_wfa2<span>(
+              seq[s1], seq[s2], wfa_aligner, dissimilarity, match, mismatch
+          );
+        } else {
+          d = distance_wfa2<span>(
+              seq[s1], seq[s2], wfa_aligner, dissimilarity, match, mismatch
+          );
+        }
         if (d > dist_threshold) return;
+        int score = wfa_aligner.getAlignmentScore();
+        ++my_aligned;
 
         my_seq1.push_back(j);
         my_seq2.push_back(i);
@@ -182,22 +200,23 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   int match, int mismatch,
   int gap_open, int gap_extend,
   int gap_open2, int gap_extend2,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   if (dynamic_cast<SparseDistanceMatrixCigar*>(&sdm)) {
     return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixCigar>>(
       seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-      gap_open2, gap_extend2, worker_threads
+      gap_open2, gap_extend2, worker_threads, dissimilarity
     );
   } else if (dynamic_cast<SparseDistanceMatrixGapstats*>(&sdm)) {
     return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixGapstats>>(
       seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-      gap_open2, gap_extend2, worker_threads
+      gap_open2, gap_extend2, worker_threads, dissimilarity
     );
   } else {
     return std::make_unique<Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrix>>(
       seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-      gap_open2, gap_extend2, worker_threads
+      gap_open2, gap_extend2, worker_threads, dissimilarity
     );
   }
 }
@@ -212,18 +231,19 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   int gap_open, int gap_extend,
   int gap_open2, int gap_extend2,
   AlignmentSpan span,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   switch (span) {
     case AlignmentSpan::GLOBAL:
       return create_wfa2_dist_worker<verbose, is_constrained, AlignmentSpan::GLOBAL>(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, worker_threads
+        gap_open2, gap_extend2, worker_threads, dissimilarity
       );
     case AlignmentSpan::EXTEND:
       return create_wfa2_dist_worker<verbose, is_constrained, AlignmentSpan::EXTEND>(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, worker_threads
+        gap_open2, gap_extend2, worker_threads, dissimilarity
       );
     default:
       OPTIMOTU_STOP("span must be 0 or 1");
@@ -241,17 +261,18 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   int gap_open2, int gap_extend2,
   AlignmentSpan span,
   bool is_constrained,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   if (is_constrained) {
     return create_wfa2_dist_worker<verbose, true>(
       seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-      gap_open2, gap_extend2, span, worker_threads
+      gap_open2, gap_extend2, span, worker_threads, dissimilarity
     );
   } else {
     return create_wfa2_dist_worker<verbose, false>(
       seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-      gap_open2, gap_extend2, span, worker_threads
+      gap_open2, gap_extend2, span, worker_threads, dissimilarity
     );
   }
 }
@@ -267,35 +288,36 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   int verbose,
   AlignmentSpan span,
   bool constrain,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   int v = (verbose > 4) ? 4 : verbose;
   switch (v) {
     case 0:
       return create_wfa2_dist_worker<0>(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, span, constrain, worker_threads
+        gap_open2, gap_extend2, span, constrain, worker_threads, dissimilarity
       );
     case 1:
       return create_wfa2_dist_worker<1>(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, span, constrain, worker_threads
+        gap_open2, gap_extend2, span, constrain, worker_threads, dissimilarity
       );
     case 2:
       return create_wfa2_dist_worker<2>(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, span, constrain, worker_threads
+        gap_open2, gap_extend2, span, constrain, worker_threads, dissimilarity
       );
     case 3:
       return create_wfa2_dist_worker<3>(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, span, constrain, worker_threads
+        gap_open2, gap_extend2, span, constrain, worker_threads, dissimilarity
       );
     case 4:
     default:
       return create_wfa2_dist_worker<4>(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, span, constrain, worker_threads
+        gap_open2, gap_extend2, span, constrain, worker_threads, dissimilarity
       );
   }
 }

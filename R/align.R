@@ -42,6 +42,9 @@
 #' two-piece affine gap penalty; positive is penalty.
 #' @param method (`character` scalar) alignment method to use; one of "wfa2",
 #' "edlib", or "ksw2".
+#' @param dissimilarity (`character` string) `"identity"` (default) is
+#' \eqn{(L - M) / L} from the CIGAR. `"score"` uses the aligner's
+#' optimal score in substitution units of the same penalties.
 #' @param span (`character` scalar) alignment span; one of "global" or "extend".
 #' In "global" mode, the entire sequences are aligned and end gaps are
 #' penalized. "extend" mode is slightly between methods: in both cases, left
@@ -62,6 +65,7 @@ align <- function(
   gap_open2 = 0,
   gap_extend2 = 0,
   method = c("wfa2", "edlib", "ksw2"),
+  dissimilarity = c("identity", "score"),
   span = c("global", "extend")
 ) {
   # Check that the inputs are valid
@@ -79,6 +83,7 @@ align <- function(
 
   checkmate::assert_character(method)
   method <- match.arg(method)
+  dissimilarity <- match.arg(dissimilarity)
   if (method == "edlib") {
     if (
       match != 0 ||
@@ -95,8 +100,8 @@ align <- function(
     }
     switch(
       span,
-      global = align_edlib_global(a, b),
-      extend = align_edlib_extend(a, b)
+      global = align_edlib_global(a, b, dissimilarity),
+      extend = align_edlib_extend(a, b, dissimilarity)
     )
   } else if (method == "ksw2") {
     switch(
@@ -109,7 +114,8 @@ align <- function(
         gap_open,
         gap_extend,
         gap_open2,
-        gap_extend2
+        gap_extend2,
+        dissimilarity
       ),
       extend = align_ksw2_extend(
         a,
@@ -119,7 +125,8 @@ align <- function(
         gap_open,
         gap_extend,
         gap_open2,
-        gap_extend2
+        gap_extend2,
+        dissimilarity
       )
     )
   } else {
@@ -133,7 +140,8 @@ align <- function(
         gap_open,
         gap_extend,
         gap_open2,
-        gap_extend2
+        gap_extend2,
+        dissimilarity
       ),
       extend = align_wfa2_extend(
         a,
@@ -143,7 +151,8 @@ align <- function(
         gap_open,
         gap_extend,
         gap_open2,
-        gap_extend2
+        gap_extend2,
+        dissimilarity
       )
     )
   }

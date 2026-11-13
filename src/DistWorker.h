@@ -12,6 +12,7 @@
 
 #include "SparseDistanceMatrix.h"
 #include "PairGenerator.h"
+#include "alignment_enums.h"
 
 class DistWorker : public RcppParallel::Worker {
 protected:
@@ -21,6 +22,7 @@ protected:
   const std::size_t threads;
   std::size_t _prealigned = 0, _aligned = 0;
   SparseDistanceMatrix &sdm;
+  const Dissimilarity dissimilarity;
 
 public:
   DistWorker(
@@ -29,7 +31,8 @@ public:
     DivisiblePairGenerator::Builder & pair_generator_builder,
     SparseDistanceMatrix &sdm,
     int verbose = 0,
-    std::size_t worker_threads = 0
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
   ) : seq(seq),
       dist_threshold(dist_threshold),
       sim_threshold(1.0 - dist_threshold),
@@ -42,7 +45,8 @@ public:
               1, std::min(worker_threads, pair_generators.size())
             )
       ),
-      sdm(sdm) {}
+      sdm(sdm),
+      dissimilarity(dissimilarity) {}
 
   virtual ~DistWorker() = default;
 

@@ -5,13 +5,18 @@
 #include <edlib.h>
 #include <algorithm>
 #include "pairwise_alignment.h"
+#include "score_dissimilarity.h"
 
 template <int verbose>
 void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
   (void)end;
 
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
-    -1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0
+    -1, EdlibAlignMode::EDLIB_MODE_NW,
+    dissimilarity == Dissimilarity::SCORE
+      ? EdlibAlignTask::EDLIB_TASK_DISTANCE
+      : EdlibAlignTask::EDLIB_TASK_PATH,
+    0, 0
   );
 
   for_each_assigned_tile(
@@ -93,13 +98,21 @@ void EdlibSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t
           << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              0, 1, 0, 1, 0, 1
+            )) {
           ++my_prealigned;
-          double sim_threshold_plus_1 = 2.0 - threshold;
-          double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-          ed_aligner.k = (int)maxd1 + 1;
-          double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
+          if (dissimilarity == Dissimilarity::SCORE) {
+            ed_aligner.k = edlib_score_k(
+                score_ref_length(l1, l2, AlignmentSpan::GLOBAL), threshold
+            );
+          } else {
+            double sim_threshold_plus_1 = 2.0 - threshold;
+            double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+            ed_aligner.k = (int)maxd1 + 1;
+          }
+          double d = distance_edlib(seq[s1], seq[s2], ed_aligner, dissimilarity);
           if (d < 1.0) ++my_aligned;
 
           OPTIMOTU_DEBUG(
@@ -139,7 +152,9 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
     -1,
     EdlibAlignMode::EDLIB_MODE_NW,
-    EdlibAlignTask::EDLIB_TASK_PATH,
+    dissimilarity == Dissimilarity::SCORE
+      ? EdlibAlignTask::EDLIB_TASK_DISTANCE
+      : EdlibAlignTask::EDLIB_TASK_PATH,
     0,
     0
   );
@@ -183,13 +198,21 @@ void EdlibConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::s
           <<")####" << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              0, 1, 0, 1, 0, 1
+            )) {
           ++my_prealigned;
-          double sim_threshold_plus_1 = 2.0 - threshold;
-          double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
-          ed_aligner.k = (int)maxd1 + 1;
-          double d = distance_edlib(seq[s1], seq[s2], ed_aligner);
+          if (dissimilarity == Dissimilarity::SCORE) {
+            ed_aligner.k = edlib_score_k(
+                score_ref_length(l1, l2, AlignmentSpan::GLOBAL), threshold
+            );
+          } else {
+            double sim_threshold_plus_1 = 2.0 - threshold;
+            double maxd1 = threshold * (l1 + l2) / sim_threshold_plus_1;
+            ed_aligner.k = (int)maxd1 + 1;
+          }
+          double d = distance_edlib(seq[s1], seq[s2], ed_aligner, dissimilarity);
           if (d < 1.0) ++my_aligned;
           OPTIMOTU_DEBUG(
             4,

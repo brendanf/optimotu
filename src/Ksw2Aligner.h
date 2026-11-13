@@ -39,6 +39,9 @@ public:
   // Symmetric band width. Use w < 0 to disable banding.
   void setBandWidth(int w) { band_width = w; }
 
+  // Skip CIGAR traceback. Align still returns the DP score.
+  void setScoreOnly(bool v) { score_only = v; }
+
   // Align a (query) vs b (target). Callers should pass the longer sequence as
   // query and the shorter as target when following the WFA2 worker convention.
   // Traceback always sets KSW_EZ_RIGHT (right-aligned gaps on score ties).
@@ -97,6 +100,7 @@ private:
   int8_t sc_mismatch = -1;
   bool dual_affine = false;
   int band_width = -1;
+  bool score_only = false;
   int last_score = 0;
   bool last_ok = false;
 

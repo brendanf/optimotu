@@ -14,7 +14,8 @@ public :
     DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1,
     int verbose = 0,
-    std::size_t worker_threads = 0
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
   );
 };
 
@@ -27,14 +28,16 @@ class HybridSplitClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::_prealigned;
   using DistClusterWorker::_aligned;
   using DistClusterWorker::pair_generators;
+  using DistClusterWorker::dissimilarity;
 public :
   HybridSplitClusterWorker(
     const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1,
-    std::size_t worker_threads = 0
-  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose, worker_threads) {};
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose, worker_threads, dissimilarity) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 
@@ -47,14 +50,16 @@ class HybridConcurrentClusterWorker : public HybridClusterWorker {
   using DistClusterWorker::_prealigned;
   using DistClusterWorker::_aligned;
   using DistClusterWorker::pair_generators;
+  using DistClusterWorker::dissimilarity;
 public :
   HybridConcurrentClusterWorker(
     const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
     const double breakpoint = 0.1,
-    std::size_t worker_threads = 0
-  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose, worker_threads) {};
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : HybridClusterWorker(seq, clust_algo, pgb, breakpoint, verbose, worker_threads, dissimilarity) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 

@@ -121,8 +121,8 @@ fmeasure_matrix <- function(k, c, ncpu = 1L) {
 #' @param threads (`integer` count) number of parallel threads to use.
 #' @export
 #' @rdname seq_distmx
-seq_distmx_kmer <- function(seq, dist_threshold, udist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L) {
-    .Call(`_optimotu_seq_distmx_kmer`, seq, dist_threshold, udist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads)
+seq_distmx_kmer <- function(seq, dist_threshold, udist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L, dissimilarity = "identity") {
+    .Call(`_optimotu_seq_distmx_kmer`, seq, dist_threshold, udist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, threads, dissimilarity)
 }
 
 #' Calculate similarity for a set of alternate "test" partitions vs. a "true" partition
@@ -198,43 +198,43 @@ cigar_ksw2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, ga
 #' @describeIn pairwise_alignment Compute pairwise alignment distance with WFA2
 #' @export
 #' @keywords internal
-align_wfa2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
-    .Call(`_optimotu_align_wfa2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+align_wfa2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, dissimilarity = "identity") {
+    .Call(`_optimotu_align_wfa2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity)
 }
 
 #' @describeIn pairwise_alignment Compute pairwise alignment distance with WFA2
 #' @export
 #' @keywords internal
-align_wfa2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
-    .Call(`_optimotu_align_wfa2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+align_wfa2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, dissimilarity = "identity") {
+    .Call(`_optimotu_align_wfa2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity)
 }
 
 #' @describeIn pairwise_alignment Compute pairwise  global alignment distance with Edlib
 #' @export
 #' @keywords internal
-align_edlib_global <- function(a, b) {
-    .Call(`_optimotu_align_edlib_global`, a, b)
+align_edlib_global <- function(a, b, dissimilarity = "identity") {
+    .Call(`_optimotu_align_edlib_global`, a, b, dissimilarity)
 }
 
 #' @describeIn pairwise_alignment Compute pairwise extension alignment distance with Edlib
 #' @export
 #' @keywords internal
-align_edlib_extend <- function(a, b) {
-    .Call(`_optimotu_align_edlib_extend`, a, b)
+align_edlib_extend <- function(a, b, dissimilarity = "identity") {
+    .Call(`_optimotu_align_edlib_extend`, a, b, dissimilarity)
 }
 
 #' @describeIn pairwise_alignment Compute pairwise alignment distance with KSW2
 #' @export
 #' @keywords internal
-align_ksw2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
-    .Call(`_optimotu_align_ksw2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+align_ksw2_global <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, dissimilarity = "identity") {
+    .Call(`_optimotu_align_ksw2_global`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity)
 }
 
 #' @describeIn pairwise_alignment Compute pairwise extension alignment distance with KSW2
 #' @export
 #' @keywords internal
-align_ksw2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L) {
-    .Call(`_optimotu_align_ksw2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2)
+align_ksw2_extend <- function(a, b, match = 0L, mismatch = 1L, gap_open = 0L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, dissimilarity = "identity") {
+    .Call(`_optimotu_align_ksw2_extend`, a, b, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity)
 }
 
 #' Add gap statistics to a DataFrame containing CIGAR strings
@@ -266,8 +266,8 @@ add_gapstats <- function(df, cigar_column) {
 #' @param threads (`integer` count) number of parallel threads to use.
 #' @export
 #' @rdname seq_distmx
-seq_distmx_prealign <- function(seq, dist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L) {
-    .Call(`_optimotu_seq_distmx_prealign`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads)
+seq_distmx_prealign <- function(seq, dist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L, dissimilarity = "identity") {
+    .Call(`_optimotu_seq_distmx_prealign`, seq, dist_threshold, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, prealign, constrain, threads, dissimilarity)
 }
 
 seq_cluster_single <- function(seq, dist_config, threshold_config, clust_config, parallel_config, output_type = "matrix", verbose = 0L) {

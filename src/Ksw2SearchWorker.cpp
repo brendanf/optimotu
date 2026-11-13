@@ -6,6 +6,7 @@
 #include "Ksw2Aligner.h"
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 
 #include <algorithm>
 
@@ -21,6 +22,7 @@ void Ksw2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
   );
 
   Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
+  aligner.setScoreOnly(dissimilarity == Dissimilarity::SCORE && !do_cigar);
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
     if (!hits[i]) {
@@ -58,15 +60,18 @@ void Ksw2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
         << " (l2=" << l2 <<")####" << std::endl
       );
 
-      double sim_threshold = 1.0 - max_dist;
-      if constexpr (span == AlignmentSpan::GLOBAL) {
-        if (l1/l2 < sim_threshold) continue;
+      if (!pair_length_ok(
+            dissimilarity, span, l1, l2, max_dist,
+            0, ksw_effective_match(match) + ksw_effective_mismatch(mismatch),
+            gap_open, gap_extend, gap_open2, gap_extend2
+          )) {
+        continue;
       }
       ++my_prealigned;
-      WfaIdentityBound bound = wfa_identity_bound(
-          l1, l2, max_dist, match, mismatch,
+      WfaIdentityBound bound = choose_alignment_bound(
+          dissimilarity, l1, l2, max_dist, match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2,
-          span == AlignmentSpan::EXTEND
+          span == AlignmentSpan::EXTEND, true
       );
       // Bandwidth 0 after an exact hit drops later identical refs.
       // Extension also needs room for the length difference: KSW2's
@@ -86,14 +91,18 @@ void Ksw2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
       // first so a short query can match a prefix of a longer reference.
       if constexpr (span == AlignmentSpan::EXTEND) {
         if constexpr (do_cigar) {
-          std::tie(d, cigar) = distance_and_cigar_ksw2<span>(s1, s2, aligner);
+          std::tie(d, cigar) = distance_and_cigar_ksw2<span>(
+              s1, s2, aligner, dissimilarity
+          );
         } else {
-          d = distance_ksw2<span>(s1, s2, aligner);
+          d = distance_ksw2<span>(s1, s2, aligner, dissimilarity);
         }
       } else if constexpr (do_cigar) {
-        std::tie(d, cigar) = distance_and_cigar_ksw2<span>(s2, s1, aligner);
+        std::tie(d, cigar) = distance_and_cigar_ksw2<span>(
+            s2, s1, aligner, dissimilarity
+        );
       } else {
-        d = distance_ksw2<span>(s2, s1, aligner);
+        d = distance_ksw2<span>(s2, s1, aligner, dissimilarity);
       }
       OPTIMOTU_DEBUG(
         4,

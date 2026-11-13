@@ -136,4 +136,130 @@ inline WfaIdentityBound wfa_identity_bound(
   return out;
 }
 
+// Cheapest affine/dual-affine cost of G gap characters (one run).
+inline int wfa_min_gap_cost(
+    int n_gap_chars,
+    int gap_open,
+    int gap_extend,
+    int gap_open2,
+    int gap_extend2
+) {
+  if (n_gap_chars <= 0) return 0;
+  long long g = n_gap_chars;
+  long long c1 = (long long)gap_open + (long long)gap_extend * g;
+  long long c2 = (long long)gap_open2 + (long long)gap_extend2 * g;
+  long long c = std::min(c1, c2);
+  if (c > std::numeric_limits<int>::max()) {
+    return std::numeric_limits<int>::max();
+  }
+  if (c < 0) return 0;
+  return (int)c;
+}
+
+inline int wfa_max_gap_chars_for_budget(
+    double budget,
+    int gap_open,
+    int gap_extend,
+    int gap_open2,
+    int gap_extend2
+) {
+  if (budget < 0.0) return 0;
+  auto g_from = [&](int open, int ext) -> int {
+    if (ext <= 0) {
+      return (double)open <= budget
+        ? std::numeric_limits<int>::max() / 4
+        : 0;
+    }
+    double rem = budget - (double)open;
+    if (rem < (double)ext) return 0;
+    long long g = (long long)std::floor(rem / (double)ext);
+    if (g > std::numeric_limits<int>::max() / 4) {
+      return std::numeric_limits<int>::max() / 4;
+    }
+    if (g < 0) return 0;
+    return (int)g;
+  };
+  return std::max(
+      g_from(gap_open, gap_extend),
+      g_from(gap_open2, gap_extend2)
+  );
+}
+
+// Band and exclusive WFA score cap so that no alignment with substitution-
+// equivalent distance <= threshold can fall outside the band or exceed the
+// cap. Derivation: docs/wfa-identity-score-bound.md (score-mode section).
+inline WfaIdentityBound wfa_score_bound(
+    double l1,
+    double l2,
+    double threshold,
+    int match,
+    int mismatch,
+    int gap_open,
+    int gap_extend,
+    int gap_open2,
+    int gap_extend2,
+    bool extend_span = false
+) {
+  WfaIdentityBound out;
+  if (l2 < l1) {
+    double tmp = l1;
+    l1 = l2;
+    l2 = tmp;
+  }
+  double L = extend_span ? l1 : l2;
+  if (L < 1.0) L = 1.0;
+  int delta_pen = mismatch - match;
+  if (delta_pen < 1) delta_pen = 1;
+  double B = threshold * (double)delta_pen * L;
+  int g_max = wfa_max_gap_chars_for_budget(
+      B, gap_open, gap_extend, gap_open2, gap_extend2
+  );
+  int Delta = (int)std::ceil(l2 - l1);
+  if (Delta < 0) Delta = 0;
+  out.max_k = g_max + Delta;
+  out.min_k = -g_max;
+  if (match < 0) {
+    out.max_alignment_steps = std::numeric_limits<int>::max();
+  } else {
+    long long s = (long long)match * (long long)std::ceil(L) +
+      (long long)std::floor(B);
+    if (s >= std::numeric_limits<int>::max()) {
+      out.max_alignment_steps = std::numeric_limits<int>::max();
+    } else if (s < 0) {
+      out.max_alignment_steps = 1;
+    } else {
+      out.max_alignment_steps = (int)s + 1;
+    }
+  }
+  if (out.max_alignment_steps < 1) out.max_alignment_steps = 1;
+  return out;
+}
+
+inline bool score_global_length_ok(
+    double l1,
+    double l2,
+    double threshold,
+    int match,
+    int mismatch,
+    int gap_open,
+    int gap_extend,
+    int gap_open2,
+    int gap_extend2
+) {
+  if (l2 < l1) {
+    double tmp = l1;
+    l1 = l2;
+    l2 = tmp;
+  }
+  double L = l2;
+  if (L < 1.0) L = 1.0;
+  int delta_pen = mismatch - match;
+  if (delta_pen < 1) delta_pen = 1;
+  double B = threshold * (double)delta_pen * L;
+  int Delta = (int)std::ceil(l2 - l1);
+  return wfa_min_gap_cost(
+      Delta, gap_open, gap_extend, gap_open2, gap_extend2
+  ) <= B + 1e-9;
+}
+
 #endif

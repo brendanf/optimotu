@@ -8,6 +8,7 @@
 #include <mutex>
 #include <RcppParallel.h>
 #include "SearchHits.h"
+#include "alignment_enums.h"
 
 class SearchWorker : public RcppParallel::Worker{
 protected:
@@ -18,14 +19,16 @@ protected:
   std::mutex mutex;
   size_t _prealigned = 0, _aligned = 0;
   SearchHits hits;
+  const Dissimilarity dissimilarity;
 public:
   SearchWorker(
     const std::vector<std::string> & query,
     const std::vector<std::string> & ref,
     const double threshold,
-    const std::uint8_t threads
+    const std::uint8_t threads,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
   ) : query(query), ref(ref), threshold(threshold), threads(threads),
-  hits(query.size()) {}
+  hits(query.size()), dissimilarity(dissimilarity) {}
 
   size_t prealigned() const { return _prealigned; }
 

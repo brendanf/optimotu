@@ -2,6 +2,7 @@
 #include "EdlibSearchWorker.h"
 #include <edlib.h>
 #include "pairwise_alignment.h"
+#include "score_dissimilarity.h"
 
 template<int verbose, bool do_cigar, enum AlignmentSpan span>
 void EdlibSearchWorkerImpl<verbose, do_cigar, span>::operator()(
@@ -25,7 +26,11 @@ void EdlibSearchWorkerImpl<verbose, do_cigar, span>::operator()(
     static_assert(always_false_v<span>, "Invalid alignment span");
   }
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
-    -1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0
+    -1, mode,
+    (dissimilarity == Dissimilarity::SCORE && !do_cigar)
+      ? EdlibAlignTask::EDLIB_TASK_DISTANCE
+      : EdlibAlignTask::EDLIB_TASK_PATH,
+    0, 0
   );
 
   std::size_t my_prealigned = 0, my_aligned = 0;
@@ -64,20 +69,28 @@ void EdlibSearchWorkerImpl<verbose, do_cigar, span>::operator()(
         << " (l2=" << l2 <<")####" << std::endl
       );
 
-      double sim_threshold = 1.0 - max_dist;
-      if constexpr (span == AlignmentSpan::GLOBAL) {
-        if (l1/l2 < sim_threshold) continue;
+      if (!pair_length_ok(
+            dissimilarity, span, l1, l2, max_dist,
+            0, 1, 0, 1, 0, 1
+          )) {
+        continue;
       }
       ++my_prealigned;
-      double sim_threshold_plus_1 = 2.0 - max_dist;
-      double maxd1 = max_dist * (l1 + l2) / sim_threshold_plus_1;
-      ed_aligner.k = (int)maxd1 + 1;
+      if (dissimilarity == Dissimilarity::SCORE) {
+        ed_aligner.k = edlib_score_k(score_ref_length(l1, l2, span), max_dist);
+      } else {
+        double sim_threshold_plus_1 = 2.0 - max_dist;
+        double maxd1 = max_dist * (l1 + l2) / sim_threshold_plus_1;
+        ed_aligner.k = (int)maxd1 + 1;
+      }
       double d;
       std::string cigar;
       if constexpr (do_cigar) {
-        std::tie(d, cigar) = distance_and_cigar_edlib<span>(s1, s2, ed_aligner);
+        std::tie(d, cigar) = distance_and_cigar_edlib<span>(
+            s1, s2, ed_aligner, dissimilarity
+        );
       } else {
-        d = distance_edlib(s1, s2, ed_aligner);
+        d = distance_edlib(s1, s2, ed_aligner, dissimilarity);
       }
       OPTIMOTU_DEBUG(
         4,

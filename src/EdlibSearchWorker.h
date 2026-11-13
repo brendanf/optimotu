@@ -19,6 +19,7 @@ class EdlibSearchWorkerImpl : public EdlibSearchWorker {
   using SearchWorker::_prealigned;
   using SearchWorker::_aligned;
   using SearchWorker::hits;
+  using SearchWorker::dissimilarity;
 public:
   using EdlibSearchWorker::EdlibSearchWorker;
   void operator()(std::size_t begin, std::size_t end) override;

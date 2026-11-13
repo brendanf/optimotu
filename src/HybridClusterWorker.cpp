@@ -9,6 +9,7 @@
 #include <edlib.h>
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 
 typedef RcppParallel::RMatrix<int> matrix_t;
 
@@ -18,17 +19,26 @@ HybridClusterWorker::HybridClusterWorker(
   DivisiblePairGenerator::Builder & pgb,
   const double breakpoint,
   int verbose,
-  std::size_t worker_threads
-) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads), breakpoint(breakpoint) {};
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
+) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads, dissimilarity), breakpoint(breakpoint) {};
 
 template<int verbose>
 void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
   (void)end;
 
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
-    -1, EdlibAlignMode::EDLIB_MODE_NW, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0
+    -1, EdlibAlignMode::EDLIB_MODE_NW,
+    dissimilarity == Dissimilarity::SCORE
+      ? EdlibAlignTask::EDLIB_TASK_DISTANCE
+      : EdlibAlignTask::EDLIB_TASK_PATH,
+    0, 0
   );
-  wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
+  wfa::WFAlignerEdit wfa_aligner{
+    dissimilarity == Dissimilarity::SCORE
+      ? wfa::WFAligner::Score
+      : wfa::WFAligner::Alignment
+  };
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -119,22 +129,28 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
           << s2 << " (l2=" << l2 <<")####" << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              0, 1, 0, 1, 0, 1
+            )) {
           ++my_prealigned;
-          double maxd1 = wfa_identity_max_edits(l1, l2, threshold);
+          double maxd1 = dissimilarity == Dissimilarity::SCORE
+              ? edlib_score_k(score_ref_length(l1, l2, AlignmentSpan::GLOBAL), threshold)
+              : wfa_identity_max_edits(l1, l2, threshold);
           bool is_close = breakpoint >= 1 ? maxd1 < breakpoint : threshold < breakpoint;
           double d;
           if (is_close) {
-            WfaIdentityBound bound = wfa_identity_bound(
-                l1, l2, threshold, 0, 1, 0, 1, 0, 1
+            WfaIdentityBound bound = choose_alignment_bound(
+                dissimilarity, l1, l2, threshold, 0, 1, 0, 1, 0, 1
             );
             wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
             wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
-            d = distance_wfa2<>(seq[s1], seq[s2], wfa_aligner);
+            d = distance_wfa2<>(seq[s1], seq[s2], wfa_aligner, dissimilarity, 0, 1);
           } else {
-            ed_aligner.k = (int)maxd1 + 1;
-            d = distance_edlib(seq[s1], seq[s2], ed_aligner);
+            ed_aligner.k = dissimilarity == Dissimilarity::SCORE
+                ? (int)maxd1
+                : (int)maxd1 + 1;
+            d = distance_edlib(seq[s1], seq[s2], ed_aligner, dissimilarity);
           }
           if (d < 1.0) ++my_aligned;
 
@@ -178,11 +194,17 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
     -1,
     EdlibAlignMode::EDLIB_MODE_NW,
-    EdlibAlignTask::EDLIB_TASK_PATH,
+    dissimilarity == Dissimilarity::SCORE
+      ? EdlibAlignTask::EDLIB_TASK_DISTANCE
+      : EdlibAlignTask::EDLIB_TASK_PATH,
     0,
     0
   );
-  wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
+  wfa::WFAlignerEdit wfa_aligner{
+    dissimilarity == Dissimilarity::SCORE
+      ? wfa::WFAligner::Score
+      : wfa::WFAligner::Alignment
+  };
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -226,15 +248,19 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
           << "####" << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              0, 1, 0, 1, 0, 1
+            )) {
           ++my_prealigned;
-          double maxd1 = wfa_identity_max_edits(l1, l2, threshold);
+          double maxd1 = dissimilarity == Dissimilarity::SCORE
+              ? edlib_score_k(score_ref_length(l1, l2, AlignmentSpan::GLOBAL), threshold)
+              : wfa_identity_max_edits(l1, l2, threshold);
           bool is_close = breakpoint >= 1 ? maxd1 < breakpoint : threshold < breakpoint;
           double d;
           if (is_close) {
-            WfaIdentityBound bound = wfa_identity_bound(
-                l1, l2, threshold, 0, 1, 0, 1, 0, 1
+            WfaIdentityBound bound = choose_alignment_bound(
+                dissimilarity, l1, l2, threshold, 0, 1, 0, 1, 0, 1
             );
             wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
             wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
@@ -245,10 +271,12 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
               << " max score=" << bound.max_alignment_steps
               << std::endl
             );
-            d = distance_wfa2<>(seq[s1], seq[s2], wfa_aligner);
+            d = distance_wfa2<>(seq[s1], seq[s2], wfa_aligner, dissimilarity, 0, 1);
           } else {
-            ed_aligner.k = (int)maxd1 + 1;
-            d = distance_edlib(seq[s1], seq[s2], ed_aligner);
+            ed_aligner.k = dissimilarity == Dissimilarity::SCORE
+                ? (int)maxd1
+                : (int)maxd1 + 1;
+            d = distance_edlib(seq[s1], seq[s2], ed_aligner, dissimilarity);
           }
           if (d < 1.0) ++my_aligned;
           OPTIMOTU_DEBUG(

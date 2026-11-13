@@ -3,8 +3,10 @@
 #include "tile_pairs.h"
 #include <edlib.h>
 #include <algorithm>
+#include <cmath>
 #include "pairwise_alignment.h"
 #include "optimotu.h"
+#include "score_dissimilarity.h"
 
 template<int verbose, bool is_constrained, enum AlignmentSpan span, typename SparseDistanceMatrixType>
 void EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>::operator()(std::size_t begin, std::size_t end) {
@@ -50,8 +52,16 @@ void EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType
     static_assert(always_false_v<span>, "Invalid alignment span");
   }
 
-  EdlibAlignConfig aligner =
-    edlibNewAlignConfig(-1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0);
+  constexpr bool need_path =
+    !std::is_same_v<SparseDistanceMatrixType, SparseDistanceMatrix>;
+  const bool score_only =
+    dissimilarity == Dissimilarity::SCORE && !need_path;
+  EdlibAlignConfig aligner = edlibNewAlignConfig(
+    -1, mode,
+    score_only ? EdlibAlignTask::EDLIB_TASK_DISTANCE
+               : EdlibAlignTask::EDLIB_TASK_PATH,
+    0, 0
+  );
 
   if constexpr (verbose >= 2) {
     RcppThread::Rcerr << "EdlibDistWorker thread " << begin
@@ -94,10 +104,19 @@ void EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType
                             << j << " (l2=" << l2 <<") ####" << std::endl;
         }
 
-        if (l1/l2 < sim_threshold) return;
+        if (!pair_length_ok(
+              dissimilarity, span, l1, l2, dist_threshold,
+              0, 1, 0, 1, 0, 1
+            )) {
+          return;
+        }
 
         if constexpr (is_constrained) {
-          if constexpr (span == AlignmentSpan::GLOBAL) {
+          if (dissimilarity == Dissimilarity::SCORE) {
+            int L = score_ref_length(l1, l2, span);
+            aligner.k = (int)std::floor(dist_threshold * (double)L);
+            if (aligner.k < 0) aligner.k = 0;
+          } else if constexpr (span == AlignmentSpan::GLOBAL) {
             double maxd1 = dist_threshold * (l1 + l2) / sim_threshold_plus_1;
             aligner.k = (int)maxd1 + 1;
           } else {
@@ -127,8 +146,20 @@ void EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType
           return;
         }
         my_aligned++;
-        double d2 = (double)alignResult.editDistance /
-          (double) alignResult.alignmentLength;
+        double d2;
+        if (dissimilarity == Dissimilarity::SCORE) {
+          int L = score_ref_length(
+              static_cast<int>(seq[s1].size()),
+              static_cast<int>(seq[s2].size()),
+              span
+          );
+          d2 = cost_score_distance(alignResult.editDistance, L, 0, 1);
+        } else if (alignResult.alignmentLength > 0) {
+          d2 = (double)alignResult.editDistance /
+            (double) alignResult.alignmentLength;
+        } else {
+          d2 = 1.0;
+        }
         if (d2 <= dist_threshold) {
           my_seq1.push_back(j);
           my_seq2.push_back(i);
@@ -208,19 +239,20 @@ std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
   const double dist_threshold,
   DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   if (dynamic_cast<SparseDistanceMatrixCigar*>(&sdm)) {
     return std::make_unique<EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixCigar>>(
-      seq, dist_threshold, pgb, sdm, worker_threads
+      seq, dist_threshold, pgb, sdm, worker_threads, dissimilarity
     );
   } else if (dynamic_cast<SparseDistanceMatrixGapstats*>(&sdm)) {
     return std::make_unique<EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixGapstats>>(
-      seq, dist_threshold, pgb, sdm, worker_threads
+      seq, dist_threshold, pgb, sdm, worker_threads, dissimilarity
     );
   } else {
     return std::make_unique<EdlibDistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrix>>(
-      seq, dist_threshold, pgb, sdm, worker_threads
+      seq, dist_threshold, pgb, sdm, worker_threads, dissimilarity
     );
   }
 }
@@ -232,16 +264,17 @@ std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
   DivisiblePairGenerator::Builder & pgb,
   SparseDistanceMatrix &sdm,
   AlignmentSpan span,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   switch (span) {
     case AlignmentSpan::GLOBAL:
       return create_edlib_dist_worker<verbose, is_constrained, AlignmentSpan::GLOBAL>(
-        seq, dist_threshold, pgb, sdm, worker_threads
+        seq, dist_threshold, pgb, sdm, worker_threads, dissimilarity
       );
     case AlignmentSpan::EXTEND:
       return create_edlib_dist_worker<verbose, is_constrained, AlignmentSpan::EXTEND>(
-        seq, dist_threshold, pgb, sdm, worker_threads
+        seq, dist_threshold, pgb, sdm, worker_threads, dissimilarity
       );
     default:
       OPTIMOTU_STOP("span must be 0 or 1");
@@ -256,15 +289,16 @@ std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
   SparseDistanceMatrix &sdm,
   AlignmentSpan span,
   bool constrain,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   if (constrain) {
     return create_edlib_dist_worker<verbose, true>(
-      seq, dist_threshold, pgb, sdm, span, worker_threads
+      seq, dist_threshold, pgb, sdm, span, worker_threads, dissimilarity
     );
   } else {
     return create_edlib_dist_worker<verbose, false>(
-      seq, dist_threshold, pgb, sdm, span, worker_threads
+      seq, dist_threshold, pgb, sdm, span, worker_threads, dissimilarity
     );
   }
 }
@@ -277,30 +311,36 @@ std::unique_ptr<EdlibDistWorker> create_edlib_dist_worker(
   int verbose,
   AlignmentSpan span,
   bool constrain,
-  std::size_t worker_threads
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
 ) {
   int v = (verbose > 4) ? 4 : verbose;
   switch (v) {
     case 0:
       return create_edlib_dist_worker<0>(
-        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads
+        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads,
+        dissimilarity
       );
     case 1:
       return create_edlib_dist_worker<1>(
-        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads
+        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads,
+        dissimilarity
       );
     case 2:
       return create_edlib_dist_worker<2>(
-        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads
+        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads,
+        dissimilarity
       );
     case 3:
       return create_edlib_dist_worker<3>(
-        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads
+        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads,
+        dissimilarity
       );
     case 4:
     default:
       return create_edlib_dist_worker<4>(
-        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads
+        seq, dist_threshold, pgb, sdm, span, constrain, worker_threads,
+        dissimilarity
       );
   }
 }

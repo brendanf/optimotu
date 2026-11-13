@@ -4,6 +4,7 @@
 #include <edlib.h>
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 
 template<int verbose, bool do_cigar, enum AlignmentSpan span>
 void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
@@ -27,9 +28,17 @@ void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
     static_assert(always_false_v<span>, "Invalid alignment span");
   }
   EdlibAlignConfig ed_aligner = edlibNewAlignConfig(
-    -1, mode, EdlibAlignTask::EDLIB_TASK_PATH, 0, 0
+    -1, mode,
+    (dissimilarity == Dissimilarity::SCORE && !do_cigar)
+      ? EdlibAlignTask::EDLIB_TASK_DISTANCE
+      : EdlibAlignTask::EDLIB_TASK_PATH,
+    0, 0
   );
-  wfa::WFAlignerEdit wfa_aligner{wfa::WFAligner::Alignment};
+  wfa::WFAlignerEdit wfa_aligner{
+    (dissimilarity == Dissimilarity::SCORE && !do_cigar)
+      ? wfa::WFAligner::Score
+      : wfa::WFAligner::Alignment
+  };
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
@@ -67,35 +76,43 @@ void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
         << " (l2=" << l2 <<")####" << std::endl
       );
 
-      double sim_threshold = 1.0 - max_dist;
-      if constexpr (span == AlignmentSpan::GLOBAL) {
-        if (l1/l2 < sim_threshold) continue;
+      if (!pair_length_ok(
+            dissimilarity, span, l1, l2, max_dist,
+            0, 1, 0, 1, 0, 1
+          )) {
+        continue;
       }
       ++my_prealigned;
-      double maxd1 = wfa_identity_max_edits(l1, l2, max_dist);
+      double maxd1 = dissimilarity == Dissimilarity::SCORE
+          ? edlib_score_k(score_ref_length(l1, l2, span), max_dist)
+          : wfa_identity_max_edits(l1, l2, max_dist);
       bool is_close = breakpoint >= 1 ? maxd1 < breakpoint : max_dist < breakpoint;
       double d;
       std::string cigar;
       if (is_close) {
-        WfaIdentityBound bound = wfa_identity_bound(
-            l1, l2, max_dist, 0, 1, 0, 1, 0, 1,
+        WfaIdentityBound bound = choose_alignment_bound(
+            dissimilarity, l1, l2, max_dist, 0, 1, 0, 1, 0, 1,
             span == AlignmentSpan::EXTEND
         );
         wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
         wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
         if constexpr (do_cigar) {
-          std::tie(d, cigar) =
-            distance_and_cigar_wfa2<span>(s1, s2, wfa_aligner);
+          std::tie(d, cigar) = distance_and_cigar_wfa2<span>(
+              s1, s2, wfa_aligner, dissimilarity, 0, 1
+          );
         } else {
-          d = distance_wfa2<span>(s1, s2, wfa_aligner);
+          d = distance_wfa2<span>(s1, s2, wfa_aligner, dissimilarity, 0, 1);
         }
       } else {
-        ed_aligner.k = (int)maxd1 + 1;
+        ed_aligner.k = dissimilarity == Dissimilarity::SCORE
+            ? (int)maxd1
+            : (int)maxd1 + 1;
         if constexpr (do_cigar) {
-          std::tie(d, cigar) =
-            distance_and_cigar_edlib<span>(s1, s2, ed_aligner);
+          std::tie(d, cigar) = distance_and_cigar_edlib<span>(
+              s1, s2, ed_aligner, dissimilarity
+          );
         } else {
-          d = distance_edlib(s1, s2, ed_aligner);
+          d = distance_edlib(s1, s2, ed_aligner, dissimilarity);
         }
       }
       OPTIMOTU_DEBUG(

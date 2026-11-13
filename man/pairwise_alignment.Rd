@@ -74,7 +74,8 @@ align_wfa2_global(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = 0L,
-  gap_extend2 = 0L
+  gap_extend2 = 0L,
+  dissimilarity = "identity"
 )
 
 align_wfa2_extend(
@@ -85,12 +86,13 @@ align_wfa2_extend(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = 0L,
-  gap_extend2 = 0L
+  gap_extend2 = 0L,
+  dissimilarity = "identity"
 )
 
-align_edlib_global(a, b)
+align_edlib_global(a, b, dissimilarity = "identity")
 
-align_edlib_extend(a, b)
+align_edlib_extend(a, b, dissimilarity = "identity")
 
 align_ksw2_global(
   a,
@@ -100,7 +102,8 @@ align_ksw2_global(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = 0L,
-  gap_extend2 = 0L
+  gap_extend2 = 0L,
+  dissimilarity = "identity"
 )
 
 align_ksw2_extend(
@@ -111,7 +114,8 @@ align_ksw2_extend(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = 0L,
-  gap_extend2 = 0L
+  gap_extend2 = 0L,
+  dissimilarity = "identity"
 )
 
 align(
@@ -124,6 +128,7 @@ align(
   gap_open2 = 0,
   gap_extend2 = 0,
   method = c("wfa2", "edlib", "ksw2"),
+  dissimilarity = c("identity", "score"),
   span = c("global", "extend")
 )
 
@@ -172,6 +177,10 @@ affine gap penalty; positive is penalty.}
 
 \item{gap_extend2}{(\code{integer} scalar) alternate gap extension score for
 two-piece affine gap penalty; positive is penalty.}
+
+\item{dissimilarity}{(\code{character} string) \code{"identity"} (default) is
+\eqn{(L - M) / L} from the CIGAR. \code{"score"} uses the aligner's
+optimal score in substitution units of the same penalties.}
 
 \item{method}{(\code{character} scalar) alignment method to use; one of "wfa2",
 "edlib", or "ksw2".}

@@ -18,7 +18,8 @@ public :
     const int gap_open = 0, const int gap_extend = 1,
     const int gap_open2 = 0, const int gap_extend2 = 1,
     int verbose = 0,
-    std::size_t worker_threads = 0
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
   );
 };
 
@@ -37,6 +38,7 @@ class Wfa2SplitClusterWorker : public Wfa2ClusterWorker {
   using Wfa2ClusterWorker::gap_extend;
   using Wfa2ClusterWorker::gap_open2;
   using Wfa2ClusterWorker::gap_extend2;
+  using DistClusterWorker::dissimilarity;
 public:
   Wfa2SplitClusterWorker(
     const SequenceSet &seq,
@@ -45,8 +47,9 @@ public:
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
     const int gap_open2 = 0, const int gap_extend2 = 1,
-    std::size_t worker_threads = 0
-  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, worker_threads) {};
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, worker_threads, dissimilarity) {};
   void operator()(std::size_t begin, std::size_t end) override;
 };
 
@@ -65,6 +68,7 @@ class Wfa2ConcurrentClusterWorker : public Wfa2ClusterWorker {
   using Wfa2ClusterWorker::gap_extend;
   using Wfa2ClusterWorker::gap_open2;
   using Wfa2ClusterWorker::gap_extend2;
+  using DistClusterWorker::dissimilarity;
   public:
   Wfa2ConcurrentClusterWorker(
     const SequenceSet &seq,
@@ -73,8 +77,9 @@ class Wfa2ConcurrentClusterWorker : public Wfa2ClusterWorker {
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
     const int gap_open2 = 0, const int gap_extend2 = 1,
-    std::size_t worker_threads = 0
-  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, worker_threads) {};
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : Wfa2ClusterWorker(seq, clust_algo, pgb, match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2, verbose, worker_threads, dissimilarity) {};
   void operator()(std::size_t begin, std::size_t end) override;
 };
 

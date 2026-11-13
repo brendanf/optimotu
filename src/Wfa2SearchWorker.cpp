@@ -3,6 +3,7 @@
 #include <bindings/cpp/WFAligner.hpp>
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 
 template<int verbose, bool do_cigar, enum AlignmentSpan span>
 void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin, std::size_t end) {
@@ -15,9 +16,12 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
     << ", "<< end_i << ")" << std::endl
   );
 
-  wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
-                                   gap_open2, gap_extend2,
-                                   wfa::WFAligner::Alignment};
+  wfa::WFAlignerChoose wfa_aligner{
+    match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2,
+    (dissimilarity == Dissimilarity::SCORE && !do_cigar)
+      ? wfa::WFAligner::Score
+      : wfa::WFAligner::Alignment
+  };
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
     if (!hits[i]) {
@@ -56,13 +60,15 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
         << " (l2=" << l2 <<")####" << std::endl
       );
 
-      double sim_threshold = 1.0 - max_dist; // compiler can probably do this?
-      if constexpr (span == AlignmentSpan::GLOBAL) {
-        if (l1/l2 < sim_threshold) continue;
+      if (!pair_length_ok(
+            dissimilarity, span, l1, l2, max_dist,
+            match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2
+          )) {
+        continue;
       }
       ++my_prealigned;
-      WfaIdentityBound bound = wfa_identity_bound(
-          l1, l2, max_dist, match, mismatch,
+      WfaIdentityBound bound = choose_alignment_bound(
+          dissimilarity, l1, l2, max_dist, match, mismatch,
           gap_open, gap_extend, gap_open2, gap_extend2,
           span == AlignmentSpan::EXTEND
       );
@@ -71,9 +77,11 @@ void Wfa2SearchWorkerImpl<verbose, do_cigar, span>::operator()(std::size_t begin
       double d;
       std::string cigar;
       if constexpr (do_cigar) {
-        std::tie(d, cigar) = distance_and_cigar_wfa2<span>(s1, s2, wfa_aligner);
+        std::tie(d, cigar) = distance_and_cigar_wfa2<span>(
+            s1, s2, wfa_aligner, dissimilarity, match, mismatch
+        );
       } else {
-        d = distance_wfa2<span>(s1, s2, wfa_aligner);
+        d = distance_wfa2<span>(s1, s2, wfa_aligner, dissimilarity, match, mismatch);
       }
       OPTIMOTU_DEBUG(
         4,

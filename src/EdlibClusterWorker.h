@@ -17,13 +17,15 @@ class EdlibSplitClusterWorker : public EdlibClusterWorker {
   using DistClusterWorker::mutex;
   using DistClusterWorker::_prealigned;
   using DistClusterWorker::_aligned;
+  using DistClusterWorker::dissimilarity;
 public:
   EdlibSplitClusterWorker(
     const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
-    std::size_t worker_threads = 0
-  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose, worker_threads) {};
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose, worker_threads, dissimilarity) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 
@@ -35,13 +37,15 @@ class EdlibConcurrentClusterWorker : public EdlibClusterWorker {
   using DistClusterWorker::clust_algo;
   using DistClusterWorker::_prealigned;
   using DistClusterWorker::_aligned;
+  using DistClusterWorker::dissimilarity;
   public:
   EdlibConcurrentClusterWorker(
     const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pgb,
-    std::size_t worker_threads = 0
-  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose, worker_threads) {};
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : EdlibClusterWorker(seq, clust_algo, pgb, verbose, worker_threads, dissimilarity) {};
   void operator()(std::size_t begin, std::size_t end);
 };
 

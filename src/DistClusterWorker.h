@@ -9,6 +9,7 @@
 #include "ClusterAlgorithm.h"
 #include "PairGenerator.h"
 #include "SequenceView.h"
+#include "alignment_enums.h"
 
 class DistClusterWorker : public RcppParallel::Worker {
 protected:
@@ -18,20 +19,23 @@ protected:
   size_t _prealigned = 0, _aligned = 0;
   std::vector<std::unique_ptr<PairGenerator>> pair_generators;
   const std::size_t threads;
+  const Dissimilarity dissimilarity;
 public :
   DistClusterWorker(
     const SequenceSet &seq,
     ClusterAlgorithm &clust_algo,
     DivisiblePairGenerator::Builder & pair_generator_builder,
     int verbose = 0,
-    std::size_t worker_threads = 0
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
   ) : seq(seq), clust_algo(clust_algo),
   pair_generators(pair_generator_builder.build(verbose)),
   threads(
     worker_threads == 0
       ? std::max<std::size_t>(1, pair_generators.size())
       : std::max<std::size_t>(1, std::min(worker_threads, pair_generators.size()))
-  ) {};
+  ),
+  dissimilarity(dissimilarity) {};
 
   ~DistClusterWorker() override = default;
 

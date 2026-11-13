@@ -669,6 +669,14 @@ resolve_subproblems <- function(threads, method, requested = NULL) {
 #' from a file. The file format is a tab-separated table with the IDs of two
 #' sequences in the first two columns, and the distance in the third column.
 #'
+#' # Dissimilarity
+#'
+#' For WFA2, Edlib, KSW2, and hybrid, `dissimilarity = "identity"` keeps
+#' the CIGAR column identity \eqn{(L - M) / L}. `dissimilarity = "score"`
+#' converts the optimal alignment score into substitution-equivalent
+#' units of the same penalties and can skip traceback when a CIGAR or
+#' gap summary is not requested.
+#'
 #' @param method (`character` string) method to use for distance calculations
 #' @param ... passed on to variants
 #'
@@ -743,6 +751,12 @@ dist_config <- function(
 #' opening
 #' @param gap_extend2 (positive `integer` scalar) alternate penalty for gap
 #' extension
+#' @param dissimilarity (`character` string) how to convert an alignment into a
+#' distance in \[0, 1\]. `"identity"` (default) is
+#' \eqn{(L - M) / L} from the CIGAR path. `"score"` uses the aligner's
+#' optimal score in substitution units of the same penalties, without
+#' traceback unless a CIGAR or gap summary is requested. Hamming,
+#' USEARCH, and file methods do not accept this argument.
 #'
 #' @export
 #' @describeIn dist_config helper function for method `"wfa2"`
@@ -752,7 +766,8 @@ dist_wfa2 <- function(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = gap_open,
-  gap_extend2 = gap_extend
+  gap_extend2 = gap_extend,
+  dissimilarity = c("identity", "score")
 ) {
   checkmate::assert_count(match)
   checkmate::assert_count(mismatch, positive = TRUE)
@@ -760,6 +775,7 @@ dist_wfa2 <- function(
   checkmate::assert_count(gap_extend, positive = TRUE)
   checkmate::assert_count(gap_open2)
   checkmate::assert_count(gap_extend2, positive = TRUE)
+  dissimilarity <- match.arg(dissimilarity)
   structure(
     list(
       method = "wfa2",
@@ -769,6 +785,7 @@ dist_wfa2 <- function(
       gap_extend = as.integer(gap_extend),
       gap_open2 = as.integer(gap_open2),
       gap_extend2 = as.integer(gap_extend2),
+      dissimilarity = dissimilarity,
       call = match.call()
     ),
     class = "optimotu_dist_config"
@@ -777,10 +794,12 @@ dist_wfa2 <- function(
 
 #' @export
 #' @describeIn dist_config helper function for method `"edlib"`
-dist_edlib <- function() {
+dist_edlib <- function(dissimilarity = c("identity", "score")) {
+  dissimilarity <- match.arg(dissimilarity)
   structure(
     list(
       method = "edlib",
+      dissimilarity = dissimilarity,
       call = match.call()
     ),
     class = "optimotu_dist_config"
@@ -795,7 +814,8 @@ dist_ksw2 <- function(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = gap_open,
-  gap_extend2 = gap_extend
+  gap_extend2 = gap_extend,
+  dissimilarity = c("identity", "score")
 ) {
   checkmate::assert_count(match)
   checkmate::assert_count(mismatch, positive = TRUE)
@@ -803,6 +823,7 @@ dist_ksw2 <- function(
   checkmate::assert_count(gap_extend, positive = TRUE)
   checkmate::assert_count(gap_open2)
   checkmate::assert_count(gap_extend2, positive = TRUE)
+  dissimilarity <- match.arg(dissimilarity)
   structure(
     list(
       method = "ksw2",
@@ -812,6 +833,7 @@ dist_ksw2 <- function(
       gap_extend = as.integer(gap_extend),
       gap_open2 = as.integer(gap_open2),
       gap_extend2 = as.integer(gap_extend2),
+      dissimilarity = dissimilarity,
       call = match.call()
     ),
     class = "optimotu_dist_config"
@@ -823,12 +845,17 @@ dist_ksw2 <- function(
 #' are considered "close"; when the sequences are expected to be "close", then
 #' WFA2 in edit-distance mode is used, otherwise EdLib.
 #' @describeIn dist_config helper function for method `"hybrid"`
-dist_hybrid <- function(cutoff = 0.1) {
+dist_hybrid <- function(
+  cutoff = 0.1,
+  dissimilarity = c("identity", "score")
+) {
   checkmate::assert_number(cutoff, lower = 0)
+  dissimilarity <- match.arg(dissimilarity)
   structure(
     list(
       method = "hybrid",
       cutoff = cutoff,
+      dissimilarity = dissimilarity,
       call = match.call()
     ),
     class = "optimotu_dist_config"

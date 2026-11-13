@@ -122,4 +122,35 @@ Constrained WFA in `Wfa2ClusterWorker`, `Wfa2DistWorker`,
 `kmer.cpp`, and `prealign_dist_matrix.cpp` uses `wfa_identity_bound()`.
 Edlib’s `k` remains an edit-distance limit (`maxd1`). The edit prealigner
 in `seq_distmx_prealign()` also still uses `maxd1`; only the final WFA
-aligner uses the affine cap.  
+aligner uses the affine cap.
+
+## Score-mode distance (not identity)
+
+`dissimilarity = "score"` stores a substitution-equivalent distance from
+the optimal DP score, not \((L-M)/L\). For cost aligners (WFA2, Edlib)
+with match cost \(m\) and mismatch \(x\), \(\delta = x - m\):
+
+\[
+d = \min\bigl(1,\ (S - m L)/(\delta L)\bigr)
+\]
+
+\(L = \max(\ell_1,\ell_2)\) globally and \(\min(\ell_1,\ell_2)\) for
+extend. Edlib is \(m = 0\), \(\delta = 1\). KSW2 is a similarity with
+effective match \(\mu\) (`match` if positive, else 1):
+
+\[
+d = \min\bigl(1,\ (\mu L - S)/((\mu+\nu) L)\bigr)
+\]
+
+The identity band is **not** sound here: a cheap gap can pass
+\(d \le \tau\) while falling outside the identity diagonal, and the
+length filter \(\ell_1/\ell_2 \ge 1-\tau\) drops those pairs. Score
+mode skips a pair only when the cheapest possible score for those
+lengths already exceeds the threshold budget \(\tau \delta L\) (extend
+has no length filter). The WFA score cap is one past
+\(m L + \tau \delta L\) unless a negative match bonus makes that cap
+unusable. The diagonal band is the widest single-gap whose cheaper
+piece still costs \(\le \tau \delta L\), shifted by the length
+difference. Edlib's `k` is \(\lfloor \tau L \rfloor\). Helpers:
+`wfa_score_bound()`, `score_global_length_ok()`,
+`src/score_dissimilarity.h`.

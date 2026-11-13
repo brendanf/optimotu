@@ -8,6 +8,7 @@
 #include "tile_pairs.h"
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 
 #include <algorithm>
 
@@ -19,8 +20,9 @@ Ksw2ClusterWorker::Ksw2ClusterWorker(
   const int gap_open, const int gap_extend,
   const int gap_open2, const int gap_extend2,
   int verbose,
-  std::size_t worker_threads
-) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads),
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
+) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads, dissimilarity),
 match(match), mismatch(mismatch), gap_open(gap_open), gap_extend(gap_extend),
 gap_open2(gap_open2), gap_extend2(gap_extend2) {};
 
@@ -28,6 +30,7 @@ template<int verbose>
 void Ksw2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
   (void)end;
   Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
+  aligner.setScoreOnly(dissimilarity == Dissimilarity::SCORE);
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -104,17 +107,20 @@ void Ksw2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
           << j0 << " (l2=" << l2 <<")####" << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
-          ++my_prealigned;
-          WfaIdentityBound bound = wfa_identity_bound(
-              l1, l2, threshold, match, mismatch,
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              0, ksw_effective_match(match) + ksw_effective_mismatch(mismatch),
               gap_open, gap_extend, gap_open2, gap_extend2
+            )) {
+          ++my_prealigned;
+          WfaIdentityBound bound = choose_alignment_bound(
+              dissimilarity, l1, l2, threshold, match, mismatch,
+              gap_open, gap_extend, gap_open2, gap_extend2, false, true
           );
           int w = std::max(bound.max_k, -bound.min_k);
           aligner.setBandWidth(w);
           // Longer as query, shorter as target (KSW2 convention in plan)
-          double d = distance_ksw2(seq[s2], seq[s1], aligner);
+          double d = distance_ksw2(seq[s2], seq[s1], aligner, dissimilarity);
           if (d < 1.0) ++my_aligned;
 
           OPTIMOTU_DEBUG(
@@ -151,6 +157,7 @@ void Ksw2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
   size_t my_aligned = 0;
 
   Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
+  aligner.setScoreOnly(dissimilarity == Dissimilarity::SCORE);
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -182,12 +189,15 @@ void Ksw2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
           << s2 << " (l2=" << l2 <<")####" << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
-          ++my_prealigned;
-          WfaIdentityBound bound = wfa_identity_bound(
-              l1, l2, threshold, match, mismatch,
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              0, ksw_effective_match(match) + ksw_effective_mismatch(mismatch),
               gap_open, gap_extend, gap_open2, gap_extend2
+            )) {
+          ++my_prealigned;
+          WfaIdentityBound bound = choose_alignment_bound(
+              dissimilarity, l1, l2, threshold, match, mismatch,
+              gap_open, gap_extend, gap_open2, gap_extend2, false, true
           );
           int w = std::max(bound.max_k, -bound.min_k);
           aligner.setBandWidth(w);
@@ -198,7 +208,7 @@ void Ksw2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
             << " max_k=" << bound.max_k
             << std::endl
           );
-          double d = distance_ksw2(seq[s2], seq[s1], aligner);
+          double d = distance_ksw2(seq[s2], seq[s1], aligner, dissimilarity);
           if (d < 1.0) ++my_aligned;
           OPTIMOTU_DEBUG(
             4,

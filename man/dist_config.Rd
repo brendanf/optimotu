@@ -25,10 +25,11 @@ dist_wfa2(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = gap_open,
-  gap_extend2 = gap_extend
+  gap_extend2 = gap_extend,
+  dissimilarity = c("identity", "score")
 )
 
-dist_edlib()
+dist_edlib(dissimilarity = c("identity", "score"))
 
 dist_ksw2(
   match = 0L,
@@ -36,10 +37,11 @@ dist_ksw2(
   gap_open = 0L,
   gap_extend = 1L,
   gap_open2 = gap_open,
-  gap_extend2 = gap_extend
+  gap_extend2 = gap_extend,
+  dissimilarity = c("identity", "score")
 )
 
-dist_hybrid(cutoff = 0.1)
+dist_hybrid(cutoff = 0.1, dissimilarity = c("identity", "score"))
 
 dist_hamming(min_overlap = 0L, ignore_gaps = TRUE)
 
@@ -86,6 +88,13 @@ opening}
 
 \item{gap_extend2}{(positive \code{integer} scalar) alternate penalty for gap
 extension}
+
+\item{dissimilarity}{(\code{character} string) how to convert an alignment into a
+distance in [0, 1]. \code{"identity"} (default) is
+\eqn{(L - M) / L} from the CIGAR path. \code{"score"} uses the aligner's
+optimal score in substitution units of the same penalties, without
+traceback unless a CIGAR or gap summary is requested. Hamming,
+USEARCH, and file methods do not accept this argument.}
 
 \item{cutoff}{(\code{numeric} scalar) A pairwise distance to decide when sequences
 are considered "close"; when the sequences are expected to be "close", then
@@ -224,6 +233,14 @@ as linear and affine gap penalties.
 Pairwise distances can also be precomputed by any other method and loaded
 from a file. The file format is a tab-separated table with the IDs of two
 sequences in the first two columns, and the distance in the third column.
+}
+
+\section{Dissimilarity}{
+For WFA2, Edlib, KSW2, and hybrid, \code{dissimilarity = "identity"} keeps
+the CIGAR column identity \eqn{(L - M) / L}. \code{dissimilarity = "score"}
+converts the optimal alignment score into substitution-equivalent
+units of the same penalties and can skip traceback when a CIGAR or
+gap summary is not requested.
 }
 
 \references{

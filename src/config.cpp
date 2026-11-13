@@ -392,6 +392,20 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
 }
 
 #ifdef OPTIMOTU_R
+
+Dissimilarity element_as_dissimilarity(Rcpp::List dist_config)
+{
+  if (!dist_config.containsElementNamed("dissimilarity")) {
+    return Dissimilarity::IDENTITY;
+  }
+  std::string s = element_as_string(dist_config, "dissimilarity", "dist_config");
+  if (s == "score") return Dissimilarity::SCORE;
+  if (s == "identity") return Dissimilarity::IDENTITY;
+  OPTIMOTU_STOP(
+    "invalid `dist_config`: dissimilarity must be \"identity\" or \"score\""
+  );
+}
+
 double element_as_double(
     Rcpp::List obj,
     const std::string & e,
@@ -771,6 +785,7 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     );
   }
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
+  Dissimilarity dissimilarity = element_as_dissimilarity(dist_config);
   std::string par_method = element_as_string(parallel_config, "method", "parallel_config");
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
   if (cluster.uses_prim())
@@ -809,31 +824,31 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else if (v == 1) {
         return std::make_unique<Wfa2SplitClusterWorker<1>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else if (v == 2) {
         return std::make_unique<Wfa2SplitClusterWorker<2>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else if (v == 3) {
         return std::make_unique<Wfa2SplitClusterWorker<3>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else {
         return std::make_unique<Wfa2SplitClusterWorker<4>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
@@ -841,31 +856,31 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else if (v == 1) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<1>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else if (v == 2) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<2>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else if (v == 3) {
         return std::make_unique<Wfa2ConcurrentClusterWorker<3>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       } else {
         return std::make_unique<Wfa2ConcurrentClusterWorker<4>>(
             seq,
             cluster, pgb, match, mismatch,
             gap_open, gap_extend, gap_open2, gap_extend2,
-            worker_threads);
+            worker_threads, dissimilarity);
       }
     } else {
       OPTIMOTU_STOP("unknown parallelization method");
@@ -885,31 +900,31 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       {
         return std::make_unique<Ksw2SplitClusterWorker<0>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else if (v == 1)
       {
         return std::make_unique<Ksw2SplitClusterWorker<1>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else if (v == 2)
       {
         return std::make_unique<Ksw2SplitClusterWorker<2>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else if (v == 3)
       {
         return std::make_unique<Ksw2SplitClusterWorker<3>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else
       {
         return std::make_unique<Ksw2SplitClusterWorker<4>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
     }
     else if (par_method == "concurrent")
@@ -918,31 +933,31 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       {
         return std::make_unique<Ksw2ConcurrentClusterWorker<0>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else if (v == 1)
       {
         return std::make_unique<Ksw2ConcurrentClusterWorker<1>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else if (v == 2)
       {
         return std::make_unique<Ksw2ConcurrentClusterWorker<2>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else if (v == 3)
       {
         return std::make_unique<Ksw2ConcurrentClusterWorker<3>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
       else
       {
         return std::make_unique<Ksw2ConcurrentClusterWorker<4>>(
             seq, cluster, pgb, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads);
+            gap_open, gap_extend, gap_open2, gap_extend2, worker_threads, dissimilarity);
       }
     }
     else
@@ -956,54 +971,54 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (v == 0) {
         return std::make_unique<EdlibSplitClusterWorker<0>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else if (v == 1) {
         return std::make_unique<EdlibSplitClusterWorker<1>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else if (v == 2) {
         return std::make_unique<EdlibSplitClusterWorker<2>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else if (v == 3) {
         return std::make_unique<EdlibSplitClusterWorker<3>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else {
         return std::make_unique<EdlibSplitClusterWorker<4>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
         return std::make_unique<EdlibConcurrentClusterWorker<0>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else if (v == 1) {
         return std::make_unique<EdlibConcurrentClusterWorker<1>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else if (v == 2) {
         return std::make_unique<EdlibConcurrentClusterWorker<2>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else if (v == 3) {
         return std::make_unique<EdlibConcurrentClusterWorker<3>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       } else {
         return std::make_unique<EdlibConcurrentClusterWorker<4>>(
           seq,
-          cluster, pgb, worker_threads
+          cluster, pgb, worker_threads, dissimilarity
         );
       }
     } else {
@@ -1017,54 +1032,54 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       if (v == 0) {
         return std::make_unique<HybridSplitClusterWorker<0>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else if (v == 1) {
         return std::make_unique<HybridSplitClusterWorker<1>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else if (v == 2) {
         return std::make_unique<HybridSplitClusterWorker<2>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else if (v == 3) {
         return std::make_unique<HybridSplitClusterWorker<3>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else {
         return std::make_unique<HybridSplitClusterWorker<4>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       }
     } else if (par_method == "concurrent") {
       if (v == 0) {
         return std::make_unique<HybridConcurrentClusterWorker<0>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else if (v == 1) {
         return std::make_unique<HybridConcurrentClusterWorker<1>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else if (v == 2) {
         return std::make_unique<HybridConcurrentClusterWorker<2>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else if (v == 3) {
         return std::make_unique<HybridConcurrentClusterWorker<3>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       } else {
         return std::make_unique<HybridConcurrentClusterWorker<4>>(
           seq,
-          cluster, pgb, breakpoint, worker_threads
+          cluster, pgb, breakpoint, worker_threads, dissimilarity
         );
       }
     } else {
@@ -1232,6 +1247,7 @@ std::unique_ptr<SearchWorker> create_search_worker(
     );
   }
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
+  Dissimilarity dissimilarity = element_as_dissimilarity(dist_config);
   int threads = element_as_int(parallel_config, "threads", "parallel_config");
   int v = (verbose > 4) ? 4 : verbose;
   if (dist_method == "wfa2") {
@@ -1250,13 +1266,13 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<0, true>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<0, true, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         default:
@@ -1267,13 +1283,13 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<0, false>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<0, false, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         default:
@@ -1286,13 +1302,13 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<1, true>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<1, true, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         default:
@@ -1303,13 +1319,13 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<1, false>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<1, false, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
           break;
         default:
@@ -1322,12 +1338,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<2, true>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<2, true, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
@@ -1337,12 +1353,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<2, false>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<2, false, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
@@ -1355,12 +1371,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<3, true>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<3, true, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
@@ -1370,12 +1386,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<3, false>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<3, false, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
@@ -1389,12 +1405,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<4, true>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<4, true, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
@@ -1404,12 +1420,12 @@ std::unique_ptr<SearchWorker> create_search_worker(
         case 0:
           return std::make_unique<Wfa2SearchWorkerImpl<4, false>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         case 1:
           return std::make_unique<Wfa2SearchWorkerImpl<4, false, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity
           );
         default:
           OPTIMOTU_STOP("span must be 0 or 1");
@@ -1435,13 +1451,13 @@ std::unique_ptr<SearchWorker> create_search_worker(
         {
           return std::make_unique<Ksw2SearchWorkerImpl<vv, true>>(
               query, ref, threshold, threads, match, mismatch,
-              gap_open, gap_extend, gap_open2, gap_extend2);
+              gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity);
         }
         if (span == 1)
         {
           return std::make_unique<Ksw2SearchWorkerImpl<vv, true, AlignmentSpan::EXTEND>>(
               query, ref, threshold, threads, match, mismatch,
-              gap_open, gap_extend, gap_open2, gap_extend2);
+              gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity);
         }
         OPTIMOTU_STOP("span must be 0 or 1");
       }
@@ -1449,13 +1465,13 @@ std::unique_ptr<SearchWorker> create_search_worker(
       {
         return std::make_unique<Ksw2SearchWorkerImpl<vv, false>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2);
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity);
       }
       if (span == 1)
       {
         return std::make_unique<Ksw2SearchWorkerImpl<vv, false, AlignmentSpan::EXTEND>>(
             query, ref, threshold, threads, match, mismatch,
-            gap_open, gap_extend, gap_open2, gap_extend2);
+            gap_open, gap_extend, gap_open2, gap_extend2, dissimilarity);
       }
       OPTIMOTU_STOP("span must be 0 or 1");
     };
@@ -1483,24 +1499,24 @@ std::unique_ptr<SearchWorker> create_search_worker(
         if (span == 0)
         {
           return std::make_unique<EdlibSearchWorkerImpl<vv, true>>(
-              query, ref, threshold, threads);
+              query, ref, threshold, threads, dissimilarity);
         }
         if (span == 1)
         {
           return std::make_unique<EdlibSearchWorkerImpl<vv, true, AlignmentSpan::EXTEND>>(
-              query, ref, threshold, threads);
+              query, ref, threshold, threads, dissimilarity);
         }
         OPTIMOTU_STOP("span must be 0 or 1");
       }
       if (span == 0)
       {
         return std::make_unique<EdlibSearchWorkerImpl<vv, false>>(
-            query, ref, threshold, threads);
+            query, ref, threshold, threads, dissimilarity);
       }
       if (span == 1)
       {
         return std::make_unique<EdlibSearchWorkerImpl<vv, false, AlignmentSpan::EXTEND>>(
-            query, ref, threshold, threads);
+            query, ref, threshold, threads, dissimilarity);
       }
       OPTIMOTU_STOP("span must be 0 or 1");
     };
@@ -1529,24 +1545,24 @@ std::unique_ptr<SearchWorker> create_search_worker(
         if (span == 0)
         {
           return std::make_unique<HybridSearchWorkerImpl<vv, true>>(
-              query, ref, threshold, threads, breakpoint);
+              query, ref, threshold, threads, breakpoint, dissimilarity);
         }
         if (span == 1)
         {
           return std::make_unique<HybridSearchWorkerImpl<vv, true, AlignmentSpan::EXTEND>>(
-              query, ref, threshold, threads, breakpoint);
+              query, ref, threshold, threads, breakpoint, dissimilarity);
         }
         OPTIMOTU_STOP("span must be 0 or 1");
       }
       if (span == 0)
       {
         return std::make_unique<HybridSearchWorkerImpl<vv, false>>(
-            query, ref, threshold, threads, breakpoint);
+            query, ref, threshold, threads, breakpoint, dissimilarity);
       }
       if (span == 1)
       {
         return std::make_unique<HybridSearchWorkerImpl<vv, false, AlignmentSpan::EXTEND>>(
-            query, ref, threshold, threads, breakpoint);
+            query, ref, threshold, threads, breakpoint, dissimilarity);
       }
       OPTIMOTU_STOP("span must be 0 or 1");
     };
@@ -1678,6 +1694,7 @@ std::unique_ptr<DistWorker> create_dist_worker(
   std::string dist_method = element_as_string(dist_config, "method", "dist_config");
   int subproblems = resolve_subproblems_from_config(
       parallel_config, threads, dist_method);
+  Dissimilarity dissimilarity = element_as_dissimilarity(dist_config);
   AlignmentSpan span_enum;
   switch (span) {
     case 0:
@@ -1702,7 +1719,7 @@ std::unique_ptr<DistWorker> create_dist_worker(
     return create_wfa2_dist_worker(
       seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
       gap_open2, gap_extend2, verbose, span_enum, constrain,
-      static_cast<std::size_t>(threads)
+      static_cast<std::size_t>(threads), dissimilarity
     );
   }
   else if (dist_method == "ksw2")
@@ -1716,14 +1733,14 @@ std::unique_ptr<DistWorker> create_dist_worker(
     return create_ksw2_dist_worker(
       seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
       gap_open2, gap_extend2, verbose, span_enum, constrain,
-      static_cast<std::size_t>(threads)
+      static_cast<std::size_t>(threads), dissimilarity
     );
   }
   else if (dist_method == "edlib")
   {
     return create_edlib_dist_worker(
       seq, threshold, pgb, sdm, verbose, span_enum, constrain,
-      static_cast<std::size_t>(threads)
+      static_cast<std::size_t>(threads), dissimilarity
     );
   }
   else if (dist_method == "hamming")

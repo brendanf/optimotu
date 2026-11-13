@@ -13,8 +13,9 @@ public :
     const std::vector<std::string> &ref,
     const double threshold,
     const std::uint8_t threads,
-    const double breakpoint = 0.1
-  ) : SearchWorker(query, ref, threshold, threads),
+    const double breakpoint = 0.1,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : SearchWorker(query, ref, threshold, threads, dissimilarity),
   breakpoint(breakpoint) {};
 };
 
@@ -34,6 +35,7 @@ class HybridSearchWorkerImpl : public HybridSearchWorker {
   using SearchWorker::hits;
 
   using HybridSearchWorker::breakpoint;
+  using SearchWorker::dissimilarity;
 
 public:
   using HybridSearchWorker::HybridSearchWorker;

@@ -153,6 +153,9 @@ bool Ksw2Aligner::align(
   if (span == AlignmentSpan::EXTEND) {
     flag |= KSW_EZ_EXTZ_ONLY;
   }
+  if (score_only) {
+    flag |= KSW_EZ_SCORE_ONLY;
+  }
 
 #ifdef __SSE2__
   if (dual_affine) {
@@ -186,7 +189,7 @@ bool Ksw2Aligner::align(
 
   // Convert MATCH runs to EQ/X using the encoded sequences. Do not use
   // ksw_cigar2eqx(): it does not update *ci1 after krealloc.
-  if (ez.n_cigar > 0 && ez.cigar) {
+  if (!score_only && ez.n_cigar > 0 && ez.cigar) {
     int nc1 = 0;
     int mc1 = 0;
     uint32_t *ci1 = nullptr;
@@ -225,15 +228,19 @@ bool Ksw2Aligner::align(
   }
 
   if (span == AlignmentSpan::EXTEND) {
-    // Prefer end-reaching extension score when available.
-    last_score = ez.reach_end ? ez.mqe : static_cast<int>(ez.max);
+    if (score_only) {
+      // Query is the longer sequence; target is the shorter one.
+      last_score = ez.mte;
+    } else {
+      last_score = ez.reach_end ? ez.mqe : static_cast<int>(ez.max);
+    }
   } else {
     last_score = ez.score;
   }
   if (last_score == KSW_NEG_INF) {
     return false;
   }
-  if (ez.n_cigar <= 0 || ez.cigar == nullptr) {
+  if (!score_only && (ez.n_cigar <= 0 || ez.cigar == nullptr)) {
     return false;
   }
   last_ok = true;

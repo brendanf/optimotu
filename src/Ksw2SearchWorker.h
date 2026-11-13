@@ -20,8 +20,9 @@ public:
     const std::uint8_t threads,
     const int match = 0, const int mismatch = 1,
     const int gap_open = 0, const int gap_extend = 1,
-    const int gap_open2 = 0, const int gap_extend2 = 1
-  ) : SearchWorker(query, ref, threshold, threads),
+    const int gap_open2 = 0, const int gap_extend2 = 1,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
+  ) : SearchWorker(query, ref, threshold, threads, dissimilarity),
   match(match), mismatch(mismatch), gap_open(gap_open),
   gap_extend(gap_extend), gap_open2(gap_open2), gap_extend2(gap_extend2) {}
 };
@@ -43,6 +44,7 @@ class Ksw2SearchWorkerImpl : public Ksw2SearchWorker {
   using Ksw2SearchWorker::gap_extend;
   using Ksw2SearchWorker::gap_open2;
   using Ksw2SearchWorker::gap_extend2;
+  using SearchWorker::dissimilarity;
 
 public:
   using Ksw2SearchWorker::Ksw2SearchWorker;

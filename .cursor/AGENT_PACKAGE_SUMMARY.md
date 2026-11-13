@@ -162,6 +162,12 @@ Native code:
     at most the threshold, so it stays sound when penalties are not
     edit-shaped. Derivation: `docs/wfa-identity-score-bound.md`. Catch
     tests live in `src/test-wfa_identity_bound.cpp`.
+  - Optional `dissimilarity = "score"` on `dist_wfa2()` / `dist_edlib()` /
+    `dist_ksw2()` / `dist_hybrid()` and `align()` converts the optimal
+    alignment score to substitution-equivalent units
+    (`src/score_dissimilarity.h`) and skips traceback unless CIGAR or
+    gapstats are requested. Score banding (`wfa_score_bound`) is a
+    substitution-budget bound and must not reuse the identity band.
   - Windows LLP64: `unsigned long` is 32-bit, so WFA2 packed match-extend
     must use `__builtin_ctzll` on `uint64_t` (not `ctzl`), and WFA2
     debug `fprintf` of `uint64_t` memory sizes must use `PRIu64` rather

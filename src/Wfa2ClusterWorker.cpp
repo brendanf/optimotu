@@ -5,6 +5,7 @@
 #include <bindings/cpp/WFAligner.hpp>
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 
 Wfa2ClusterWorker::Wfa2ClusterWorker(
   const SequenceSet &seq,
@@ -14,16 +15,21 @@ Wfa2ClusterWorker::Wfa2ClusterWorker(
   const int gap_open, const int gap_extend,
   const int gap_open2, const int gap_extend2,
   int verbose,
-  std::size_t worker_threads
-) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads),
+  std::size_t worker_threads,
+  Dissimilarity dissimilarity
+) : DistClusterWorker(seq, clust_algo, pgb, verbose, worker_threads, dissimilarity),
 match(match), mismatch(mismatch), gap_open(gap_open), gap_extend(gap_extend),
 gap_open2(gap_open2), gap_extend2(gap_extend2) {};
 
 template<int verbose>
 void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t end) {
   (void)end;
-  wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
-                                   gap_open2, gap_extend2, wfa::WFAligner::Alignment};
+  wfa::WFAlignerChoose wfa_aligner{
+    match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2,
+    dissimilarity == Dissimilarity::SCORE
+      ? wfa::WFAligner::Score
+      : wfa::WFAligner::Alignment
+  };
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -100,16 +106,20 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
           << j0 << " (l2=" << l2 <<")####" << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2
+            )) {
           ++my_prealigned;
-          WfaIdentityBound bound = wfa_identity_bound(
-              l1, l2, threshold, match, mismatch,
+          WfaIdentityBound bound = choose_alignment_bound(
+              dissimilarity, l1, l2, threshold, match, mismatch,
               gap_open, gap_extend, gap_open2, gap_extend2
           );
           wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
           wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
-          double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
+          double d = distance_wfa2(
+              seq[s1], seq[s2], wfa_aligner, dissimilarity, match, mismatch
+          );
           if (d < 1.0) ++my_aligned;
 
           OPTIMOTU_DEBUG(
@@ -145,8 +155,12 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
   size_t my_prealigned = 0;
   size_t my_aligned = 0;
 
-  wfa::WFAlignerChoose wfa_aligner{match, mismatch, gap_open, gap_extend,
-                                   gap_open2, gap_extend2, wfa::WFAligner::Alignment};
+  wfa::WFAlignerChoose wfa_aligner{
+    match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2,
+    dissimilarity == Dissimilarity::SCORE
+      ? wfa::WFAligner::Score
+      : wfa::WFAligner::Alignment
+  };
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -178,11 +192,13 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
           << s2 << " (l2=" << l2 <<")####" << std::endl
         );
 
-        double sim_threshold = 1.0 - threshold;
-        if (l1/l2 >= sim_threshold) {
+        if (pair_length_ok(
+              dissimilarity, AlignmentSpan::GLOBAL, l1, l2, threshold,
+              match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2
+            )) {
           ++my_prealigned;
-          WfaIdentityBound bound = wfa_identity_bound(
-              l1, l2, threshold, match, mismatch,
+          WfaIdentityBound bound = choose_alignment_bound(
+              dissimilarity, l1, l2, threshold, match, mismatch,
               gap_open, gap_extend, gap_open2, gap_extend2
           );
           wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
@@ -194,7 +210,9 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
             << " max score=" << bound.max_alignment_steps
             << std::endl
           );
-          double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
+          double d = distance_wfa2(
+              seq[s1], seq[s2], wfa_aligner, dissimilarity, match, mismatch
+          );
           if (d < 1.0) ++my_aligned;
           OPTIMOTU_DEBUG(
             4,

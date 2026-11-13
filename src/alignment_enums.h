@@ -6,6 +6,11 @@ enum class AlignmentSpan {
   EXTEND = 1
 };
 
+enum class Dissimilarity {
+  IDENTITY = 0,
+  SCORE = 1
+};
+
 // Dependent false for discarded if-constexpr else branches.
 // `static_assert(span != span)` triggers -Wtautological-compare on
 // GCC/Windows even when the branch is not instantiated.

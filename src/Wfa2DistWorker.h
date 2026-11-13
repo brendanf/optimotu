@@ -18,7 +18,8 @@ public:
     int gap_open, int gap_extend,
     int gap_open2, int gap_extend2,
     int verbose = 0,
-    std::size_t worker_threads = 0
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
   );
 };
 
@@ -38,6 +39,7 @@ class Wfa2DistWorkerImpl : public Wfa2DistWorker {
   using Wfa2DistWorker::gap_extend;
   using Wfa2DistWorker::gap_open2;
   using Wfa2DistWorker::gap_extend2;
+  using DistWorker::dissimilarity;
 public:
   Wfa2DistWorkerImpl(
     const std::vector<std::string> &seq,
@@ -47,10 +49,11 @@ public:
     int match, int mismatch,
     int gap_open, int gap_extend,
     int gap_open2, int gap_extend2,
-    std::size_t worker_threads = 0
+    std::size_t worker_threads = 0,
+    Dissimilarity dissimilarity = Dissimilarity::IDENTITY
   ) : Wfa2DistWorker(
         seq, dist_threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
-        gap_open2, gap_extend2, verbose, worker_threads
+        gap_open2, gap_extend2, verbose, worker_threads, dissimilarity
       ) {};
 
   virtual void operator()(std::size_t begin, std::size_t end) override;
@@ -70,7 +73,8 @@ std::unique_ptr<Wfa2DistWorker> create_wfa2_dist_worker(
   int verbose = 0,
   enum AlignmentSpan span = AlignmentSpan::GLOBAL,
   bool constrain = true,
-  std::size_t worker_threads = 0
+  std::size_t worker_threads = 0,
+  Dissimilarity dissimilarity = Dissimilarity::IDENTITY
 );
 
 #endif //OPTIMOTU_R

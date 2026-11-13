@@ -7,6 +7,8 @@
 
 #include "kmer.h"
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
+#include "optimotu.h"
 
 // for a given kmer (implicit),
 // what sequence was it found in (i),
@@ -111,6 +113,7 @@ struct KmerAlignWorker : public RcppParallel::Worker {
   const int match, mismatch, gap, extend, gap2, extend2;
   const double dist_threshold;
   const double udist_threshold;
+  const Dissimilarity dissimilarity;
   const std::uint8_t threads;
   SparseDistanceMatrix &sdm;
   size_t &aligned;
@@ -129,6 +132,7 @@ struct KmerAlignWorker : public RcppParallel::Worker {
     const int extend2,
     const double dist_threshold,
     const double udist_threshold,
+    Dissimilarity dissimilarity,
     const std::uint8_t threads,
     SparseDistanceMatrix &sdm,
     size_t &aligned,
@@ -136,7 +140,8 @@ struct KmerAlignWorker : public RcppParallel::Worker {
   ) : seq(seq), kmer_seq_index(kmer_seq_index), seq_kmer_index(seq_kmer_index),
   seq_x_index(seq_x_index),
   match(match), mismatch(mismatch), gap(gap), extend(extend), gap2(gap2), extend2(extend2),
-  dist_threshold(dist_threshold), udist_threshold(udist_threshold), threads(threads),
+  dist_threshold(dist_threshold), udist_threshold(udist_threshold),
+  dissimilarity(dissimilarity), threads(threads),
   sdm(sdm), aligned(aligned), considered(considered) {};
 
   void operator()(std::size_t begin, std::size_t end) {
@@ -158,10 +163,12 @@ struct KmerAlignWorker : public RcppParallel::Worker {
     std::vector<double> my_dist2;
     my_dist2.reserve(1000);
     KmerBitField match_hits;
-    wfa::WFAlignerChoose aligner{match, mismatch, gap, extend, gap2, extend2,
-                                 wfa::WFAligner::Alignment};
-
-    double sim_threshold = 1.0 - dist_threshold;
+    wfa::WFAlignerChoose aligner{
+      match, mismatch, gap, extend, gap2, extend2,
+      dissimilarity == Dissimilarity::SCORE
+        ? wfa::WFAligner::Score
+        : wfa::WFAligner::Alignment
+    };
 
     if (begin == 0) {
       begin_i = 1;
@@ -209,16 +216,25 @@ struct KmerAlignWorker : public RcppParallel::Worker {
           size_t s1 = is_seqj_longer ? i : match.first;
           size_t s2 = is_seqj_longer ? match.first : i;
           double l1 = seq[s1].size(), l2 = seq[s2].size();
-          if (l1/l2 < sim_threshold) continue;
-          WfaIdentityBound bound = wfa_identity_bound(
-              l1, l2, dist_threshold,
+          if (!pair_length_ok(
+                dissimilarity, AlignmentSpan::GLOBAL, l1, l2, dist_threshold,
+                this->match, this->mismatch, this->gap, this->extend,
+                this->gap2, this->extend2
+              )) {
+            continue;
+          }
+          WfaIdentityBound bound = choose_alignment_bound(
+              dissimilarity, l1, l2, dist_threshold,
               this->match, this->mismatch, this->gap, this->extend,
               this->gap2, this->extend2
           );
           aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
           aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
 
-          auto d2 = score_and_distance_wfa2(seq[s1], seq[s2], aligner);
+          auto d2 = score_and_distance_wfa2(
+              seq[s1], seq[s2], aligner, dissimilarity,
+              this->match, this->mismatch
+          );
           if (d2.second <= dist_threshold) {
             my_seq1.push_back(match.first);
             my_seq2.push_back(i);
@@ -282,7 +298,8 @@ Rcpp::DataFrame seq_distmx_kmer(
   int gap_extend = 1,
   int gap_open2 = 0,
   int gap_extend2 = 0,
-  std::uint8_t threads = 1
+  std::uint8_t threads = 1,
+  std::string dissimilarity = "identity"
 ) {
 
   Rcpp::Rcout << "Indexing k-mers...";
@@ -352,10 +369,16 @@ Rcpp::DataFrame seq_distmx_kmer(
   size_t aligned = 0, considered = 0;
 
   SparseDistanceMatrix sdm {seq1, seq2, score1, score2, dist1, dist2};
+  if (dissimilarity != "score" && dissimilarity != "identity") {
+    OPTIMOTU_STOP("dissimilarity must be \"identity\" or \"score\"");
+  }
+  Dissimilarity mode = (dissimilarity == "score")
+      ? Dissimilarity::SCORE
+      : Dissimilarity::IDENTITY;
   KmerAlignWorker worker(seq, kmer_seq_index, seq_kmer_index, seq_x_index,
                          match, mismatch, gap_open, gap_extend, gap_open2,
                          gap_extend2,
-                         dist_threshold, udist_threshold, threads,
+                         dist_threshold, udist_threshold, mode, threads,
                          sdm, aligned, considered);
   if (threads > 1) {
     RcppParallel::parallelFor(0, threads, worker, 1, threads);

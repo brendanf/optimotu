@@ -20,7 +20,8 @@ seq_distmx_kmer(
   gap_extend = 1L,
   gap_open2 = 0L,
   gap_extend2 = 0L,
-  threads = 1L
+  threads = 1L,
+  dissimilarity = "identity"
 )
 
 seq_distmx_prealign(
@@ -34,7 +35,8 @@ seq_distmx_prealign(
   gap_extend2 = 0L,
   prealign = TRUE,
   constrain = TRUE,
-  threads = 1L
+  threads = 1L,
+  dissimilarity = "identity"
 )
 
 seq_distmx(

@@ -1,10 +1,21 @@
 #include "optimotu.h"
 #include "pairwise_alignment.h"
 #include "config.h"
+#include "score_dissimilarity.h"
 #include <cstdint>
 #include <sstream>
 #include <string>
 #include <optional>
+
+namespace {
+
+Dissimilarity parse_dissimilarity(const std::string &s) {
+  if (s == "score") return Dissimilarity::SCORE;
+  if (s == "identity") return Dissimilarity::IDENTITY;
+  OPTIMOTU_STOP("dissimilarity must be \"identity\" or \"score\"");
+}
+
+}  // namespace
 
 
 // stream insertion operator for std::optional
@@ -127,7 +138,14 @@ std::tuple<double, int, int, int, int, int> dist_gapstats_from_cigar_extend(cons
 
 
 template<enum AlignmentSpan span>
-double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner &aligner) {
+double distance_wfa2(
+    const std::string &a,
+    const std::string &b,
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
+) {
   wfa::WFAligner::AlignmentStatus status;
 
   if constexpr (span == AlignmentSpan::GLOBAL) {
@@ -139,6 +157,11 @@ double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner 
   }
   if (status != wfa::WFAligner::StatusAlgCompleted &&
       status != wfa::WFAligner::StatusAlgPartial) return 1.0;
+  if (dissimilarity == Dissimilarity::SCORE) {
+    int L = score_ref_length(a.size(), b.size(), span);
+    int cost = wfa_reported_to_cost(aligner.getAlignmentScore(), match);
+    return cost_score_distance(cost, L, match, mismatch);
+  }
   std::string cigar(aligner.getCIGAR(true));
   if constexpr (span == AlignmentSpan::EXTEND) {
     return distance_from_cigar_extend(cigar);
@@ -151,17 +174,30 @@ double distance_wfa2(const std::string &a, const std::string &b, wfa::WFAligner 
 template double distance_wfa2<AlignmentSpan::EXTEND>(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
 template double distance_wfa2<AlignmentSpan::GLOBAL>(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
 template<enum AlignmentSpan span>
-double distance_wfa2(const SequenceView &a, const SequenceView &b, wfa::WFAligner &aligner) {
+double distance_wfa2(
+    const SequenceView &a,
+    const SequenceView &b,
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
+) {
   wfa::WFAligner::AlignmentStatus status;
 
   if constexpr (span == AlignmentSpan::GLOBAL) {
@@ -179,6 +215,11 @@ double distance_wfa2(const SequenceView &a, const SequenceView &b, wfa::WFAligne
   }
   if (status != wfa::WFAligner::StatusAlgCompleted &&
       status != wfa::WFAligner::StatusAlgPartial) return 1.0;
+  if (dissimilarity == Dissimilarity::SCORE) {
+    int L = score_ref_length(a.size(), b.size(), span);
+    int cost = wfa_reported_to_cost(aligner.getAlignmentScore(), match);
+    return cost_score_distance(cost, L, match, mismatch);
+  }
   std::string cigar(aligner.getCIGAR(true));
   if constexpr (span == AlignmentSpan::EXTEND) {
     return distance_from_cigar_extend(cigar);
@@ -190,41 +231,80 @@ double distance_wfa2(const SequenceView &a, const SequenceView &b, wfa::WFAligne
 template double distance_wfa2<AlignmentSpan::EXTEND>(
     const SequenceView &a,
     const SequenceView &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
 template double distance_wfa2<AlignmentSpan::GLOBAL>(
     const SequenceView &a,
     const SequenceView &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
-// calculate distance using edlib, with a pre-initialized config object
-// this is
-double distance_edlib(const std::string &a, const std::string &b, EdlibAlignConfig &aligner) {
+static double distance_from_edlib_result(
+    const EdlibAlignResult &aln,
+    int l1,
+    int l2,
+    EdlibAlignMode mode,
+    Dissimilarity dissimilarity
+) {
+  if (aln.status != EDLIB_STATUS_OK || aln.editDistance < 0) return 1.0;
+  if (dissimilarity == Dissimilarity::SCORE) {
+    AlignmentSpan span = (mode == EDLIB_MODE_SHW)
+      ? AlignmentSpan::EXTEND
+      : AlignmentSpan::GLOBAL;
+    int L = score_ref_length(l1, l2, span);
+    return cost_score_distance(aln.editDistance, L, 0, 1);
+  }
+  if (aln.alignmentLength <= 0) return 1.0;
+  return (double)aln.editDistance / (double)aln.alignmentLength;
+}
+
+double distance_edlib(
+    const std::string &a,
+    const std::string &b,
+    EdlibAlignConfig &aligner,
+    Dissimilarity dissimilarity
+) {
   auto aln = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(), aligner);
-  double d = 1.0;
-  if (aln.status == EDLIB_STATUS_OK && aln.editDistance >= 0)
-    d = (double)aln.editDistance / (double)aln.alignmentLength;
+  double d = distance_from_edlib_result(
+      aln, static_cast<int>(a.size()), static_cast<int>(b.size()),
+      aligner.mode, dissimilarity
+  );
   edlibFreeAlignResult(aln);
   return d;
 }
 
-double distance_edlib(const SequenceView &a, const SequenceView &b, EdlibAlignConfig &aligner) {
+double distance_edlib(
+    const SequenceView &a,
+    const SequenceView &b,
+    EdlibAlignConfig &aligner,
+    Dissimilarity dissimilarity
+) {
   auto aln = edlibAlign(
     a.data(), static_cast<int>(a.size()),
     b.data(), static_cast<int>(b.size()),
     aligner
   );
-  double d = 1.0;
-  if (aln.status == EDLIB_STATUS_OK && aln.editDistance >= 0)
-    d = (double)aln.editDistance / (double)aln.alignmentLength;
+  double d = distance_from_edlib_result(
+      aln, static_cast<int>(a.size()), static_cast<int>(b.size()),
+      aligner.mode, dissimilarity
+  );
   edlibFreeAlignResult(aln);
   return d;
 }
 
 template<enum AlignmentSpan span>
-double distance_edlib(const std::string &a, const std::string &b) {
+double distance_edlib(
+    const std::string &a,
+    const std::string &b,
+    Dissimilarity dissimilarity
+) {
   EdlibAlignMode mode;
   if constexpr (span == AlignmentSpan::GLOBAL) {
     mode = EDLIB_MODE_NW;
@@ -233,15 +313,18 @@ double distance_edlib(const std::string &a, const std::string &b) {
   } else {
     static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
-  auto aligner = edlibNewAlignConfig(-1, mode, EDLIB_TASK_PATH, NULL, 0);
-  return distance_edlib(a, b, aligner);
+  EdlibAlignTask task = (dissimilarity == Dissimilarity::SCORE)
+    ? EDLIB_TASK_DISTANCE
+    : EDLIB_TASK_PATH;
+  auto aligner = edlibNewAlignConfig(-1, mode, task, NULL, 0);
+  return distance_edlib(a, b, aligner, dissimilarity);
 }
 
 //explicit instantiations
 template double distance_edlib<AlignmentSpan::GLOBAL>(
-    const std::string &a, const std::string &b);
+    const std::string &a, const std::string &b, Dissimilarity dissimilarity);
 template double distance_edlib<AlignmentSpan::EXTEND>(
-    const std::string &a, const std::string &b);
+    const std::string &a, const std::string &b, Dissimilarity dissimilarity);
 
 template<enum AlignmentSpan span>
 std::string cigar_wfa2(const std::string &a, const std::string &b,
@@ -295,7 +378,10 @@ template<enum AlignmentSpan span>
 std::pair<double, std::string> distance_and_cigar_wfa2(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 ) {
   wfa::WFAligner::AlignmentStatus status;
   if constexpr (span == AlignmentSpan::GLOBAL) {
@@ -308,11 +394,17 @@ std::pair<double, std::string> distance_and_cigar_wfa2(
 
   if (status != wfa::WFAligner::StatusAlgCompleted) return {1.0, ""};
   std::string cigar(aligner.getCIGAR(true));
-  if constexpr (span == AlignmentSpan::EXTEND) {
-    return {distance_from_cigar_extend(cigar), cigar};
+  double d;
+  if (dissimilarity == Dissimilarity::SCORE) {
+    int L = score_ref_length(a.size(), b.size(), span);
+    int cost = wfa_reported_to_cost(aligner.getAlignmentScore(), match);
+    d = cost_score_distance(cost, L, match, mismatch);
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    d = distance_from_cigar_extend(cigar);
   } else {
-    return {distance_from_cigar(cigar), cigar};
+    d = distance_from_cigar(cigar);
   }
+  return {d, cigar};
 }
 
 // explicit instantiations
@@ -320,14 +412,20 @@ template
 std::pair<double, std::string> distance_and_cigar_wfa2<AlignmentSpan::EXTEND>(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
 template
 std::pair<double, std::string> distance_and_cigar_wfa2<AlignmentSpan::GLOBAL>(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
 template<enum AlignmentSpan span>
@@ -382,13 +480,17 @@ template<enum AlignmentSpan span>
 std::pair<double, std::string> distance_and_cigar_edlib(
     const std::string &a,
     const std::string &b,
-    EdlibAlignConfig &aligner
+    EdlibAlignConfig &aligner,
+    Dissimilarity dissimilarity
 ) {
   aligner.task = EDLIB_TASK_PATH;
   auto alignment = edlibAlign(a.c_str(), a.size(), b.c_str(), b.size(), aligner);
   if (alignment.status != EDLIB_STATUS_OK) return {1.0, ""};
   if (alignment.editDistance == -1) return {1.0, ""};
-  double d = (double)alignment.editDistance / (double)alignment.alignmentLength;
+  double d = distance_from_edlib_result(
+      alignment, static_cast<int>(a.size()), static_cast<int>(b.size()),
+      aligner.mode, dissimilarity
+  );
   std::string cigar;
   cigar.reserve(alignment.alignmentLength);
   std::vector<char> key = {'M', 'D', 'I', 'X'};
@@ -403,22 +505,26 @@ std::pair<double, std::string> distance_and_cigar_edlib(
 template std::pair<double, std::string> distance_and_cigar_edlib<AlignmentSpan::GLOBAL>(
     const std::string &a,
     const std::string &b,
-    EdlibAlignConfig &aligner
+    EdlibAlignConfig &aligner,
+    Dissimilarity dissimilarity
 );
 template std::pair<double, std::string> distance_and_cigar_edlib<AlignmentSpan::EXTEND>(
     const std::string &a,
     const std::string &b,
-    EdlibAlignConfig &aligner
+    EdlibAlignConfig &aligner,
+    Dissimilarity dissimilarity
 );
 
 template<enum AlignmentSpan span>
 std::pair<int, double> score_and_distance_wfa2(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 ) {
   wfa::WFAligner::AlignmentStatus status;
-  // if (a.size() >= b.size()) {
   if constexpr (span == AlignmentSpan::GLOBAL) {
     status = aligner.alignEnd2End(a, b);
   } else if constexpr (span == AlignmentSpan::EXTEND) {
@@ -426,16 +532,19 @@ std::pair<int, double> score_and_distance_wfa2(
   } else {
     static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
-  // } else {
-  //   status = aligner.alignEnd2End(b, a);
-  // }
   if (status != wfa::WFAligner::StatusAlgCompleted) return {
-    std::max(a.size(), b.size()), 1.0};
+    static_cast<int>(std::max(a.size(), b.size())), 1.0};
+  int score = aligner.getAlignmentScore();
+  if (dissimilarity == Dissimilarity::SCORE) {
+    int L = score_ref_length(a.size(), b.size(), span);
+    int cost = wfa_reported_to_cost(score, match);
+    return {cost, cost_score_distance(cost, L, match, mismatch)};
+  }
   auto cigar = aligner.getCIGAR(true);
   if constexpr (span == AlignmentSpan::EXTEND) {
-    return {aligner.getAlignmentScore(), distance_from_cigar_extend(cigar)};
+    return {score, distance_from_cigar_extend(cigar)};
   } else {
-    return {aligner.getAlignmentScore(), distance_from_cigar(cigar)};
+    return {score, distance_from_cigar(cigar)};
   }
 }
 
@@ -443,49 +552,91 @@ std::pair<int, double> score_and_distance_wfa2(
 template std::pair<int, double> score_and_distance_wfa2<AlignmentSpan::GLOBAL>(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
 template std::pair<int, double> score_and_distance_wfa2<AlignmentSpan::EXTEND>(
     const std::string &a,
     const std::string &b,
-    wfa::WFAligner &aligner
+    wfa::WFAligner &aligner,
+    Dissimilarity dissimilarity,
+    int match,
+    int mismatch
 );
 
 
 double align_wfa2_global(const std::string a, const std::string b,
              int match, int mismatch,
              int gap_open, int gap_extend,
-             int gap_open2, int gap_extend2) {
+             int gap_open2, int gap_extend2,
+             std::string dissimilarity) {
+  Dissimilarity mode = parse_dissimilarity(dissimilarity);
+  auto scope = mode == Dissimilarity::SCORE
+    ? wfa::WFAligner::AlignmentScope::Score
+    : wfa::WFAligner::AlignmentScope::Alignment;
   wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
-                               gap_open2, gap_extend2,
-                               wfa::WFAligner::AlignmentScope::Alignment};
-  return distance_wfa2<AlignmentSpan::GLOBAL>(a, b, aligner);
+                               gap_open2, gap_extend2, scope};
+  return distance_wfa2<AlignmentSpan::GLOBAL>(a, b, aligner, mode, match, mismatch);
 }
 
 double align_wfa2_extend(const std::string a, const std::string b,
              int match, int mismatch,
              int gap_open, int gap_extend,
-             int gap_open2, int gap_extend2) {
+             int gap_open2, int gap_extend2,
+             std::string dissimilarity) {
+  Dissimilarity mode = parse_dissimilarity(dissimilarity);
+  auto scope = mode == Dissimilarity::SCORE
+    ? wfa::WFAligner::AlignmentScope::Score
+    : wfa::WFAligner::AlignmentScope::Alignment;
   wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
-                               gap_open2, gap_extend2,
-                               wfa::WFAligner::AlignmentScope::Alignment};
-  return distance_wfa2<AlignmentSpan::EXTEND>(a, b, aligner);
+                               gap_open2, gap_extend2, scope};
+  return distance_wfa2<AlignmentSpan::EXTEND>(a, b, aligner, mode, match, mismatch);
 }
 
-double align_edlib_global(const std::string a, const std::string b) {
-  auto config = edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0);
-  return distance_edlib(a, b, config);
+double align_edlib_global(
+    const std::string a,
+    const std::string b,
+    std::string dissimilarity
+) {
+  Dissimilarity mode = parse_dissimilarity(dissimilarity);
+  auto task = mode == Dissimilarity::SCORE ? EDLIB_TASK_DISTANCE : EDLIB_TASK_PATH;
+  auto config = edlibNewAlignConfig(-1, EDLIB_MODE_NW, task, NULL, 0);
+  return distance_edlib(a, b, config, mode);
 }
 
-double align_edlib_extend(const std::string a, const std::string b) {
-  auto config = edlibNewAlignConfig(-1, EDLIB_MODE_SHW, EDLIB_TASK_PATH, NULL, 0);
-  return distance_edlib(a, b, config);
+double align_edlib_extend(
+    const std::string a,
+    const std::string b,
+    std::string dissimilarity
+) {
+  Dissimilarity mode = parse_dissimilarity(dissimilarity);
+  auto task = mode == Dissimilarity::SCORE ? EDLIB_TASK_DISTANCE : EDLIB_TASK_PATH;
+  auto config = edlibNewAlignConfig(-1, EDLIB_MODE_SHW, task, NULL, 0);
+  // SHW is (query, target) with the query's suffix free; use the shorter
+  // sequence as query so all three backends share L = min(l1, l2).
+  if (a.size() <= b.size()) {
+    return distance_edlib(a, b, config, mode);
+  }
+  return distance_edlib(b, a, config, mode);
 }
 
 template<enum AlignmentSpan span>
-double distance_ksw2(const std::string &a, const std::string &b, Ksw2Aligner &aligner) {
+double distance_ksw2(
+    const std::string &a,
+    const std::string &b,
+    Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity
+) {
   if (!aligner.align(a, b, span)) return 1.0;
+  if (dissimilarity == Dissimilarity::SCORE) {
+    int L = score_ref_length(a.size(), b.size(), span);
+    return ksw_score_distance(
+        aligner.getAlignmentScore(), L, aligner.match, aligner.mismatch
+    );
+  }
   std::string cigar = aligner.getCIGAR();
   if (cigar.empty()) return 1.0;
   if constexpr (span == AlignmentSpan::EXTEND) {
@@ -496,13 +647,26 @@ double distance_ksw2(const std::string &a, const std::string &b, Ksw2Aligner &al
 }
 
 template double distance_ksw2<AlignmentSpan::GLOBAL>(
-    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity);
 template double distance_ksw2<AlignmentSpan::EXTEND>(
-    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity);
 
 template<enum AlignmentSpan span>
-double distance_ksw2(const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner) {
+double distance_ksw2(
+    const SequenceView &a,
+    const SequenceView &b,
+    Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity
+) {
   if (!aligner.align(a, b, span)) return 1.0;
+  if (dissimilarity == Dissimilarity::SCORE) {
+    int L = score_ref_length(a.size(), b.size(), span);
+    return ksw_score_distance(
+        aligner.getAlignmentScore(), L, aligner.match, aligner.mismatch
+    );
+  }
   std::string cigar = aligner.getCIGAR();
   if (cigar.empty()) return 1.0;
   if constexpr (span == AlignmentSpan::EXTEND) {
@@ -513,9 +677,11 @@ double distance_ksw2(const SequenceView &a, const SequenceView &b, Ksw2Aligner &
 }
 
 template double distance_ksw2<AlignmentSpan::GLOBAL>(
-    const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner);
+    const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity);
 template double distance_ksw2<AlignmentSpan::EXTEND>(
-    const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner);
+    const SequenceView &a, const SequenceView &b, Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity);
 
 template<enum AlignmentSpan span>
 std::string cigar_ksw2(const std::string &a, const std::string &b,
@@ -549,37 +715,53 @@ template<enum AlignmentSpan span>
 std::pair<double, std::string> distance_and_cigar_ksw2(
     const std::string &a,
     const std::string &b,
-    Ksw2Aligner &aligner
+    Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity
 ) {
   if (!aligner.align(a, b, span)) return {1.0, ""};
   std::string cigar = aligner.getCIGAR();
   if (cigar.empty()) return {1.0, ""};
-  if constexpr (span == AlignmentSpan::EXTEND) {
-    return {distance_from_cigar_extend(cigar), cigar};
+  double d;
+  if (dissimilarity == Dissimilarity::SCORE) {
+    int L = score_ref_length(a.size(), b.size(), span);
+    d = ksw_score_distance(
+        aligner.getAlignmentScore(), L, aligner.match, aligner.mismatch
+    );
+  } else if constexpr (span == AlignmentSpan::EXTEND) {
+    d = distance_from_cigar_extend(cigar);
   } else {
-    return {distance_from_cigar(cigar), cigar};
+    d = distance_from_cigar(cigar);
   }
+  return {d, cigar};
 }
 
 template std::pair<double, std::string> distance_and_cigar_ksw2<AlignmentSpan::GLOBAL>(
-    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity);
 template std::pair<double, std::string> distance_and_cigar_ksw2<AlignmentSpan::EXTEND>(
-    const std::string &a, const std::string &b, Ksw2Aligner &aligner);
+    const std::string &a, const std::string &b, Ksw2Aligner &aligner,
+    Dissimilarity dissimilarity);
 
 double align_ksw2_global(const std::string a, const std::string b,
              int match, int mismatch,
              int gap_open, int gap_extend,
-             int gap_open2, int gap_extend2) {
+             int gap_open2, int gap_extend2,
+             std::string dissimilarity) {
+  Dissimilarity mode = parse_dissimilarity(dissimilarity);
   Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
-  return distance_ksw2<AlignmentSpan::GLOBAL>(a, b, aligner);
+  aligner.setScoreOnly(mode == Dissimilarity::SCORE);
+  return distance_ksw2<AlignmentSpan::GLOBAL>(a, b, aligner, mode);
 }
 
 double align_ksw2_extend(const std::string a, const std::string b,
              int match, int mismatch,
              int gap_open, int gap_extend,
-             int gap_open2, int gap_extend2) {
+             int gap_open2, int gap_extend2,
+             std::string dissimilarity) {
+  Dissimilarity mode = parse_dissimilarity(dissimilarity);
   Ksw2Aligner aligner{match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2};
-  return distance_ksw2<AlignmentSpan::EXTEND>(a, b, aligner);
+  aligner.setScoreOnly(mode == Dissimilarity::SCORE);
+  return distance_ksw2<AlignmentSpan::EXTEND>(a, b, aligner, mode);
 }
 
 std::vector<std::string> align_from_cigar(

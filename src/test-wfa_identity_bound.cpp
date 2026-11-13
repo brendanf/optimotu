@@ -1,6 +1,8 @@
 #include <testthat.h>
 #include "wfa_identity_bound.h"
+#include "score_dissimilarity.h"
 #include <cmath>
+#include <limits>
 
 context("wfa_identity_bound") {
   test_that("edit penalties recover ceil(maxd1)+1") {
@@ -63,5 +65,54 @@ context("wfa_identity_bound") {
         10.0, 10.0, 0.0, 0, 6, 4, 2, 4, 2
     );
     expect_true(b.max_alignment_steps == 1);
+  }
+}
+
+context("wfa_score_bound") {
+  test_that("edit score cap is floor(tau L)+1") {
+    const double l1 = 100.0;
+    const double l2 = 100.0;
+    const double tau = 0.03;
+    WfaIdentityBound b = wfa_score_bound(
+        l1, l2, tau, 0, 1, 0, 1, 0, 1
+    );
+    expect_true(b.max_alignment_steps == (int)std::floor(tau * l2) + 1);
+    expect_true(b.max_k >= 0);
+    expect_true(b.min_k <= 0);
+  }
+
+  test_that("cheap affine gaps allow a wider band than identity") {
+    const double l1 = 100.0;
+    const double l2 = 100.0;
+    const double tau = 0.03;
+    WfaIdentityBound ident = wfa_identity_bound(
+        l1, l2, tau, 0, 6, 4, 1, 4, 1
+    );
+    WfaIdentityBound score = wfa_score_bound(
+        l1, l2, tau, 0, 6, 4, 1, 4, 1
+    );
+    expect_true(score.max_k >= ident.max_k);
+  }
+
+  test_that("negative match bonus leaves the score cap unset") {
+    WfaIdentityBound b = wfa_score_bound(
+        50.0, 50.0, 0.1, -2, 4, 4, 2, 4, 2
+    );
+    expect_true(b.max_alignment_steps == std::numeric_limits<int>::max());
+  }
+
+  test_that("global length filter rejects a huge length gap") {
+    expect_false(
+        score_global_length_ok(10.0, 1000.0, 0.03, 0, 1, 0, 1, 0, 1)
+    );
+    expect_true(
+        score_global_length_ok(100.0, 100.0, 0.03, 0, 1, 0, 1, 0, 1)
+    );
+  }
+
+  test_that("cost_score_distance is substitution units") {
+    expect_true(std::abs(cost_score_distance(1, 4, 0, 1) - 0.25) < 1e-12);
+    expect_true(std::abs(ksw_score_distance(2, 4, 0, 1) - 0.25) < 1e-12);
+    expect_true(wfa_reported_to_cost(-3, 0) == 3);
   }
 }
