@@ -1295,7 +1295,7 @@ optimize_thresholds <- function(
           parallel_config = local_parallel_config,
           which = testset_select$seq_index[batch_idx],
           true_partitions = testset_select$true_partition[batch_idx],
-          multiplicity = if (is.null(testset_select$multiplicity)) {
+          multiplicity = if (is.null(testset_select[["multiplicity"]])) {
             NULL
           } else {
             testset_select$multiplicity[batch_idx]
