@@ -15,7 +15,7 @@
 // the smaller square.
 inline bool optimotu_dist_method_is_slow(const std::string &method) {
   return method == "wfa2" || method == "edlib" || method == "ksw2" ||
-         method == "hybrid";
+         method == "hybrid" || method == "gasal2";
 }
 
 inline int optimotu_square_subproblems(int n) {

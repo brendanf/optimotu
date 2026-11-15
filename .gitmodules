@@ -7,3 +7,6 @@
 [submodule "src/ksw2"]
 	path = src/ksw2
 	url = https://github.com/lh3/ksw2.git
+[submodule "src/GASAL2"]
+	path = src/GASAL2
+	url = https://github.com/nahmedraja/GASAL2.git

@@ -551,7 +551,7 @@ parallel_hierarchical <- function(threads, shards, subproblems = NULL) {
 #'
 #' Hamming, USEARCH, `aa`, and `evo` use the perfect square nearest
 #' `4 * threads`.
-#' Alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`) pick the square
+#' Alignment methods (`wfa2`, `edlib`, `ksw2`, `hybrid`, `gasal2`) pick the square
 #' `S` with `threads <= S <= 4 * threads` that maximizes equal-tile
 #' utilization `S / (threads * ceil(S / threads))`; ties keep the
 #' smaller square.
@@ -568,7 +568,7 @@ default_subproblems <- function(threads, method) {
     return(1L)
   }
   max_s <- 4L * threads
-  slow <- method %in% c("wfa2", "edlib", "ksw2", "hybrid")
+  slow <- method %in% c("wfa2", "edlib", "ksw2", "hybrid", "gasal2")
   if (!slow) {
     n_blocks <- as.integer(round(sqrt(4 * threads)))
     if (n_blocks < 1L) {
@@ -643,6 +643,20 @@ resolve_subproblems <- function(threads, method, requested = NULL) {
 #' linear, affine, and dual-affine gap penalties, and is faster than WFA2 for
 #' these models for divergent sequences.
 #'
+#' # GASAL2
+#'
+#' `dist_gasal2()` fills nucleotide tiles on every visible CUDA GPU with
+#' Needleman–Wunsch scores (GASAL2-style score kernels; no GPU
+#' traceback). Edit penalties (`match = 0`, linear gaps, equal
+#' substitution and indel costs) keep match cost 0, so `"score"` is
+#' Levenshtein / \eqn{\max(n, m)} and `"identity"` screens on that
+#' score then runs Edlib CIGAR traceback. Affine or unequal linear
+#' costs use the KSW2 similarity mapping (`match = 0` becomes `+1`)
+#' and KSW2 traceback. Dual-affine penalties belong on `dist_ksw2()`.
+#' Sequences longer than 1024 bases are rejected. A build without
+#' CUDA, or a machine with no device, errors. Restrict devices with
+#' `OPTIMOTU_CUDA_DEVICES`.
+#'
 #' # Hamming
 #'
 #' Hamming distance does not perform alignment, it simply counts the number of
@@ -671,7 +685,7 @@ resolve_subproblems <- function(threads, method, requested = NULL) {
 #'
 #' # Dissimilarity
 #'
-#' For WFA2, Edlib, KSW2, and hybrid, `dissimilarity = "identity"` keeps
+#' For WFA2, Edlib, KSW2, hybrid, and GASAL2, `dissimilarity = "identity"` keeps
 #' the CIGAR column identity \eqn{(L - M) / L}. `dissimilarity = "score"`
 #' converts the optimal alignment score into substitution-equivalent
 #' units of the same penalties and can skip traceback when a CIGAR or
@@ -704,6 +718,11 @@ resolve_subproblems <- function(threads, method, requested = NULL) {
 #'  Bioinformatics, 34:3094-3100.
 #'  https://doi.org/10.1093/bioinformatics/bty191
 #'
+#' Ahmed, N., Lévy, J., Ren, S., Mushtaq, H., Bertels, K., and Al-Ars, Z.
+#'  (2019). GASAL2: a GPU accelerated sequence alignment library for
+#'  high-throughput NGS data. BMC Bioinformatics, 20:520.
+#'  https://doi.org/10.1186/s12859-019-3086-9
+#'
 #' Li, R., Ratnasingham, S., Zarubiieva, I., Somervuo, P., & Taylor, G. W.
 #'  (2024). PROTAX-GPU: a scalable probabilistic taxonomic classification
 #'  system for DNA barcodes. Philosophical transactions of the Royal Society of
@@ -715,6 +734,7 @@ dist_config <- function(
     "wfa2",
     "edlib",
     "ksw2",
+    "gasal2",
     "hybrid",
     "hamming",
     "aa",
@@ -730,6 +750,7 @@ dist_config <- function(
     wfa2 = dist_wfa2(...),
     edlib = dist_edlib(...),
     ksw2 = dist_ksw2(...),
+    gasal2 = dist_gasal2(...),
     file = dist_file(...),
     hybrid = dist_hybrid(...),
     hamming = dist_hamming(...),
@@ -833,6 +854,37 @@ dist_ksw2 <- function(
       gap_extend = as.integer(gap_extend),
       gap_open2 = as.integer(gap_open2),
       gap_extend2 = as.integer(gap_extend2),
+      dissimilarity = dissimilarity,
+      call = match.call()
+    ),
+    class = "optimotu_dist_config"
+  )
+}
+
+#' @export
+#' @describeIn dist_config helper function for method `"gasal2"`
+dist_gasal2 <- function(
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
+  dissimilarity = c("identity", "score")
+) {
+  if (!isTRUE(optimotu_cuda_build())) {
+    stop("dist_gasal2() requires a CUDA build of optimotu", call. = FALSE)
+  }
+  checkmate::assert_count(match)
+  checkmate::assert_count(mismatch, positive = TRUE)
+  checkmate::assert_count(gap_open)
+  checkmate::assert_count(gap_extend, positive = TRUE)
+  dissimilarity <- match.arg(dissimilarity)
+  structure(
+    list(
+      method = "gasal2",
+      match = as.integer(match),
+      mismatch = as.integer(mismatch),
+      gap_open = as.integer(gap_open),
+      gap_extend = as.integer(gap_extend),
       dissimilarity = dissimilarity,
       call = match.call()
     ),

@@ -11,6 +11,7 @@
 #include <tuple>
 #include "EvoModel.h"
 #include "PackedAaSequenceSet.h"
+#include "gpu_tile.h"
 #include <memory>
 #include <vector>
 
@@ -37,6 +38,8 @@ protected:
     int *n_ok_out
   ) const;
   std::tuple<bool, int, double> score_pair(int i, int j) const;
+  bool wants_gpu() const override;
+  std::unique_ptr<GpuDistanceKernel> make_gpu_kernel() override;
 
 public:
   AaDistWorker(
@@ -70,6 +73,11 @@ class AaDistWorkerImpl : public AaDistWorker {
 public:
   using AaDistWorker::AaDistWorker;
   void operator()(std::size_t begin, std::size_t end) override;
+  void consume_gpu_tile(
+    std::size_t pg_index,
+    PairGenerator &pg,
+    const GpuTileResult &result
+  ) override;
 };
 
 std::unique_ptr<AaDistWorker> create_aa_dist_worker(

@@ -61,6 +61,7 @@ class AaSearchWorkerImpl : public AaSearchWorker {
 public:
   using AaSearchWorker::AaSearchWorker;
   void operator()(std::size_t begin, std::size_t end) override;
+  bool try_run_gpu() override;
 };
 
 #endif

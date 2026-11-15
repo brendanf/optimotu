@@ -51,3 +51,32 @@ jobs:
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+  # Compile CUDA sources. Hosted runners have no GPU, so kernel tests
+  # skip when nvidia-smi fails. Running kernels needs a self-hosted
+  # runner labeled `cuda-gpu`; that job is optional and not required.
+  cuda-compile:
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:12.6.0-devel-ubuntu22.04
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git sudo ca-certificates
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+      - name: R CMD check (skip tests without a GPU)
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          build_args: 'c("--no-manual")'
+          upload-snapshots: false

@@ -6,10 +6,12 @@
 #include <RcppParallel.h>
 #include <RcppThread.h>
 #include <algorithm>
+#include <memory>
 #include "ClusterAlgorithm.h"
 #include "PairGenerator.h"
 #include "SequenceView.h"
 #include "alignment_enums.h"
+#include "gpu_tile.h"
 
 class DistClusterWorker : public RcppParallel::Worker {
 protected:
@@ -20,6 +22,10 @@ protected:
   std::vector<std::unique_ptr<PairGenerator>> pair_generators;
   const std::size_t threads;
   const Dissimilarity dissimilarity;
+  std::size_t active_workers = 0;
+  std::size_t n_active() const {
+    return active_workers == 0 ? threads : active_workers;
+  }
 public :
   DistClusterWorker(
     const SequenceSet &seq,
@@ -46,6 +52,15 @@ public :
   std::size_t n_threads();
   std::size_t n_tiles();
   void run();
+  virtual bool wants_gpu() const { return false; }
+  virtual std::unique_ptr<GpuDistanceKernel> make_gpu_kernel() {
+    return nullptr;
+  }
+  virtual void consume_gpu_tile(
+    std::size_t pg_index,
+    PairGenerator &pg,
+    const GpuTileResult &result
+  );
 
   // One-thread merge has a single full-range tile; work on the root so
   // ClusterSLINK never allocates the unused delegate tree.

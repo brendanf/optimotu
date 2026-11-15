@@ -472,6 +472,7 @@ context("for_each_tile_pair") {
     expect_true(optimotu_default_subproblems(30, "wfa2") == 81);
     expect_true(optimotu_default_subproblems(20, "edlib") == 36);
     expect_true(optimotu_default_subproblems(12, "hybrid") == 36);
+    expect_true(optimotu_default_subproblems(16, "gasal2") == 16);
     expect_true(optimotu_resolve_subproblems(16, "hamming", 36) == 36);
     expect_true(optimotu_resolve_subproblems(16, "hamming", 4) == 16);
   }

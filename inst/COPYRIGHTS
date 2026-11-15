@@ -1,0 +1,7 @@
+GASAL2 (src/GASAL2) is Copyright (c) 2019 the GASAL2 authors and is
+licensed under the Apache License, Version 2.0. See src/GASAL2/LICENSE
+after the git submodule is initialized.
+
+optimotu's dist_gasal2() GPU path uses affine Needleman–Wunsch score
+kernels mapped onto the KSW2 similarity scale (match 0 → +1). GPU
+traceback from GASAL2 is not used.

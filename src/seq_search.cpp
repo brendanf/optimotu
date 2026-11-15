@@ -41,10 +41,12 @@ Rcpp::RObject seq_search_internal(
     return_cigar, span
   );
   int threads = search_worker->n_threads();
-  if (threads == 1) {
-    (*search_worker)(0, 1);
-  } else {
-    RcppParallel::parallelFor(0, threads, *search_worker, 1, threads);
+  if (!search_worker->try_run_gpu()) {
+    if (threads == 1) {
+      (*search_worker)(0, 1);
+    } else {
+      RcppParallel::parallelFor(0, threads, *search_worker, 1, threads);
+    }
   }
 
   // count size of output

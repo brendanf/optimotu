@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "DistClusterWorker.h"
+#include "optimotu.h"
 
 size_t DistClusterWorker::prealigned() {
   return _prealigned;
@@ -19,12 +20,43 @@ std::size_t DistClusterWorker::n_tiles() {
   return pair_generators.size();
 }
 
+void DistClusterWorker::consume_gpu_tile(
+  std::size_t,
+  PairGenerator &,
+  const GpuTileResult &
+) {
+  OPTIMOTU_STOP("GPU tiles are not implemented for this distance method");
+}
+
 void DistClusterWorker::run() {
   const std::size_t n = pair_generators.size();
   if (n == 0)
   {
     return;
   }
+  if (wants_gpu() && gpu_runtime_available()) {
+    const auto devices = gpu_selected_devices();
+    if (!devices.empty()) {
+      active_workers = std::max(threads, devices.size());
+      if (n_active() > 1) {
+        clust_algo.prepare_merge_slots(n);
+      }
+      gpu_run_tiles(
+        pair_generators,
+        n_active(),
+        [this]() { return make_gpu_kernel(); },
+        [this](
+          std::size_t idx,
+          PairGenerator &pg,
+          const GpuTileResult &res
+        ) {
+          consume_gpu_tile(idx, pg, res);
+        }
+      );
+      return;
+    }
+  }
+  active_workers = threads;
   if (threads > 1)
   {
     clust_algo.prepare_merge_slots(n);
@@ -39,7 +71,7 @@ void DistClusterWorker::run() {
 
 ClusterAlgorithm *DistClusterWorker::tile_algo(PairGenerator *pg)
 {
-  if (threads == 1)
+  if (n_active() == 1)
   {
     return &clust_algo;
   }
@@ -48,7 +80,7 @@ ClusterAlgorithm *DistClusterWorker::tile_algo(PairGenerator *pg)
 
 void DistClusterWorker::finish_tile(ClusterAlgorithm *my_algo, std::size_t pg_index)
 {
-  if (threads == 1)
+  if (n_active() == 1)
   {
     return;
   }

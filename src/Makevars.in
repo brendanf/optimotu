@@ -1,19 +1,24 @@
 CXX_STD = CXX17
-PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./edlib -I./ksw2
+PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./edlib -I./ksw2 @CUDA_CPPFLAGS@
 PKG_CFLAGS =  -DGMP -DSKIP_MAIN
-PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") -lz
+PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") -lz @CUDALIBS@
 
 # Include all C++ files in src/ and its subdirectories: src/A and src/B
 SOURCES=@CXXSOURCES@ WFA2-lib/bindings/cpp/WFAligner.cpp edlib/edlib.cpp
 CSOURCES=@CSOURCES@
+CUSOURCES=@CUSOURCES@
+NVCC=@NVCC@
+CUDA_ARCH_FLAGS=@CUDA_ARCH_FLAGS@
 
 # Obtain the object files
-OBJECTS=$(SOURCES:.cpp=.o) $(CSOURCES:.c=.o)
+OBJECTS=$(SOURCES:.cpp=.o) $(CSOURCES:.c=.o) $(CUSOURCES:.cu=.o)
 
 # Make the shared object
 all: $(SHLIB)
 
+%.o: %.cu
+	$(NVCC) -std=c++17 -O3 -Xcompiler -fPIC -I$(R_HOME)/include $(PKG_CPPFLAGS) $(CLINK_CPPFLAGS) $(CUDA_ARCH_FLAGS) -c $< -o $@
+
 # Provide recipe to remove all objects
 clean:
 	@rm -f $(OBJECTS)
-

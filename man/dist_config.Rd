@@ -5,6 +5,7 @@
 \alias{dist_wfa2}
 \alias{dist_edlib}
 \alias{dist_ksw2}
+\alias{dist_gasal2}
 \alias{dist_hybrid}
 \alias{dist_hamming}
 \alias{dist_aa}
@@ -14,7 +15,7 @@
 \title{Configuration helper for pairwise distance methods}
 \usage{
 dist_config(
-  method = c("wfa2", "edlib", "ksw2", "hybrid", "hamming", "aa", "evo", "file",
+  method = c("wfa2", "edlib", "ksw2", "gasal2", "hybrid", "hamming", "aa", "evo", "file",
     "usearch"),
   ...
 )
@@ -38,6 +39,14 @@ dist_ksw2(
   gap_extend = 1L,
   gap_open2 = gap_open,
   gap_extend2 = gap_extend,
+  dissimilarity = c("identity", "score")
+)
+
+dist_gasal2(
+  match = 0L,
+  mismatch = 1L,
+  gap_open = 0L,
+  gap_extend = 1L,
   dissimilarity = c("identity", "score")
 )
 
@@ -160,7 +169,11 @@ model \code{Q_ij = s_ij * pi_j}, scaled so the mean rate is 1. Vendored
 tables are mtART (Abascal, Posada, and Zardoya 2007), mtREV24 (Adachi
 and Hasegawa 1996), mtMam (Yang, Nielsen, and Hasegawa 1998), JTT
 (Jones, Taylor, and Thornton 1992), WAG (Whelan and Goldman 2001), and
-LG (Le and Gascuel 2008).
+LG (Le and Gascuel 2008). When the package was built with CUDA and a
+device is visible, \code{seq_distmx()}, \code{seq_search()}, \code{seq_cluster()},
+and \code{optimize_thresholds()} fill distance tiles on every selected GPU
+(\code{OPTIMOTU_CUDA_DEVICES}, default all). Otherwise the CPU Newton path
+is used with no message.
 }
 \section{Functions}{
 \itemize{
@@ -169,6 +182,8 @@ LG (Le and Gascuel 2008).
 \item \code{dist_edlib()}: helper function for method \code{"edlib"}
 
 \item \code{dist_ksw2()}: helper function for method \code{"ksw2"}
+
+\item \code{dist_gasal2()}: helper function for method \code{"gasal2"}
 
 \item \code{dist_hybrid()}: helper function for method \code{"hybrid"}
 
@@ -209,6 +224,20 @@ linear, affine, and dual-affine gap penalties, and is faster than WFA2 for
 these models for divergent sequences.
 }
 
+\section{GASAL2}{
+\code{dist_gasal2()} fills nucleotide tiles on every visible CUDA GPU with
+Needleman–Wunsch scores (GASAL2-style score kernels; no GPU
+traceback). Edit penalties (\code{match = 0}, linear gaps, equal
+substitution and indel costs) keep match cost 0, so \code{"score"} is
+Levenshtein / \eqn{\max(n, m)} and \code{"identity"} screens on that
+score then runs Edlib CIGAR traceback. Affine or unequal linear
+costs use the KSW2 similarity mapping (\code{match = 0} becomes \code{+1})
+and KSW2 traceback. Dual-affine penalties belong on \code{dist_ksw2()}.
+Sequences longer than 1024 bases are rejected. A build without
+CUDA, or a machine with no device, errors. Restrict devices with
+\code{OPTIMOTU_CUDA_DEVICES}.
+}
+
 \section{Hamming}{
 Hamming distance does not perform alignment, it simply counts the number of
 mismatches. It is extremely fast, but only applicable to sequences which are
@@ -236,7 +265,7 @@ sequences in the first two columns, and the distance in the third column.
 }
 
 \section{Dissimilarity}{
-For WFA2, Edlib, KSW2, and hybrid, \code{dissimilarity = "identity"} keeps
+For WFA2, Edlib, KSW2, hybrid, and GASAL2, \code{dissimilarity = "identity"} keeps
 the CIGAR column identity \eqn{(L - M) / L}. \code{dissimilarity = "score"}
 converts the optimal alignment score into substitution-equivalent
 units of the same penalties and can skip traceback when a CIGAR or
@@ -264,6 +293,11 @@ https://doi.org/10.1186/s12859-018-2014-8
 Li, H (2018) Minimap2: pairwise alignment for nucleotide sequences.
 Bioinformatics, 34:3094-3100.
 https://doi.org/10.1093/bioinformatics/bty191
+
+Ahmed, N., Lévy, J., Ren, S., Mushtaq, H., Bertels, K., and Al-Ars, Z.
+(2019). GASAL2: a GPU accelerated sequence alignment library for
+high-throughput NGS data. BMC Bioinformatics, 20:520.
+https://doi.org/10.1186/s12859-019-3086-9
 
 Li, R., Ratnasingham, S., Zarubiieva, I., Somervuo, P., & Taylor, G. W.
 (2024). PROTAX-GPU: a scalable probabilistic taxonomic classification

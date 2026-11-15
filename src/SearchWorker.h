@@ -37,6 +37,8 @@ public:
   std::uint8_t n_threads() const { return threads; }
 
   const SearchHits & get_hits() const { return hits; }
+
+  virtual bool try_run_gpu() { return false; }
 };
 
 #endif

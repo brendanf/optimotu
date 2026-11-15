@@ -16,7 +16,7 @@ Description: OptimOTU calculates single-linkage clusters at multiple thresholds
     Routines for quickly counting the measure of the intersection of sorted
     sets, and for calculating the multiclass F-measure, are also included.
 License: MIT + file LICENSE
-SystemRequirements: GNU make, C++17
+SystemRequirements: GNU make, C++17; NVIDIA CUDA toolkit (optional; nvcc) for GPU dist_evo() and dist_gasal2()
 Imports:
     checkmate,
     Biostrings,

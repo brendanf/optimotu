@@ -4,6 +4,11 @@
 
 #include "optimotu.h"
 #include "AaSearchWorker.h"
+#include "gpu_tile.h"
+#ifdef OPTIMOTU_CUDA
+#include "evo_gpu.h"
+#endif
+#include <algorithm>
 #include <memory>
 
 AaSearchWorker::AaSearchWorker(
@@ -122,6 +127,78 @@ void AaSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t end)
     _prealigned += my_prealigned;
     _aligned += my_aligned;
   }
+}
+
+template<int verbose>
+bool AaSearchWorkerImpl<verbose>::try_run_gpu() {
+  if (!has_evo || !gpu_runtime_available()) {
+    return false;
+  }
+  const auto devices = gpu_selected_devices();
+  if (devices.empty()) {
+    return false;
+  }
+  const int nq = static_cast<int>(query.size());
+  const int nr = static_cast<int>(ref.size());
+  if (nq == 0 || nr == 0) {
+    return true;
+  }
+  const int n_chunk = std::max(
+    1,
+    nq / std::max(1, static_cast<int>(devices.size() * 4))
+  );
+  std::vector<GpuTileSpec> specs;
+  for (int q = 0; q < nq; q += n_chunk) {
+    GpuTileSpec spec;
+    spec.kind = GpuTileSpec::Kind::Rectangle;
+    spec.i0 = q;
+    spec.i1 = std::min(q + n_chunk, nq);
+    spec.j0 = nq;
+    spec.j1 = nq + nr;
+    specs.push_back(spec);
+  }
+  gpu_run_specs(
+    specs,
+    std::max<std::size_t>(threads, devices.size()),
+    [&]() {
+#ifdef OPTIMOTU_CUDA
+      return make_evo_gpu_kernel(pss, evo);
+#else
+      return nullptr;
+#endif
+    },
+    [&](std::size_t, const GpuTileSpec &spec, const GpuTileResult &result) {
+      std::size_t my_prealigned = 0;
+      std::size_t my_aligned = 0;
+      for (int i = spec.i0; i < spec.i1; ++i) {
+        if (!hits[static_cast<std::size_t>(i)]) {
+          hits[static_cast<std::size_t>(i)] = std::make_unique<SearchHit>();
+        }
+        SearchHit &hit = *hits[static_cast<std::size_t>(i)];
+        for (int j = 0; j < nr; ++j) {
+          const double d = gpu_result_distance(spec, result, i, nq + j);
+          ++my_prealigned;
+          if (!(d < evo.t_max)) {
+            continue;
+          }
+          ++my_aligned;
+          const double max_dist =
+            (hit.best_dist < threshold) ? hit.best_dist : threshold;
+          if (d < max_dist) {
+            hit.best_dist = d;
+            hit.best_ref.clear();
+            hit.best_ref.push_back(j);
+          } else if (d == hit.best_dist) {
+            hit.best_ref.push_back(j);
+          }
+        }
+      }
+      std::lock_guard<std::mutex> lock(mutex);
+      _prealigned += my_prealigned;
+      _aligned += my_aligned;
+    }
+  );
+  return true;
 }
 
 template class AaSearchWorkerImpl<0>;

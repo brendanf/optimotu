@@ -10,6 +10,9 @@
 #include "tile_pairs.h"
 #include "AllPairGenerator.h"
 #include "BipartitePairGenerator.h"
+#ifdef OPTIMOTU_CUDA
+#include "evo_gpu.h"
+#endif
 
 #include <algorithm>
 #include <utility>
@@ -493,6 +496,158 @@ void AaConcurrentClusterWorker<verbose>::operator()(
       my_prealigned = 0;
     }
   );
+}
+
+bool AaClusterWorker::wants_gpu() const {
+  return has_evo;
+}
+
+std::unique_ptr<GpuDistanceKernel> AaClusterWorker::make_gpu_kernel() {
+#ifdef OPTIMOTU_CUDA
+  return make_evo_gpu_kernel(pss, evo);
+#else
+  return nullptr;
+#endif
+}
+
+namespace {
+
+double gpu_lookup(
+  const GpuTileSpec &spec,
+  const GpuTileResult &result,
+  int i0,
+  int j0
+) {
+  if (spec.kind == GpuTileSpec::Kind::Triangle) {
+    int i = i0 - spec.offset;
+    int j = j0 - spec.offset;
+    if (i < j) {
+      std::swap(i, j);
+    }
+    const std::size_t p =
+      static_cast<std::size_t>(i) * static_cast<std::size_t>(i - 1) / 2 +
+      static_cast<std::size_t>(j);
+    return result.distances[p];
+  }
+  const int nj = spec.j1 - spec.j0;
+  const int row = i0 - spec.i0;
+  const int col = j0 - spec.j0;
+  return result.distances[
+    static_cast<std::size_t>(row) * static_cast<std::size_t>(nj) +
+    static_cast<std::size_t>(col)
+  ];
+}
+
+}  // namespace
+
+template<int verbose>
+void AaSplitClusterWorker<verbose>::consume_gpu_tile(
+  std::size_t pg_index,
+  PairGenerator &pg,
+  const GpuTileResult &result
+) {
+  ClusterAlgorithm *my_algo = tile_algo(&pg);
+  if (!my_algo) {
+    finish_tile(nullptr, pg_index);
+    return;
+  }
+  my_algo->set_merge_slot(pg_index);
+  const GpuTileSpec spec = gpu_tile_from_generator(pg);
+  size_t my_prealigned = 0;
+  size_t my_aligned = 0;
+  if (my_algo->uses_prim()) {
+    const bool grew = try_grow_prim(
+      my_algo, pg,
+      [&](j_t gi, j_t gj, double) {
+        const double d = gpu_lookup(
+          spec, result, static_cast<int>(gi), static_cast<int>(gj)
+        );
+        ++my_prealigned;
+        if (below_unit(d)) {
+          ++my_aligned;
+        }
+        return d;
+      }
+    );
+    if (!grew) {
+      OPTIMOTU_STOP(
+        "clust_prim() amino-acid batch grow requires ClusterPrim"
+      );
+    }
+    mutex.lock();
+    _aligned += my_aligned;
+    _prealigned += my_prealigned;
+    mutex.unlock();
+    finish_tile(my_algo, pg_index);
+    return;
+  }
+  const bool use_local =
+    dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
+  for_each_tile_pair(pg, [&](
+    std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
+  ) {
+    const double d = gpu_lookup(
+      spec, result, static_cast<int>(i0), static_cast<int>(j0)
+    );
+    ++my_prealigned;
+    if (below_unit(d)) {
+      ++my_aligned;
+    }
+    if (use_local) {
+      const double threshold = my_algo->max_relevant_local(
+        static_cast<j_t>(li), static_cast<j_t>(lj)
+      );
+      if (d <= threshold) {
+        my_algo->apply_local(
+          static_cast<j_t>(li), static_cast<j_t>(lj), d
+        );
+      }
+    } else {
+      const double threshold = my_algo->max_relevant(
+        static_cast<j_t>(i0), static_cast<j_t>(j0)
+      );
+      if (d <= threshold) {
+        (*my_algo)(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
+      }
+    }
+  });
+  mutex.lock();
+  _aligned += my_aligned;
+  _prealigned += my_prealigned;
+  mutex.unlock();
+  finish_tile(my_algo, pg_index);
+}
+
+template<int verbose>
+void AaConcurrentClusterWorker<verbose>::consume_gpu_tile(
+  std::size_t,
+  PairGenerator &pg,
+  const GpuTileResult &result
+) {
+  const GpuTileSpec spec = gpu_tile_from_generator(pg);
+  size_t my_prealigned = 0;
+  size_t my_aligned = 0;
+  for_each_tile_pair(pg, [&](
+    std::size_t i0, std::size_t j0, std::size_t, std::size_t
+  ) {
+    const double d = gpu_lookup(
+      spec, result, static_cast<int>(i0), static_cast<int>(j0)
+    );
+    const double threshold = clust_algo.max_relevant(
+      static_cast<j_t>(i0), static_cast<j_t>(j0)
+    );
+    ++my_prealigned;
+    if (below_unit(d)) {
+      ++my_aligned;
+    }
+    if (d < threshold) {
+      clust_algo(static_cast<j_t>(i0), static_cast<j_t>(j0), d);
+    }
+  });
+  mutex.lock();
+  _aligned += my_aligned;
+  _prealigned += my_prealigned;
+  mutex.unlock();
 }
 
 template class AaSplitClusterWorker<0>;

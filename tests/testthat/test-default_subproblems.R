@@ -14,6 +14,7 @@ testthat::test_that("default_subproblems slow methods maximize last-wave fill", 
   testthat::expect_equal(default_subproblems(30L, "wfa2"), 81L)
   testthat::expect_equal(default_subproblems(20L, "edlib"), 36L)
   testthat::expect_equal(default_subproblems(12L, "hybrid"), 36L)
+  testthat::expect_equal(default_subproblems(16L, "gasal2"), 16L)
 })
 
 testthat::test_that("resolve_subproblems keeps explicit values and floors at threads", {

@@ -1,5 +1,11 @@
 # optimotu development version
 
+* Optional CUDA GPU backends for distance calculations, including `seq_search()`,
+  `seq_cluster()`, `seq_distmx()`, and `optimize_thresholds()`. These methods are only
+  compiled when CUDA tooling is available. Currently implemented methods are a
+  GPU-accelerated version of `dist_evo()`, which is used when available but silently
+  keeps the CPU path otherwise; and `dist_gasal2()` which is a GPU-only pairwise alignment method which supports edit distance, linear gap penalties, and affine gap penalities.
+  `optimotu_cuda()` reports whether a device is usable.
 * Add `dissimilarity = "score"` to `dist_wfa2()`, `dist_edlib()`,
   `dist_ksw2()`, `dist_hybrid()`, and `align()`. The default remains
   CIGAR identity `(L - M) / L`. Score mode converts the aligner's

@@ -245,7 +245,11 @@ parse_paml_exchangeability <- function(path) {
 #' tables are mtART (Abascal, Posada, and Zardoya 2007), mtREV24 (Adachi
 #' and Hasegawa 1996), mtMam (Yang, Nielsen, and Hasegawa 1998), JTT
 #' (Jones, Taylor, and Thornton 1992), WAG (Whelan and Goldman 2001), and
-#' LG (Le and Gascuel 2008).
+#' LG (Le and Gascuel 2008). When the package was built with CUDA and a
+#' device is visible, `seq_distmx()`, `seq_search()`, `seq_cluster()`,
+#' and `optimize_thresholds()` fill distance tiles on every selected GPU
+#' (`OPTIMOTU_CUDA_DEVICES`, default all). Otherwise the CPU Newton path
+#' is used with no message.
 #'
 #' @export
 #' @describeIn dist_config helper function for method `"evo"`

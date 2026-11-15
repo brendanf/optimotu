@@ -8,7 +8,7 @@ It focuses on package-level architecture and maintenance conventions.
 `optimotu` is the algorithmic core for clustering and threshold optimization.
 It provides:
 
-- distance computation backends (`wfa2`, `edlib`, `ksw2`, `hamming`, `usearch`, etc.)
+- distance computation backends (`wfa2`, `edlib`, `ksw2`, `gasal2`, `hamming`, `usearch`, etc.)
 - single-linkage clustering across many thresholds
 - threshold optimization against known taxonomy
 - clustering quality metrics (MCC, ARI, AMI, FMI, FM, etc.)
@@ -112,11 +112,14 @@ Native code:
     walks `[begin, end)`;
     `DistClusterWorker::run()` / `DistWorker::run()` launch
     `parallelFor(0, n_tiles, grain=1, n_threads)` so idle threads can
-    steal. `parallel_config$subproblems` is a first-class field
+    steal, or `gpu_run_tiles()` when the method wants CUDA and a device
+    is visible (`src/gpu_tile.cpp`: one pump thread per GPU, workers
+    pinned to that device's NUMA node). `parallel_config$subproblems` is a first-class field
     (`parallel_merge()` / `parallel_concurrent()`); `NULL` uses
-    `default_subproblems(threads, dist_method)`: Hamming/USEARCH/`aa`
-    the square nearest `4 * threads`, alignment methods the best-filled
-    square up to `4 * threads`. Explicit values are `max(threads,
+    `default_subproblems(threads, dist_method)`: Hamming/USEARCH/`aa`/`evo`
+    the square nearest `4 * threads`, alignment methods (`wfa2`,
+    `edlib`, `ksw2`, `hybrid`, `gasal2`) the best-filled square up to
+    `4 * threads`. Explicit values are `max(threads,
     subproblems)` then squared. DistWorker thread count is capped at
     `min(requested, n_generators)` like DistClusterWorker. Split
     cluster workers use `max_relevant_local` / `apply_local` on mapped
@@ -181,8 +184,20 @@ Native code:
 Core exported API families include:
 
 - config helpers:
-  - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_ksw2()`, `dist_hamming()`,
+  - `dist_config()` + `dist_wfa2()`, `dist_edlib()`, `dist_ksw2()`, `dist_gasal2()`, `dist_hamming()`,
     `dist_aa()`, `dist_evo()`, `dist_usearch()`, `dist_file()`, `dist_hybrid()`
+  - `optimotu_cuda()` is true when this build linked CUDA and a device
+    is visible. `OPTIMOTU_CUDA` is set by `configure` when it finds an
+    `nvcc` whose CUDA major version the driver accepts (`nvidia-smi`);
+    a default `/usr/local/cuda` newer than the driver is skipped.
+    `dist_evo()` GPU tiles fall back to the CPU Newton path with no
+    message. `dist_gasal2()` errors without a CUDA build or device.
+    GASAL2 is score-only on the GPU. Edit penalties (match 0, linear
+    equal sub/indel) keep match cost 0 and use Edlib for identity
+    traceback; affine costs keep the KSW2 `+1` match map and KSW2
+    traceback. One process uses every visible GPU
+    (`OPTIMOTU_CUDA_DEVICES`); Grace/host threads pin to that device's
+    NUMA node (`src/gpu_tile.cpp`).
   - `translate_aligned()` for HMM A2M nucleotides before `dist_aa()` and
     `dist_evo()`
   - `clust_config()` + `clust_tree()`, `clust_matrix()`, `clust_index()`,

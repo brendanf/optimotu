@@ -9,7 +9,9 @@
 #include "EvoModel.h"
 #include "PackedAaSequenceSet.h"
 #include "SequenceView.h"
+#include "gpu_tile.h"
 #include <cstddef>
+#include <memory>
 #include <vector>
 
 class AaClusterWorker : public DistClusterWorker {
@@ -33,6 +35,8 @@ protected:
   ) const;
   double pair_distance(int i, int j) const;
   bool below_unit(double d) const;
+  bool wants_gpu() const override;
+  std::unique_ptr<GpuDistanceKernel> make_gpu_kernel() override;
 public:
   AaClusterWorker(
     const SequenceSet &seq,
@@ -76,6 +80,11 @@ public:
     const EvoModel *evo_model = nullptr
   );
   void operator()(std::size_t begin, std::size_t end) override;
+  void consume_gpu_tile(
+    std::size_t pg_index,
+    PairGenerator &pg,
+    const GpuTileResult &result
+  ) override;
 };
 
 template<int verbose>
@@ -103,6 +112,11 @@ public:
     const EvoModel *evo_model = nullptr
   );
   void operator()(std::size_t begin, std::size_t end) override;
+  void consume_gpu_tile(
+    std::size_t pg_index,
+    PairGenerator &pg,
+    const GpuTileResult &result
+  ) override;
 };
 
 #endif

@@ -53,6 +53,36 @@ fastq_names <- function(x) {
     .Call(`_optimotu_fastq_names`, x)
 }
 
+#' Whether a CUDA device is usable
+#'
+#' @name optimotu_cuda
+#' @return `TRUE` when this build linked CUDA and at least one device
+#'   is visible (after `OPTIMOTU_CUDA_DEVICES` if that is set).
+#' @export
+optimotu_cuda <- function() {
+    .Call(`_optimotu_optimotu_cuda`)
+}
+
+#' Whether this build of optimotu was compiled with CUDA
+#'
+#' @name optimotu_cuda_build
+#' @return `TRUE` when `.cu` kernels were compiled (`OPTIMOTU_CUDA`).
+#' @keywords internal
+#' @export
+optimotu_cuda_build <- function() {
+    .Call(`_optimotu_optimotu_cuda_build`)
+}
+
+#' Number of selected CUDA devices
+#'
+#' @name optimotu_cuda_device_count
+#' @return integer count of devices `optimotu_cuda()` would use
+#' @keywords internal
+#' @export
+optimotu_cuda_device_count <- function() {
+    .Call(`_optimotu_optimotu_cuda_device_count`)
+}
+
 #' Group byte-identical sequences that share all rank labels
 #'
 #' @param seq (`character`) reference sequences

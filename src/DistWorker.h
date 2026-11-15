@@ -9,10 +9,12 @@
 #include <string>
 #include <memory>
 #include <cstdint>
+#include <functional>
 
 #include "SparseDistanceMatrix.h"
 #include "PairGenerator.h"
 #include "alignment_enums.h"
+#include "gpu_tile.h"
 
 class DistWorker : public RcppParallel::Worker {
 protected:
@@ -52,6 +54,20 @@ public:
 
   virtual void operator()(std::size_t begin, std::size_t end) = 0;
 
+  virtual bool wants_gpu() const { return false; }
+  virtual std::unique_ptr<GpuDistanceKernel> make_gpu_kernel() {
+    return nullptr;
+  }
+  virtual void consume_gpu_tile(
+    std::size_t pg_index,
+    PairGenerator &pg,
+    const GpuTileResult &result
+  ) {
+    (void)pg_index;
+    (void)pg;
+    (void)result;
+  }
+
   std::size_t n_threads() const { return threads; }
 
   std::size_t n_tiles() const { return pair_generators.size(); }
@@ -59,6 +75,22 @@ public:
   void run() {
     const std::size_t n = pair_generators.size();
     if (n == 0) {
+      return;
+    }
+    if (wants_gpu() && gpu_runtime_available() &&
+        !gpu_selected_devices().empty()) {
+      gpu_run_tiles(
+        pair_generators,
+        std::max(threads, gpu_selected_devices().size()),
+        [this]() { return make_gpu_kernel(); },
+        [this](
+          std::size_t idx,
+          PairGenerator &pg,
+          const GpuTileResult &res
+        ) {
+          consume_gpu_tile(idx, pg, res);
+        }
+      );
       return;
     }
     if (threads <= 1) {

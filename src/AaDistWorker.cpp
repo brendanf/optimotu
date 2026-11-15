@@ -7,7 +7,11 @@
 #include "AllPairGenerator.h"
 #include "BipartitePairGenerator.h"
 #include "tile_pairs.h"
+#ifdef OPTIMOTU_CUDA
+#include "evo_gpu.h"
+#endif
 #include <algorithm>
+#include <mutex>
 
 #ifdef OPTIMOTU_R
 
@@ -274,6 +278,51 @@ template class AaDistWorkerImpl<1>;
 template class AaDistWorkerImpl<2>;
 template class AaDistWorkerImpl<3>;
 template class AaDistWorkerImpl<4>;
+
+bool AaDistWorker::wants_gpu() const {
+  return has_evo;
+}
+
+std::unique_ptr<GpuDistanceKernel> AaDistWorker::make_gpu_kernel() {
+#ifdef OPTIMOTU_CUDA
+  return make_evo_gpu_kernel(pss, evo);
+#else
+  return nullptr;
+#endif
+}
+
+template<int verbose>
+void AaDistWorkerImpl<verbose>::consume_gpu_tile(
+  std::size_t,
+  PairGenerator &pg,
+  const GpuTileResult &result
+) {
+  const GpuTileSpec spec = gpu_tile_from_generator(pg);
+  std::vector<size_t> my_seq1;
+  std::vector<size_t> my_seq2;
+  std::vector<int> my_score1;
+  std::vector<int> my_score2;
+  std::vector<double> my_dist1;
+  std::vector<double> my_dist2;
+  my_seq1.reserve(1000);
+  my_seq2.reserve(1000);
+  my_score1.reserve(1000);
+  my_score2.reserve(1000);
+  my_dist1.reserve(1000);
+  my_dist2.reserve(1000);
+  for_each_tile_pair(pg, [&](
+    std::size_t i0, std::size_t j0, std::size_t, std::size_t
+  ) {
+    const double d = gpu_result_distance(
+      spec, result, static_cast<int>(i0), static_cast<int>(j0)
+    );
+    consider_pair(
+      i0, j0, d, 0, dist_threshold, return_all,
+      my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2, sdm
+    );
+  });
+  flush_hits(sdm, my_seq1, my_seq2, my_score1, my_score2, my_dist1, my_dist2);
+}
 
 std::unique_ptr<AaDistWorker> create_aa_dist_worker(
   const std::vector<std::string> &seq,

@@ -109,6 +109,36 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// optimotu_cuda
+bool optimotu_cuda();
+RcppExport SEXP _optimotu_optimotu_cuda() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(optimotu_cuda());
+    return rcpp_result_gen;
+END_RCPP
+}
+// optimotu_cuda_build
+bool optimotu_cuda_build();
+RcppExport SEXP _optimotu_optimotu_cuda_build() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(optimotu_cuda_build());
+    return rcpp_result_gen;
+END_RCPP
+}
+// optimotu_cuda_device_count
+int optimotu_cuda_device_count();
+RcppExport SEXP _optimotu_optimotu_cuda_device_count() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(optimotu_cuda_device_count());
+    return rcpp_result_gen;
+END_RCPP
+}
 // group_identical_seq_tax
 Rcpp::List group_identical_seq_tax(Rcpp::CharacterVector seq, Rcpp::DataFrame ranks);
 RcppExport SEXP _optimotu_group_identical_seq_tax(SEXP seqSEXP, SEXP ranksSEXP) {
@@ -671,6 +701,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_distmx_cluster_multi", (DL_FUNC) &_optimotu_distmx_cluster_multi, 9},
     {"_optimotu_distmx_cluster_multi_best_threshold", (DL_FUNC) &_optimotu_distmx_cluster_multi_best_threshold, 14},
     {"_optimotu_fastq_names", (DL_FUNC) &_optimotu_fastq_names, 1},
+    {"_optimotu_optimotu_cuda", (DL_FUNC) &_optimotu_optimotu_cuda, 0},
+    {"_optimotu_optimotu_cuda_build", (DL_FUNC) &_optimotu_optimotu_cuda_build, 0},
+    {"_optimotu_optimotu_cuda_device_count", (DL_FUNC) &_optimotu_optimotu_cuda_device_count, 0},
     {"_optimotu_group_identical_seq_tax", (DL_FUNC) &_optimotu_group_identical_seq_tax, 2},
     {"_optimotu_remap_testset_representatives", (DL_FUNC) &_optimotu_remap_testset_representatives, 4},
     {"_optimotu_intersect_length", (DL_FUNC) &_optimotu_intersect_length, 2},

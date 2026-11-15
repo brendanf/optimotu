@@ -6,6 +6,7 @@
 #include "HammingClusterWorker.h"
 #include "AaClusterWorker.h"
 #include "Ksw2ClusterWorker.h"
+#include "Gasal2ClusterWorker.h"
 
 #include "Wfa2SearchWorker.h"
 #include "EdlibSearchWorker.h"
@@ -13,6 +14,7 @@
 #include "HammingSearchWorker.h"
 #include "AaSearchWorker.h"
 #include "Ksw2SearchWorker.h"
+#include "Gasal2SearchWorker.h"
 
 #include "Wfa2DistWorker.h"
 #include "EdlibDistWorker.h"
@@ -21,8 +23,10 @@
 #include "AaConfig.h"
 #include "EvoConfig.h"
 #include "Ksw2DistWorker.h"
+#include "Gasal2DistWorker.h"
 
 #include "AllPairGenerator.h"
+#include "gpu_tile.h"
 #include "subproblems.h"
 
 #include <algorithm>
@@ -119,6 +123,16 @@ namespace
     return optimotu_default_subproblems(threads, dist_method);
   }
 #endif
+
+  void require_gasal2() {
+#ifndef OPTIMOTU_CUDA
+    OPTIMOTU_STOP("dist_gasal2() requires a CUDA build of optimotu");
+#else
+    if (!gpu_runtime_available() || gpu_selected_devices().empty()) {
+      OPTIMOTU_STOP("dist_gasal2() requires a CUDA device");
+    }
+#endif
+  }
 
 } // namespace
 
@@ -965,6 +979,45 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
       OPTIMOTU_STOP("unknown parallelization method");
     }
   }
+  else if (dist_method == "gasal2")
+  {
+    require_gasal2();
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    auto make_gasal2_cluster =
+      [&](auto verbose_tag) -> std::unique_ptr<DistClusterWorker>
+    {
+      constexpr int vv = decltype(verbose_tag)::value;
+      if (par_method == "merge") {
+        return std::make_unique<Gasal2SplitClusterWorker<vv>>(
+          seq, cluster, pgb, match, mismatch, gap_open, gap_extend,
+          vv, worker_threads, dissimilarity
+        );
+      }
+      if (par_method == "concurrent") {
+        return std::make_unique<Gasal2ConcurrentClusterWorker<vv>>(
+          seq, cluster, pgb, match, mismatch, gap_open, gap_extend,
+          vv, worker_threads, dissimilarity
+        );
+      }
+      OPTIMOTU_STOP("unknown parallelization method");
+      return nullptr;
+    };
+    switch (v) {
+    case 0:
+      return make_gasal2_cluster(std::integral_constant<int, 0>{});
+    case 1:
+      return make_gasal2_cluster(std::integral_constant<int, 1>{});
+    case 2:
+      return make_gasal2_cluster(std::integral_constant<int, 2>{});
+    case 3:
+      return make_gasal2_cluster(std::integral_constant<int, 3>{});
+    default:
+      return make_gasal2_cluster(std::integral_constant<int, 4>{});
+    }
+  }
   else if (dist_method == "edlib")
   {
     if (par_method == "merge") {
@@ -1489,6 +1542,47 @@ std::unique_ptr<SearchWorker> create_search_worker(
       return make_ksw2_search(std::integral_constant<int, 4>{});
     }
   }
+  else if (dist_method == "gasal2")
+  {
+    require_gasal2();
+    if (return_cigar) {
+      OPTIMOTU_STOP("cigar is not implemented for dist_gasal2()");
+    }
+    if (span != 0) {
+      OPTIMOTU_STOP("dist_gasal2() uses global alignment; use dist_ksw2() for extension");
+    }
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    switch (v) {
+    case 0:
+      return std::make_unique<Gasal2SearchWorkerImpl<0>>(
+        query, ref, threshold, threads, match, mismatch, gap_open, gap_extend,
+        dissimilarity
+      );
+    case 1:
+      return std::make_unique<Gasal2SearchWorkerImpl<1>>(
+        query, ref, threshold, threads, match, mismatch, gap_open, gap_extend,
+        dissimilarity
+      );
+    case 2:
+      return std::make_unique<Gasal2SearchWorkerImpl<2>>(
+        query, ref, threshold, threads, match, mismatch, gap_open, gap_extend,
+        dissimilarity
+      );
+    case 3:
+      return std::make_unique<Gasal2SearchWorkerImpl<3>>(
+        query, ref, threshold, threads, match, mismatch, gap_open, gap_extend,
+        dissimilarity
+      );
+    default:
+      return std::make_unique<Gasal2SearchWorkerImpl<4>>(
+        query, ref, threshold, threads, match, mismatch, gap_open, gap_extend,
+        dissimilarity
+      );
+    }
+  }
   else if (dist_method == "edlib")
   {
     auto make_edlib_search = [&](auto verbose_tag) -> std::unique_ptr<SearchWorker>
@@ -1734,6 +1828,23 @@ std::unique_ptr<DistWorker> create_dist_worker(
       seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
       gap_open2, gap_extend2, verbose, span_enum, constrain,
       static_cast<std::size_t>(threads), dissimilarity
+    );
+  }
+  else if (dist_method == "gasal2")
+  {
+    require_gasal2();
+    if (span_enum != AlignmentSpan::GLOBAL) {
+      OPTIMOTU_STOP(
+        "dist_gasal2() uses global alignment; use dist_ksw2() for extension"
+      );
+    }
+    int match = element_as_int(dist_config, "match", "dist_config");
+    int mismatch = element_as_int(dist_config, "mismatch", "dist_config");
+    int gap_open = element_as_int(dist_config, "gap_open", "dist_config");
+    int gap_extend = element_as_int(dist_config, "gap_extend", "dist_config");
+    return create_gasal2_dist_worker(
+      seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
+      verbose, static_cast<std::size_t>(threads), dissimilarity
     );
   }
   else if (dist_method == "edlib")
