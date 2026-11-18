@@ -1,5 +1,8 @@
 # optimotu development version
 
+* `seq_search(span = "extension")` no longer drops a pair whose length
+  ratio is below `1 - threshold`. Global search still applies that
+  screen.
 * Optional CUDA GPU backends for distance calculations, including `seq_search()`,
   `seq_cluster()`, `seq_distmx()`, and `optimize_thresholds()`. These methods are only
   compiled when CUDA tooling is available. Currently implemented methods are a

@@ -146,8 +146,12 @@ inline bool pair_length_ok(
     l2 = tmp;
   }
   if (l2 <= 0.0) return false;
-  if (mode == Dissimilarity::SCORE) {
-    if (span == AlignmentSpan::EXTEND) return true;
+  // Extension aligns the shorter sequence inside the longer one, so
+  // the global length ratio does not apply.
+  if (span == AlignmentSpan::EXTEND)
+    return true;
+  if (mode == Dissimilarity::SCORE)
+  {
     return score_global_length_ok(
         l1, l2, threshold, match, mismatch,
         gap_open, gap_extend, gap_open2, gap_extend2
