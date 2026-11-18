@@ -194,6 +194,23 @@ parse_paml_exchangeability <- function(path) {
   q / rate
 }
 
+# Q is reversible, so D Q D^{-1} is symmetric for D = diag(sqrt(pi)).
+# A general eigen solver does not reconstruct the identity on every
+# BLAS (GitHub' CUDA test image does not). The symmetric factorization
+# does, and its inverse is U' D rather than a second solve().
+.evo_decompose <- function(q, pi) {
+  scale <- sqrt(as.numeric(pi))
+  balanced <- (scale * q) / rep(scale, each = length(scale))
+  balanced <- (balanced + t(balanced)) / 2
+  ev <- eigen(balanced, symmetric = TRUE)
+  vectors <- ev$vectors
+  list(
+    lambda = ev$values,
+    evec = vectors / scale,
+    evec_inv = t(vectors * scale)
+  )
+}
+
 .evo_time_grid <- function(t_max, n) {
   n <- as.integer(n)
   pos <- exp(seq(log(t_max / 1000), log(t_max), length.out = n - 1L))
@@ -282,15 +299,12 @@ dist_evo <- function(
   resolved <- .resolve_evo_model(model, pi)
   states <- colnames(resolved$S)
   q <- .evo_rate_matrix(resolved$S, resolved$pi)
-  ev <- eigen(q, symmetric = FALSE)
-  if (any(abs(Im(ev$values)) > 1e-6) || any(abs(Im(ev$vectors)) > 1e-6)) {
-    stop("rate matrix eigen decomposition is not real")
-  }
-  lambda <- Re(ev$values)
-  evec <- Re(ev$vectors)
-  evec_inv <- solve(evec)
-  p0 <- evec %*% diag(exp(lambda * 0), 20L) %*% evec_inv
-  if (max(abs(p0 - diag(20L))) > 1e-5) {
+  ev <- .evo_decompose(q, resolved$pi)
+  lambda <- ev$lambda
+  evec <- ev$evec
+  evec_inv <- ev$evec_inv
+  p0 <- evec %*% evec_inv
+  if (max(abs(p0 - diag(20L))) > 1e-8) {
     stop("rate matrix eigen decomposition did not reconstruct the identity")
   }
   grid <- .evo_time_grid(t_max, t_grid)
