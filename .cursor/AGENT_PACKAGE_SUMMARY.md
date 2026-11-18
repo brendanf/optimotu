@@ -87,6 +87,12 @@ Native code:
     tiles see taxa as contiguous index blocks. Permutation is of character
     vector entries only (no CHARSXP copy). Skipped for
     `dist_file(by_name = FALSE)`.
+  - `optimize_thresholds()` requires unique `taxonomy[[id_col]]` for every
+    distance method. Name-keyed clustering (`dist_file()`, `dist_usearch()`,
+    and the by-name `ClusterWorker` / MCA name maps) also rejects duplicate
+    sequence names and repeated members inside one `which` subset; those
+    used to leave a `NO_CLUST` permutation slot and segfault on
+    `write_threshold_row()`.
   - After `min_refseq` filtering, `optimize_thresholds()` collapses
     byte-identical sequences that agree on every `ranks` column, then
     weights MCC/RI/ARI/FMI/MI/AMI/FM by multiplicity so metric values
@@ -341,6 +347,9 @@ explicitly requests API changes.
 - Package docs use roxygen2 markdown style.
 - Do not hand-edit `NAMESPACE` or `.Rd`; generate via roxygen2.
 - Keep comments concise and technical; use them for intent and assumptions.
+- Prefer `checkmate` for R argument checking (`assert_*` / `check_*`) instead
+  of hand-rolled validation when checkmate covers the constraint
+  (including `unique = TRUE`, types, lengths, and missingness).
 - For non-trivial behavior changes, add/adjust tests with the same patch set.
 
 ## 7) Relationship to sister repos
@@ -362,6 +371,11 @@ Common triggers:
 - native backend behavior changes
 - major test strategy changes
 - shifts in repo responsibilities across the three-project ecosystem
+
+When bumping `Version:` in `DESCRIPTION`, run `autoconf` in the package
+root so the generated `configure` script embeds the new version
+(`configure.ac` reads it from `DESCRIPTION` via `m4_include`). Skipping
+this leaves `PACKAGE_VERSION` stale relative to `DESCRIPTION`.
 
 ## 9) Suggested reading order
 

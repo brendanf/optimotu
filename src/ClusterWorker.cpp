@@ -83,7 +83,18 @@ ClusterWorkerImpl<distmx_type, id_t>::ClusterWorkerImpl(
   }
   id_map = std::make_shared<id_map_type>();
   for (int i = 0; (size_t)i < id_list.size(); ++i) {
-    id_map->insert({id_list[i], i});
+    auto inserted = id_map->insert({id_list[i], i});
+    if (!inserted.second)
+    {
+      if constexpr (std::is_same<id_t, std::string>::value)
+      {
+        OPTIMOTU_STOP("duplicate sequence name '" + id_list[i] + "'");
+      }
+      else
+      {
+        OPTIMOTU_STOP("duplicate sequence id in id list");
+      }
+    }
   }
 }
 

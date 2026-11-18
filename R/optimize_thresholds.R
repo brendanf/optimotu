@@ -563,6 +563,12 @@ cluster_find_best_thresholds <- function(
       stop("`seq_file` is not supported with `dist_file()`.", call. = FALSE)
     }
     names_vec <- seq_input_seq_ids(seq, seq_idx, NULL)
+    checkmate::assert_character(
+      names_vec,
+      unique = TRUE,
+      any.missing = FALSE,
+      .var.name = "dist_file() sequence names"
+    )
     if (which_is_index) {
       which <- lapply(which, function(i) names_vec[i])
     }
@@ -594,6 +600,12 @@ cluster_find_best_thresholds <- function(
       seq_idx = seq_idx,
       seq_file = seq_file,
       as = "character"
+    )
+    checkmate::assert_character(
+      names(seq_char),
+      unique = TRUE,
+      any.missing = FALSE,
+      .var.name = "dist_usearch() sequence names"
     )
     if (which_is_index) {
       which <- lapply(which, function(i) names(seq_char)[i])
@@ -937,7 +949,8 @@ find_best_threshold <- function(
 #'
 #' @param taxonomy (`data.frame`) taxonomic identifications of the reference
 #' sequences.  Must include a column for each rank in `ranks` and a column for
-#' sequence identifiers, defined by `id_col`. Any additional columns are ignored.
+#' sequence identifiers, defined by `id_col`. Values in `id_col` must be unique.
+#' Any additional columns are ignored.
 #' @param refseq (named `character`, file name,
 #' [`DNAStringSet`][Biostrings::XStringSet-class], `data.frame`,
 #' `fastqindexr_index`, or character vector of `.fqi` paths) the
@@ -1012,6 +1025,11 @@ find_best_threshold <- function(
 #' merge-mode pair tiles hit fewer taxonomic subsets. Reordering is skipped
 #' for `dist_file(by_name = FALSE)`, where integer IDs in the distance file
 #' follow the original sequence order.
+#'
+#' `taxonomy[[id_col]]` must be unique for every distance method. Name-keyed
+#' paths (`dist_file()`, `dist_usearch()`) also require unique sequence names
+#' used for clustering; duplicate IDs previously caused an out-of-range write
+#' after clustering rather than an R error.
 #'
 #' After subset selection, byte-identical sequences that agree on every
 #' column in `ranks` are collapsed to one clustering representative when
@@ -1112,6 +1130,13 @@ optimize_thresholds <- function(
     checkmate::check_integerish(verbose, lower = 0L)
   )
   checkmate::assert_flag(return_curves)
+
+  checkmate::assert_character(
+    taxonomy[[id_col]],
+    unique = TRUE,
+    any.missing = FALSE,
+    .var.name = sprintf("taxonomy[['%s']]", id_col)
+  )
 
   # SLINK will fail if the order of sequences is different in the testset and
   # the reference sequences

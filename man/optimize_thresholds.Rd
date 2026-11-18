@@ -33,7 +33,8 @@ optimize_thresholds(
 \arguments{
 \item{taxonomy}{(\code{data.frame}) taxonomic identifications of the reference
 sequences.  Must include a column for each rank in \code{ranks} and a column for
-sequence identifiers, defined by \code{id_col}. Any additional columns are ignored.}
+sequence identifiers, defined by \code{id_col}. Values in \code{id_col} must be unique.
+Any additional columns are ignored.}
 
 \item{refseq}{(named \code{character}, file name,
 \code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{data.frame},
@@ -146,6 +147,11 @@ taxonomy order (\code{ranks}, then \code{id_col}) before clustering so that
 merge-mode pair tiles hit fewer taxonomic subsets. Reordering is skipped
 for \code{dist_file(by_name = FALSE)}, where integer IDs in the distance file
 follow the original sequence order.
+
+\code{taxonomy[[id_col]]} must be unique for every distance method. Name-keyed
+paths (\code{dist_file()}, \code{dist_usearch()}) also require unique sequence names
+used for clustering; duplicate IDs previously caused an out-of-range write
+after clustering rather than an R error.
 
 After subset selection, byte-identical sequences that agree on every
 column in \code{ranks} are collapsed to one clustering representative when

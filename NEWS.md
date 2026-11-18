@@ -1,5 +1,10 @@
 # optimotu development version
 
+* Reject duplicate sequence IDs before name-keyed clustering. Duplicate
+  IDs in `optimize_thresholds()` taxonomy, or in names passed to
+  `dist_file()` / `dist_usearch()` / `distmx_cluster()`, now error
+  instead of segfaulting after clustering when a subset listed the same
+  name twice.
 * Windows source builds compile the same C/C++ units as the Unix CPU
   build. GASAL2's CUDA host sources are no longer compiled; their
   headers include a Linux CUDA toolkit path.

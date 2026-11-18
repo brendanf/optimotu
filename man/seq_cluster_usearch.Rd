@@ -27,7 +27,8 @@ seq_cluster_usearch(
 
 \item{seq_id}{(\code{character} vector) names for the sequences.  If they are
 already named, this will replace the names.  Has no effect if \code{seq} is a
-filename.}
+filename. Values must be unique; duplicate IDs are rejected before USEARCH
+is launched.}
 
 \item{threshold_config}{(\code{optimotu_threshold_config} object returned by
 \code{\link[=threshold_config]{threshold_config()}} or one of its helper functions) Definition of the

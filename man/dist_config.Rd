@@ -126,7 +126,8 @@ inputs are aligned nucleotides and are translated before scoring.}
 \item{codon_offset}{(\code{integer} in 0, 1, 2) first codon base in the
 aligned nucleotides when \code{genetic_code} is set.}
 
-\item{usearch}{(\code{character} path) path to the USEARCH executable}
+\item{usearch}{(\code{character} path) path to the USEARCH executable.
+Sequence IDs passed into clustering must be unique.}
 
 \item{usearch_ncpu}{(\code{integer} scalar or \code{NULL}) number of threads for
 USEARCH. If \code{NULL}, USEARCH will autodetect.}
@@ -137,7 +138,7 @@ USEARCH. If \code{NULL}, USEARCH will autodetect.}
 the file by name; if \code{FALSE}, they are identified by number, starting with 0.
 Identification by number may be slightly faster and reduces the necessary
 file size, but is not supported by \code{optimotu()}, only by
-\code{optimize_thresholds()}.}
+\code{optimize_thresholds()}. Names passed with the matrix must be unique.}
 
 \item{model}{(\code{character} or square \code{numeric} matrix) an abbreviation
 (\code{mtart}, \code{mtrev}, \code{mtmam}, \code{jtt}, \code{wag}, \code{lg}), a PAML \code{.dat} path, or

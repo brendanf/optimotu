@@ -15,7 +15,8 @@
 #' "seq_id" (`character`) and "seq" (`character`)) sequences to cluster
 #' @param seq_id (`character` vector) names for the sequences.  If they are
 #' already named, this will replace the names.  Has no effect if `seq` is a
-#' filename.
+#' filename. Values must be unique; duplicate IDs are rejected before USEARCH
+#' is launched.
 #' @param usearch_ncpu (`integer` scalar) number of threads to use for
 #' calculating the distance matrix.  The number of threads for clustering is
 #' specified in the "parallel_config" argument.
@@ -241,6 +242,12 @@ do_usearch_singlelink <- function(
   usearch
 ) {
   checkmate::assert_class(threshold_config, "optimotu_threshold_config")
+  checkmate::assert_character(
+    seq_id,
+    unique = TRUE,
+    any.missing = FALSE,
+    .var.name = "dist_usearch() sequence names"
+  )
   usearch_thresh_max <- if (threshold_config$type == "uniform") {
     threshold_config$to
   } else {

@@ -26,7 +26,8 @@ seq_cluster(
 
 \item{seq_id}{(\code{character} vector) names for the sequences.  If they are
 already named, this will replace the names.  Has no effect if \code{seq} is a
-filename.}
+filename. Values must be unique; duplicate IDs are rejected before USEARCH
+is launched.}
 
 \item{dist_config}{(\code{optimotu_dist_config} object returned by
 \code{\link[=dist_config]{dist_config()}} or one of its helpers) Configuration of the method to

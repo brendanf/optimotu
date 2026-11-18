@@ -1033,7 +1033,8 @@ dist_aa <- function(
 
 #' @param usearch_ncpu (`integer` scalar or `NULL`) number of threads for
 #' USEARCH. If `NULL`, USEARCH will autodetect.
-#' @param usearch (`character` path) path to the USEARCH executable
+#' @param usearch (`character` path) path to the USEARCH executable.
+#' Sequence IDs passed into clustering must be unique.
 #' @export
 #' @describeIn dist_config helper function for method `"usearch"`
 dist_usearch <- function(usearch = Sys.which("usearch"), usearch_ncpu = NULL) {
@@ -1055,7 +1056,7 @@ dist_usearch <- function(usearch = Sys.which("usearch"), usearch_ncpu = NULL) {
 #' the file by name; if `FALSE`, they are identified by number, starting with 0.
 #' Identification by number may be slightly faster and reduces the necessary
 #' file size, but is not supported by `optimotu()`, only by
-#' `optimize_thresholds()`.
+#' `optimize_thresholds()`. Names passed with the matrix must be unique.
 #' @export
 #' @describeIn dist_config helper function for method `"file"`
 dist_file <- function(filename, by_name = TRUE) {

@@ -16,18 +16,28 @@ std::vector<std::vector<j_t>> calculate_subset_indices(
 ) {
   std::unordered_map<std::string, j_t> namekey;
   for (j_t i = 0; i < names.size(); i++) {
-    namekey.emplace(names[i], i);
+    auto inserted = namekey.emplace(names[i], i);
+    if (!inserted.second) {
+      OPTIMOTU_STOP("duplicate sequence name '" + names[i] + "'");
+    }
   }
   std::vector<std::vector<j_t>> out;
   out.reserve(subset_names.size());
   for (const auto & my_subset_names : subset_names) {
     std::vector<j_t> subset_indices;
     subset_indices.reserve(my_subset_names.size());
+    std::unordered_map<j_t, std::string> seen_in_subset;
     for (const auto & name : my_subset_names) {
       auto f = namekey.find(name);
       if (f == namekey.end()) {
         OPTIMOTU_STOP("name '" + name +
            "' in subset is not found in the names of the sequences");
+      }
+      auto seen = seen_in_subset.emplace(f->second, name);
+      if (!seen.second) {
+        OPTIMOTU_STOP(
+          "sequence '" + name + "' is listed more than once in a subset"
+        );
       }
       subset_indices.push_back(f->second);
     }
@@ -45,11 +55,19 @@ std::vector<std::vector<j_t>> sort_subset_indices(
   out.reserve(subset_which.size());
   for (const auto &which : subset_which) {
     std::vector<j_t> indices = which;
+    std::unordered_map<j_t, bool> seen_in_subset;
     for (j_t idx : indices) {
       if (idx >= n_seq) {
         OPTIMOTU_STOP(
           "subset index " + std::to_string(idx) +
           " is out of range for " + std::to_string(n_seq) + " sequences"
+        );
+      }
+      auto seen = seen_in_subset.emplace(idx, true);
+      if (!seen.second) {
+        OPTIMOTU_STOP(
+          "subset index " + std::to_string(idx) +
+          " is listed more than once in a subset"
         );
       }
     }

@@ -40,7 +40,7 @@ is_list_of_character <- function(x) {
 #' labeling the columns of the output matrix. Typically, in order to generate
 #' the sparse distance matrix with integer indices, an alternate version of the
 #' input may be used, where the "real" names are replaced with integers. These
-#' are the "real" names.
+#' are the "real" names. Values must be unique.
 #' @param threshold_config (`optimotu_threshold_config` object returned by
 #' [threshold_config()] or one of its helper functions) Definition of the
 #' thresholds to use for clustering.
