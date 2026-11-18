@@ -28,9 +28,6 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
-      # After Makeconf's -march, so the last -march wins. PKG_CXXFLAGS
-      # is earlier on the command line and would lose.
-      MAKEFLAGS: 'CFLAGS+=-march=native\ -mtune=native CXXFLAGS+=-march=native\ -mtune=native'
 
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +47,29 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
+      # User Makevars, not MAKEFLAGS or PKG_*FLAGS. R CMD check treats
+      # CFLAGS/CXXFLAGS on the make command line as overrides of the
+      # user/site settings. += is applied after Makeconf, so the last
+      # -march wins. ~/.Renviron cannot: Makeconf's CFLAGS = hides an
+      # environment CFLAGS.
+      - name: Compile for the runner CPU
+        shell: Rscript {0}
+        run: |
+          dest <- if (.Platform$OS.type == "windows") {
+            path.expand("~/.R/Makevars.ucrt")
+          } else {
+            path.expand("~/.R/Makevars")
+          }
+          dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+          cat(
+            "CFLAGS += -march=native -mtune=native",
+            "CXXFLAGS += -march=native -mtune=native",
+            "",
+            sep = "\n",
+            file = dest,
+            append = TRUE
+          )
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
@@ -68,10 +88,6 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
       TZ: Etc/UTC
       LANG: en_US.UTF-8
-      # After Makeconf's -march, so the last -march wins. PKG_CXXFLAGS
-      # is earlier on the command line and would lose. nvcc's own
-      # recipe does not read CXXFLAGS.
-      MAKEFLAGS: 'CFLAGS+=-march=native\ -mtune=native CXXFLAGS+=-march=native\ -mtune=native'
     steps:
       - name: Install system packages
         run: |
@@ -92,6 +108,20 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
+      # See the matrix job. nvcc's recipe does not read CXXFLAGS.
+      - name: Compile for the runner CPU
+        shell: Rscript {0}
+        run: |
+          dest <- path.expand("~/.R/Makevars")
+          dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+          cat(
+            "CFLAGS += -march=native -mtune=native",
+            "CXXFLAGS += -march=native -mtune=native",
+            "",
+            sep = "\n",
+            file = dest,
+            append = TRUE
+          )
       - name: R CMD check (skip tests without a GPU)
         uses: r-lib/actions/check-r-package@v2
         with:

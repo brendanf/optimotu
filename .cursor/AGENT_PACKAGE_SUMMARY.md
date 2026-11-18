@@ -36,10 +36,14 @@ Native code:
   - distance workers, clustering algorithms, generators, and glue via Rcpp
   - R package builds define `OPTIMOTU_R` (`src/Makevars`). `Makevars` does
     not set `-march` and does not pass `-mavx512*` or ARM flags.
-    GitHub Actions appends `-march=native -mtune=native` to `CFLAGS` and
-    `CXXFLAGS` through `MAKEFLAGS`, after `Makeconf`, so that `-march`
-    wins. CRAN and local builds do not get those flags. The nvcc recipe
-    does not read `CXXFLAGS`.
+    GitHub Actions appends `-march=native -mtune=native` in the user
+    Makevars (`~/.R/Makevars`, or `Makevars.ucrt` on Windows), after
+    `Makeconf`, so that `-march` wins. `MAKEFLAGS` and `PKG_*FLAGS` are
+    not used for this: `R CMD check` treats `CFLAGS` / `CXXFLAGS` set
+    there as overrides of the user/site settings. An environment
+    `CFLAGS` in `.Renviron` does not override `Makeconf`. CRAN and local
+    builds do not get those flags. The nvcc recipe does not read
+    `CXXFLAGS`.
     `src/Makevars.win` lists the same units as `configure` (top-level
     sources, `WFAligner.cpp`, `edlib.cpp`, WFA2 library C files, and the
     four ksw2 affine files). It does not recurse into `src/GASAL2`;
