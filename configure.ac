@@ -65,10 +65,10 @@ CUDALIBS=""
 CUDA_ARCH_FLAGS=""
 DRIVER_MAJOR=`nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version: \([[0-9]][[0-9]]*\).*/\1/p' | head -n 1`
 nvcc_release_major() {
-  "$[1]" --version 2>/dev/null | sed -n 's/.*release \([[0-9]][[0-9]]*\).*/\1/p' | head -n 1
+  "[$]1" --version 2>/dev/null | sed -n 's/.*release \([[0-9]][[0-9]]*\).*/\1/p' | head -n 1
 }
 nvcc_compatible() {
-  maj=`nvcc_release_major "$[1]"`
+  maj=`nvcc_release_major "[$]1"`
   if test -z "$maj"; then
     return 1
   fi
