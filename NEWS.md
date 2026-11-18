@@ -3,6 +3,10 @@
 * `seq_search(span = "extension")` no longer drops a pair whose length
   ratio is below `1 - threshold`. Global search still applies that
   screen.
+* WFA out-of-memory and fatal aligner errors, including exhausted
+  wavefront or backtrace storage, are reported as an R error. A pair
+  that only hits the alignment-step cap is still a soft miss (distance
+  1, empty CIGAR).
 * Optional CUDA GPU backends for distance calculations, including `seq_search()`,
   `seq_cluster()`, `seq_distmx()`, and `optimize_thresholds()`. These methods are only
   compiled when CUDA tooling is available. Currently implemented methods are a

@@ -7,6 +7,7 @@
 #include "optimotu.h"
 #include "wfa_identity_bound.h"
 #include "score_dissimilarity.h"
+#include "wfa_fatal.h"
 
 Wfa2DistWorker::Wfa2DistWorker(
   const std::vector<std::string> &seq,
@@ -68,6 +69,11 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
     match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2,
     score_only ? wfa::WFAligner::Score : wfa::WFAligner::Alignment
   };
+  if (wfa_aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return;
+  }
 
   OPTIMOTU_DEBUG(
     2,
@@ -102,11 +108,13 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
   };
 
   for_each_assigned_tile(
-    pair_generators, begin, end,
-    [&](std::size_t /*pg_index*/, PairGenerator &pg) {
-      for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t, std::size_t
-      ) {
+      pair_generators, begin, end,
+      [&](std::size_t /*pg_index*/, PairGenerator &pg)
+      {
+        for_each_tile_pair(pg, [&](
+                                   std::size_t i0, std::size_t j0, std::size_t, std::size_t)
+                           {
+        if (optimotu_wfa_fatal_pending()) return;
         const size_t i = i0;
         const size_t j = j0;
 
@@ -143,6 +151,10 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
               seq[s1], seq[s2], wfa_aligner, dissimilarity, match, mismatch
           );
         }
+        if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending()) {
+          optimotu_wfa_note_fatal();
+          return;
+        }
         if (d > dist_threshold) return;
         int score = wfa_aligner.getAlignmentScore();
         ++my_aligned;
@@ -167,10 +179,8 @@ void Wfa2DistWorkerImpl<verbose, is_constrained, span, SparseDistanceMatrixType>
           my_max_delete.push_back(max_del);
         }
         flush_if_full();
-        RcppThread::checkUserInterrupt();
+        RcppThread::checkUserInterrupt(); });
       });
-    }
-  );
   if (my_seq1.size() > 0) {
     if constexpr (std::is_same_v<SparseDistanceMatrixType, SparseDistanceMatrixCigar>) {
       sdm.append(

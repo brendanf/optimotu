@@ -49,6 +49,38 @@ namespace
     return ClusterInstanceRole::Parent;
   }
 
+  // Penalties are the already-negated scores passed to WFAligner.
+  // OptimOTU only builds end-to-end and extension aligners, and only
+  // applies a static band. Other spans are rejected by the caller.
+  void validate_wfa_penalties(
+      int match,
+      int mismatch,
+      int gap_open,
+      int gap_extend,
+      int gap_open2,
+      int gap_extend2)
+  {
+    if (match > 0)
+    {
+      OPTIMOTU_STOP("WFA match score must be <= 0");
+    }
+    if (mismatch <= 0)
+    {
+      OPTIMOTU_STOP("WFA mismatch penalty must be > 0");
+    }
+    const bool affine2 =
+        (gap_open2 != 0 || gap_extend2 != 0) &&
+        (gap_open2 != gap_open || gap_extend2 != gap_extend);
+    if (gap_open < 0 || (affine2 && gap_open2 < 0))
+    {
+      OPTIMOTU_STOP("WFA gap open penalty must be >= 0");
+    }
+    if (gap_extend <= 0 || (affine2 && gap_extend2 <= 0))
+    {
+      OPTIMOTU_STOP("WFA gap extend penalty must be > 0");
+    }
+  }
+
   void reject_prim_multi(const ClusterAlgorithmFactory &factory)
   {
     if (dynamic_cast<const ClusterPrimFactory *>(&factory) != nullptr)
@@ -832,6 +864,8 @@ std::unique_ptr<DistClusterWorker> create_dist_cluster_worker(
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
     // dist_wfa2() match is a non-negative bonus; WFA2 requires <= 0.
     match = -match;
+    validate_wfa_penalties(
+        match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
     if (par_method == "merge") {
       if (v == 0) {
         return std::make_unique<Wfa2SplitClusterWorker<0>>(
@@ -1312,6 +1346,8 @@ std::unique_ptr<SearchWorker> create_search_worker(
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
     // dist_wfa2() match is a non-negative bonus; WFA2 requires <= 0.
     match = -match;
+    validate_wfa_penalties(
+        match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
     switch (v) {
     case 0:
       if (return_cigar) {
@@ -1810,6 +1846,8 @@ std::unique_ptr<DistWorker> create_dist_worker(
     int gap_extend2 = element_as_int(dist_config, "gap_extend2", "dist_config");
     // dist_wfa2() match is a non-negative bonus; WFA2 requires <= 0.
     match = -match;
+    validate_wfa_penalties(
+        match, mismatch, gap_open, gap_extend, gap_open2, gap_extend2);
     return create_wfa2_dist_worker(
       seq, threshold, pgb, sdm, match, mismatch, gap_open, gap_extend,
       gap_open2, gap_extend2, verbose, span_enum, constrain,

@@ -6,6 +6,7 @@
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
 #include "score_dissimilarity.h"
+#include "wfa_fatal.h"
 
 Wfa2ClusterWorker::Wfa2ClusterWorker(
   const SequenceSet &seq,
@@ -30,6 +31,11 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
       ? wfa::WFAligner::Score
       : wfa::WFAligner::Alignment
   };
+  if (wfa_aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return;
+  }
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -46,6 +52,11 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
               my_algo, pg,
               [&](j_t gi, j_t gj, double threshold)
               {
+                if (optimotu_wfa_fatal_pending() || wfa_aligner.fatal())
+                {
+                  optimotu_wfa_note_fatal();
+                  return 1.0;
+                }
                 bool is_seqj_longer = seq[gj].size() > seq[gi].size();
                 size_t s1 = is_seqj_longer ? gi : gj;
                 size_t s2 = is_seqj_longer ? gj : gi;
@@ -62,6 +73,11 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
                 wfa_aligner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
                 wfa_aligner.setMaxAlignmentSteps(bound.max_alignment_steps);
                 double d = distance_wfa2(seq[s1], seq[s2], wfa_aligner);
+                if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending())
+                {
+                  optimotu_wfa_note_fatal();
+                  return 1.0;
+                }
                 if (d < 1.0)
                 {
                   ++my_aligned;
@@ -80,8 +96,9 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
           dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
 
       for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
-      ) {
+                                 std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj)
+                         {
+        if (optimotu_wfa_fatal_pending()) return;
         double threshold = use_local
             ? my_algo->max_relevant_local(
                   static_cast<j_t>(li), static_cast<j_t>(lj))
@@ -120,6 +137,10 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
           double d = distance_wfa2(
               seq[s1], seq[s2], wfa_aligner, dissimilarity, match, mismatch
           );
+          if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending()) {
+            optimotu_wfa_note_fatal();
+            return;
+          }
           if (d < 1.0) ++my_aligned;
 
           OPTIMOTU_DEBUG(
@@ -136,8 +157,7 @@ void Wfa2SplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_t 
             }
           }
         }
-        RcppThread::checkUserInterrupt();
-      });
+        RcppThread::checkUserInterrupt(); });
       mutex.lock();
       OPTIMOTU_DEBUG(2, << "thread " << pg_index << " ready to merge" << std::endl);
       _aligned += my_aligned;
@@ -161,6 +181,11 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
       ? wfa::WFAligner::Score
       : wfa::WFAligner::Alignment
   };
+  if (wfa_aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return;
+  }
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -170,8 +195,9 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
         << " entered" << std::endl
       );
       for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t, std::size_t
-      ) {
+                                 std::size_t i0, std::size_t j0, std::size_t, std::size_t)
+                         {
+        if (optimotu_wfa_fatal_pending()) return;
         double threshold = clust_algo.max_relevant(
             static_cast<j_t>(i0), static_cast<j_t>(j0));
         OPTIMOTU_DEBUG(
@@ -213,6 +239,10 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
           double d = distance_wfa2(
               seq[s1], seq[s2], wfa_aligner, dissimilarity, match, mismatch
           );
+          if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending()) {
+            optimotu_wfa_note_fatal();
+            return;
+          }
           if (d < 1.0) ++my_aligned;
           OPTIMOTU_DEBUG(
             4,
@@ -231,8 +261,7 @@ void Wfa2ConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::si
           << " and " << i0 << " (i0=" << i0 << ")"
           << "\n" << std::endl
         );
-        RcppThread::checkUserInterrupt();
-      });
+        RcppThread::checkUserInterrupt(); });
       OPTIMOTU_DEBUG(2, << "thread " << pg_index << " done" << std::endl);
     }
   );

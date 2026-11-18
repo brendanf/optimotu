@@ -1,6 +1,6 @@
 CXX_STD = CXX17
 PKG_CPPFLAGS = -DOPTIMOTU_R -I./WFA2-lib -I./edlib -I./ksw2 @CUDA_CPPFLAGS@
-PKG_CFLAGS =  -DGMP -DSKIP_MAIN
+PKG_CFLAGS =  -DGMP -DSKIP_MAIN -include optimotu_wfa_shim.h
 PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") -lz @CUDALIBS@
 
 # Include all C++ files in src/ and its subdirectories: src/A and src/B

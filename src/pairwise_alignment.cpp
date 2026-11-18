@@ -2,6 +2,7 @@
 #include "pairwise_alignment.h"
 #include "config.h"
 #include "score_dissimilarity.h"
+#include "wfa_fatal.h"
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -13,6 +14,18 @@ Dissimilarity parse_dissimilarity(const std::string &s) {
   if (s == "score") return Dissimilarity::SCORE;
   if (s == "identity") return Dissimilarity::IDENTITY;
   OPTIMOTU_STOP("dissimilarity must be \"identity\" or \"score\"");
+}
+
+bool wfa_hard_fail(
+    wfa::WFAligner &aligner,
+    wfa::WFAligner::AlignmentStatus status)
+{
+  if (aligner.fatal() || status == wfa::WFAligner::StatusOOM)
+  {
+    optimotu_wfa_note_fatal();
+    return true;
+  }
+  return false;
 }
 
 }  // namespace
@@ -155,6 +168,8 @@ double distance_wfa2(
   } else {
     static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
+  if (wfa_hard_fail(aligner, status))
+    return 1.0;
   if (status != wfa::WFAligner::StatusAlgCompleted &&
       status != wfa::WFAligner::StatusAlgPartial) return 1.0;
   if (dissimilarity == Dissimilarity::SCORE) {
@@ -163,6 +178,11 @@ double distance_wfa2(
     return cost_score_distance(cost, L, match, mismatch);
   }
   std::string cigar(aligner.getCIGAR(true));
+  if (aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return 1.0;
+  }
   if constexpr (span == AlignmentSpan::EXTEND) {
     return distance_from_cigar_extend(cigar);
   } else {
@@ -213,6 +233,8 @@ double distance_wfa2(
   } else {
     static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
+  if (wfa_hard_fail(aligner, status))
+    return 1.0;
   if (status != wfa::WFAligner::StatusAlgCompleted &&
       status != wfa::WFAligner::StatusAlgPartial) return 1.0;
   if (dissimilarity == Dissimilarity::SCORE) {
@@ -221,6 +243,11 @@ double distance_wfa2(
     return cost_score_distance(cost, L, match, mismatch);
   }
   std::string cigar(aligner.getCIGAR(true));
+  if (aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return 1.0;
+  }
   if constexpr (span == AlignmentSpan::EXTEND) {
     return distance_from_cigar_extend(cigar);
   } else {
@@ -337,8 +364,16 @@ std::string cigar_wfa2(const std::string &a, const std::string &b,
   } else {
     static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
+  if (wfa_hard_fail(aligner, status))
+    return "";
   if (status != wfa::WFAligner::StatusAlgCompleted) return "";
-  return aligner.getCIGAR(true);
+  std::string cigar = aligner.getCIGAR(true);
+  if (aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return "";
+  }
+  return cigar;
 }
 
 std::string cigar_wfa2_global(const std::string &a, const std::string &b,
@@ -348,7 +383,9 @@ std::string cigar_wfa2_global(const std::string &a, const std::string &b,
   wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
                                gap_open2, gap_extend2,
                                wfa::WFAligner::AlignmentScope::Alignment};
-  return cigar_wfa2<AlignmentSpan::GLOBAL>(a, b, aligner);
+  std::string cigar = cigar_wfa2<AlignmentSpan::GLOBAL>(a, b, aligner);
+  optimotu_wfa_stop_if_fatal();
+  return cigar;
 }
 
 std::string cigar_wfa2_extend(const std::string &a, const std::string &b,
@@ -358,7 +395,9 @@ std::string cigar_wfa2_extend(const std::string &a, const std::string &b,
   wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
                                gap_open2, gap_extend2,
                                wfa::WFAligner::AlignmentScope::Alignment};
-  return cigar_wfa2<AlignmentSpan::EXTEND>(a, b, aligner);
+  std::string cigar = cigar_wfa2<AlignmentSpan::EXTEND>(a, b, aligner);
+  optimotu_wfa_stop_if_fatal();
+  return cigar;
 }
 
 // explicit instantiations
@@ -392,8 +431,15 @@ std::pair<double, std::string> distance_and_cigar_wfa2(
     static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
 
+  if (wfa_hard_fail(aligner, status))
+    return {1.0, ""};
   if (status != wfa::WFAligner::StatusAlgCompleted) return {1.0, ""};
   std::string cigar(aligner.getCIGAR(true));
+  if (aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return {1.0, ""};
+  }
   double d;
   if (dissimilarity == Dissimilarity::SCORE) {
     int L = score_ref_length(a.size(), b.size(), span);
@@ -532,8 +578,16 @@ std::pair<int, double> score_and_distance_wfa2(
   } else {
     static_assert(always_false_v<span>, "Instantiation of unimplemented AlignmentSpan");
   }
+  if (wfa_hard_fail(aligner, status))
+    return {
+        static_cast<int>(std::max(a.size(), b.size())), 1.0};
   if (status != wfa::WFAligner::StatusAlgCompleted) return {
     static_cast<int>(std::max(a.size(), b.size())), 1.0};
+  if (aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return {static_cast<int>(std::max(a.size(), b.size())), 1.0};
+  }
   int score = aligner.getAlignmentScore();
   if (dissimilarity == Dissimilarity::SCORE) {
     int L = score_ref_length(a.size(), b.size(), span);
@@ -579,7 +633,10 @@ double align_wfa2_global(const std::string a, const std::string b,
     : wfa::WFAligner::AlignmentScope::Alignment;
   wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
                                gap_open2, gap_extend2, scope};
-  return distance_wfa2<AlignmentSpan::GLOBAL>(a, b, aligner, mode, match, mismatch);
+  double d = distance_wfa2<AlignmentSpan::GLOBAL>(
+      a, b, aligner, mode, match, mismatch);
+  optimotu_wfa_stop_if_fatal();
+  return d;
 }
 
 double align_wfa2_extend(const std::string a, const std::string b,
@@ -593,7 +650,10 @@ double align_wfa2_extend(const std::string a, const std::string b,
     : wfa::WFAligner::AlignmentScope::Alignment;
   wfa::WFAlignerChoose aligner{match, mismatch, gap_open, gap_extend,
                                gap_open2, gap_extend2, scope};
-  return distance_wfa2<AlignmentSpan::EXTEND>(a, b, aligner, mode, match, mismatch);
+  double d = distance_wfa2<AlignmentSpan::EXTEND>(
+      a, b, aligner, mode, match, mismatch);
+  optimotu_wfa_stop_if_fatal();
+  return d;
 }
 
 double align_edlib_global(

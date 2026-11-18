@@ -156,6 +156,18 @@ Native code:
     (`create_*_worker`, `pairwise_alignment`) negate it before
     constructing `WFAligner`. Low-level `cigar_wfa2_*` / `align_wfa2_*`
     still take WFA2-native match (`<= 0`); the R wrappers negate.
+    `validate_wfa_penalties()` in `src/config.cpp` checks the negated
+    penalties on the main thread before any parallel region.
+  - The `optimotu` fork of WFA2-lib includes upstream `main` through
+    v2.3.6. `commons.c` is not linked. C sources are compiled with
+    `-include optimotu_wfa_shim.h` (`PKG_CFLAGS` only): `stderr` is a
+    `FILE*` opened on `/dev/null`, and `exit` is `optimotu_wfa_fail`,
+    which `longjmp`s to a C trampoline in `WFAligner.cpp`. Wavefront
+    and backtrace storage exhaustion return `WF_STATUS_OOM`.
+    `StatusOOM` and that jump set `optimotu_wfa_fatal_flag`; workers
+    stop, and the main thread calls `Rcpp::stop` after the join.
+    `StatusMaxStepsReached` stays a soft miss. The shim is not part of
+    the upstream-shaped `embedder-safety` branch.
   - KSW2 (`Ksw2Aligner`) always sets `KSW_EZ_RIGHT` so score ties
     right-align gaps and, on mismatch-vs-indel ties, prefer the longer
     more-match CIGAR used by WFA2. Not an R option.

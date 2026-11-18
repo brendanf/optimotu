@@ -10,6 +10,7 @@
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
 #include "score_dissimilarity.h"
+#include "wfa_fatal.h"
 
 typedef RcppParallel::RMatrix<int> matrix_t;
 
@@ -39,6 +40,11 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
       ? wfa::WFAligner::Score
       : wfa::WFAligner::Alignment
   };
+  if (wfa_aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return;
+  }
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -59,6 +65,11 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
               my_algo, pg,
               [&](j_t gi, j_t gj, double threshold)
               {
+                if (optimotu_wfa_fatal_pending() || wfa_aligner.fatal())
+                {
+                  optimotu_wfa_note_fatal();
+                  return 1.0;
+                }
                 bool is_seqj_longer = seq[gj].size() > seq[gi].size();
                 size_t s1 = is_seqj_longer ? gi : gj;
                 size_t s2 = is_seqj_longer ? gj : gi;
@@ -86,6 +97,11 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
                   ed_aligner.k = (int)maxd1 + 1;
                   d = distance_edlib(seq[s1], seq[s2], ed_aligner);
                 }
+                if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending())
+                {
+                  optimotu_wfa_note_fatal();
+                  return 1.0;
+                }
                 if (d < 1.0)
                 {
                   ++my_aligned;
@@ -104,8 +120,9 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
           dynamic_cast<MappedClusterAlgorithm *>(my_algo) != nullptr;
 
       for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj
-      ) {
+                                 std::size_t i0, std::size_t j0, std::size_t li, std::size_t lj)
+                         {
+        if (optimotu_wfa_fatal_pending()) return;
         double threshold = use_local
             ? my_algo->max_relevant_local(
                   static_cast<j_t>(li), static_cast<j_t>(lj))
@@ -152,6 +169,10 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
                 : (int)maxd1 + 1;
             d = distance_edlib(seq[s1], seq[s2], ed_aligner, dissimilarity);
           }
+          if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending()) {
+            optimotu_wfa_note_fatal();
+            return;
+          }
           if (d < 1.0) ++my_aligned;
 
           OPTIMOTU_DEBUG(
@@ -175,8 +196,7 @@ void HybridSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size_
           << " and " << li << " (i0=" << i0 << ")"
           << "\n" << std::endl
         );
-        RcppThread::checkUserInterrupt();
-      });
+        RcppThread::checkUserInterrupt(); });
       mutex.lock();
       OPTIMOTU_DEBUG(1, << "thread" << pg_index << " ready to merge" << std::endl);
       _aligned += my_aligned;
@@ -205,6 +225,11 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
       ? wfa::WFAligner::Score
       : wfa::WFAligner::Alignment
   };
+  if (wfa_aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return;
+  }
   for_each_assigned_tile(
     pair_generators, begin, end,
     [&](std::size_t pg_index, PairGenerator &pg) {
@@ -216,8 +241,9 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
       size_t my_prealigned = 0;
       size_t my_aligned = 0;
       for_each_tile_pair(pg, [&](
-        std::size_t i0, std::size_t j0, std::size_t, std::size_t
-      ) {
+                                 std::size_t i0, std::size_t j0, std::size_t, std::size_t)
+                         {
+        if (optimotu_wfa_fatal_pending()) return;
         OPTIMOTU_DEBUG(
           4,
           << "Thread " << pg_index
@@ -278,6 +304,10 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
                 : (int)maxd1 + 1;
             d = distance_edlib(seq[s1], seq[s2], ed_aligner, dissimilarity);
           }
+          if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending()) {
+            optimotu_wfa_note_fatal();
+            return;
+          }
           if (d < 1.0) ++my_aligned;
           OPTIMOTU_DEBUG(
             4,
@@ -296,8 +326,7 @@ void HybridConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std::
           << " and " << i0 << " (i0=" << i0 << ")"
           << "\n" << std::endl
         );
-        RcppThread::checkUserInterrupt();
-      });
+        RcppThread::checkUserInterrupt(); });
       mutex.lock();
       _aligned += my_aligned;
       _prealigned += my_prealigned;

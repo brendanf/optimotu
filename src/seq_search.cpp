@@ -1,6 +1,7 @@
 #ifdef OPTIMOTU_R
 
 #include "config.h"
+#include "wfa_fatal.h"
 
 //' Search for best match(es) of query sequences in reference sequences
 //' @param query (named `character`) query sequences
@@ -41,6 +42,7 @@ Rcpp::RObject seq_search_internal(
     return_cigar, span
   );
   int threads = search_worker->n_threads();
+  optimotu_wfa_fatal_clear();
   if (!search_worker->try_run_gpu()) {
     if (threads == 1) {
       (*search_worker)(0, 1);
@@ -48,6 +50,7 @@ Rcpp::RObject seq_search_internal(
       RcppParallel::parallelFor(0, threads, *search_worker, 1, threads);
     }
   }
+  optimotu_wfa_stop_if_fatal();
 
   // count size of output
   int n = 0;

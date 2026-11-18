@@ -9,6 +9,7 @@
 #include "wfa_identity_bound.h"
 #include "score_dissimilarity.h"
 #include "optimotu.h"
+#include "wfa_fatal.h"
 
 // for a given kmer (implicit),
 // what sequence was it found in (i),
@@ -169,6 +170,11 @@ struct KmerAlignWorker : public RcppParallel::Worker {
         ? wfa::WFAligner::Score
         : wfa::WFAligner::Alignment
     };
+    if (aligner.fatal())
+    {
+      optimotu_wfa_note_fatal();
+      return;
+    }
 
     if (begin == 0) {
       begin_i = 1;
@@ -235,6 +241,11 @@ struct KmerAlignWorker : public RcppParallel::Worker {
               seq[s1], seq[s2], aligner, dissimilarity,
               this->match, this->mismatch
           );
+          if (aligner.fatal() || optimotu_wfa_fatal_pending())
+          {
+            optimotu_wfa_note_fatal();
+            return;
+          }
           if (d2.second <= dist_threshold) {
             my_seq1.push_back(match.first);
             my_seq2.push_back(i);
@@ -375,6 +386,7 @@ Rcpp::DataFrame seq_distmx_kmer(
   Dissimilarity mode = (dissimilarity == "score")
       ? Dissimilarity::SCORE
       : Dissimilarity::IDENTITY;
+  optimotu_wfa_fatal_clear();
   KmerAlignWorker worker(seq, kmer_seq_index, seq_kmer_index, seq_x_index,
                          match, mismatch, gap_open, gap_extend, gap_open2,
                          gap_extend2,
@@ -385,6 +397,7 @@ Rcpp::DataFrame seq_distmx_kmer(
   } else {
     worker(0, 1);
   }
+  optimotu_wfa_stop_if_fatal();
 
   Rcpp::Rcout  << seq1.size() << " included / "
                << aligned << " aligned / "

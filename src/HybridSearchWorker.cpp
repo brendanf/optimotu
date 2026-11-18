@@ -5,6 +5,7 @@
 #include "pairwise_alignment.h"
 #include "wfa_identity_bound.h"
 #include "score_dissimilarity.h"
+#include "wfa_fatal.h"
 
 template<int verbose, bool do_cigar, enum AlignmentSpan span>
 void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
@@ -40,8 +41,15 @@ void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
       : wfa::WFAligner::Alignment
   };
 
+  if (wfa_aligner.fatal())
+  {
+    optimotu_wfa_note_fatal();
+    return;
+  }
   std::size_t my_prealigned = 0, my_aligned = 0;
   for (std::size_t i = begin_i; i < end_i; i++) {
+    if (optimotu_wfa_fatal_pending())
+      break;
     if (!hits[i]) {
       if constexpr (do_cigar) {
         hits[i] = std::make_unique<SearchCigarHit>();
@@ -51,6 +59,8 @@ void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
     }
     SearchHit & hit = *hits[i];
     for (std::size_t j = 0; j < ref.size(); j++) {
+      if (optimotu_wfa_fatal_pending())
+        break;
       double max_dist = (hit.best_dist < threshold) ? hit.best_dist : threshold;
       OPTIMOTU_DEBUG(
         4,
@@ -114,6 +124,11 @@ void HybridSearchWorkerImpl<verbose, do_cigar, span>::operator()(
         } else {
           d = distance_edlib(s1, s2, ed_aligner, dissimilarity);
         }
+      }
+      if (wfa_aligner.fatal() || optimotu_wfa_fatal_pending())
+      {
+        optimotu_wfa_note_fatal();
+        break;
       }
       OPTIMOTU_DEBUG(
         4,

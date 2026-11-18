@@ -8,6 +8,7 @@
 #include "ClusterIndexedMatrix.h"
 #include "wfa_identity_bound.h"
 #include "score_dissimilarity.h"
+#include "wfa_fatal.h"
 #include <cstdint>
 
 struct PrealignAlignWorker : public RcppParallel::Worker {
@@ -72,6 +73,11 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
         ? wfa::WFAligner::Score
         : wfa::WFAligner::Alignment
     };
+    if (prealigner.fatal() || aligner.fatal())
+    {
+      optimotu_wfa_note_fatal();
+      return;
+    }
     if (begin == 0) {
       begin_i = 1;
     } else {
@@ -108,6 +114,11 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
           prealigner.setMaxAlignmentSteps((int)maxd1 + 1);
           prealigner.setHeuristicBandedStatic(bound.min_k, bound.max_k);
           auto status = prealigner.alignEnd2End(seq[s1], seq[s2]);
+          if (prealigner.fatal() || status == wfa::WFAligner::StatusOOM)
+          {
+            optimotu_wfa_note_fatal();
+            return;
+          }
           ++my_prealigned;
           if (status != wfa::WFAligner::AlignmentStatus::StatusAlgCompleted) continue;
           int sc1 = prealigner.getAlignmentScore();
@@ -121,7 +132,11 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
         auto d2 = score_and_distance_wfa2(
             seq[s1], seq[s2], aligner, dissimilarity, match, mismatch
         );
-        // std::cout << "Alignment successful." << std::endl;
+        if (aligner.fatal() || optimotu_wfa_fatal_pending())
+        {
+          optimotu_wfa_note_fatal();
+          return;
+        }
 
         my_aligned++;
         if (d2.second <= dist_threshold) {
@@ -193,6 +208,7 @@ Rcpp::DataFrame seq_distmx_prealign(
   if (dissimilarity != "score" && dissimilarity != "identity") {
     OPTIMOTU_STOP("dissimilarity must be \"identity\" or \"score\"");
   }
+  optimotu_wfa_fatal_clear();
   PrealignAlignWorker worker(seq,
                              match, mismatch, gap_open, gap_extend, gap_open2,
                              gap_extend2,
@@ -203,6 +219,7 @@ Rcpp::DataFrame seq_distmx_prealign(
   } else {
     worker(0, 1);
   }
+  optimotu_wfa_stop_if_fatal();
 
   Rcpp::Rcout << seq1.size() << " included / "
               << aligned << " aligned / "

@@ -15,6 +15,7 @@
 #include "PairGenerator.h"
 #include "alignment_enums.h"
 #include "gpu_tile.h"
+#include "wfa_fatal.h"
 
 class DistWorker : public RcppParallel::Worker {
 protected:
@@ -73,6 +74,7 @@ public:
   std::size_t n_tiles() const { return pair_generators.size(); }
 
   void run() {
+    optimotu_wfa_fatal_clear();
     const std::size_t n = pair_generators.size();
     if (n == 0) {
       return;
@@ -95,9 +97,12 @@ public:
     }
     if (threads <= 1) {
       (*this)(0, n);
-      return;
     }
-    RcppParallel::parallelFor(0, n, *this, 1, threads);
+    else
+    {
+      RcppParallel::parallelFor(0, n, *this, 1, threads);
+    }
+    optimotu_wfa_stop_if_fatal();
   }
 
   std::size_t prealigned() const { return _prealigned; }

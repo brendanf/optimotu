@@ -3,6 +3,7 @@
 
 #include "DistClusterWorker.h"
 #include "optimotu.h"
+#include "wfa_fatal.h"
 
 size_t DistClusterWorker::prealigned() {
   return _prealigned;
@@ -29,6 +30,7 @@ void DistClusterWorker::consume_gpu_tile(
 }
 
 void DistClusterWorker::run() {
+  optimotu_wfa_fatal_clear();
   const std::size_t n = pair_generators.size();
   if (n == 0)
   {
@@ -64,9 +66,12 @@ void DistClusterWorker::run() {
   if (threads <= 1)
   {
     (*this)(0, n);
-    return;
   }
-  RcppParallel::parallelFor(0, n, *this, 1, threads);
+  else
+  {
+    RcppParallel::parallelFor(0, n, *this, 1, threads);
+  }
+  optimotu_wfa_stop_if_fatal();
 }
 
 ClusterAlgorithm *DistClusterWorker::tile_algo(PairGenerator *pg)

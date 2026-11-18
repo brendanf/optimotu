@@ -1801,7 +1801,7 @@ fi
 CXXSOURCES="$(cd src/ && ls *.cpp | tr '\n' ' ')"
 # ksw2: only the affine/dual-affine global+extension implementations
 # (exclude cli.c, gg*, splice, and unused helpers)
-CSOURCES="$(cd src/ && ls *.c WFA2-lib/**/*.c ksw2/ksw2_extz.c ksw2/ksw2_extd.c ksw2/ksw2_extz2_sse.c ksw2/ksw2_extd2_sse.c | tr '\n' ' ')"
+CSOURCES="$(cd src/ && ls *.c WFA2-lib/**/*.c ksw2/ksw2_extz.c ksw2/ksw2_extd.c ksw2/ksw2_extz2_sse.c ksw2/ksw2_extd2_sse.c | grep -v 'commons\.c$' | tr '\n' ' ')"
 
 # Supply it as a variable
 
