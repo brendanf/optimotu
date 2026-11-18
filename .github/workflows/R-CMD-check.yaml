@@ -64,13 +64,17 @@ jobs:
       # upgrades it during apt; these keep that step from waiting.
       DEBIAN_FRONTEND: noninteractive
       TZ: Etc/UTC
+      LANG: en_US.UTF-8
     steps:
-      - name: Install git
+      - name: Install system packages
         run: |
           ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
           echo Etc/UTC > /etc/timezone
           apt-get update
-          apt-get install -y --no-install-recommends git sudo ca-certificates tzdata
+          apt-get install -y --no-install-recommends \
+            git sudo ca-certificates tzdata locales
+          printf '%s\n' 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
+          locale-gen
       - uses: actions/checkout@v4
         with:
           submodules: recursive

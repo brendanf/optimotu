@@ -206,6 +206,11 @@ Core exported API families include:
     is visible. `OPTIMOTU_CUDA` is set by `configure` when it finds an
     `nvcc` whose CUDA major version the driver accepts (`nvidia-smi`);
     a default `/usr/local/cuda` newer than the driver is skipped.
+    nvcc's host stub for each `__device__` function calls `exit`.
+    `src/Makevars` renames that symbol to
+    `optimotu_nvcc_device_stub_exit` in the `.cu` objects only
+    (`src/cuda_host_stub.cpp`), so the compiled-code check still
+    sees `exit` from any other object.
     `dist_evo()` GPU tiles fall back to the CPU Newton path with no
     message. `dist_gasal2()` errors without a CUDA build or device.
     GASAL2 is score-only on the GPU. Edit penalties (match 0, linear

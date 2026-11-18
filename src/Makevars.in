@@ -16,8 +16,11 @@ OBJECTS=$(SOURCES:.cpp=.o) $(CSOURCES:.c=.o) $(CUSOURCES:.cu=.o)
 # Make the shared object
 all: $(SHLIB)
 
+# nvcc's host stub for a __device__ function calls exit(). Rename that
+# symbol in the CUDA objects only; exit elsewhere is still checked.
 %.o: %.cu
 	$(NVCC) -std=c++17 -O3 -Xcompiler -fPIC -I$(R_HOME)/include $(PKG_CPPFLAGS) $(CLINK_CPPFLAGS) $(CUDA_ARCH_FLAGS) -c $< -o $@
+	objcopy --redefine-sym exit=optimotu_nvcc_device_stub_exit $@
 
 # Provide recipe to remove all objects
 clean:
