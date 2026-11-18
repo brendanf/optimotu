@@ -116,7 +116,7 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(
       if constexpr (!std::is_same_v<
         SparseDistanceMatrixType, SparseDistanceMatrixGapstats
       >) {
-        if ((ignore_gap || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+        if (optimotu_hamming_use_stripe(ignore_gap) &&
             dynamic_cast<AllPairGenerator *>(&pg) != nullptr) {
           auto *diag = static_cast<AllPairGenerator *>(&pg);
           const int offset = static_cast<int>(diag->seq_offset());
@@ -149,7 +149,7 @@ void HammingDistWorkerImpl<verbose, SparseDistanceMatrixType>::operator()(
           }
           return;
         }
-        if ((ignore_gap || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+        if (optimotu_hamming_use_stripe(ignore_gap) &&
             dynamic_cast<BipartitePairGenerator *>(&pg) != nullptr) {
           auto *bip = static_cast<BipartitePairGenerator *>(&pg);
           const int begin_i = static_cast<int>(bip->seq_begin_i());

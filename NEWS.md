@@ -1,5 +1,6 @@
 # optimotu development version
 
+* Revert to previous Hamming algorithm on non-AVX platforms.
 * Reject duplicate sequence IDs before name-keyed clustering. Duplicate
   IDs in `optimize_thresholds()` taxonomy, or in names passed to
   `dist_file()` / `dist_usearch()` / `distmx_cluster()`, now error

@@ -44,4 +44,17 @@
 #define OPTIMOTU_HAMMING_PDISTB2_STRIPE 0
 #endif
 
+// Word-major stripe for this ignore_gaps flag. Scalar (kernel 1, the
+// Windows -msse2 build) stays on pairwise pdist / pdistB2. That is the
+// path which matched hclust; the scalar stripe did not. AVX2, AVX-512,
+// and NEON keep the stripe.
+inline bool optimotu_hamming_use_stripe(bool ignore_gaps) {
+#if OPTIMOTU_HAMMING_KERNEL == 1
+  (void)ignore_gaps;
+  return false;
+#else
+  return ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE;
+#endif
+}
+
 #endif

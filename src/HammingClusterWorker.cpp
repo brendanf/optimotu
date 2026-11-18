@@ -183,7 +183,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
         }
         my_algo->set_merge_slot(pg_index);
         if (my_algo->uses_prim() &&
-            (ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE)) {
+            optimotu_hamming_use_stripe(ignore_gaps)) {
           const std::vector<std::size_t> *fwd = nullptr;
           if (auto *mapped = dynamic_cast<MappedClusterAlgorithm *>(my_algo)) {
             fwd = mapped->fwd_map_ptr();
@@ -369,7 +369,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
           hamming_maybe_interrupt(pairs_since_check);
         };
 
-        if ((ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+        if (optimotu_hamming_use_stripe(ignore_gaps) &&
             dynamic_cast<AllPairGenerator *>(&pg) != nullptr) {
           auto *diag = static_cast<AllPairGenerator *>(&pg);
           const int offset = static_cast<int>(diag->seq_offset());
@@ -399,7 +399,7 @@ void HammingSplitClusterWorker<verbose>::operator()(std::size_t begin, std::size
               );
             }
           }
-        } else if ((ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+        } else if (optimotu_hamming_use_stripe(ignore_gaps) &&
                    dynamic_cast<BipartitePairGenerator *>(&pg) != nullptr) {
           auto *bip = static_cast<BipartitePairGenerator *>(&pg);
           const int begin_i = static_cast<int>(bip->seq_begin_i());
@@ -502,7 +502,7 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
         hamming_maybe_interrupt(pairs_since_check);
       };
 
-      if ((ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+      if (optimotu_hamming_use_stripe(ignore_gaps) &&
           dynamic_cast<AllPairGenerator *>(&pg) != nullptr) {
         auto *diag = static_cast<AllPairGenerator *>(&pg);
         const int offset = static_cast<int>(diag->seq_offset());
@@ -529,7 +529,7 @@ void HammingConcurrentClusterWorker<verbose>::operator()(std::size_t begin, std:
             );
           }
         }
-      } else if ((ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE) &&
+      } else if (optimotu_hamming_use_stripe(ignore_gaps) &&
                  dynamic_cast<BipartitePairGenerator *>(&pg) != nullptr) {
         auto *bip = static_cast<BipartitePairGenerator *>(&pg);
         const int begin_i = static_cast<int>(bip->seq_begin_i());

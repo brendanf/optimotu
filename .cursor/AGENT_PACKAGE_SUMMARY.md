@@ -36,15 +36,25 @@ Native code:
   - distance workers, clustering algorithms, generators, and glue via Rcpp
   - R package builds define `OPTIMOTU_R` (`src/Makevars`). `Makevars` does
     not set `-march` and does not pass `-mavx512*` or ARM flags.
+    GitHub Actions appends `-march=native -mtune=native` to `CFLAGS` and
+    `CXXFLAGS` through `MAKEFLAGS`, after `Makeconf`, so that `-march`
+    wins. CRAN and local builds do not get those flags. The nvcc recipe
+    does not read `CXXFLAGS`.
     `src/Makevars.win` lists the same units as `configure` (top-level
     sources, `WFAligner.cpp`, `edlib.cpp`, WFA2 library C files, and the
     four ksw2 affine files). It does not recurse into `src/GASAL2`;
     those host sources include a Linux CUDA path and are not part of the
     CPU build. Hamming uses a word-major one-versus-many stripe
     (`src/hamming_stripe.cpp`): `OPTIMOTU_HAMMING_KERNEL` 3 AVX-512
-    `VPOPCNTDQ`, else 2 AVX2, else 4 NEON, else 1 scalar. `ignore_gaps`
-    is `pdistB` (AND+popcount over all packed words). Internal gaps
-    (`ignore_gaps = FALSE`) uses that `pdistB2` stripe only on AVX2 /
+    `VPOPCNTDQ`, else 2 AVX2, else 4 NEON, else 1 scalar.
+    `optimotu_hamming_use_stripe()` is false for the scalar kernel, so a
+    default Windows Rtools build (`-msse2`, no AVX) and any other build
+    whose compiler does not enable AVX or NEON score pairwise. Actions
+    runners use `-march=native`, so they get the AVX or NEON kernel when
+    the host CPU has it.
+    On AVX2, AVX-512, and NEON, `ignore_gaps` is the `pdistB` stripe
+    (AND+popcount over all packed words). Internal gaps
+    (`ignore_gaps = FALSE`) use that `pdistB2` stripe only on AVX2 /
     AVX-512; scalar and NEON keep pairwise `pdistB2`. Pair leftovers
     and `pdistB2_gap` stay on the pair path.
     Amino-acid identity width is
@@ -139,8 +149,10 @@ Native code:
     binary tournament (last arriving thread merges). Amino-acid Prim
     scores the live outside set with the position-major kernels
     (identity / weighted SIMD above).     Hamming Prim uses the word-major
-    stripe for `ignore_gaps` and for `pdistB2` on AVX2 / AVX-512;
-    `pdistB2_gap` and alignment methods stay pairwise. Multi-subset `optimize_thresholds()` /
+    stripe when `optimotu_hamming_use_stripe()` is true (`ignore_gaps`
+    on AVX2 / AVX-512 / NEON, and `pdistB2` on AVX2 / AVX-512). Scalar
+    Prim stays pairwise. `pdistB2_gap` and alignment methods stay
+    pairwise. Multi-subset `optimize_thresholds()` /
     `seq_cluster(..., which = ...)` errors (Prim grow order cannot
     share a streamed pair). Use for single-subset `seq_cluster()`.
     Concurrent Prim with `threads > 1` errors;

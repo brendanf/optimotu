@@ -18,7 +18,7 @@ HammingSearchWorker::HammingSearchWorker(
     ignore_gaps(ignore_gaps) {
   const int nq = static_cast<int>(query.size());
   const int nr = static_cast<int>(ref.size());
-  if (ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE) {
+  if (optimotu_hamming_use_stripe(ignore_gaps)) {
     ref_idx.resize(static_cast<std::size_t>(nr));
     for (int j = 0; j < nr; ++j) {
       ref_idx[static_cast<std::size_t>(j)] = nq + j;
@@ -40,7 +40,7 @@ void HammingSearchWorkerImpl<verbose>::operator()(std::size_t begin, std::size_t
 
   std::size_t my_prealigned = 0, my_aligned = 0;
   const int nr = static_cast<int>(ref.size());
-  const bool use_stripe = ignore_gaps || OPTIMOTU_HAMMING_PDISTB2_STRIPE;
+  const bool use_stripe = optimotu_hamming_use_stripe(ignore_gaps);
   std::vector<double> dists;
   std::vector<int> n_ok;
   const int nq = static_cast<int>(query.size());

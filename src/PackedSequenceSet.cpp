@@ -181,7 +181,9 @@ bool PackedSequenceSet::verify(const SequenceSet & seq) const {
           mask_i = mask[i][k];
         }
 
-        uint64_t mask_bit = (0x1LL << (NUCLEOTIDES_IN_WORD * 4 - j - 1)) & mask_i;
+        // uint64_t: 1LL << 63 is undefined for signed long long.
+        uint64_t mask_bit =
+          (uint64_t{1} << (NUCLEOTIDES_IN_WORD * 4 - j - 1)) & mask_i;
         if (mask_bit) {
           if (c != 'A' && c != 'C' && c != 'G' && c != 'T') {
             OPTIMOTU_CERR << "mismatch between sequence " << i

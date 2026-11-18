@@ -15,6 +15,13 @@
 
 namespace {
 
+#if defined(__GNUC__) && !defined(__clang__)
+#define OPTIMOTU_NO_VECTORIZE \
+  __attribute__((optimize("no-tree-vectorize")))
+#else
+#define OPTIMOTU_NO_VECTORIZE
+#endif
+
 void finalize_lane(
   uint32_t n_ok,
   uint32_t n_match,
@@ -34,6 +41,7 @@ void finalize_lane(
   }
 }
 
+OPTIMOTU_NO_VECTORIZE
 void score_stripe_scalar(
   const uint64_t *query_seq,
   const uint64_t *query_mask,
@@ -277,6 +285,7 @@ inline uint64_t mask_word_edge(
   return ~uint64_t{0};
 }
 
+OPTIMOTU_NO_VECTORIZE
 void score_stripe_scalar_internal(
   const uint64_t *query_seq,
   const uint64_t *query_mask,
