@@ -1,5 +1,8 @@
 # optimotu development version
 
+* Windows source builds compile the same C/C++ units as the Unix CPU
+  build. GASAL2's CUDA host sources are no longer compiled; their
+  headers include a Linux CUDA toolkit path.
 * `seq_search(span = "extension")` no longer drops a pair whose length
   ratio is below `1 - threshold`. Global search still applies that
   screen.

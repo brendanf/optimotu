@@ -35,8 +35,12 @@ Native code:
   - performance-critical C/C++ implementations
   - distance workers, clustering algorithms, generators, and glue via Rcpp
   - R package builds define `OPTIMOTU_R` (`src/Makevars`). `Makevars` does
-    not set `-march` and does not pass `-mavx512*` or ARM flags.     Hamming
-    uses a word-major one-versus-many stripe
+    not set `-march` and does not pass `-mavx512*` or ARM flags.
+    `src/Makevars.win` lists the same units as `configure` (top-level
+    sources, `WFAligner.cpp`, `edlib.cpp`, WFA2 library C files, and the
+    four ksw2 affine files). It does not recurse into `src/GASAL2`;
+    those host sources include a Linux CUDA path and are not part of the
+    CPU build. Hamming uses a word-major one-versus-many stripe
     (`src/hamming_stripe.cpp`): `OPTIMOTU_HAMMING_KERNEL` 3 AVX-512
     `VPOPCNTDQ`, else 2 AVX2, else 4 NEON, else 1 scalar. `ignore_gaps`
     is `pdistB` (AND+popcount over all packed words). Internal gaps

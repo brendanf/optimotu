@@ -4,9 +4,17 @@ PKG_CFLAGS = -DGMP -DSKIP_MAIN -include optimotu_wfa_shim.h
 PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
 PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()") -lz
 
-SOURCES=$(shell find . -name "*.cpp")
-# Exclude ksw2/cli.c (has main) and unused ksw2 variants
-CSOURCES=$(shell find . -name "*.c" ! -name "cli.c" ! -name "kalloc.c" ! -name "commons.c" ! -name "ksw2_gg*" ! -name "ksw2_extf*" ! -name "ksw2_exts*")
+# Same translation units as configure.ac. Do not recurse: GASAL2 host
+# sources include a Linux CUDA path, and WFA2 tools/examples define main.
+# .cu files stay out; this file is the CPU-only Windows build.
+SOURCES = $(wildcard *.cpp) WFA2-lib/bindings/cpp/WFAligner.cpp edlib/edlib.cpp
+CSOURCES = $(filter-out WFA2-lib/utils/commons.c,$(wildcard *.c) \
+	$(wildcard WFA2-lib/alignment/*.c) \
+	$(wildcard WFA2-lib/system/*.c) \
+	$(wildcard WFA2-lib/utils/*.c) \
+	$(wildcard WFA2-lib/wavefront/*.c)) \
+	ksw2/ksw2_extz.c ksw2/ksw2_extd.c ksw2/ksw2_extz2_sse.c \
+	ksw2/ksw2_extd2_sse.c
 
 # Obtain the object files
 OBJECTS=$(SOURCES:.cpp=.o) $(CSOURCES:.c=.o)
