@@ -60,11 +60,17 @@ jobs:
     container: nvidia/cuda:12.6.0-devel-ubuntu22.04
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      # tzdata's postinst asks for a region on a TTY. The CUDA image
+      # upgrades it during apt; these keep that step from waiting.
+      DEBIAN_FRONTEND: noninteractive
+      TZ: Etc/UTC
     steps:
       - name: Install git
         run: |
+          ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
+          echo Etc/UTC > /etc/timezone
           apt-get update
-          apt-get install -y --no-install-recommends git sudo ca-certificates
+          apt-get install -y --no-install-recommends git sudo ca-certificates tzdata
       - uses: actions/checkout@v4
         with:
           submodules: recursive
