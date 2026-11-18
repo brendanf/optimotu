@@ -329,7 +329,10 @@ explicitly requests API changes.
   not the `optimotu` branch of `src/WFA2-lib` or `src/edlib`. After moving
   a submodule pointer, update the pin and its digest
   (`sh tools/fetch-submodules.sh --print-digests`). `configure.ac` no
-  longer records those commits via `m4_esyscmd`.
+  longer records those commits via `m4_esyscmd`. Pin lines are matched
+  after stripping a trailing CR, because a Windows checkout may store
+  `tools/submodule-pins` with CRLF. `.gitattributes` keeps that file
+  and `*.sh` as LF.
 - Prefer running tests in the project container/environment used by the wider
   OptimOTU ecosystem, not only ad hoc local setups.
 

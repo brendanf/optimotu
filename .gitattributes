@@ -4,3 +4,5 @@ configure text eol=lf
 configure.ac text eol=lf
 configure.win text eol=lf
 cleanup text eol=lf
+*.sh text eol=lf
+tools/submodule-pins text eol=lf

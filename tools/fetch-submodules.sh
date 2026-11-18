@@ -141,7 +141,11 @@ fail() {
   exit 1
 }
 
+# Windows checkouts may deliver this pin file with CRLF. A trailing
+# CR would make an otherwise matching digest compare unequal.
+cr=$(printf '\r')
 while IFS= read -r line || [ -n "$line" ]; do
+  line=${line%"$cr"}
   case "$line" in
     "" | \#*) continue ;;
   esac
