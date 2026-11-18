@@ -1,0 +1,6 @@
+# R CMD check rejects CR or CRLF in these scripts. Force LF on checkout,
+# including Windows, where Git would otherwise convert them.
+configure text eol=lf
+configure.ac text eol=lf
+configure.win text eol=lf
+cleanup text eol=lf
