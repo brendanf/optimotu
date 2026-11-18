@@ -73,7 +73,7 @@ reduplicate_thresholds <- function(out, thresholds) {
   UseMethod("reduplicate_thresholds", out)
 }
 
-#' @method reduplicate_thresholds matrix
+#' @exportS3Method reduplicate_thresholds matrix
 reduplicate_thresholds.matrix <- function(out, thresholds) {
   checkmate::assert_class(thresholds, "optimotu_threshold_config")
   if (thresholds$type == "uniform") {
@@ -87,12 +87,12 @@ reduplicate_thresholds.matrix <- function(out, thresholds) {
   }
 }
 
-#' @method reduplicate_thresholds hclust
+#' @exportS3Method reduplicate_thresholds hclust
 reduplicate_thresholds.hclust <- function(out, thresholds) {
   out
 }
 
-#' @method reduplicate_thresholds list
+#' @exportS3Method reduplicate_thresholds list
 reduplicate_thresholds.list <- function(out, thresholds) {
   lapply(out, function(x) reduplicate_thresholds(x, thresholds = thresholds))
 }
@@ -101,7 +101,7 @@ rename_thresholds <- function(out, thresholds) {
   UseMethod("rename_thresholds", out)
 }
 
-#' @method rename_thresholds matrix
+#' @exportS3Method rename_thresholds matrix
 rename_thresholds.matrix <- function(out, thresholds) {
   if (!is.null(thresholds$thresh_names)) {
     `rownames<-`(out, thresholds$thresh_names)
@@ -110,12 +110,12 @@ rename_thresholds.matrix <- function(out, thresholds) {
   }
 }
 
-#' @method rename_thresholds hclust
+#' @exportS3Method rename_thresholds hclust
 rename_thresholds.hclust <- function(out, thresholds) {
   out
 }
 
-#' @method rename_thresholds list
+#' @exportS3Method rename_thresholds list
 rename_thresholds.list <- function(out, thresholds) {
   lapply(out, function(x) rename_thresholds(x, thresholds = thresholds))
 }
