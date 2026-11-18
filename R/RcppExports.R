@@ -149,6 +149,8 @@ fmeasure_matrix <- function(k, c, ncpu = 1L) {
 #' (number of shared kmers / number of kmers in the shorter sequence) for full
 #' alignment.
 #' @param threads (`integer` count) number of parallel threads to use.
+#' @param dissimilarity (`character` scalar) dissimilarity measure to use,
+#' default: "identity"
 #' @export
 #' @rdname seq_distmx
 seq_distmx_kmer <- function(seq, dist_threshold, udist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, threads = 1L, dissimilarity = "identity") {
@@ -294,6 +296,8 @@ add_gapstats <- function(df, cigar_column) {
 #' in a pairwise distance which is equal to or greater than an alignment based
 #' on the edit distance score.
 #' @param threads (`integer` count) number of parallel threads to use.
+#' @param dissimilarity (`character` scalar) dissimilarity measure to use,
+#' default: "identity"
 #' @export
 #' @rdname seq_distmx
 seq_distmx_prealign <- function(seq, dist_threshold, match = -1L, mismatch = 2L, gap_open = 10L, gap_extend = 1L, gap_open2 = 0L, gap_extend2 = 0L, prealign = TRUE, constrain = TRUE, threads = 1L, dissimilarity = "identity") {

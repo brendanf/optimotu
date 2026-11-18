@@ -8,7 +8,7 @@
 \alias{seq_distmx_hamming}
 \alias{seq_distmx_wfa2}
 \alias{seq_distmx_ksw2}
-\title{Search for the closest match(es) to sequences in a reference database}
+\title{Calculate distances between sequences}
 \usage{
 seq_distmx_kmer(
   seq,
@@ -135,6 +135,9 @@ extension}
 
 \item{threads}{(\code{integer} count) number of parallel threads to use.}
 
+\item{dissimilarity}{(\code{character} scalar) dissimilarity measure to use,
+default: "identity"}
+
 \item{prealign}{(\code{logical} flag) if \code{TRUE}, do a prealignment using
 edit-distance as alignment score (\verb{match = 0, mismatch = 1, gap_open = 0, gap_extend = 1, gap_open2 = 0, gap_extend2 = 1}) to test feasibility before
 aligning with alternate alignment scores. Note that, since pairwise distance
@@ -211,5 +214,5 @@ columns "align_length", "n_insert", "n_delete", "max_insert", and
 returned in a column "cigar" (\code{character}).
 }
 \description{
-Search for the closest match(es) to sequences in a reference database
+Calculate distances between sequences
 }

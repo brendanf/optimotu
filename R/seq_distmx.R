@@ -1,4 +1,4 @@
-#' Search for the closest match(es) to sequences in a reference database
+#' Calculate distances between sequences
 #'
 #' @param seq (`character`, `data.frame`, or `XStringSet`) DNA sequences to
 #' calculate distances for

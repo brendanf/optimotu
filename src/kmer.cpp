@@ -296,6 +296,8 @@ uint8_t lookup(char c) {
 //' (number of shared kmers / number of kmers in the shorter sequence) for full
 //' alignment.
 //' @param threads (`integer` count) number of parallel threads to use.
+//' @param dissimilarity (`character` scalar) dissimilarity measure to use,
+//' default: "identity"
 //' @export
 //' @rdname seq_distmx
 // [[Rcpp::export]]

@@ -182,6 +182,8 @@ struct PrealignAlignWorker : public RcppParallel::Worker {
 //' in a pairwise distance which is equal to or greater than an alignment based
 //' on the edit distance score.
 //' @param threads (`integer` count) number of parallel threads to use.
+//' @param dissimilarity (`character` scalar) dissimilarity measure to use,
+//' default: "identity"
 //' @export
 //' @rdname seq_distmx
 // [[Rcpp::export]]
