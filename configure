@@ -1694,106 +1694,14 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 ### Make sure we have our submodules
-
-
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for src/WFA2-lib/Makefile" >&5
-$as_echo_n "checking for src/WFA2-lib/Makefile... " >&6; }
-if ${ac_cv_file_src_WFA2_lib_Makefile+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "src/WFA2-lib/Makefile"; then
-  ac_cv_file_src_WFA2_lib_Makefile=yes
-else
-  ac_cv_file_src_WFA2_lib_Makefile=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_src_WFA2_lib_Makefile" >&5
-$as_echo "$ac_cv_file_src_WFA2_lib_Makefile" >&6; }
-if test "x$ac_cv_file_src_WFA2_lib_Makefile" = xyes; then :
+# Pins live in tools/submodule-pins (not m4_esyscmd) so they stay in sync
+# with the gitlinks. GitHub tarballs ship empty submodule directories, and
+# remotes clones the default branch of each submodule before this runs.
+if sh tools/fetch-submodules.sh; then :
 
 else
-  git clone https://github.com/brendanf/WFA2-lib src/WFA2-lib &&
-               cd src/WFA2-lib &&
-               git checkout a6d9fbab0eeb01f0a90f452f1445d2e9d13e9ff2 &&
-               cd ../..
+  as_fn_error $? "fetching git submodules failed" "$LINENO" 5
 fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for src/edlib/edlib.h" >&5
-$as_echo_n "checking for src/edlib/edlib.h... " >&6; }
-if ${ac_cv_file_src_edlib_edlib_h+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "src/edlib/edlib.h"; then
-  ac_cv_file_src_edlib_edlib_h=yes
-else
-  ac_cv_file_src_edlib_edlib_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_src_edlib_edlib_h" >&5
-$as_echo "$ac_cv_file_src_edlib_edlib_h" >&6; }
-if test "x$ac_cv_file_src_edlib_edlib_h" = xyes; then :
-
-else
-  git clone https://github.com/brendanf/edlib src/edlib &&
-               cd src/edlib &&
-               git checkout 5e1cdcc1851ccf8fcadc8b418c3a3886c5a4501b &&
-               cd ../..
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for src/ksw2/ksw2.h" >&5
-$as_echo_n "checking for src/ksw2/ksw2.h... " >&6; }
-if ${ac_cv_file_src_ksw2_ksw2_h+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "src/ksw2/ksw2.h"; then
-  ac_cv_file_src_ksw2_ksw2_h=yes
-else
-  ac_cv_file_src_ksw2_ksw2_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_src_ksw2_ksw2_h" >&5
-$as_echo "$ac_cv_file_src_ksw2_ksw2_h" >&6; }
-if test "x$ac_cv_file_src_ksw2_ksw2_h" = xyes; then :
-
-else
-  git clone https://github.com/lh3/ksw2 src/ksw2 &&
-               cd src/ksw2 &&
-               git checkout 289609bd9e5381a13b16239d0a7703f1ff03f9ca &&
-               cd ../..
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for src/GASAL2/README.md" >&5
-$as_echo_n "checking for src/GASAL2/README.md... " >&6; }
-if ${ac_cv_file_src_GASAL2_README_md+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "src/GASAL2/README.md"; then
-  ac_cv_file_src_GASAL2_README_md=yes
-else
-  ac_cv_file_src_GASAL2_README_md=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_src_GASAL2_README_md" >&5
-$as_echo "$ac_cv_file_src_GASAL2_README_md" >&6; }
-if test "x$ac_cv_file_src_GASAL2_README_md" = xyes; then :
-
-else
-  git clone https://github.com/nahmedraja/GASAL2 src/GASAL2 &&
-               cd src/GASAL2 &&
-               git checkout 106d94ee53fc847214fb05f2f9f892538a5d3baf &&
-               cd ../..
-fi
-
 
 ### Determine subdirectory source files
 

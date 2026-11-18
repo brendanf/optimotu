@@ -14,34 +14,12 @@ AC_COPYRIGHT(Copyright (C) 2025 Brendan Furneaux)
 AC_CONFIG_SRCDIR([src])
 
 ### Make sure we have our submodules
-m4_define([WFA2_LIB_VERSION],
-          m4_esyscmd([git submodule | awk '$2=="src/WFA2-lib"{printf $1}']))
-m4_define([EDLIB_VERSION],
-          m4_esyscmd([git submodule | awk '$2=="src/edlib"{printf $1}']))
-m4_define([KSW2_VERSION],
-          m4_esyscmd([git submodule | awk '$2=="src/ksw2"{printf $1}']))
-m4_define([GASAL2_VERSION],
-          m4_esyscmd([git submodule | awk '$2=="src/GASAL2"{printf $1}']))
-AC_CHECK_FILE([src/WFA2-lib/Makefile], [],
-              [[git clone https://github.com/brendanf/WFA2-lib src/WFA2-lib &&
-               cd src/WFA2-lib &&
-               git checkout] WFA2_LIB_VERSION [&&
-               cd ../..]])
-AC_CHECK_FILE([src/edlib/edlib.h], [],
-              [[git clone https://github.com/brendanf/edlib src/edlib &&
-               cd src/edlib &&
-               git checkout] EDLIB_VERSION [&&
-               cd ../..]])
-AC_CHECK_FILE([src/ksw2/ksw2.h], [],
-              [[git clone https://github.com/lh3/ksw2 src/ksw2 &&
-               cd src/ksw2 &&
-               git checkout] KSW2_VERSION [&&
-               cd ../..]])
-AC_CHECK_FILE([src/GASAL2/README.md], [],
-              [[git clone https://github.com/nahmedraja/GASAL2 src/GASAL2 &&
-               cd src/GASAL2 &&
-               git checkout] GASAL2_VERSION [&&
-               cd ../..]])
+# Pins live in tools/submodule-pins (not m4_esyscmd) so they stay in sync
+# with the gitlinks. GitHub tarballs ship empty submodule directories, and
+# remotes clones the default branch of each submodule before this runs.
+AS_IF([sh tools/fetch-submodules.sh],
+      [],
+      [AC_MSG_ERROR([fetching git submodules failed])])
 
 ### Determine subdirectory source files
 

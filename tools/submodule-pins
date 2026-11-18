@@ -1,0 +1,12 @@
+# Commits fetched by tools/fetch-submodules.sh during configure.
+# GitHub tarballs omit submodule contents. remotes clones each
+# submodule's default branch, which is not these commits: WFA2-lib and
+# edlib are pinned to their "optimotu" branches.
+#
+# Fields: path url commit sentinel digest
+# After changing a submodule pointer, put the new commit here and refresh
+# the digest with: sh tools/fetch-submodules.sh --print-digests
+src/WFA2-lib https://github.com/brendanf/WFA2-lib.git 4be27fdc4b4d89c1777c856976b2248aec0c23ee bindings/cpp/WFAligner.hpp 23ef6fc1470d1500c292760907495cd73b62c557
+src/edlib https://github.com/brendanf/edlib.git 5e1cdcc1851ccf8fcadc8b418c3a3886c5a4501b edlib.h 2af9e377f70827c014f3bfac3f74fb9c145cd4a9
+src/ksw2 https://github.com/lh3/ksw2.git 289609bd9e5381a13b16239d0a7703f1ff03f9ca ksw2.h 2836f019830aed00e05ef0e895cb9270fffa7dd4
+src/GASAL2 https://github.com/nahmedraja/GASAL2.git 106d94ee53fc847214fb05f2f9f892538a5d3baf README.md e37a42463c905be13b520c2e253423a98013e8ae

@@ -317,6 +317,14 @@ explicitly requests API changes.
   own objects (`rm -f src/*.o src/optimotu.so`, keeping the `WFA2-lib/`,
   `edlib/`, and `ksw2/` submodule objects) before rebuilding, or you can get link errors or
   silently stale code.
+- Git submodule commits are pinned in `tools/submodule-pins` and fetched by
+  `tools/fetch-submodules.sh` from `configure` / `configure.win`. GitHub
+  source tarballs (`remotes`, `renv`, `pak`) omit submodule contents, and
+  `remotes` also shallow-clones each submodule's default branch, which is
+  not the `optimotu` branch of `src/WFA2-lib` or `src/edlib`. After moving
+  a submodule pointer, update the pin and its digest
+  (`sh tools/fetch-submodules.sh --print-digests`). `configure.ac` no
+  longer records those commits via `m4_esyscmd`.
 - Prefer running tests in the project container/environment used by the wider
   OptimOTU ecosystem, not only ad hoc local setups.
 
