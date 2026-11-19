@@ -37,13 +37,14 @@ Native code:
   - R package builds define `OPTIMOTU_R` (`src/Makevars`). `Makevars` does
     not set `-march` and does not pass `-mavx512*` or ARM flags.
     GitHub Actions appends `-march=native -mtune=native` in the user
-    Makevars (`~/.R/Makevars`, or `Makevars.ucrt` on Windows), after
-    `Makeconf`, so that `-march` wins. `MAKEFLAGS` and `PKG_*FLAGS` are
-    not used for this: `R CMD check` treats `CFLAGS` / `CXXFLAGS` set
-    there as overrides of the user/site settings. An environment
-    `CFLAGS` in `.Renviron` does not override `Makeconf`. CRAN and local
-    builds do not get those flags. The nvcc recipe does not read
-    `CXXFLAGS`.
+    Makevars (`~/.R/Makevars`, or `Makevars.ucrt` on Windows) to
+    `CFLAGS`, `CXXFLAGS`, and `CXX11FLAGS` through `CXX23FLAGS`.
+    `CXX_STD=CXX17` compiles C++ from `CXX17FLAGS`; on Windows that is
+    not `CXXFLAGS`. `+=` is applied after `Makeconf`, so that `-march`
+    wins. `MAKEFLAGS` and `PKG_*FLAGS` are not used for this:
+    `R CMD check` treats `CFLAGS` / `CXXFLAGS` set there as overrides of
+    the user/site settings. CRAN and local builds do not get those
+    flags. The nvcc recipe does not read them.
     `src/Makevars.win` lists the same units as `configure` (top-level
     sources, `WFAligner.cpp`, `edlib.cpp`, WFA2 library C files, and the
     four ksw2 affine files). It does not recurse into `src/GASAL2`;

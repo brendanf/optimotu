@@ -48,10 +48,10 @@ jobs:
           needs: check
 
       # User Makevars, not MAKEFLAGS or PKG_*FLAGS. R CMD check treats
-      # CFLAGS/CXXFLAGS on the make command line as overrides of the
+      # those variables on the make command line as overrides of the
       # user/site settings. += is applied after Makeconf, so the last
-      # -march wins. ~/.Renviron cannot: Makeconf's CFLAGS = hides an
-      # environment CFLAGS.
+      # -march wins. CXX_STD=CXX17 compiles from CXX17FLAGS; on Windows
+      # that is not CXXFLAGS, so C alone picked up -march=native.
       - name: Compile for the runner CPU
         shell: Rscript {0}
         run: |
@@ -61,9 +61,13 @@ jobs:
             path.expand("~/.R/Makevars")
           }
           dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+          flags <- "-march=native -mtune=native"
+          vars <- c(
+            "CFLAGS", "CXXFLAGS", "CXX11FLAGS", "CXX14FLAGS",
+            "CXX17FLAGS", "CXX20FLAGS", "CXX23FLAGS"
+          )
           cat(
-            "CFLAGS += -march=native -mtune=native",
-            "CXXFLAGS += -march=native -mtune=native",
+            sprintf("%s += %s", vars, flags),
             "",
             sep = "\n",
             file = dest,
@@ -108,15 +112,19 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
-      # See the matrix job. nvcc's recipe does not read CXXFLAGS.
+      # See the matrix job. nvcc's recipe does not read these flags.
       - name: Compile for the runner CPU
         shell: Rscript {0}
         run: |
           dest <- path.expand("~/.R/Makevars")
           dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+          flags <- "-march=native -mtune=native"
+          vars <- c(
+            "CFLAGS", "CXXFLAGS", "CXX11FLAGS", "CXX14FLAGS",
+            "CXX17FLAGS", "CXX20FLAGS", "CXX23FLAGS"
+          )
           cat(
-            "CFLAGS += -march=native -mtune=native",
-            "CXXFLAGS += -march=native -mtune=native",
+            sprintf("%s += %s", vars, flags),
             "",
             sep = "\n",
             file = dest,
