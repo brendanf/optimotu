@@ -32,6 +32,106 @@ install.packages("remotes") # skip if it's already installed
 remotes::install_github("brendanf/optimotu")
 ```
 
+<details>
+
+<summary>
+
+<b>Compiling for higher CPU-based performance</b>
+</summary>
+
+Several of the distance algorithms in `optimotu` can take advantage of
+extra features of modern x86-64 CPUs, such as AVX2 and AVX-512. However,
+the default compilation flags for R do not enable these features. To
+compile for higher performance, append `-march=native -mtune=native` in
+your personal Makevars, then install. `+=` keeps R’s own flags,
+including `-O2`. These flags tell the compiler to use all the features
+of your CPU instead of compiling for a baseline CPU. The library this
+produces may not run on a different CPU, so do not copy it to other
+machines.
+
+The relevant lines for building `optimotu` are `CXX17FLAGS` and
+`CFLAGS`. The remaining `C*FLAGS`, `CXX*FLAGS`, and Fortran lines below
+are for other R packages you install from source; `optimotu` does not
+read them. If you do not want these features permanently enabled, you
+can remove the lines from your Makevars file after installing
+`optimotu`.
+
+For Linux, MacOS, and other Unix-like systems, the file is
+`~/.R/Makevars`:
+
+``` bash
+# Native CPU optimizations.
+CFLAGS += -march=native -mtune=native
+C17FLAGS += -march=native -mtune=native
+C23FLAGS += -march=native -mtune=native
+C90FLAGS += -march=native -mtune=native
+C99FLAGS += -march=native -mtune=native
+CXXFLAGS += -march=native -mtune=native
+CXX11FLAGS += -march=native -mtune=native
+CXX14FLAGS += -march=native -mtune=native
+CXX17FLAGS += -march=native -mtune=native
+CXX20FLAGS += -march=native -mtune=native
+CXX23FLAGS += -march=native -mtune=native
+FFLAGS += -march=native -mtune=native
+FCFLAGS += -march=native -mtune=native
+```
+
+On Windows, the additional flag `-Wa,-muse-unaligned-vector-move` is
+required due to Rtools default stack alignment of 16 bytes. For 64-bit
+Windows with current R, the file is `~/.R/Makevars.ucrt` (or
+`~/.R/Makevars.win` if you are using the legacy 32-bit Rtools):
+
+``` bash
+# Native CPU optimizations.
+CFLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+C17FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+C23FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+C90FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+C99FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+CXXFLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+CXX11FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+CXX14FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+CXX17FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+CXX20FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+CXX23FLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+FFLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+FCFLAGS += -march=native -mtune=native -Wa,-muse-unaligned-vector-move
+```
+
+</details>
+
+<details>
+
+<summary>
+
+<b>Compiling for GPU-based performance</b>
+</summary>
+
+When the CUDA toolkit is available during installation, `optimotu` will
+also include GPU accelerated distance calculations for pairwise global
+sequence alignment using GASAL2, and also for amino acid evolutionary
+distance calculations. To check whether your installation of `optimotu`
+was compiled with GPU support, you can run the following from R:
+
+``` r
+library(optimotu)
+optimotu_cuda_build()
+```
+
+If the output is `TRUE`, then your installation of `optimotu` was
+compiled with GPU support.
+
+To additionally check whether `optimotu` can see your GPU(s), you can
+run the following:
+
+``` r
+library(optimotu)
+optimotu_cuda() # TRUE if CUDA support is available and a device is found
+optimotu_cuda_device_count() # number of devices found
+```
+
+</details>
+
 ## Example
 
 ``` r

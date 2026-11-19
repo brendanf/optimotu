@@ -43,8 +43,13 @@ Native code:
     not `CXXFLAGS`. `+=` is applied after `Makeconf`, so that `-march`
     wins. `MAKEFLAGS` and `PKG_*FLAGS` are not used for this:
     `R CMD check` treats `CFLAGS` / `CXXFLAGS` set there as overrides of
-    the user/site settings. CRAN and local builds do not get those
-    flags. The nvcc recipe does not read them.
+    the user/site settings. On Windows those same lines also append
+    `-Wa,-muse-unaligned-vector-move`. Rtools passes `-mstackrealign`,
+    and the x64 ABI only guarantees 16-byte stack alignment; GCC still
+    emits aligned ymm/zmm moves (`vmovdqa`), which fault. The assembler
+    encodes those as unaligned moves. Unix jobs do not add that flag.
+    CRAN and local builds do not get those flags. The nvcc recipe does
+    not read them.
     `src/Makevars.win` lists the same units as `configure` (top-level
     sources, `WFAligner.cpp`, `edlib.cpp`, WFA2 library C files, and the
     four ksw2 affine files). It does not recurse into `src/GASAL2`;

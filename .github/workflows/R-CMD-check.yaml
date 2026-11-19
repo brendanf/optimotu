@@ -52,6 +52,10 @@ jobs:
       # user/site settings. += is applied after Makeconf, so the last
       # -march wins. CXX_STD=CXX17 compiles from CXX17FLAGS; on Windows
       # that is not CXXFLAGS, so C alone picked up -march=native.
+      # Rtools also passes -mstackrealign. The Windows x64 ABI only
+      # guarantees 16-byte stack alignment, and GCC still emits aligned
+      # ymm/zmm moves (vmovdqa), which fault. The assembler rewrites
+      # those as unaligned moves.
       - name: Compile for the runner CPU
         shell: Rscript {0}
         run: |
@@ -62,6 +66,9 @@ jobs:
           }
           dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
           flags <- "-march=native -mtune=native"
+          if (.Platform$OS.type == "windows") {
+            flags <- paste(flags, "-Wa,-muse-unaligned-vector-move")
+          }
           vars <- c(
             "CFLAGS", "CXXFLAGS", "CXX11FLAGS", "CXX14FLAGS",
             "CXX17FLAGS", "CXX20FLAGS", "CXX23FLAGS"
